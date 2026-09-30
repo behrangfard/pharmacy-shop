@@ -1,0 +1,33 @@
+
+cd C:\Users\Cool\Desktop\pharmacy-shop\backend
+
+php artisan serve
+
+ترمینال ۲:
+cd C:\Users\Cool\Desktop\pharmacy-shop\frontend
+
+npm run dev
+
+بعد برو به:
+
+http://localhost:5173/products
+
+
+
+cd C:\Users\behrang\Desktop\pharmacy-shop\backend
+
+php artisan serve
+
+ترمینال ۲:
+cd C:\Users\behrang\Desktop\pharmacy-shop\frontend
+
+npm run dev
+
+
+بعد برو به:
+
+http://localhost:5173/products
+
+
+
+temporary password is generated for root@localhost: B&lzd.0Qpcwo

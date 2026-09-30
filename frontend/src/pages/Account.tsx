@@ -1,0 +1,1713 @@
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import {
+ArrowRight,
+Mail,
+ShoppingCart,
+User,
+Package,
+Loader2,
+Pencil,
+Save,
+Lock,
+ChevronLeft,
+CalendarDays,
+CreditCard,
+XCircle,
+CheckCircle2,
+Truck,
+Clock3,
+} from "lucide-react";
+
+import Layout from "../components/Layout";
+import { useAuth } from "../context/AuthContext";
+import { useCart } from "../context/CartContext";
+import api from "../services/api";
+
+type ProductImage = {
+id: number;
+path: string;
+alt?: string | null;
+sort_order?: number;
+is_primary?: boolean;
+};
+
+type OrderItem = {
+id: number;
+product_id: number;
+product_name: string;
+sku?: string | null;
+quantity: number;
+unit_price: string | number;
+total_price: string | number;
+product?: {
+id: number;
+name: string;
+slug: string;
+thumbnail?: string | null;
+images?: ProductImage[];
+} | null;
+};
+
+type Order = {
+id: number;
+order_number: string;
+subtotal: string | number;
+shipping_cost: string | number;
+discount: string | number;
+total: string | number;
+status: string;
+payment_status: string;
+recipient_name: string;
+phone: string;
+address: string;
+postal_code: string;
+notes?: string | null;
+created_at: string;
+items: OrderItem[];
+};
+
+function Account() {
+const navigate = useNavigate();
+
+const { user, setUser, logout } = useAuth();
+const { cartCount } = useCart();
+
+const [orders, setOrders] = useState<Order[]>([]);
+const [ordersLoading, setOrdersLoading] = useState(false);
+const [ordersError, setOrdersError] = useState("");
+
+const [editingProfile, setEditingProfile] = useState(false);
+const [profileName, setProfileName] = useState("");
+const [profileEmail, setProfileEmail] = useState("");
+const [profileLoading, setProfileLoading] = useState(false);
+const [profileMessage, setProfileMessage] = useState("");
+const [profileError, setProfileError] = useState("");
+
+const [currentPassword, setCurrentPassword] = useState("");
+const [newPassword, setNewPassword] = useState("");
+const [passwordConfirmation, setPasswordConfirmation] = useState("");
+const [passwordLoading, setPasswordLoading] = useState(false);
+const [passwordMessage, setPasswordMessage] = useState("");
+const [passwordError, setPasswordError] = useState("");
+
+useEffect(() => {
+if (!user) {
+return;
+}
+
+
+setProfileName(user.name);
+setProfileEmail(user.email);
+
+
+}, [user]);
+
+useEffect(() => {
+if (!user) {
+return;
+}
+
+
+const loadOrders = async () => {
+  setOrdersLoading(true);
+  setOrdersError("");
+
+  try {
+    const response = await api.get("/orders");
+
+    const data =
+      response.data?.data ??
+      response.data?.orders ??
+      response.data ??
+      [];
+
+    setOrders(Array.isArray(data) ? data : []);
+  } catch (error) {
+    console.error("Orders error:", error);
+
+    setOrdersError(
+      "دریافت سفارش‌ها با خطا مواجه شد."
+    );
+  } finally {
+    setOrdersLoading(false);
+  }
+};
+
+loadOrders();
+
+
+}, [user]);
+
+const handleLogout = async () => {
+await logout();
+navigate("/");
+};
+
+const handleProfileSubmit = async (
+event: React.FormEvent<HTMLFormElement>
+) => {
+event.preventDefault();
+
+
+setProfileLoading(true);
+setProfileMessage("");
+setProfileError("");
+
+try {
+  const response = await api.put(
+    "/auth/profile",
+    {
+      name: profileName,
+      email: profileEmail,
+    }
+  );
+
+  const updatedUser = response.data?.user;
+
+  if (updatedUser) {
+    setUser(updatedUser);
+
+    localStorage.setItem(
+      "pharmacy-shop-user",
+      JSON.stringify(updatedUser)
+    );
+  }
+
+  setProfileMessage(
+    "اطلاعات حساب با موفقیت به‌روزرسانی شد."
+  );
+
+  setEditingProfile(false);
+} catch (error: any) {
+  console.error(
+    "Profile update error:",
+    error
+  );
+
+  const message =
+    error?.response?.data?.message ??
+    "به‌روزرسانی اطلاعات حساب با خطا مواجه شد.";
+
+  setProfileError(message);
+} finally {
+  setProfileLoading(false);
+}
+
+
+};
+
+const handlePasswordSubmit = async (
+event: React.FormEvent<HTMLFormElement>
+) => {
+event.preventDefault();
+
+
+setPasswordMessage("");
+setPasswordError("");
+
+if (newPassword !== passwordConfirmation) {
+  setPasswordError(
+    "رمز عبور جدید و تکرار آن یکسان نیستند."
+  );
+  return;
+}
+
+if (newPassword.length < 8) {
+  setPasswordError(
+    "رمز عبور جدید باید حداقل ۸ کاراکتر باشد."
+  );
+  return;
+}
+
+setPasswordLoading(true);
+
+try {
+  const response = await api.put(
+    "/auth/password",
+    {
+      current_password: currentPassword,
+      password: newPassword,
+      password_confirmation: passwordConfirmation,
+    }
+  );
+
+  setPasswordMessage(
+    response.data?.message ??
+      "رمز عبور با موفقیت تغییر کرد."
+  );
+
+  setCurrentPassword("");
+  setNewPassword("");
+  setPasswordConfirmation("");
+} catch (error: any) {
+  console.error(
+    "Password change error:",
+    error
+  );
+
+  const responseErrors =
+    error?.response?.data?.errors;
+
+  if (responseErrors) {
+    const firstError = Object.values(responseErrors)
+      .flat()
+      .find(
+        (message) =>
+          typeof message === "string"
+      );
+
+    setPasswordError(
+      typeof firstError === "string"
+        ? firstError
+        : "اطلاعات واردشده صحیح نیست."
+    );
+  } else {
+    setPasswordError(
+      error?.response?.data?.message ??
+        "تغییر رمز عبور انجام نشد."
+    );
+  }
+} finally {
+  setPasswordLoading(false);
+}
+
+
+};
+
+const formatPrice = (
+value: string | number
+) => {
+return Number(value).toLocaleString("fa-IR");
+};
+
+const formatDate = (value: string) => {
+return new Date(value).toLocaleDateString(
+"fa-IR"
+);
+};
+
+const getOrderStatus = (status: string) => {
+switch (status) {
+case "pending":
+return "در انتظار بررسی";
+
+
+  case "processing":
+    return "در حال پردازش";
+
+  case "shipped":
+    return "ارسال شده";
+
+  case "delivered":
+    return "تحویل شده";
+
+  case "cancelled":
+    return "لغو شده";
+
+  default:
+    return status;
+}
+
+
+};
+
+const getPaymentStatus = (status: string) => {
+switch (status) {
+case "paid":
+return "پرداخت شده";
+
+
+  case "pending":
+  case "unpaid":
+    return "پرداخت نشده";
+
+  case "failed":
+    return "پرداخت ناموفق";
+
+  case "refunded":
+    return "مسترد شده";
+
+  default:
+    return status;
+}
+
+
+};
+
+const getStatusStyle = (status: string) => {
+switch (status) {
+case "pending":
+return {
+wrapper:
+"bg-amber-50 text-amber-700 border-amber-100",
+icon: Clock3,
+};
+
+
+  case "processing":
+    return {
+      wrapper:
+        "bg-blue-50 text-blue-700 border-blue-100",
+      icon: Package,
+    };
+
+  case "shipped":
+    return {
+      wrapper:
+        "bg-indigo-50 text-indigo-700 border-indigo-100",
+      icon: Truck,
+    };
+
+  case "delivered":
+    return {
+      wrapper:
+        "bg-green-50 text-green-700 border-green-100",
+      icon: CheckCircle2,
+    };
+
+  case "cancelled":
+    return {
+      wrapper:
+        "bg-red-50 text-red-700 border-red-100",
+      icon: XCircle,
+    };
+
+  default:
+    return {
+      wrapper:
+        "bg-slate-50 text-slate-600 border-slate-100",
+      icon: Package,
+    };
+}
+
+
+};
+
+const getPaymentStyle = (status: string) => {
+switch (status) {
+case "paid":
+return "bg-green-50 text-green-700 border-green-100";
+
+
+  case "failed":
+    return "bg-red-50 text-red-700 border-red-100";
+
+  case "refunded":
+    return "bg-purple-50 text-purple-700 border-purple-100";
+
+  default:
+    return "bg-slate-50 text-slate-600 border-slate-100";
+}
+
+
+};
+
+const getOrderImage = (order: Order) => {
+const firstItem = order.items?.[0];
+
+
+if (!firstItem?.product) {
+  return null;
+}
+
+const thumbnail = firstItem.product.thumbnail;
+
+if (thumbnail) {
+  return thumbnail.startsWith("http")
+    ? thumbnail
+    : `http://127.0.0.1:8000/storage/${thumbnail}`;
+}
+
+const images =
+  firstItem.product.images ?? [];
+
+if (images.length === 0) {
+  return null;
+}
+
+const primaryImage = images.find(
+  (image) => image.is_primary
+);
+
+const selectedImage =
+  primaryImage ??
+  [...images].sort(
+    (a, b) =>
+      (a.sort_order ?? 0) -
+      (b.sort_order ?? 0)
+  )[0];
+
+if (!selectedImage?.path) {
+  return null;
+}
+
+return selectedImage.path.startsWith("http")
+  ? selectedImage.path
+  : `http://127.0.0.1:8000/storage/${selectedImage.path}`;
+
+
+};
+
+if (!user) {
+return ( <Layout> <main className="max-w-4xl mx-auto px-6 py-16"> <div
+         className="
+           bg-white
+           rounded-3xl
+           border
+           border-slate-100
+           shadow-sm
+           p-10
+           text-center
+         "
+       > <div
+           className="
+             w-16
+             h-16
+             mx-auto
+             rounded-2xl
+             bg-blue-50
+             text-blue-600
+             flex
+             items-center
+             justify-center
+           "
+         > <User size={30} /> </div>
+
+
+        <h1
+          className="
+            text-2xl
+            font-black
+            mt-5
+          "
+        >
+          ورود به حساب کاربری
+        </h1>
+
+        <p className="text-slate-500 mt-2">
+          برای مشاهده اطلاعات حساب، ابتدا وارد شوید.
+        </p>
+
+        <Link
+          to="/login"
+          className="
+            inline-flex
+            mt-6
+            bg-blue-600
+            text-white
+            px-6
+            py-3
+            rounded-xl
+            font-bold
+          "
+        >
+          ورود به حساب
+        </Link>
+      </div>
+    </main>
+  </Layout>
+);
+
+
+}
+
+return ( <Layout> <main className="max-w-5xl mx-auto px-6 py-12"> <div className="mb-8"> <Link
+         to="/"
+         className="
+           inline-flex
+           items-center
+           gap-2
+           text-sm
+           text-slate-500
+           hover:text-blue-600
+         "
+       > <ArrowRight size={17} />
+بازگشت به فروشگاه </Link>
+
+
+      <h1
+        className="
+          text-3xl
+          font-black
+          text-slate-900
+          mt-5
+        "
+      >
+        حساب کاربری من
+      </h1>
+
+      <p className="text-slate-500 mt-2">
+        مدیریت اطلاعات حساب و مشاهده سفارش‌های شما
+      </p>
+    </div>
+
+    <div className="grid md:grid-cols-3 gap-6">
+      <div className="md:col-span-2 space-y-6">
+        <div
+          className="
+            bg-white
+            rounded-3xl
+            border
+            border-slate-100
+            shadow-sm
+            p-7
+          "
+        >
+          <div
+            className="
+              flex
+              items-center
+              justify-between
+              gap-4
+              pb-6
+              border-b
+              border-slate-100
+            "
+          >
+            <div
+              className="
+                flex
+                items-center
+                gap-4
+              "
+            >
+              <div
+                className="
+                  w-16
+                  h-16
+                  rounded-2xl
+                  bg-blue-50
+                  text-blue-600
+                  flex
+                  items-center
+                  justify-center
+                "
+              >
+                <User size={30} />
+              </div>
+
+              <div>
+                <h2 className="text-xl font-black">
+                  {user.name}
+                </h2>
+
+                <p
+                  className="
+                    text-slate-500
+                    text-sm
+                    mt-1
+                  "
+                >
+                  حساب کاربری آرسن شاپ
+                </p>
+              </div>
+            </div>
+
+            {!editingProfile && (
+              <button
+                type="button"
+                onClick={() => {
+                  setProfileMessage("");
+                  setProfileError("");
+                  setEditingProfile(true);
+                }}
+                className="
+                  inline-flex
+                  items-center
+                  gap-2
+                  rounded-xl
+                  bg-blue-50
+                  text-blue-600
+                  px-4
+                  py-2
+                  font-bold
+                  text-sm
+                "
+              >
+                <Pencil size={17} />
+                ویرایش
+              </button>
+            )}
+          </div>
+
+          {profileMessage && (
+            <div
+              className="
+                mt-5
+                bg-green-50
+                text-green-700
+                rounded-xl
+                p-4
+                text-sm
+                font-bold
+              "
+            >
+              {profileMessage}
+            </div>
+          )}
+
+          {profileError && (
+            <div
+              className="
+                mt-5
+                bg-red-50
+                text-red-600
+                rounded-xl
+                p-4
+                text-sm
+                font-bold
+              "
+            >
+              {profileError}
+            </div>
+          )}
+
+          {!editingProfile ? (
+            <div className="mt-7 space-y-5">
+              <div className="flex items-center gap-4">
+                <div
+                  className="
+                    w-11
+                    h-11
+                    rounded-xl
+                    bg-slate-50
+                    flex
+                    items-center
+                    justify-center
+                  "
+                >
+                  <User size={20} />
+                </div>
+
+                <div>
+                  <p className="text-xs text-slate-400">
+                    نام و نام خانوادگی
+                  </p>
+
+                  <p className="font-bold mt-1">
+                    {user.name}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4">
+                <div
+                  className="
+                    w-11
+                    h-11
+                    rounded-xl
+                    bg-slate-50
+                    flex
+                    items-center
+                    justify-center
+                  "
+                >
+                  <Mail size={20} />
+                </div>
+
+                <div>
+                  <p className="text-xs text-slate-400">
+                    ایمیل
+                  </p>
+
+                  <p className="font-bold mt-1">
+                    {user.email}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <form
+              onSubmit={handleProfileSubmit}
+              className="mt-7 space-y-5"
+            >
+              <div>
+                <label
+                  className="
+                    block
+                    text-sm
+                    font-bold
+                    mb-2
+                  "
+                >
+                  نام و نام خانوادگی
+                </label>
+
+                <input
+                  type="text"
+                  value={profileName}
+                  onChange={(event) =>
+                    setProfileName(
+                      event.target.value
+                    )
+                  }
+                  required
+                  className="
+                    w-full
+                    rounded-xl
+                    border
+                    border-slate-200
+                    px-4
+                    py-3
+                    outline-none
+                    focus:border-blue-500
+                    focus:ring-2
+                    focus:ring-blue-100
+                  "
+                />
+              </div>
+
+              <div>
+                <label
+                  className="
+                    block
+                    text-sm
+                    font-bold
+                    mb-2
+                  "
+                >
+                  ایمیل
+                </label>
+
+                <input
+                  type="email"
+                  value={profileEmail}
+                  onChange={(event) =>
+                    setProfileEmail(
+                      event.target.value
+                    )
+                  }
+                  required
+                  dir="ltr"
+                  className="
+                    w-full
+                    rounded-xl
+                    border
+                    border-slate-200
+                    px-4
+                    py-3
+                    outline-none
+                    focus:border-blue-500
+                    focus:ring-2
+                    focus:ring-blue-100
+                  "
+                />
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="submit"
+                  disabled={profileLoading}
+                  className="
+                    inline-flex
+                    items-center
+                    justify-center
+                    gap-2
+                    flex-1
+                    rounded-xl
+                    bg-blue-600
+                    text-white
+                    py-3
+                    font-bold
+                    disabled:opacity-60
+                  "
+                >
+                  {profileLoading ? (
+                    <>
+                      <Loader2
+                        size={19}
+                        className="animate-spin"
+                      />
+                      در حال ذخیره...
+                    </>
+                  ) : (
+                    <>
+                      <Save size={19} />
+                      ذخیره تغییرات
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setProfileName(user.name);
+                    setProfileEmail(user.email);
+                    setProfileError("");
+                    setProfileMessage("");
+                    setEditingProfile(false);
+                  }}
+                  className="
+                    rounded-xl
+                    bg-slate-100
+                    text-slate-700
+                    px-5
+                    py-3
+                    font-bold
+                  "
+                >
+                  انصراف
+                </button>
+              </div>
+            </form>
+          )}
+
+          {!editingProfile && (
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="
+                mt-8
+                w-full
+                rounded-xl
+                bg-red-50
+                text-red-600
+                py-3
+                font-bold
+              "
+            >
+              خروج از حساب کاربری
+            </button>
+          )}
+        </div>
+
+        <div
+          className="
+            bg-white
+            rounded-3xl
+            border
+            border-slate-100
+            shadow-sm
+            p-7
+          "
+        >
+          <div
+            className="
+              flex
+              items-center
+              gap-3
+              mb-6
+            "
+          >
+            <div
+              className="
+                w-12
+                h-12
+                rounded-xl
+                bg-amber-50
+                text-amber-600
+                flex
+                items-center
+                justify-center
+              "
+            >
+              <Lock size={24} />
+            </div>
+
+            <div>
+              <h2 className="text-xl font-black">
+                تغییر رمز عبور
+              </h2>
+
+              <p
+                className="
+                  text-sm
+                  text-slate-500
+                "
+              >
+                برای امنیت بیشتر، رمز حساب خود را مدیریت کنید
+              </p>
+            </div>
+          </div>
+
+          {passwordMessage && (
+            <div
+              className="
+                mb-5
+                bg-green-50
+                text-green-700
+                rounded-xl
+                p-4
+                text-sm
+                font-bold
+              "
+            >
+              {passwordMessage}
+            </div>
+          )}
+
+          {passwordError && (
+            <div
+              className="
+                mb-5
+                bg-red-50
+                text-red-600
+                rounded-xl
+                p-4
+                text-sm
+                font-bold
+              "
+            >
+              {passwordError}
+            </div>
+          )}
+
+          <form
+            onSubmit={handlePasswordSubmit}
+            className="space-y-5"
+          >
+            <div>
+              <label
+                className="
+                  block
+                  text-sm
+                  font-bold
+                  mb-2
+                "
+              >
+                رمز عبور فعلی
+              </label>
+
+              <input
+                type="password"
+                value={currentPassword}
+                onChange={(event) =>
+                  setCurrentPassword(
+                    event.target.value
+                  )
+                }
+                required
+                autoComplete="current-password"
+                className="
+                  w-full
+                  rounded-xl
+                  border
+                  border-slate-200
+                  px-4
+                  py-3
+                  outline-none
+                  focus:border-blue-500
+                  focus:ring-2
+                  focus:ring-blue-100
+                "
+              />
+            </div>
+
+            <div>
+              <label
+                className="
+                  block
+                  text-sm
+                  font-bold
+                  mb-2
+                "
+              >
+                رمز عبور جدید
+              </label>
+
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(event) =>
+                  setNewPassword(
+                    event.target.value
+                  )
+                }
+                required
+                minLength={8}
+                autoComplete="new-password"
+                placeholder="حداقل ۸ کاراکتر"
+                className="
+                  w-full
+                  rounded-xl
+                  border
+                  border-slate-200
+                  px-4
+                  py-3
+                  outline-none
+                  focus:border-blue-500
+                  focus:ring-2
+                  focus:ring-blue-100
+                "
+              />
+            </div>
+
+            <div>
+              <label
+                className="
+                  block
+                  text-sm
+                  font-bold
+                  mb-2
+                "
+              >
+                تکرار رمز عبور جدید
+              </label>
+
+              <input
+                type="password"
+                value={passwordConfirmation}
+                onChange={(event) =>
+                  setPasswordConfirmation(
+                    event.target.value
+                  )
+                }
+                required
+                minLength={8}
+                autoComplete="new-password"
+                placeholder="تکرار رمز عبور جدید"
+                className="
+                  w-full
+                  rounded-xl
+                  border
+                  border-slate-200
+                  px-4
+                  py-3
+                  outline-none
+                  focus:border-blue-500
+                  focus:ring-2
+                  focus:ring-blue-100
+                "
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={passwordLoading}
+              className="
+                inline-flex
+                items-center
+                justify-center
+                gap-2
+                w-full
+                rounded-xl
+                bg-slate-900
+                text-white
+                py-3.5
+                font-bold
+                disabled:opacity-60
+              "
+            >
+              {passwordLoading ? (
+                <>
+                  <Loader2
+                    size={19}
+                    className="animate-spin"
+                  />
+                  در حال تغییر رمز...
+                </>
+              ) : (
+                <>
+                  <Lock size={19} />
+                  تغییر رمز عبور
+                </>
+              )}
+            </button>
+          </form>
+        </div>
+
+        <div
+          className="
+            bg-white
+            rounded-3xl
+            border
+            border-slate-100
+            shadow-sm
+            p-7
+          "
+        >
+          <div
+            className="
+              flex
+              items-center
+              gap-3
+              mb-6
+            "
+          >
+            <div
+              className="
+                w-12
+                h-12
+                rounded-xl
+                bg-blue-50
+                text-blue-600
+                flex
+                items-center
+                justify-center
+              "
+            >
+              <Package size={24} />
+            </div>
+
+            <div>
+              <h2 className="text-xl font-black">
+                سفارش‌های من
+              </h2>
+
+              <p
+                className="
+                  text-sm
+                  text-slate-500
+                "
+              >
+                تاریخچه سفارش‌های ثبت شده
+              </p>
+            </div>
+
+            {orders.length > 0 && (
+              <span
+                className="
+                  mr-auto
+                  min-w-8
+                  h-8
+                  px-2
+                  rounded-full
+                  bg-blue-50
+                  text-blue-600
+                  flex
+                  items-center
+                  justify-center
+                  text-sm
+                  font-black
+                "
+              >
+                {orders.length.toLocaleString(
+                  "fa-IR"
+                )}
+              </span>
+            )}
+          </div>
+
+          {ordersLoading && (
+            <div className="py-10 text-center">
+              <Loader2
+                size={32}
+                className="
+                  mx-auto
+                  animate-spin
+                  text-blue-600
+                "
+              />
+
+              <p
+                className="
+                  mt-4
+                  text-slate-500
+                "
+              >
+                در حال دریافت سفارش‌ها...
+              </p>
+            </div>
+          )}
+
+          {!ordersLoading && ordersError && (
+            <div
+              className="
+                bg-red-50
+                text-red-600
+                rounded-xl
+                p-5
+              "
+            >
+              {ordersError}
+            </div>
+          )}
+
+          {!ordersLoading &&
+            !ordersError &&
+            orders.length === 0 && (
+              <div
+                className="
+                  text-center
+                  py-10
+                "
+              >
+                <Package
+                  size={48}
+                  className="
+                    mx-auto
+                    text-slate-300
+                  "
+                />
+
+                <h3
+                  className="
+                    font-black
+                    mt-4
+                  "
+                >
+                  هنوز سفارشی ثبت نکرده‌اید
+                </h3>
+
+                <Link
+                  to="/products"
+                  className="
+                    inline-flex
+                    mt-5
+                    bg-blue-600
+                    text-white
+                    px-6
+                    py-3
+                    rounded-xl
+                    font-bold
+                  "
+                >
+                  مشاهده محصولات
+                </Link>
+              </div>
+            )}
+
+          {!ordersLoading &&
+            !ordersError &&
+            orders.length > 0 && (
+              <div className="space-y-4">
+                {orders.map((order) => {
+                  const statusStyle =
+                    getStatusStyle(order.status);
+
+                  const StatusIcon =
+                    statusStyle.icon;
+
+                  const orderImage =
+                    getOrderImage(order);
+
+                  const itemCount =
+                    order.items?.reduce(
+                      (sum, item) =>
+                        sum + Number(item.quantity),
+                      0
+                    ) ?? 0;
+
+                  const firstItem =
+                    order.items?.[0];
+
+                  return (
+                    <Link
+                      key={order.id}
+                      to={`/account/orders/${order.order_number}`}
+                      className="
+                        group
+                        block
+                        border
+                        border-slate-100
+                        rounded-2xl
+                        overflow-hidden
+                        hover:border-blue-300
+                        hover:shadow-md
+                        transition-all
+                      "
+                    >
+                      <div className="p-5">
+                        <div
+                          className="
+                            flex
+                            items-start
+                            justify-between
+                            gap-4
+                          "
+                        >
+                          <div className="flex items-center gap-4">
+                            <div
+                              className="
+                                w-16
+                                h-16
+                                rounded-2xl
+                                bg-slate-50
+                                border
+                                border-slate-100
+                                overflow-hidden
+                                flex-shrink-0
+                              "
+                            >
+                              {orderImage ? (
+                                <img
+                                  src={orderImage}
+                                  alt={
+                                    firstItem
+                                      ?.product?.name ??
+                                    firstItem?.product_name ??
+                                    "محصول سفارش"
+                                  }
+                                  className="
+                                    w-full
+                                    h-full
+                                    object-contain
+                                    p-1
+                                  "
+                                />
+                              ) : (
+                                <div
+                                  className="
+                                    w-full
+                                    h-full
+                                    flex
+                                    items-center
+                                    justify-center
+                                    text-slate-300
+                                  "
+                                >
+                                  <Package size={27} />
+                                </div>
+                              )}
+                            </div>
+
+                            <div>
+                              <p
+                                className="
+                                  text-xs
+                                  text-slate-400
+                                "
+                              >
+                                شماره سفارش
+                              </p>
+
+                              <p
+                                className="
+                                  font-black
+                                  text-blue-600
+                                  mt-1
+                                "
+                                dir="ltr"
+                              >
+                                {order.order_number}
+                              </p>
+
+                              {firstItem && (
+                                <p
+                                  className="
+                                    text-sm
+                                    text-slate-500
+                                    mt-1
+                                    max-w-[220px]
+                                    truncate
+                                  "
+                                >
+                                  {firstItem.product?.name ??
+                                    firstItem.product_name}
+
+                                  {order.items.length > 1 &&
+                                    ` و ${
+                                      order.items.length - 1
+                                    } کالای دیگر`}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+
+                          <div
+                            className="
+                              flex
+                              flex-col
+                              items-end
+                              gap-2
+                            "
+                          >
+                            <span
+                              className={`
+                                inline-flex
+                                items-center
+                                gap-1.5
+                                px-3
+                                py-1.5
+                                rounded-full
+                                border
+                                text-xs
+                                font-bold
+                                ${statusStyle.wrapper}
+                              `}
+                            >
+                              <StatusIcon size={14} />
+                              {getOrderStatus(
+                                order.status
+                              )}
+                            </span>
+
+                            <span
+                              className={`
+                                inline-flex
+                                items-center
+                                px-3
+                                py-1.5
+                                rounded-full
+                                border
+                                text-xs
+                                font-bold
+                                ${getPaymentStyle(
+                                  order.payment_status
+                                )}
+                              `}
+                            >
+                              <CreditCard
+                                size={13}
+                                className="ml-1"
+                              />
+                              {getPaymentStatus(
+                                order.payment_status
+                              )}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div
+                          className="
+                            grid
+                            grid-cols-2
+                            md:grid-cols-3
+                            gap-4
+                            mt-5
+                            pt-5
+                            border-t
+                            border-slate-100
+                          "
+                        >
+                          <div>
+                            <div
+                              className="
+                                flex
+                                items-center
+                                gap-1.5
+                                text-xs
+                                text-slate-400
+                              "
+                            >
+                              <CreditCard size={14} />
+                              مبلغ سفارش
+                            </div>
+
+                            <p
+                              className="
+                                font-black
+                                text-slate-800
+                                mt-1
+                              "
+                            >
+                              {formatPrice(
+                                order.total
+                              )}{" "}
+                              <span className="text-xs font-normal text-slate-500">
+                                تومان
+                              </span>
+                            </p>
+                          </div>
+
+                          <div>
+                            <div
+                              className="
+                                flex
+                                items-center
+                                gap-1.5
+                                text-xs
+                                text-slate-400
+                              "
+                            >
+                              <CalendarDays size={14} />
+                              تاریخ
+                            </div>
+
+                            <p
+                              className="
+                                font-bold
+                                text-slate-800
+                                mt-1
+                              "
+                            >
+                              {formatDate(
+                                order.created_at
+                              )}
+                            </p>
+                          </div>
+
+                          <div>
+                            <div
+                              className="
+                                flex
+                                items-center
+                                gap-1.5
+                                text-xs
+                                text-slate-400
+                              "
+                            >
+                              <Package size={14} />
+                              تعداد کالا
+                            </div>
+
+                            <p
+                              className="
+                                font-bold
+                                text-slate-800
+                                mt-1
+                              "
+                            >
+                              {itemCount.toLocaleString(
+                                "fa-IR"
+                              )}{" "}
+                              کالا
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div
+                        className="
+                          px-5
+                          py-3
+                          bg-slate-50
+                          border-t
+                          border-slate-100
+                          flex
+                          items-center
+                          justify-between
+                          gap-3
+                          group-hover:bg-blue-50
+                          transition
+                        "
+                      >
+                        <span
+                          className="
+                            text-sm
+                            font-bold
+                            text-slate-500
+                            group-hover:text-blue-600
+                          "
+                        >
+                          مشاهده جزئیات سفارش
+                        </span>
+
+                        <ChevronLeft
+                          size={18}
+                          className="
+                            text-slate-400
+                            group-hover:text-blue-600
+                            group-hover:-translate-x-1
+                            transition
+                          "
+                        />
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+        </div>
+      </div>
+
+      <div className="space-y-6">
+        <Link
+          to="/cart"
+          className="
+            block
+            bg-white
+            rounded-3xl
+            border
+            border-slate-100
+            shadow-sm
+            p-6
+            hover:border-blue-200
+            hover:shadow-md
+            transition
+          "
+        >
+          <div
+            className="
+              w-12
+              h-12
+              rounded-xl
+              bg-blue-50
+              text-blue-600
+              flex
+              items-center
+              justify-center
+            "
+          >
+            <ShoppingCart size={24} />
+          </div>
+
+          <h3
+            className="
+              font-black
+              mt-5
+            "
+          >
+            سبد خرید
+          </h3>
+
+          <p
+            className="
+              text-sm
+              text-slate-500
+              mt-2
+            "
+          >
+            {cartCount > 0
+              ? `${cartCount.toLocaleString(
+                  "fa-IR"
+                )} کالا در سبد خرید`
+              : "سبد خرید شما خالی است"}
+          </p>
+
+          <div
+            className="
+              mt-5
+              flex
+              items-center
+              justify-between
+              text-sm
+              font-bold
+              text-blue-600
+            "
+          >
+            <span>مشاهده سبد خرید</span>
+
+            <ChevronLeft size={17} />
+          </div>
+        </Link>
+
+        <div
+          className="
+            bg-slate-900
+            text-white
+            rounded-3xl
+            p-6
+          "
+        >
+          <p
+            className="
+              text-sm
+              text-slate-300
+            "
+          >
+            خوش آمدید
+          </p>
+
+          <h3
+            className="
+              font-black
+              text-lg
+              mt-2
+            "
+          >
+            {user.name}
+          </h3>
+
+          <p
+            className="
+              text-sm
+              text-slate-400
+              mt-3
+              leading-6
+            "
+          >
+            از حساب کاربری خود برای مدیریت خریدها و سفارش‌های آینده استفاده کنید.
+          </p>
+        </div>
+      </div>
+    </div>
+  </main>
+</Layout>
+
+
+);
+}
+
+export default Account;
