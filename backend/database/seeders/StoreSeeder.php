@@ -157,6 +157,7 @@ class StoreSeeder extends Seeder
             'description' => 'دستگاه فشار خون دیجیتال مناسب استفاده خانگی و حرفه‌ای.',
             'price' => 2850000,
             'compare_price' => 3200000,
+            'discount_percent' => 20,
             'stock' => 18,
             'weight' => 0.650,
             'is_active' => true,
