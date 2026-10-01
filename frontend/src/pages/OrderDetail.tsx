@@ -28,19 +28,21 @@ interface Product {
 interface OrderItem {
   id: number;
   product_id: number;
+  product_name: string;
+  sku?: string | null;
   quantity: number;
-  price: number;
-  subtotal: number;
+  unit_price: number | string;
+  total_price: number | string;
   product?: Product;
 }
 
 interface Order {
   id: number;
   order_number: string;
-  subtotal: number;
-  shipping_cost: number;
-  discount: number;
-  total: number;
+  subtotal: number | string;
+  shipping_cost: number | string;
+  discount: number | string;
+  total: number | string;
   status: string;
   payment_status: string;
   recipient_name: string;
@@ -74,9 +76,7 @@ export default function OrderDetail() {
       }
 
       try {
-        const response = await api.get<OrderResponse>(
-          `/orders/${orderNumber}`
-        );
+        const response = await api.get<OrderResponse>(`/orders/${orderNumber}`);
 
         console.log("ORDER API:", response.data);
 
@@ -92,8 +92,7 @@ export default function OrderDetail() {
           setError("سفارش موردنظر پیدا نشد.");
         } else {
           setError(
-            err?.response?.data?.message ||
-              "خطا در دریافت اطلاعات سفارش."
+            err?.response?.data?.message || "خطا در دریافت اطلاعات سفارش.",
           );
         }
       } finally {
@@ -104,8 +103,14 @@ export default function OrderDetail() {
     fetchOrder();
   }, [orderNumber]);
 
-  const formatPrice = (price: number) => {
-    return `${Number(price).toLocaleString("fa-IR")} تومان`;
+  const formatPrice = (price: number | string | null | undefined) => {
+    const numericPrice = Number(price ?? 0);
+
+    if (Number.isNaN(numericPrice)) {
+      return "۰ تومان";
+    }
+
+    return `${numericPrice.toLocaleString("fa-IR")} تومان`;
   };
 
   const formatDate = (date: string) => {
@@ -137,14 +142,19 @@ export default function OrderDetail() {
     switch (status) {
       case "pending":
         return <Clock3 className="w-5 h-5" />;
+
       case "processing":
         return <Package className="w-5 h-5" />;
+
       case "shipped":
         return <Truck className="w-5 h-5" />;
+
       case "delivered":
         return <CheckCircle2 className="w-5 h-5" />;
+
       case "cancelled":
         return <XCircle className="w-5 h-5" />;
+
       default:
         return <Package className="w-5 h-5" />;
     }
@@ -154,12 +164,16 @@ export default function OrderDetail() {
     switch (status) {
       case "paid":
         return "پرداخت شده";
+
       case "unpaid":
         return "پرداخت نشده";
+
       case "failed":
         return "پرداخت ناموفق";
+
       case "refunded":
         return "مبلغ بازپرداخت شده";
+
       default:
         return status;
     }
@@ -210,7 +224,6 @@ export default function OrderDetail() {
     <Layout>
       <div className="bg-gray-50 min-h-screen py-8 px-4">
         <div className="max-w-5xl mx-auto">
-
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
             <div>
               <Link
@@ -221,13 +234,9 @@ export default function OrderDetail() {
                 بازگشت به سفارش‌ها
               </Link>
 
-              <h1 className="text-2xl font-bold text-gray-900">
-                جزئیات سفارش
-              </h1>
+              <h1 className="text-2xl font-bold text-gray-900">جزئیات سفارش</h1>
 
-              <p className="text-gray-500 mt-1">
-                سفارش {order.order_number}
-              </p>
+              <p className="text-gray-500 mt-1">سفارش {order.order_number}</p>
             </div>
 
             <div className="text-sm text-gray-500">
@@ -237,16 +246,13 @@ export default function OrderDetail() {
 
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-
               <div className="flex items-center gap-4 bg-gray-50 rounded-xl p-4">
                 <div className="w-11 h-11 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center">
                   {getStatusIcon(order.status)}
                 </div>
 
                 <div>
-                  <p className="text-sm text-gray-500">
-                    وضعیت سفارش
-                  </p>
+                  <p className="text-sm text-gray-500">وضعیت سفارش</p>
 
                   <p className="font-bold text-gray-900 mt-1">
                     {getStatusLabel(order.status)}
@@ -270,21 +276,17 @@ export default function OrderDetail() {
                 </div>
 
                 <div>
-                  <p className="text-sm text-gray-500">
-                    وضعیت پرداخت
-                  </p>
+                  <p className="text-sm text-gray-500">وضعیت پرداخت</p>
 
                   <p className="font-bold text-gray-900 mt-1">
                     {getPaymentLabel(order.payment_status)}
                   </p>
                 </div>
               </div>
-
             </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
             <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
               <h2 className="text-lg font-bold text-gray-900 mb-5">
                 محصولات سفارش
@@ -297,7 +299,7 @@ export default function OrderDetail() {
                   const imageUrl = imagePath
                     ? imagePath.startsWith("http")
                       ? imagePath
-                      : "http://127.0.0.1:8000/storage/" + imagePath
+                      : `http://127.0.0.1:8000/storage/${imagePath}`
                     : null;
 
                   return (
@@ -312,14 +314,12 @@ export default function OrderDetail() {
                             alt={
                               item.product?.images?.[0]?.alt ||
                               item.product?.name ||
+                              item.product_name ||
                               "محصول"
                             }
                             className="w-full h-full object-cover"
                             onError={(event) => {
-                              console.error(
-                                "IMAGE LOAD ERROR:",
-                                imageUrl
-                              );
+                              console.error("IMAGE LOAD ERROR:", imageUrl);
 
                               event.currentTarget.style.display = "none";
                             }}
@@ -333,7 +333,7 @@ export default function OrderDetail() {
 
                       <div className="flex-1 min-w-0">
                         <h3 className="font-semibold text-gray-900 truncate">
-                          {item.product?.name || "محصول"}
+                          {item.product?.name || item.product_name || "محصول"}
                         </h3>
 
                         <p className="text-sm text-gray-500 mt-1">
@@ -341,12 +341,12 @@ export default function OrderDetail() {
                         </p>
 
                         <p className="text-sm text-gray-500">
-                          قیمت واحد: {formatPrice(item.price)}
+                          قیمت واحد: {formatPrice(item.unit_price)}
                         </p>
                       </div>
 
                       <div className="font-bold text-gray-900 whitespace-nowrap">
-                        {formatPrice(item.subtotal)}
+                        {formatPrice(item.total_price)}
                       </div>
                     </div>
                   );
@@ -360,11 +360,8 @@ export default function OrderDetail() {
               </h2>
 
               <div className="space-y-4 text-sm">
-
                 <div className="flex justify-between">
-                  <span className="text-gray-500">
-                    مبلغ کالاها
-                  </span>
+                  <span className="text-gray-500">مبلغ کالاها</span>
 
                   <span className="font-medium">
                     {formatPrice(order.subtotal)}
@@ -372,9 +369,7 @@ export default function OrderDetail() {
                 </div>
 
                 <div className="flex justify-between">
-                  <span className="text-gray-500">
-                    هزینه ارسال
-                  </span>
+                  <span className="text-gray-500">هزینه ارسال</span>
 
                   <span className="font-medium">
                     {formatPrice(order.shipping_cost)}
@@ -385,25 +380,19 @@ export default function OrderDetail() {
                   <div className="flex justify-between text-green-600">
                     <span>تخفیف</span>
 
-                    <span>
-                      - {formatPrice(order.discount)}
-                    </span>
+                    <span>- {formatPrice(order.discount)}</span>
                   </div>
                 )}
 
                 <div className="border-t border-gray-100 pt-4 flex justify-between items-center">
-                  <span className="font-bold text-gray-900">
-                    مبلغ نهایی
-                  </span>
+                  <span className="font-bold text-gray-900">مبلغ نهایی</span>
 
                   <span className="text-xl font-bold text-blue-600">
                     {formatPrice(order.total)}
                   </span>
                 </div>
-
               </div>
             </div>
-
           </div>
 
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mt-6">
@@ -412,11 +401,8 @@ export default function OrderDetail() {
             </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-
               <div>
-                <p className="text-sm text-gray-500 mb-1">
-                  نام گیرنده
-                </p>
+                <p className="text-sm text-gray-500 mb-1">نام گیرنده</p>
 
                 <p className="font-medium text-gray-900">
                   {order.recipient_name}
@@ -424,20 +410,14 @@ export default function OrderDetail() {
               </div>
 
               <div>
-                <p className="text-sm text-gray-500 mb-1">
-                  شماره تماس
-                </p>
+                <p className="text-sm text-gray-500 mb-1">شماره تماس</p>
 
-                <p className="font-medium text-gray-900">
-                  {order.phone}
-                </p>
+                <p className="font-medium text-gray-900">{order.phone}</p>
               </div>
 
               {order.postal_code && (
                 <div>
-                  <p className="text-sm text-gray-500 mb-1">
-                    کد پستی
-                  </p>
+                  <p className="text-sm text-gray-500 mb-1">کد پستی</p>
 
                   <p className="font-medium text-gray-900">
                     {order.postal_code}
@@ -446,9 +426,7 @@ export default function OrderDetail() {
               )}
 
               <div className="md:col-span-2">
-                <p className="text-sm text-gray-500 mb-1">
-                  آدرس
-                </p>
+                <p className="text-sm text-gray-500 mb-1">آدرس</p>
 
                 <p className="font-medium text-gray-900 leading-7">
                   {order.address}
@@ -457,21 +435,17 @@ export default function OrderDetail() {
 
               {order.notes && (
                 <div className="md:col-span-2">
-                  <p className="text-sm text-gray-500 mb-1">
-                    توضیحات سفارش
-                  </p>
+                  <p className="text-sm text-gray-500 mb-1">توضیحات سفارش</p>
 
                   <p className="font-medium text-gray-900 leading-7">
                     {order.notes}
                   </p>
                 </div>
               )}
-
             </div>
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3 mt-6">
-
             <Link
               to="/account"
               className="flex-1 inline-flex items-center justify-center gap-2 bg-white border border-gray-200 text-gray-700 font-medium py-3 rounded-xl hover:bg-gray-50 transition"
@@ -486,9 +460,7 @@ export default function OrderDetail() {
             >
               ادامه خرید
             </Link>
-
           </div>
-
         </div>
       </div>
     </Layout>
