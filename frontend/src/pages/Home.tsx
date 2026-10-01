@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
+
 import { Link } from "react-router-dom";
+
 import {
   ArrowLeft,
   ShieldCheck,
@@ -10,6 +12,7 @@ import {
 
 import Layout from "../components/Layout";
 import { api } from "../services/api";
+import { calculateProductPrice } from "../utils/price";
 
 interface ProductImage {
   id: number;
@@ -32,20 +35,15 @@ interface Product {
   images?: ProductImage[];
 }
 
-function ProductImageBox({
-  product,
-}: {
-  product: Product;
-}) {
+function ProductImageBox({ product }: { product: Product }) {
   const primaryImage =
-    product.images?.find((image) => image.is_primary) ??
-    product.images?.[0];
+    product.images?.find((image) => image.is_primary) ?? product.images?.[0];
 
   const imageUrl = primaryImage
     ? `http://127.0.0.1:8000/storage/${primaryImage.path}`
     : product.thumbnail
-    ? product.thumbnail
-    : null;
+      ? product.thumbnail
+      : null;
 
   if (!imageUrl) {
     return (
@@ -93,32 +91,14 @@ function ProductImageBox({
   );
 }
 
-function ProductPrice({
-  product,
-}: {
-  product: Product;
-}) {
-  const originalPrice = Number(product.price);
-
-  const discountPercent = Math.min(
-    Math.max(
-      Number(product.discount_percent ?? 0),
-      0
-    ),
-    100
-  );
-
-  const discountAmount =
-    Math.round(
-      (originalPrice * discountPercent) / 100
-    );
-
-  const finalPrice =
-    originalPrice - discountAmount;
-
-  const hasDiscount =
-    discountPercent > 0 &&
-    discountAmount > 0;
+function ProductPrice({ product }: { product: Product }) {
+  const {
+    originalPrice,
+    discountPercent,
+    discountAmount,
+    finalPrice,
+    hasDiscount,
+  } = calculateProductPrice(product.price, product.discount_percent);
 
   return (
     <div className="mt-5">
@@ -139,8 +119,7 @@ function ProductPrice({
           </div>
 
           <div className="text-green-600 text-xs font-medium mt-1">
-            صرفه‌جویی{" "}
-            {discountAmount.toLocaleString("fa-IR")} تومان
+            صرفه‌جویی {discountAmount.toLocaleString("fa-IR")} تومان
           </div>
         </>
       ) : (
@@ -150,12 +129,9 @@ function ProductPrice({
           </div>
 
           {product.compare_price &&
-            Number(product.compare_price) >
-              originalPrice && (
+            Number(product.compare_price) > originalPrice && (
               <div className="text-gray-400 text-sm line-through mt-1">
-                {Number(
-                  product.compare_price
-                ).toLocaleString("fa-IR")} تومان
+                {Number(product.compare_price).toLocaleString("fa-IR")} تومان
               </div>
             )}
         </>
@@ -164,11 +140,7 @@ function ProductPrice({
   );
 }
 
-function ProductCardHome({
-  product,
-}: {
-  product: Product;
-}) {
+function ProductCardHome({ product }: { product: Product }) {
   return (
     <div
       className="
@@ -182,9 +154,7 @@ function ProductCardHome({
     >
       <ProductImageBox product={product} />
 
-      <h3 className="font-bold text-lg leading-7">
-        {product.name}
-      </h3>
+      <h3 className="font-bold text-lg leading-7">{product.name}</h3>
 
       {product.short_description && (
         <p className="text-gray-500 mt-3 text-sm leading-6">
@@ -216,17 +186,13 @@ function ProductCardHome({
 }
 
 function Home() {
-  const [featuredProducts, setFeaturedProducts] =
-    useState<Product[]>([]);
+  const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
 
-  const [newestProducts, setNewestProducts] =
-    useState<Product[]>([]);
+  const [newestProducts, setNewestProducts] = useState<Product[]>([]);
 
-  const [featuredError, setFeaturedError] =
-    useState("");
+  const [featuredError, setFeaturedError] = useState("");
 
-  const [newestError, setNewestError] =
-    useState("");
+  const [newestError, setNewestError] = useState("");
 
   useEffect(() => {
     setFeaturedError("");
@@ -234,35 +200,22 @@ function Home() {
     api
       .get("/products/featured")
       .then((response) => {
-        console.log(
-          "FEATURED RESPONSE:",
-          response
-        );
+        console.log("FEATURED RESPONSE:", response);
 
-        console.log(
-          "FEATURED DATA:",
-          response.data
-        );
+        console.log("FEATURED DATA:", response.data);
 
-        const result =
-          response.data?.data ??
-          response.data;
+        const result = response.data?.data ?? response.data;
 
         if (Array.isArray(result)) {
           setFeaturedProducts(result);
         } else {
           setFeaturedProducts([]);
 
-          setFeaturedError(
-            "پاسخ محصولات ویژه آرایه نیست."
-          );
+          setFeaturedError("پاسخ محصولات ویژه آرایه نیست.");
         }
       })
       .catch((error) => {
-        console.error(
-          "FEATURED API ERROR:",
-          error
-        );
+        console.error("FEATURED API ERROR:", error);
 
         setFeaturedProducts([]);
 
@@ -271,8 +224,7 @@ function Home() {
             (error?.response?.status
               ? `HTTP ${error.response.status} - `
               : "") +
-            (error?.message ||
-              "خطای نامشخص")
+            (error?.message || "خطای نامشخص"),
         );
       });
   }, []);
@@ -283,35 +235,22 @@ function Home() {
     api
       .get("/products/newest")
       .then((response) => {
-        console.log(
-          "NEWEST RESPONSE:",
-          response
-        );
+        console.log("NEWEST RESPONSE:", response);
 
-        console.log(
-          "NEWEST DATA:",
-          response.data
-        );
+        console.log("NEWEST DATA:", response.data);
 
-        const result =
-          response.data?.data ??
-          response.data;
+        const result = response.data?.data ?? response.data;
 
         if (Array.isArray(result)) {
           setNewestProducts(result);
         } else {
           setNewestProducts([]);
 
-          setNewestError(
-            "پاسخ جدیدترین محصولات آرایه نیست."
-          );
+          setNewestError("پاسخ جدیدترین محصولات آرایه نیست.");
         }
       })
       .catch((error) => {
-        console.error(
-          "NEWEST API ERROR:",
-          error
-        );
+        console.error("NEWEST API ERROR:", error);
 
         setNewestProducts([]);
 
@@ -320,8 +259,7 @@ function Home() {
             (error?.response?.status
               ? `HTTP ${error.response.status} - `
               : "") +
-            (error?.message ||
-              "خطای نامشخص")
+            (error?.message || "خطای نامشخص"),
         );
       });
   }, []);
@@ -341,8 +279,8 @@ function Home() {
             </h1>
 
             <p className="mt-6 text-lg text-blue-100 leading-8">
-              خرید آسان و مطمئن انواع تجهیزات پزشکی،
-              محصولات سلامت، بهداشت و مراقبت شخصی
+              خرید آسان و مطمئن انواع تجهیزات پزشکی، محصولات سلامت، بهداشت و
+              مراقبت شخصی
             </p>
 
             <div className="flex flex-wrap gap-4 mt-8">
@@ -399,9 +337,7 @@ function Home() {
               </div>
 
               <div>
-                <h3 className="font-bold">
-                  ارسال سریع
-                </h3>
+                <h3 className="font-bold">ارسال سریع</h3>
 
                 <p className="text-sm text-gray-500 mt-1">
                   ارسال سریع سفارش‌ها
@@ -415,9 +351,7 @@ function Home() {
               </div>
 
               <div>
-                <h3 className="font-bold">
-                  تضمین اصالت
-                </h3>
+                <h3 className="font-bold">تضمین اصالت</h3>
 
                 <p className="text-sm text-gray-500 mt-1">
                   محصولات معتبر و اصل
@@ -431,9 +365,7 @@ function Home() {
               </div>
 
               <div>
-                <h3 className="font-bold">
-                  پشتیبانی
-                </h3>
+                <h3 className="font-bold">پشتیبانی</h3>
 
                 <p className="text-sm text-gray-500 mt-1">
                   پاسخگویی و پشتیبانی
@@ -447,13 +379,9 @@ function Home() {
               </div>
 
               <div>
-                <h3 className="font-bold">
-                  ضمانت بازگشت
-                </h3>
+                <h3 className="font-bold">ضمانت بازگشت</h3>
 
-                <p className="text-sm text-gray-500 mt-1">
-                  خرید با خیال راحت
-                </p>
+                <p className="text-sm text-gray-500 mt-1">خرید با خیال راحت</p>
               </div>
             </div>
           </div>
@@ -464,9 +392,7 @@ function Home() {
       <section className="py-12">
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex items-center justify-between mb-8">
-            <h2 className="text-2xl font-black">
-              دسته‌بندی محصولات
-            </h2>
+            <h2 className="text-2xl font-black">دسته‌بندی محصولات</h2>
 
             <Link
               to="/products"
@@ -496,9 +422,7 @@ function Home() {
                 transition
               "
             >
-              <h3 className="font-bold">
-                دارو و محصولات دارویی
-              </h3>
+              <h3 className="font-bold">دارو و محصولات دارویی</h3>
 
               <p className="text-sm text-gray-500 mt-2">
                 محصولات دارویی و سلامت
@@ -517,9 +441,7 @@ function Home() {
                 transition
               "
             >
-              <h3 className="font-bold">
-                تجهیزات پزشکی
-              </h3>
+              <h3 className="font-bold">تجهیزات پزشکی</h3>
 
               <p className="text-sm text-gray-500 mt-2">
                 تجهیزات و ابزار پزشکی
@@ -538,13 +460,9 @@ function Home() {
                 transition
               "
             >
-              <h3 className="font-bold">
-                بهداشت و مراقبت شخصی
-              </h3>
+              <h3 className="font-bold">بهداشت و مراقبت شخصی</h3>
 
-              <p className="text-sm text-gray-500 mt-2">
-                محصولات مراقبت شخصی
-              </p>
+              <p className="text-sm text-gray-500 mt-2">محصولات مراقبت شخصی</p>
             </Link>
 
             <Link
@@ -559,13 +477,9 @@ function Home() {
                 transition
               "
             >
-              <h3 className="font-bold">
-                مکمل‌ها
-              </h3>
+              <h3 className="font-bold">مکمل‌ها</h3>
 
-              <p className="text-sm text-gray-500 mt-2">
-                ویتامین و مکمل غذایی
-              </p>
+              <p className="text-sm text-gray-500 mt-2">ویتامین و مکمل غذایی</p>
             </Link>
 
             <Link
@@ -580,13 +494,9 @@ function Home() {
                 transition
               "
             >
-              <h3 className="font-bold">
-                مادر و کودک
-              </h3>
+              <h3 className="font-bold">مادر و کودک</h3>
 
-              <p className="text-sm text-gray-500 mt-2">
-                محصولات مادر و کودک
-              </p>
+              <p className="text-sm text-gray-500 mt-2">محصولات مادر و کودک</p>
             </Link>
           </div>
         </div>
@@ -596,9 +506,7 @@ function Home() {
       <section className="bg-white py-12">
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex items-center justify-between mb-8">
-            <h2 className="text-2xl font-black">
-              محصولات ویژه
-            </h2>
+            <h2 className="text-2xl font-black">محصولات ویژه</h2>
 
             <Link
               to="/products"
@@ -617,10 +525,7 @@ function Home() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {featuredProducts.map((product) => (
-              <ProductCardHome
-                key={product.id}
-                product={product}
-              />
+              <ProductCardHome key={product.id} product={product} />
             ))}
 
             {featuredProducts.length === 0 && (
@@ -631,9 +536,7 @@ function Home() {
                       خطا در دریافت محصولات ویژه
                     </div>
 
-                    <div className="text-sm">
-                      {featuredError}
-                    </div>
+                    <div className="text-sm">{featuredError}</div>
                   </div>
                 ) : (
                   <div className="text-gray-500">
@@ -650,9 +553,7 @@ function Home() {
       <section className="py-12">
         <div className="max-w-7xl mx-auto px-6">
           <div className="flex items-center justify-between mb-8">
-            <h2 className="text-2xl font-black">
-              جدیدترین محصولات
-            </h2>
+            <h2 className="text-2xl font-black">جدیدترین محصولات</h2>
 
             <Link
               to="/products"
@@ -671,10 +572,7 @@ function Home() {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {newestProducts.map((product) => (
-              <ProductCardHome
-                key={product.id}
-                product={product}
-              />
+              <ProductCardHome key={product.id} product={product} />
             ))}
 
             {newestProducts.length === 0 && (
@@ -685,9 +583,7 @@ function Home() {
                       خطا در دریافت جدیدترین محصولات
                     </div>
 
-                    <div className="text-sm">
-                      {newestError}
-                    </div>
+                    <div className="text-sm">{newestError}</div>
                   </div>
                 ) : (
                   <div className="text-gray-500">
@@ -725,8 +621,7 @@ function Home() {
               </h2>
 
               <p className="text-gray-600 mt-3">
-                مجموعه‌ای از محصولات پزشکی، سلامت و بهداشت
-                در آرسن شاپ
+                مجموعه‌ای از محصولات پزشکی، سلامت و بهداشت در آرسن شاپ
               </p>
             </div>
 

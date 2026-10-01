@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { ShoppingCart } from "lucide-react";
 
 import { useCart } from "../context/CartContext";
+import { calculateProductPrice } from "../utils/price";
 
 interface ProductImage {
   id: number;
@@ -31,36 +32,20 @@ function ProductCard({ product }: Props) {
   const { addToCart } = useCart();
 
   const primaryImage =
-    product.images?.find(
-      (image) => image.is_primary
-    ) ??
-    product.images?.[0];
+    product.images?.find((image) => image.is_primary) ?? product.images?.[0];
 
   const imageUrl = primaryImage
     ? `http://127.0.0.1:8000/storage/${primaryImage.path}`
     : product.thumbnail
-    ? product.thumbnail
-    : null;
+      ? product.thumbnail
+      : null;
 
-  const price = Number(product.price);
-
-  const discountPercent = Math.min(
-    Math.max(
-      Number(product.discount_percent ?? 0),
-      0
-    ),
-    100
-  );
-
-  const discountAmount =
-    discountPercent > 0
-      ? Math.round(
-          (price * discountPercent) / 100
-        )
-      : 0;
-
-  const finalPrice =
-    price - discountAmount;
+  const {
+    originalPrice: price,
+    discountPercent,
+    finalPrice,
+    hasDiscount,
+  } = calculateProductPrice(product.price, product.discount_percent);
 
   const handleAddToCart = () => {
     if (product.stock <= 0) {
@@ -71,16 +56,9 @@ function ProductCard({ product }: Props) {
       id: product.id,
       name: product.name,
       slug: product.slug || "",
-
-      // قیمت نهایی بعد از تخفیف
       price: finalPrice,
-
-      // قیمت اصلی قبل از تخفیف
       originalPrice: price,
-
-      // درصد تخفیف
       discountPercent: discountPercent,
-
       thumbnail: imageUrl,
       stock: product.stock,
     });
@@ -101,9 +79,7 @@ function ProductCard({ product }: Props) {
     >
       <Link
         to={
-          product.slug
-            ? `/product/${product.slug}`
-            : `/products/${product.id}`
+          product.slug ? `/product/${product.slug}` : `/products/${product.id}`
         }
         className="block"
       >
@@ -121,10 +97,7 @@ function ProductCard({ product }: Props) {
           {imageUrl ? (
             <img
               src={imageUrl}
-              alt={
-                primaryImage?.alt ||
-                product.name
-              }
+              alt={primaryImage?.alt || product.name}
               className="
                 w-full
                 h-full
@@ -136,12 +109,10 @@ function ProductCard({ product }: Props) {
               "
             />
           ) : (
-            <span className="text-slate-400 text-sm">
-              تصویر محصول
-            </span>
+            <span className="text-slate-400 text-sm">تصویر محصول</span>
           )}
 
-          {discountPercent > 0 && (
+          {hasDiscount && (
             <span
               className="
                 absolute
@@ -201,7 +172,7 @@ function ProductCard({ product }: Props) {
         )}
 
         <div className="mt-4">
-          {discountPercent > 0 ? (
+          {hasDiscount ? (
             <>
               <div className="text-slate-400 text-sm line-through">
                 {price.toLocaleString("fa-IR")} تومان
@@ -229,14 +200,10 @@ function ProductCard({ product }: Props) {
         >
           <span
             className={`text-xs font-bold ${
-              product.stock > 0
-                ? "text-emerald-600"
-                : "text-red-500"
+              product.stock > 0 ? "text-emerald-600" : "text-red-500"
             }`}
           >
-            {product.stock > 0
-              ? "موجود در انبار"
-              : "ناموجود"}
+            {product.stock > 0 ? "موجود در انبار" : "ناموجود"}
           </span>
 
           <button
@@ -263,9 +230,7 @@ function ProductCard({ product }: Props) {
           >
             <ShoppingCart size={18} />
 
-            {product.stock > 0
-              ? "افزودن به سبد"
-              : "ناموجود"}
+            {product.stock > 0 ? "افزودن به سبد" : "ناموجود"}
           </button>
         </div>
       </div>

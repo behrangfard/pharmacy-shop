@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
+
 import { Link, useParams } from "react-router-dom";
+
 import {
   ArrowRight,
   ShoppingCart,
@@ -12,6 +14,7 @@ import {
 import Layout from "../components/Layout";
 import api from "../services/api";
 import { useCart } from "../context/CartContext";
+import { calculateProductPrice } from "../utils/price";
 
 interface ProductImage {
   id: number;
@@ -45,42 +48,33 @@ interface Product {
   thumbnail?: string | null;
   short_description?: string | null;
   description?: string | null;
-
   category?: {
     id: number;
     name: string;
     slug: string;
   } | null;
-
   brand?: {
     id: number;
     name: string;
     slug: string;
   } | null;
-
   images?: ProductImage[];
   variants?: ProductVariant[];
 }
 
 function ProductDetail() {
   const { slug } = useParams();
-
   const { addToCart } = useCart();
 
-  const [product, setProduct] =
-    useState<Product | null>(null);
+  const [product, setProduct] = useState<Product | null>(null);
 
-  const [loading, setLoading] =
-    useState(true);
+  const [loading, setLoading] = useState(true);
 
-  const [error, setError] =
-    useState("");
+  const [error, setError] = useState("");
 
-  const [quantity, setQuantity] =
-    useState(1);
+  const [quantity, setQuantity] = useState(1);
 
-  const [selectedImageIndex, setSelectedImageIndex] =
-    useState(0);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
 
   useEffect(() => {
     if (!slug) {
@@ -95,21 +89,15 @@ function ProductDetail() {
     api
       .get(`/products/${slug}`)
       .then((response) => {
-        const productData =
-          response.data.data;
+        const productData = response.data.data;
 
         setProduct(productData);
         setSelectedImageIndex(0);
       })
       .catch((error) => {
-        console.error(
-          "Product detail error:",
-          error
-        );
+        console.error("Product detail error:", error);
 
-        setError(
-          "دریافت اطلاعات محصول با مشکل مواجه شد."
-        );
+        setError("دریافت اطلاعات محصول با مشکل مواجه شد.");
       })
       .finally(() => {
         setLoading(false);
@@ -161,55 +149,34 @@ function ProductDetail() {
     );
   }
 
-  const originalPrice =
-    Number(product.price);
+  const {
+    originalPrice,
+    discountPercent,
+    discountAmount,
+    finalPrice,
+    hasDiscount,
+  } = calculateProductPrice(product.price, product.discount_percent);
 
-  const discountPercent = Math.min(
-    Math.max(
-      Number(product.discount_percent ?? 0),
-      0
-    ),
-    100
-  );
-
-  const discountAmount =
-    Math.round(
-      (originalPrice * discountPercent) /
-        100
-    );
-
-  const finalPrice =
-    originalPrice - discountAmount;
-
-  const hasDiscount =
-    discountPercent > 0 &&
-    discountAmount > 0;
-
-  const sortedImages = [
-    ...(product.images || []),
-  ].sort(
-    (a, b) =>
-      a.sort_order - b.sort_order
+  const sortedImages = [...(product.images || [])].sort(
+    (a, b) => a.sort_order - b.sort_order,
   );
 
   const galleryImages =
     sortedImages.length > 0
       ? sortedImages
       : product.thumbnail
-      ? [
-          {
-            id: 0,
-            path: product.thumbnail,
-            alt: product.name,
-            sort_order: 0,
-            is_primary: true,
-          },
-        ]
-      : [];
+        ? [
+            {
+              id: 0,
+              path: product.thumbnail,
+              alt: product.name,
+              sort_order: 0,
+              is_primary: true,
+            },
+          ]
+        : [];
 
-  const selectedImage =
-    galleryImages[selectedImageIndex] ||
-    galleryImages[0];
+  const selectedImage = galleryImages[selectedImageIndex] || galleryImages[0];
 
   const imageUrl = selectedImage
     ? selectedImage.path.startsWith("http")
@@ -223,9 +190,7 @@ function ProductDetail() {
     }
 
     setSelectedImageIndex((current) =>
-      current === 0
-        ? galleryImages.length - 1
-        : current - 1
+      current === 0 ? galleryImages.length - 1 : current - 1,
     );
   };
 
@@ -235,9 +200,7 @@ function ProductDetail() {
     }
 
     setSelectedImageIndex((current) =>
-      current === galleryImages.length - 1
-        ? 0
-        : current + 1
+      current === galleryImages.length - 1 ? 0 : current + 1,
     );
   };
 
@@ -250,29 +213,14 @@ function ProductDetail() {
       id: product.id,
       name: product.name,
       slug: product.slug,
-
-      // قیمت نهایی بعد از تخفیف
       price: finalPrice,
-
-      // قیمت قبل از تخفیف
       originalPrice: originalPrice,
-
-      // درصد تخفیف
       discountPercent: discountPercent,
-
-      thumbnail:
-        imageUrl || undefined,
-
+      thumbnail: imageUrl || undefined,
       stock: product.stock,
     });
 
-    // چون addToCart یک عدد به تعداد اضافه می‌کند،
-    // برای تعداد بیشتر از یک، باقی موارد را اضافه می‌کنیم.
-    for (
-      let index = 1;
-      index < quantity;
-      index++
-    ) {
+    for (let index = 1; index < quantity; index++) {
       addToCart({
         id: product.id,
         name: product.name,
@@ -280,8 +228,7 @@ function ProductDetail() {
         price: finalPrice,
         originalPrice: originalPrice,
         discountPercent: discountPercent,
-        thumbnail:
-          imageUrl || undefined,
+        thumbnail: imageUrl || undefined,
         stock: product.stock,
       });
     }
@@ -342,10 +289,7 @@ function ProductDetail() {
                 {imageUrl ? (
                   <img
                     src={imageUrl}
-                    alt={
-                      selectedImage?.alt ||
-                      product.name
-                    }
+                    alt={selectedImage?.alt || product.name}
                     className="
                       max-w-full
                       max-h-[420px]
@@ -355,9 +299,7 @@ function ProductDetail() {
                     "
                   />
                 ) : (
-                  <div className="text-slate-400">
-                    تصویر محصول
-                  </div>
+                  <div className="text-slate-400">تصویر محصول</div>
                 )}
 
                 {hasDiscount && (
@@ -382,9 +324,7 @@ function ProductDetail() {
                   <>
                     <button
                       type="button"
-                      onClick={
-                        handlePreviousImage
-                      }
+                      onClick={handlePreviousImage}
                       className="
                         absolute
                         right-4
@@ -405,16 +345,12 @@ function ProductDetail() {
                       "
                       aria-label="تصویر قبلی"
                     >
-                      <ChevronRight
-                        size={21}
-                      />
+                      <ChevronRight size={21} />
                     </button>
 
                     <button
                       type="button"
-                      onClick={
-                        handleNextImage
-                      }
+                      onClick={handleNextImage}
                       className="
                         absolute
                         left-4
@@ -435,9 +371,7 @@ function ProductDetail() {
                       "
                       aria-label="تصویر بعدی"
                     >
-                      <ChevronLeft
-                        size={21}
-                      />
+                      <ChevronLeft size={21} />
                     </button>
                   </>
                 )}
@@ -445,28 +379,17 @@ function ProductDetail() {
 
               {galleryImages.length > 0 && (
                 <div className="mt-4 flex gap-3 overflow-x-auto pb-2">
-                  {galleryImages.map(
-                    (image, index) => {
-                      const thumbnailUrl =
-                        image.path.startsWith(
-                          "http"
-                        )
-                          ? image.path
-                          : `http://127.0.0.1:8000/storage/${image.path}`;
+                  {galleryImages.map((image, index) => {
+                    const thumbnailUrl = image.path.startsWith("http")
+                      ? image.path
+                      : `http://127.0.0.1:8000/storage/${image.path}`;
 
-                      return (
-                        <button
-                          key={
-                            image.id ||
-                            index
-                          }
-                          type="button"
-                          onClick={() =>
-                            setSelectedImageIndex(
-                              index
-                            )
-                          }
-                          className={`
+                    return (
+                      <button
+                        key={image.id || index}
+                        type="button"
+                        onClick={() => setSelectedImageIndex(index)}
+                        className={`
                             shrink-0
                             w-20
                             h-20
@@ -476,45 +399,32 @@ function ProductDetail() {
                             overflow-hidden
                             transition
                             ${
-                              selectedImageIndex ===
-                              index
+                              selectedImageIndex === index
                                 ? "border-blue-600 ring-2 ring-blue-100"
                                 : "border-slate-200 hover:border-blue-300"
                             }
                           `}
-                        >
-                          <img
-                            src={
-                              thumbnailUrl
-                            }
-                            alt={
-                              image.alt ||
-                              product.name
-                            }
-                            className="
+                      >
+                        <img
+                          src={thumbnailUrl}
+                          alt={image.alt || product.name}
+                          className="
                               w-full
                               h-full
                               object-contain
                               p-2
                             "
-                          />
-                        </button>
-                      );
-                    }
-                  )}
+                        />
+                      </button>
+                    );
+                  })}
                 </div>
               )}
 
               {galleryImages.length > 1 && (
                 <div className="text-center text-xs text-slate-400 mt-2">
-                  {(
-                    selectedImageIndex + 1
-                  ).toLocaleString("fa-IR")}{" "}
-                  از{" "}
-                  {galleryImages.length.toLocaleString(
-                    "fa-IR"
-                  )}{" "}
-                  تصویر
+                  {(selectedImageIndex + 1).toLocaleString("fa-IR")} از{" "}
+                  {galleryImages.length.toLocaleString("fa-IR")} تصویر
                 </div>
               )}
             </div>
@@ -595,34 +505,21 @@ function ProductDetail() {
                           line-through
                         "
                       >
-                        {originalPrice.toLocaleString(
-                          "fa-IR"
-                        )}{" "}
-                        تومان
+                        {originalPrice.toLocaleString("fa-IR")} تومان
                       </span>
                     </div>
 
                     <div className="text-3xl font-black text-blue-600">
-                      {finalPrice.toLocaleString(
-                        "fa-IR"
-                      )}{" "}
-                      تومان
+                      {finalPrice.toLocaleString("fa-IR")} تومان
                     </div>
 
                     <div className="text-green-600 text-sm font-medium mt-2">
-                      صرفه‌جویی{" "}
-                      {discountAmount.toLocaleString(
-                        "fa-IR"
-                      )}{" "}
-                      تومان
+                      صرفه‌جویی {discountAmount.toLocaleString("fa-IR")} تومان
                     </div>
                   </div>
                 ) : (
                   <div className="text-3xl font-black text-blue-600">
-                    {originalPrice.toLocaleString(
-                      "fa-IR"
-                    )}{" "}
-                    تومان
+                    {originalPrice.toLocaleString("fa-IR")} تومان
                   </div>
                 )}
               </div>
@@ -647,21 +544,14 @@ function ProductDetail() {
                     p-4
                   "
                 >
-                  <Package
-                    size={21}
-                    className="text-blue-600"
-                  />
+                  <Package size={21} className="text-blue-600" />
 
                   <div>
-                    <div className="text-xs text-slate-400">
-                      وضعیت موجودی
-                    </div>
+                    <div className="text-xs text-slate-400">وضعیت موجودی</div>
 
                     <div className="font-bold text-slate-700 mt-1">
                       {product.stock > 0
-                        ? `${product.stock.toLocaleString(
-                            "fa-IR"
-                          )} عدد موجود`
+                        ? `${product.stock.toLocaleString("fa-IR")} عدد موجود`
                         : "ناموجود"}
                     </div>
                   </div>
@@ -677,15 +567,10 @@ function ProductDetail() {
                     p-4
                   "
                 >
-                  <CheckCircle2
-                    size={21}
-                    className="text-green-600"
-                  />
+                  <CheckCircle2 size={21} className="text-green-600" />
 
                   <div>
-                    <div className="text-xs text-slate-400">
-                      وضعیت محصول
-                    </div>
+                    <div className="text-xs text-slate-400">وضعیت محصول</div>
 
                     <div className="font-bold text-slate-700 mt-1">
                       محصول فعال
@@ -710,14 +595,7 @@ function ProductDetail() {
                     >
                       <button
                         type="button"
-                        onClick={() =>
-                          setQuantity(
-                            Math.max(
-                              1,
-                              quantity - 1
-                            )
-                          )
-                        }
+                        onClick={() => setQuantity(Math.max(1, quantity - 1))}
                         className="
                           w-11
                           h-11
@@ -738,20 +616,13 @@ function ProductDetail() {
                           font-bold
                         "
                       >
-                        {quantity.toLocaleString(
-                          "fa-IR"
-                        )}
+                        {quantity.toLocaleString("fa-IR")}
                       </div>
 
                       <button
                         type="button"
                         onClick={() =>
-                          setQuantity(
-                            Math.min(
-                              product.stock,
-                              quantity + 1
-                            )
-                          )
+                          setQuantity(Math.min(product.stock, quantity + 1))
                         }
                         className="
                           w-11
@@ -769,9 +640,7 @@ function ProductDetail() {
 
                     <button
                       type="button"
-                      onClick={
-                        handleAddToCart
-                      }
+                      onClick={handleAddToCart}
                       className="
                         flex-1
                         h-12
@@ -787,10 +656,7 @@ function ProductDetail() {
                         transition
                       "
                     >
-                      <ShoppingCart
-                        size={20}
-                      />
-
+                      <ShoppingCart size={20} />
                       افزودن به سبد خرید
                     </button>
                   </div>
@@ -816,9 +682,7 @@ function ProductDetail() {
               <div className="mt-8 pt-6 border-t border-slate-100">
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <span className="text-slate-400">
-                      کد محصول:
-                    </span>
+                    <span className="text-slate-400">کد محصول:</span>
 
                     <span className="font-bold text-slate-700 mr-2">
                       {product.sku}
@@ -827,9 +691,7 @@ function ProductDetail() {
 
                   {product.weight && (
                     <div>
-                      <span className="text-slate-400">
-                        وزن:
-                      </span>
+                      <span className="text-slate-400">وزن:</span>
 
                       <span className="font-bold text-slate-700 mr-2">
                         {product.weight}
