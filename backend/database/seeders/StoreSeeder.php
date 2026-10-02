@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\ProductImage;
 use Illuminate\Database\Seeder;
 
 class StoreSeeder extends Seeder
@@ -147,7 +148,7 @@ class StoreSeeder extends Seeder
         |--------------------------------------------------------------------------
         */
 
-        Product::create([
+        $abbottBloodPressure = Product::create([
             'category_id' => $medical->id,
             'brand_id' => $abbott->id,
             'name' => 'دستگاه فشار خون دیجیتال Abbott',
@@ -156,13 +157,21 @@ class StoreSeeder extends Seeder
             'short_description' => 'فشارسنج دیجیتال دقیق و کاربردی',
             'description' => 'دستگاه فشار خون دیجیتال مناسب استفاده خانگی و حرفه‌ای.',
             'price' => 2850000,
-            'compare_price' => 3200000,
+            'compare_price' => null,
             'discount_percent' => 20,
             'stock' => 18,
             'weight' => 0.650,
             'is_active' => true,
             'is_featured' => true,
             'is_new' => true,
+        ]);
+
+        ProductImage::create([
+            'product_id' => $abbottBloodPressure->id,
+            'path' => 'products/abbott-blood-pressure.jpg',
+            'alt' => 'دستگاه فشار خون دیجیتال Abbott',
+            'sort_order' => 1,
+            'is_primary' => true,
         ]);
 
         Product::create([
