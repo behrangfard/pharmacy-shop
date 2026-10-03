@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ShoppingCart } from "lucide-react";
+import { CheckCircle2, ShoppingCart } from "lucide-react";
 
 import { useCart } from "../context/CartContext";
 import { calculateProductPrice } from "../utils/price";
+import Button from "./Button";
 
 interface ProductImage {
   id: number;
@@ -31,6 +33,9 @@ interface Props {
 function ProductCard({ product }: Props) {
   const { addToCart } = useCart();
 
+  const [addingToCart, setAddingToCart] = useState(false);
+  const [addedToCart, setAddedToCart] = useState(false);
+
   const primaryImage =
     product.images?.find((image) => image.is_primary) ?? product.images?.[0];
 
@@ -48,9 +53,12 @@ function ProductCard({ product }: Props) {
   } = calculateProductPrice(product.price, product.discount_percent);
 
   const handleAddToCart = () => {
-    if (product.stock <= 0) {
+    if (product.stock <= 0 || addingToCart) {
       return;
     }
+
+    setAddingToCart(true);
+    setAddedToCart(false);
 
     addToCart({
       id: product.id,
@@ -62,19 +70,31 @@ function ProductCard({ product }: Props) {
       thumbnail: imageUrl,
       stock: product.stock,
     });
+
+    window.setTimeout(() => {
+      setAddingToCart(false);
+      setAddedToCart(true);
+    }, 350);
+
+    window.setTimeout(() => {
+      setAddedToCart(false);
+    }, 1600);
   };
 
   return (
     <div
       className="
+        group
         bg-white
         rounded-2xl
         shadow-sm
         border
         border-slate-100
         overflow-hidden
-        hover:shadow-lg
-        transition
+        transition-all
+        duration-300
+        hover:-translate-y-1
+        hover:shadow-xl
       "
     >
       <Link
@@ -103,9 +123,9 @@ function ProductCard({ product }: Props) {
                 h-full
                 object-contain
                 p-5
-                transition
-                duration-300
-                hover:scale-105
+                transition-transform
+                duration-500
+                group-hover:scale-110
               "
             />
           ) : (
@@ -125,6 +145,9 @@ function ProductCard({ product }: Props) {
                 px-3
                 py-1.5
                 rounded-full
+                transition-transform
+                duration-300
+                group-hover:scale-105
               "
             >
               {discountPercent}% تخفیف
@@ -149,8 +172,10 @@ function ProductCard({ product }: Props) {
               leading-7
               text-slate-900
               line-clamp-2
+              transition-all
+              duration-200
               hover:text-blue-600
-              transition
+              hover:translate-x-0.5
             "
           >
             {product.name}
@@ -178,12 +203,31 @@ function ProductCard({ product }: Props) {
                 {price.toLocaleString("fa-IR")} تومان
               </div>
 
-              <div className="text-blue-600 font-black text-lg mt-1">
+              <div
+                className="
+                  text-blue-600
+                  font-black
+                  text-lg
+                  mt-1
+                  transition-transform
+                  duration-200
+                  group-hover:translate-x-0.5
+                "
+              >
                 {finalPrice.toLocaleString("fa-IR")} تومان
               </div>
             </>
           ) : (
-            <div className="text-blue-600 font-black text-lg">
+            <div
+              className="
+                text-blue-600
+                font-black
+                text-lg
+                transition-transform
+                duration-200
+                group-hover:translate-x-0.5
+              "
+            >
               {price.toLocaleString("fa-IR")} تومان
             </div>
           )}
@@ -206,32 +250,27 @@ function ProductCard({ product }: Props) {
             {product.stock > 0 ? "موجود در انبار" : "ناموجود"}
           </span>
 
-          <button
+          <Button
             type="button"
-            disabled={product.stock <= 0}
             onClick={handleAddToCart}
-            className="
-              flex
-              items-center
-              justify-center
-              gap-2
-              rounded-xl
-              px-4
-              py-2.5
-              bg-blue-600
-              text-white
-              text-sm
-              font-bold
-              hover:bg-blue-700
-              transition
-              disabled:bg-slate-300
-              disabled:cursor-not-allowed
-            "
+            disabled={product.stock <= 0 || addingToCart}
+            loading={addingToCart}
+            variant={addedToCart ? "success" : "primary"}
+            size="sm"
+            icon={
+              addedToCart ? (
+                <CheckCircle2 size={18} />
+              ) : (
+                <ShoppingCart size={18} />
+              )
+            }
           >
-            <ShoppingCart size={18} />
-
-            {product.stock > 0 ? "افزودن به سبد" : "ناموجود"}
-          </button>
+            {product.stock <= 0
+              ? "ناموجود"
+              : addedToCart
+                ? "به سبد اضافه شد"
+                : "افزودن به سبد"}
+          </Button>
         </div>
       </div>
     </div>

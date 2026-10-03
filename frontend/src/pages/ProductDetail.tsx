@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
-
 import { Link, useParams } from "react-router-dom";
-
 import {
   ArrowRight,
   ShoppingCart,
@@ -12,6 +10,7 @@ import {
 } from "lucide-react";
 
 import Layout from "../components/Layout";
+import Button from "../components/Button";
 import api from "../services/api";
 import { useCart } from "../context/CartContext";
 import { calculateProductPrice } from "../utils/price";
@@ -48,33 +47,34 @@ interface Product {
   thumbnail?: string | null;
   short_description?: string | null;
   description?: string | null;
+
   category?: {
     id: number;
     name: string;
     slug: string;
   } | null;
+
   brand?: {
     id: number;
     name: string;
     slug: string;
   } | null;
+
   images?: ProductImage[];
   variants?: ProductVariant[];
 }
 
 function ProductDetail() {
-  const { slug } = useParams();
+  const { slug } = useParams<{ slug: string }>();
   const { addToCart } = useCart();
 
   const [product, setProduct] = useState<Product | null>(null);
-
   const [loading, setLoading] = useState(true);
-
   const [error, setError] = useState("");
-
   const [quantity, setQuantity] = useState(1);
-
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [addingToCart, setAddingToCart] = useState(false);
+  const [addedToCart, setAddedToCart] = useState(false);
 
   useEffect(() => {
     if (!slug) {
@@ -89,14 +89,20 @@ function ProductDetail() {
     api
       .get(`/products/${slug}`)
       .then((response) => {
-        const productData = response.data.data;
+        const productData = response.data?.data;
+
+        if (!productData) {
+          setError("محصول مورد نظر پیدا نشد.");
+          return;
+        }
 
         setProduct(productData);
         setSelectedImageIndex(0);
+        setQuantity(1);
+        setAddedToCart(false);
       })
       .catch((error) => {
         console.error("Product detail error:", error);
-
         setError("دریافت اطلاعات محصول با مشکل مواجه شد.");
       })
       .finally(() => {
@@ -178,11 +184,21 @@ function ProductDetail() {
 
   const selectedImage = galleryImages[selectedImageIndex] || galleryImages[0];
 
-  const imageUrl = selectedImage
-    ? selectedImage.path.startsWith("http")
-      ? selectedImage.path
-      : `http://127.0.0.1:8000/storage/${selectedImage.path}`
-    : null;
+  const getImageUrl = (path?: string | null) => {
+    if (!path) {
+      return null;
+    }
+
+    if (path.startsWith("http://") || path.startsWith("https://")) {
+      return path;
+    }
+
+    const cleanPath = path.replace(/^\/+/, "");
+
+    return `http://127.0.0.1:8000/storage/${cleanPath}`;
+  };
+
+  const imageUrl = getImageUrl(selectedImage?.path);
 
   const handlePreviousImage = () => {
     if (galleryImages.length <= 1) {
@@ -204,33 +220,48 @@ function ProductDetail() {
     );
   };
 
-  const handleAddToCart = () => {
-    if (product.stock <= 0) {
+  const handleAddToCart = async () => {
+    if (product.stock <= 0 || addingToCart) {
       return;
     }
 
-    addToCart({
-      id: product.id,
-      name: product.name,
-      slug: product.slug,
-      price: finalPrice,
-      originalPrice: originalPrice,
-      discountPercent: discountPercent,
-      thumbnail: imageUrl || undefined,
-      stock: product.stock,
-    });
+    setAddingToCart(true);
+    setAddedToCart(false);
 
-    for (let index = 1; index < quantity; index++) {
+    try {
       addToCart({
         id: product.id,
         name: product.name,
         slug: product.slug,
         price: finalPrice,
-        originalPrice: originalPrice,
-        discountPercent: discountPercent,
+        originalPrice,
+        discountPercent,
         thumbnail: imageUrl || undefined,
         stock: product.stock,
       });
+
+      for (let index = 1; index < quantity; index++) {
+        addToCart({
+          id: product.id,
+          name: product.name,
+          slug: product.slug,
+          price: finalPrice,
+          originalPrice,
+          discountPercent,
+          thumbnail: imageUrl || undefined,
+          stock: product.stock,
+        });
+      }
+
+      setAddedToCart(true);
+
+      window.setTimeout(() => {
+        setAddedToCart(false);
+      }, 1800);
+    } finally {
+      window.setTimeout(() => {
+        setAddingToCart(false);
+      }, 450);
     }
   };
 
@@ -264,13 +295,7 @@ function ProductDetail() {
             overflow-hidden
           "
         >
-          <div
-            className="
-              grid
-              grid-cols-1
-              lg:grid-cols-2
-            "
-          >
+          <div className="grid grid-cols-1 lg:grid-cols-2">
             {/* Images */}
             <div className="p-6 lg:p-8">
               <div
@@ -341,7 +366,9 @@ function ProductDetail() {
                         text-slate-700
                         hover:bg-blue-600
                         hover:text-white
-                        transition
+                        transition-all
+                        duration-200
+                        active:scale-90
                       "
                       aria-label="تصویر قبلی"
                     >
@@ -367,7 +394,9 @@ function ProductDetail() {
                         text-slate-700
                         hover:bg-blue-600
                         hover:text-white
-                        transition
+                        transition-all
+                        duration-200
+                        active:scale-90
                       "
                       aria-label="تصویر بعدی"
                     >
@@ -380,9 +409,7 @@ function ProductDetail() {
               {galleryImages.length > 0 && (
                 <div className="mt-4 flex gap-3 overflow-x-auto pb-2">
                   {galleryImages.map((image, index) => {
-                    const thumbnailUrl = image.path.startsWith("http")
-                      ? image.path
-                      : `http://127.0.0.1:8000/storage/${image.path}`;
+                    const thumbnailUrl = getImageUrl(image.path);
 
                     return (
                       <button
@@ -390,31 +417,38 @@ function ProductDetail() {
                         type="button"
                         onClick={() => setSelectedImageIndex(index)}
                         className={`
-                            shrink-0
-                            w-20
-                            h-20
-                            rounded-xl
-                            border-2
-                            bg-slate-50
-                            overflow-hidden
-                            transition
-                            ${
-                              selectedImageIndex === index
-                                ? "border-blue-600 ring-2 ring-blue-100"
-                                : "border-slate-200 hover:border-blue-300"
-                            }
-                          `}
+                          shrink-0
+                          w-20
+                          h-20
+                          rounded-xl
+                          border-2
+                          bg-slate-50
+                          overflow-hidden
+                          transition-all
+                          duration-200
+                          ${
+                            selectedImageIndex === index
+                              ? "border-blue-600 ring-2 ring-blue-100 scale-105"
+                              : "border-slate-200 hover:border-blue-300"
+                          }
+                        `}
                       >
-                        <img
-                          src={thumbnailUrl}
-                          alt={image.alt || product.name}
-                          className="
+                        {thumbnailUrl ? (
+                          <img
+                            src={thumbnailUrl}
+                            alt={image.alt || product.name}
+                            className="
                               w-full
                               h-full
                               object-contain
                               p-2
                             "
-                        />
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-slate-400">
+                            <Package size={22} />
+                          </div>
+                        )}
                       </button>
                     );
                   })}
@@ -443,6 +477,8 @@ function ProductDetail() {
                       py-1.5
                       rounded-lg
                       font-medium
+                      transition
+                      hover:bg-blue-100
                     "
                   >
                     {product.category.name}
@@ -591,6 +627,7 @@ function ProductDetail() {
                         border-slate-200
                         rounded-xl
                         overflow-hidden
+                        bg-white
                       "
                     >
                       <button
@@ -604,6 +641,9 @@ function ProductDetail() {
                           justify-center
                           text-lg
                           hover:bg-slate-50
+                          transition-all
+                          duration-150
+                          active:scale-90
                         "
                       >
                         −
@@ -614,6 +654,7 @@ function ProductDetail() {
                           w-12
                           text-center
                           font-bold
+                          select-none
                         "
                       >
                         {quantity.toLocaleString("fa-IR")}
@@ -632,33 +673,37 @@ function ProductDetail() {
                           justify-center
                           text-lg
                           hover:bg-slate-50
+                          transition-all
+                          duration-150
+                          active:scale-90
                         "
                       >
                         +
                       </button>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={handleAddToCart}
-                      className="
-                        flex-1
-                        h-12
-                        rounded-xl
-                        bg-blue-600
-                        text-white
-                        font-bold
-                        flex
-                        items-center
-                        justify-center
-                        gap-2
-                        hover:bg-blue-700
-                        transition
-                      "
-                    >
-                      <ShoppingCart size={20} />
-                      افزودن به سبد خرید
-                    </button>
+                    <div className="flex-1">
+                      <Button
+                        type="button"
+                        onClick={handleAddToCart}
+                        loading={addingToCart}
+                        disabled={addingToCart}
+                        variant={addedToCart ? "success" : "primary"}
+                        size="lg"
+                        fullWidth
+                        icon={
+                          addedToCart ? (
+                            <CheckCircle2 size={20} />
+                          ) : (
+                            <ShoppingCart size={20} />
+                          )
+                        }
+                      >
+                        {addedToCart
+                          ? "به سبد خرید اضافه شد"
+                          : "افزودن به سبد خرید"}
+                      </Button>
+                    </div>
                   </div>
                 </div>
               )}

@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
+
 import { Link, useNavigate, useParams } from "react-router-dom";
+
 import {
   ArrowRight,
   CheckCircle2,
@@ -9,6 +11,7 @@ import {
 } from "lucide-react";
 
 import Layout from "../components/Layout";
+import Button from "../components/Button";
 import api from "../services/api";
 import { useCart } from "../context/CartContext";
 
@@ -36,17 +39,10 @@ export default function Payment() {
   const navigate = useNavigate();
   const { clearCart } = useCart();
 
-  const [order, setOrder] =
-    useState<OrderData | null>(null);
-
-  const [loading, setLoading] =
-    useState(true);
-
-  const [paying, setPaying] =
-    useState(false);
-
-  const [error, setError] =
-    useState("");
+  const [order, setOrder] = useState<OrderData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [paying, setPaying] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -57,39 +53,24 @@ export default function Payment() {
       }
 
       try {
-        const response =
-          await api.get<OrderResponse>(
-            `/orders/${orderNumber}`
-          );
+        const response = await api.get<OrderResponse>(`/orders/${orderNumber}`);
 
-        if (
-          response.data?.success &&
-          response.data.data
-        ) {
+        if (response.data?.success && response.data.data) {
           setOrder(response.data.data);
         } else {
-          setError(
-            "اطلاعات سفارش پیدا نشد."
-          );
+          setError("اطلاعات سفارش پیدا نشد.");
         }
       } catch (err: any) {
-        if (
-          err?.response?.status === 401
-        ) {
+        if (err?.response?.status === 401) {
           navigate("/login");
           return;
         }
 
-        if (
-          err?.response?.status === 404
-        ) {
-          setError(
-            "سفارش موردنظر پیدا نشد."
-          );
+        if (err?.response?.status === 404) {
+          setError("سفارش موردنظر پیدا نشد.");
         } else {
           setError(
-            err?.response?.data?.message ||
-              "خطا در دریافت اطلاعات سفارش."
+            err?.response?.data?.message || "خطا در دریافت اطلاعات سفارش.",
           );
         }
       } finally {
@@ -106,40 +87,33 @@ export default function Payment() {
       return;
     }
 
+    if (paying) {
+      return;
+    }
+
     setPaying(true);
     setError("");
 
     try {
-      const response =
-        await api.post<OrderResponse>(
-          `/orders/${orderNumber}/pay`
-        );
+      const response = await api.post<OrderResponse>(
+        `/orders/${orderNumber}/pay`,
+      );
 
       if (!response.data?.success) {
-        setError(
-          response.data?.message ||
-            "پرداخت انجام نشد."
-        );
+        setError(response.data?.message || "پرداخت انجام نشد.");
         return;
       }
 
       clearCart();
 
-      navigate(
-        `/account/orders/${orderNumber}`
-      );
+      navigate(`/account/orders/${orderNumber}`);
     } catch (err: any) {
-      if (
-        err?.response?.status === 401
-      ) {
+      if (err?.response?.status === 401) {
         navigate("/login");
         return;
       }
 
-      setError(
-        err?.response?.data?.message ||
-          "خطایی هنگام پرداخت رخ داد."
-      );
+      setError(err?.response?.data?.message || "خطایی هنگام پرداخت رخ داد.");
     } finally {
       setPaying(false);
     }
@@ -148,13 +122,11 @@ export default function Payment() {
   if (loading) {
     return (
       <Layout>
-        <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="min-h-[60vh] flex items-center justify-center px-4">
           <div className="flex items-center gap-3 text-gray-600">
             <Loader2 className="w-6 h-6 animate-spin" />
 
-            <span>
-              در حال دریافت اطلاعات سفارش...
-            </span>
+            <span>در حال دریافت اطلاعات سفارش...</span>
           </div>
         </div>
       </Layout>
@@ -165,25 +137,24 @@ export default function Payment() {
     return (
       <Layout>
         <div className="min-h-[60vh] flex items-center justify-center px-4">
-          <div className="w-full max-w-md bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center">
-            <XCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-sm border border-gray-100 p-8 text-center transition-all duration-200 hover:shadow-md">
+            <div className="transition-transform duration-200 hover:scale-105">
+              <XCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+            </div>
 
-            <h1 className="text-xl font-bold text-gray-900 mb-3">
-              خطا
-            </h1>
+            <h1 className="text-xl font-bold text-gray-900 mb-3">خطا</h1>
 
-            <p className="text-gray-600 mb-6">
-              {error}
-            </p>
+            <p className="text-gray-600 mb-6">{error}</p>
 
-            <Link
-              to="/account"
-              className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition"
+            <Button
+              type="button"
+              variant="primary"
+              size="md"
+              icon={<ArrowRight size={18} />}
+              onClick={() => navigate("/account")}
             >
-              <ArrowRight className="w-5 h-5" />
-
               بازگشت به حساب کاربری
-            </Link>
+            </Button>
           </div>
         </div>
       </Layout>
@@ -194,14 +165,14 @@ export default function Payment() {
     <Layout>
       <div className="min-h-[70vh] bg-gray-50 py-10 px-4">
         <div className="max-w-2xl mx-auto">
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-300 hover:shadow-md">
             {/* Header */}
             <div className="bg-blue-600 text-white px-6 py-8 text-center">
-              <CreditCard className="w-12 h-12 mx-auto mb-3" />
+              <div className="transition-transform duration-300 hover:scale-110">
+                <CreditCard className="w-12 h-12 mx-auto mb-3" />
+              </div>
 
-              <h1 className="text-2xl font-bold mb-2">
-                درگاه پرداخت آزمایشی
-              </h1>
+              <h1 className="text-2xl font-bold mb-2">درگاه پرداخت آزمایشی</h1>
 
               <p className="text-blue-100">
                 این صفحه برای تست فرآیند پرداخت فروشگاه است.
@@ -210,7 +181,7 @@ export default function Payment() {
 
             <div className="p-6">
               {error && (
-                <div className="mb-5 rounded-xl bg-red-50 border border-red-200 text-red-700 px-4 py-3">
+                <div className="mb-5 rounded-xl bg-red-50 border border-red-200 text-red-700 px-4 py-3 animate-pulse">
                   {error}
                 </div>
               )}
@@ -218,63 +189,39 @@ export default function Payment() {
               {order && (
                 <div className="space-y-5">
                   {/* Order Number */}
-                  <div className="flex items-center justify-between border-b pb-4">
-                    <span className="text-gray-500">
-                      شماره سفارش
-                    </span>
+                  <div className="flex items-center justify-between border-b pb-4 transition-all duration-200 hover:px-1">
+                    <span className="text-gray-500">شماره سفارش</span>
 
-                    <span className="font-bold text-gray-900">
+                    <span className="font-bold text-gray-900 transition-colors duration-200 hover:text-blue-600">
                       {order.order_number}
                     </span>
                   </div>
 
                   {/* Price Summary */}
-                  <div className="bg-gray-50 rounded-xl p-5 space-y-4">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">
-                        مبلغ کالاها
-                      </span>
+                  <div className="bg-gray-50 rounded-xl p-5 space-y-4 transition-all duration-200 hover:bg-gray-100 hover:shadow-sm">
+                    <div className="flex justify-between text-sm transition-transform duration-150 hover:translate-x-[-2px]">
+                      <span className="text-gray-500">مبلغ کالاها</span>
 
                       <span className="font-medium text-gray-800">
-                        {Number(
-                          order.subtotal
-                        ).toLocaleString(
-                          "fa-IR"
-                        )}{" "}
+                        {Number(order.subtotal).toLocaleString("fa-IR")} تومان
+                      </span>
+                    </div>
+
+                    <div className="flex justify-between text-sm transition-transform duration-150 hover:translate-x-[-2px]">
+                      <span className="text-gray-500">هزینه ارسال</span>
+
+                      <span className="font-medium text-gray-800">
+                        {Number(order.shipping_cost).toLocaleString("fa-IR")}{" "}
                         تومان
                       </span>
                     </div>
 
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-500">
-                        هزینه ارسال
-                      </span>
-
-                      <span className="font-medium text-gray-800">
-                        {Number(
-                          order.shipping_cost
-                        ).toLocaleString(
-                          "fa-IR"
-                        )}{" "}
-                        تومان
-                      </span>
-                    </div>
-
-                    {Number(
-                      order.discount
-                    ) > 0 && (
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-500">
-                          تخفیف
-                        </span>
+                    {Number(order.discount) > 0 && (
+                      <div className="flex justify-between text-sm transition-transform duration-150 hover:translate-x-[-2px]">
+                        <span className="text-gray-500">تخفیف</span>
 
                         <span className="font-bold text-red-500">
-                          -{" "}
-                          {Number(
-                            order.discount
-                          ).toLocaleString(
-                            "fa-IR"
-                          )}{" "}
+                          - {Number(order.discount).toLocaleString("fa-IR")}{" "}
                           تومان
                         </span>
                       </div>
@@ -285,23 +232,19 @@ export default function Payment() {
                         مبلغ قابل پرداخت
                       </span>
 
-                      <span className="text-2xl font-black text-blue-600">
-                        {Number(
-                          order.total
-                        ).toLocaleString(
-                          "fa-IR"
-                        )}{" "}
-                        تومان
+                      <span className="text-2xl font-black text-blue-600 transition-transform duration-200 hover:scale-105">
+                        {Number(order.total).toLocaleString("fa-IR")} تومان
                       </span>
                     </div>
                   </div>
 
                   {/* Payment */}
                   <div className="pt-2">
-                    {order.payment_status ===
-                    "paid" ? (
-                      <div className="bg-green-50 border border-green-200 rounded-xl p-5 text-center">
-                        <CheckCircle2 className="w-12 h-12 text-green-600 mx-auto mb-3" />
+                    {order.payment_status === "paid" ? (
+                      <div className="bg-green-50 border border-green-200 rounded-xl p-5 text-center transition-all duration-300 hover:shadow-md hover:-translate-y-0.5">
+                        <div className="transition-transform duration-300 hover:scale-110">
+                          <CheckCircle2 className="w-12 h-12 text-green-600 mx-auto mb-3" />
+                        </div>
 
                         <h2 className="font-bold text-green-700 mb-2">
                           این سفارش قبلاً پرداخت شده است
@@ -309,42 +252,29 @@ export default function Payment() {
 
                         <Link
                           to={`/account/orders/${order.order_number}`}
-                          className="inline-flex items-center gap-2 mt-3 text-green-700 font-medium hover:underline"
+                          className="inline-flex items-center gap-2 mt-3 text-green-700 font-medium transition-all duration-150 hover:text-green-800 hover:gap-3 active:scale-95"
                         >
                           مشاهده جزئیات سفارش
-
                           <ArrowRight className="w-4 h-4" />
                         </Link>
                       </div>
                     ) : (
-                      <button
+                      <Button
                         type="button"
-                        onClick={
-                          handlePayment
-                        }
+                        onClick={handlePayment}
                         disabled={paying}
-                        className="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white font-bold py-4 rounded-xl transition"
+                        loading={paying}
+                        variant="success"
+                        size="lg"
+                        fullWidth
+                        icon={!paying ? <CheckCircle2 size={20} /> : undefined}
                       >
-                        {paying ? (
-                          <>
-                            <Loader2 className="w-5 h-5 animate-spin" />
-
-                            در حال پردازش پرداخت...
-                          </>
-                        ) : (
-                          <>
-                            <CheckCircle2 className="w-5 h-5" />
-
-                            پرداخت{" "}
-                            {Number(
-                              order.total
-                            ).toLocaleString(
-                              "fa-IR"
-                            )}{" "}
-                            تومان
-                          </>
-                        )}
-                      </button>
+                        {paying
+                          ? "در حال پردازش پرداخت..."
+                          : `پرداخت ${Number(order.total).toLocaleString(
+                              "fa-IR",
+                            )} تومان`}
+                      </Button>
                     )}
                   </div>
 
@@ -352,7 +282,7 @@ export default function Payment() {
                   <div className="text-center pt-2">
                     <Link
                       to="/account"
-                      className="text-gray-500 hover:text-gray-700 text-sm"
+                      className="inline-flex items-center justify-center text-gray-500 hover:text-gray-700 text-sm transition-all duration-150 hover:-translate-x-0.5 active:scale-95"
                     >
                       انصراف و بازگشت به حساب کاربری
                     </Link>

@@ -1,7 +1,4 @@
 import { useEffect, useState } from "react";
-
-import { Link } from "react-router-dom";
-
 import {
   ArrowLeft,
   ShieldCheck,
@@ -9,8 +6,8 @@ import {
   Headphones,
   RotateCcw,
 } from "lucide-react";
-
 import Layout from "../components/Layout";
+import { ButtonLink } from "../components/Button";
 import { api } from "../services/api";
 import { calculateProductPrice } from "../utils/price";
 
@@ -57,6 +54,9 @@ function ProductImageBox({ product }: { product: Product }) {
           justify-center
           text-gray-400
           mb-5
+          transition-all
+          duration-300
+          group-hover:bg-gray-50
         "
       >
         تصویر محصول
@@ -75,6 +75,9 @@ function ProductImageBox({ product }: { product: Product }) {
         justify-center
         overflow-hidden
         mb-5
+        transition-all
+        duration-300
+        group-hover:bg-blue-50/40
       "
     >
       <img
@@ -85,6 +88,10 @@ function ProductImageBox({ product }: { product: Product }) {
           h-full
           object-contain
           p-3
+          transition-transform
+          duration-500
+          ease-out
+          group-hover:scale-105
         "
       />
     </div>
@@ -105,7 +112,7 @@ function ProductPrice({ product }: { product: Product }) {
       {hasDiscount ? (
         <>
           <div className="flex items-center gap-2 mb-2">
-            <span className="inline-flex items-center justify-center bg-red-500 text-white text-xs font-bold px-2.5 py-1 rounded-lg">
+            <span className="inline-flex items-center justify-center bg-red-500 text-white text-xs font-bold px-2.5 py-1 rounded-lg transition-transform duration-200 group-hover:scale-105">
               {discountPercent}% تخفیف
             </span>
 
@@ -114,7 +121,7 @@ function ProductPrice({ product }: { product: Product }) {
             </span>
           </div>
 
-          <div className="text-blue-600 font-black text-xl">
+          <div className="text-blue-600 font-black text-xl transition-colors duration-200 group-hover:text-blue-700">
             {finalPrice.toLocaleString("fa-IR")} تومان
           </div>
 
@@ -124,7 +131,7 @@ function ProductPrice({ product }: { product: Product }) {
         </>
       ) : (
         <>
-          <div className="text-blue-600 font-black text-xl">
+          <div className="text-blue-600 font-black text-xl transition-colors duration-200 group-hover:text-blue-700">
             {originalPrice.toLocaleString("fa-IR")} تومان
           </div>
 
@@ -144,17 +151,23 @@ function ProductCardHome({ product }: { product: Product }) {
   return (
     <div
       className="
+        group
         border
         rounded-2xl
         p-6
         bg-white
         hover:shadow-lg
-        transition
+        hover:-translate-y-1
+        transition-all
+        duration-300
+        ease-out
       "
     >
       <ProductImageBox product={product} />
 
-      <h3 className="font-bold text-lg leading-7">{product.name}</h3>
+      <h3 className="font-bold text-lg leading-7 transition-colors duration-200 group-hover:text-blue-700">
+        {product.name}
+      </h3>
 
       {product.short_description && (
         <p className="text-gray-500 mt-3 text-sm leading-6">
@@ -164,34 +177,36 @@ function ProductCardHome({ product }: { product: Product }) {
 
       <ProductPrice product={product} />
 
-      <Link
+      <ButtonLink
         to={`/product/${product.slug}`}
+        variant="primary"
+        size="md"
         className="
-          block
-          text-center
-          bg-blue-600
-          text-white
-          rounded-xl
-          py-3
+          w-full
           mt-5
-          font-bold
-          hover:bg-blue-700
-          transition
+          transition-all
+          duration-150
+          active:scale-95
         "
       >
         مشاهده محصول
-      </Link>
+        <ArrowLeft
+          size={18}
+          className="
+            transition-transform
+            duration-200
+            group-hover:translate-x-1
+          "
+        />
+      </ButtonLink>
     </div>
   );
 }
 
 function Home() {
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
-
   const [newestProducts, setNewestProducts] = useState<Product[]>([]);
-
   const [featuredError, setFeaturedError] = useState("");
-
   const [newestError, setNewestError] = useState("");
 
   useEffect(() => {
@@ -201,7 +216,6 @@ function Home() {
       .get("/products/featured")
       .then((response) => {
         console.log("FEATURED RESPONSE:", response);
-
         console.log("FEATURED DATA:", response.data);
 
         const result = response.data?.data ?? response.data;
@@ -210,7 +224,6 @@ function Home() {
           setFeaturedProducts(result);
         } else {
           setFeaturedProducts([]);
-
           setFeaturedError("پاسخ محصولات ویژه آرایه نیست.");
         }
       })
@@ -236,7 +249,6 @@ function Home() {
       .get("/products/newest")
       .then((response) => {
         console.log("NEWEST RESPONSE:", response);
-
         console.log("NEWEST DATA:", response.data);
 
         const result = response.data?.data ?? response.data;
@@ -245,7 +257,6 @@ function Home() {
           setNewestProducts(result);
         } else {
           setNewestProducts([]);
-
           setNewestError("پاسخ جدیدترین محصولات آرایه نیست.");
         }
       })
@@ -284,44 +295,45 @@ function Home() {
             </p>
 
             <div className="flex flex-wrap gap-4 mt-8">
-              <Link
+              <ButtonLink
                 to="/products"
+                variant="secondary"
+                size="lg"
                 className="
-                  inline-flex
-                  items-center
-                  gap-2
-                  bg-white
-                  text-blue-700
-                  px-6
-                  py-3
-                  rounded-xl
-                  font-bold
-                  hover:bg-blue-50
-                  transition
-                "
+    text-blue-700
+    hover:bg-blue-50
+    transition-all
+    duration-150
+    active:scale-95
+  "
               >
-                مشاهده محصولات
-                <ArrowLeft size={20} />
-              </Link>
+                <span className="inline-flex items-center justify-center gap-2 whitespace-nowrap">
+                  <span>مشاهده محصولات</span>
 
-              <Link
+                  <ArrowLeft
+                    size={20}
+                    className="shrink-0 transition-transform duration-200"
+                  />
+                </span>
+              </ButtonLink>
+
+              <ButtonLink
                 to="/products?category=medical-equipment"
+                variant="ghost"
+                size="lg"
                 className="
-                  inline-flex
-                  items-center
-                  gap-2
                   border
                   border-white/40
-                  px-6
-                  py-3
-                  rounded-xl
-                  font-bold
+                  text-white
                   hover:bg-white/10
-                  transition
+                  hover:text-white
+                  transition-all
+                  duration-150
+                  active:scale-95
                 "
               >
                 تجهیزات پزشکی
-              </Link>
+              </ButtonLink>
             </div>
           </div>
         </div>
@@ -332,7 +344,7 @@ function Home() {
         <div className="max-w-7xl mx-auto px-6 py-8">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             <div className="flex items-center gap-4">
-              <div className="bg-blue-50 text-blue-600 p-3 rounded-xl">
+              <div className="bg-blue-50 text-blue-600 p-3 rounded-xl transition-transform duration-300 hover:scale-105">
                 <Truck size={26} />
               </div>
 
@@ -346,7 +358,7 @@ function Home() {
             </div>
 
             <div className="flex items-center gap-4">
-              <div className="bg-green-50 text-green-600 p-3 rounded-xl">
+              <div className="bg-green-50 text-green-600 p-3 rounded-xl transition-transform duration-300 hover:scale-105">
                 <ShieldCheck size={26} />
               </div>
 
@@ -360,7 +372,7 @@ function Home() {
             </div>
 
             <div className="flex items-center gap-4">
-              <div className="bg-purple-50 text-purple-600 p-3 rounded-xl">
+              <div className="bg-purple-50 text-purple-600 p-3 rounded-xl transition-transform duration-300 hover:scale-105">
                 <Headphones size={26} />
               </div>
 
@@ -374,7 +386,7 @@ function Home() {
             </div>
 
             <div className="flex items-center gap-4">
-              <div className="bg-orange-50 text-orange-600 p-3 rounded-xl">
+              <div className="bg-orange-50 text-orange-600 p-3 rounded-xl transition-transform duration-300 hover:scale-105">
                 <RotateCcw size={26} />
               </div>
 
@@ -394,110 +406,155 @@ function Home() {
           <div className="flex items-center justify-between mb-8">
             <h2 className="text-2xl font-black">دسته‌بندی محصولات</h2>
 
-            <Link
+            <ButtonLink
               to="/products"
+              variant="ghost"
+              size="sm"
               className="
                 text-blue-600
-                font-bold
-                flex
-                items-center
-                gap-1
+                transition-all
+                duration-150
+                active:scale-95
               "
             >
               همه محصولات
-              <ArrowLeft size={18} />
-            </Link>
+              <ArrowLeft
+                size={18}
+                className="transition-transform duration-200 group-hover:-translate-x-1"
+              />
+            </ButtonLink>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-            <Link
+            <ButtonLink
               to="/products?category=medicine"
+              variant="ghost"
+              size="lg"
               className="
                 bg-white
                 border
-                rounded-2xl
-                p-6
+                text-right
+                justify-start
                 hover:border-blue-400
                 hover:shadow-md
-                transition
+                h-full
+                transition-all
+                duration-200
+                active:scale-[0.98]
               "
             >
-              <h3 className="font-bold">دارو و محصولات دارویی</h3>
+              <div>
+                <h3 className="font-bold">دارو و محصولات دارویی</h3>
 
-              <p className="text-sm text-gray-500 mt-2">
-                محصولات دارویی و سلامت
-              </p>
-            </Link>
+                <p className="text-sm text-gray-500 mt-2 font-normal">
+                  محصولات دارویی و سلامت
+                </p>
+              </div>
+            </ButtonLink>
 
-            <Link
+            <ButtonLink
               to="/products?category=medical-equipment"
+              variant="ghost"
+              size="lg"
               className="
                 bg-white
                 border
-                rounded-2xl
-                p-6
+                text-right
+                justify-start
                 hover:border-blue-400
                 hover:shadow-md
-                transition
+                h-full
+                transition-all
+                duration-200
+                active:scale-[0.98]
               "
             >
-              <h3 className="font-bold">تجهیزات پزشکی</h3>
+              <div>
+                <h3 className="font-bold">تجهیزات پزشکی</h3>
 
-              <p className="text-sm text-gray-500 mt-2">
-                تجهیزات و ابزار پزشکی
-              </p>
-            </Link>
+                <p className="text-sm text-gray-500 mt-2 font-normal">
+                  تجهیزات و ابزار پزشکی
+                </p>
+              </div>
+            </ButtonLink>
 
-            <Link
+            <ButtonLink
               to="/products?category=personal-care"
+              variant="ghost"
+              size="lg"
               className="
                 bg-white
                 border
-                rounded-2xl
-                p-6
+                text-right
+                justify-start
                 hover:border-blue-400
                 hover:shadow-md
-                transition
+                h-full
+                transition-all
+                duration-200
+                active:scale-[0.98]
               "
             >
-              <h3 className="font-bold">بهداشت و مراقبت شخصی</h3>
+              <div>
+                <h3 className="font-bold">بهداشت و مراقبت شخصی</h3>
 
-              <p className="text-sm text-gray-500 mt-2">محصولات مراقبت شخصی</p>
-            </Link>
+                <p className="text-sm text-gray-500 mt-2 font-normal">
+                  محصولات مراقبت شخصی
+                </p>
+              </div>
+            </ButtonLink>
 
-            <Link
+            <ButtonLink
               to="/products?category=supplements"
+              variant="ghost"
+              size="lg"
               className="
                 bg-white
                 border
-                rounded-2xl
-                p-6
+                text-right
+                justify-start
                 hover:border-blue-400
                 hover:shadow-md
-                transition
+                h-full
+                transition-all
+                duration-200
+                active:scale-[0.98]
               "
             >
-              <h3 className="font-bold">مکمل‌ها</h3>
+              <div>
+                <h3 className="font-bold">مکمل‌ها</h3>
 
-              <p className="text-sm text-gray-500 mt-2">ویتامین و مکمل غذایی</p>
-            </Link>
+                <p className="text-sm text-gray-500 mt-2 font-normal">
+                  ویتامین و مکمل غذایی
+                </p>
+              </div>
+            </ButtonLink>
 
-            <Link
+            <ButtonLink
               to="/products?category=mother-child"
+              variant="ghost"
+              size="lg"
               className="
                 bg-white
                 border
-                rounded-2xl
-                p-6
+                text-right
+                justify-start
                 hover:border-blue-400
                 hover:shadow-md
-                transition
+                h-full
+                transition-all
+                duration-200
+                active:scale-[0.98]
               "
             >
-              <h3 className="font-bold">مادر و کودک</h3>
+              <div>
+                <h3 className="font-bold">مادر و کودک</h3>
 
-              <p className="text-sm text-gray-500 mt-2">محصولات مادر و کودک</p>
-            </Link>
+                <p className="text-sm text-gray-500 mt-2 font-normal">
+                  محصولات مادر و کودک
+                </p>
+              </div>
+            </ButtonLink>
           </div>
         </div>
       </section>
@@ -508,19 +565,23 @@ function Home() {
           <div className="flex items-center justify-between mb-8">
             <h2 className="text-2xl font-black">محصولات ویژه</h2>
 
-            <Link
+            <ButtonLink
               to="/products"
+              variant="ghost"
+              size="sm"
               className="
                 text-blue-600
-                font-bold
-                flex
-                items-center
-                gap-1
+                transition-all
+                duration-150
+                active:scale-95
               "
             >
               مشاهده همه
-              <ArrowLeft size={18} />
-            </Link>
+              <ArrowLeft
+                size={18}
+                className="transition-transform duration-200 group-hover:-translate-x-1"
+              />
+            </ButtonLink>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -555,19 +616,23 @@ function Home() {
           <div className="flex items-center justify-between mb-8">
             <h2 className="text-2xl font-black">جدیدترین محصولات</h2>
 
-            <Link
+            <ButtonLink
               to="/products"
+              variant="ghost"
+              size="sm"
               className="
                 text-blue-600
-                font-bold
-                flex
-                items-center
-                gap-1
+                transition-all
+                duration-150
+                active:scale-95
               "
             >
               مشاهده همه
-              <ArrowLeft size={18} />
-            </Link>
+              <ArrowLeft
+                size={18}
+                className="transition-transform duration-200 group-hover:-translate-x-1"
+              />
+            </ButtonLink>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -625,22 +690,19 @@ function Home() {
               </p>
             </div>
 
-            <Link
+            <ButtonLink
               to="/products"
+              variant="primary"
+              size="lg"
               className="
-                bg-blue-600
-                text-white
-                px-7
-                py-3
-                rounded-xl
-                font-bold
                 whitespace-nowrap
-                hover:bg-blue-700
-                transition
+                transition-all
+                duration-150
+                active:scale-95
               "
             >
               مشاهده فروشگاه
-            </Link>
+            </ButtonLink>
           </div>
         </div>
       </section>

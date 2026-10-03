@@ -7,7 +7,6 @@ import {
   Search,
   SlidersHorizontal,
 } from "lucide-react";
-
 import Layout from "../components/Layout";
 import ProductCard from "../components/ProductCard";
 import { api } from "../services/api";
@@ -51,7 +50,6 @@ function Products() {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
-
   const [loading, setLoading] = useState(true);
   const [filterOpen, setFilterOpen] = useState(false);
 
@@ -69,28 +67,22 @@ function Products() {
   useEffect(() => {
     const fetchFilters = async () => {
       try {
-        const [categoriesResponse, brandsResponse] =
-          await Promise.all([
-            api.get("/categories"),
-            api.get("/brands"),
-          ]);
+        const [categoriesResponse, brandsResponse] = await Promise.all([
+          api.get("/categories"),
+          api.get("/brands"),
+        ]);
 
         setCategories(
           categoriesResponse.data?.data?.data ||
             categoriesResponse.data?.data ||
-            []
+            [],
         );
 
         setBrands(
-          brandsResponse.data?.data?.data ||
-            brandsResponse.data?.data ||
-            []
+          brandsResponse.data?.data?.data || brandsResponse.data?.data || [],
         );
       } catch (error) {
-        console.error(
-          "خطا در دریافت فیلترها:",
-          error
-        );
+        console.error("خطا در دریافت فیلترها:", error);
       }
     };
 
@@ -111,18 +103,11 @@ function Products() {
           },
         });
 
-        const result =
-          response.data?.data?.data ||
-          response.data?.data ||
-          [];
+        const result = response.data?.data?.data || response.data?.data || [];
 
         setProducts(result);
       } catch (error) {
-        console.error(
-          "خطا در دریافت محصولات:",
-          error
-        );
-
+        console.error("خطا در دریافت محصولات:", error);
         setProducts([]);
       } finally {
         setLoading(false);
@@ -132,20 +117,13 @@ function Products() {
     fetchProducts();
   }, [search, category, brand, sort]);
 
-  const handleSearch = (
-    event: React.FormEvent<HTMLFormElement>
-  ) => {
+  const handleSearch = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    const params = new URLSearchParams(
-      searchParams
-    );
+    const params = new URLSearchParams(searchParams);
 
     if (searchInput.trim()) {
-      params.set(
-        "search",
-        searchInput.trim()
-      );
+      params.set("search", searchInput.trim());
     } else {
       params.delete("search");
     }
@@ -153,12 +131,8 @@ function Products() {
     setSearchParams(params);
   };
 
-  const handleCategoryChange = (
-    value: string
-  ) => {
-    const params = new URLSearchParams(
-      searchParams
-    );
+  const handleCategoryChange = (value: string) => {
+    const params = new URLSearchParams(searchParams);
 
     if (value) {
       params.set("category", value);
@@ -169,12 +143,8 @@ function Products() {
     setSearchParams(params);
   };
 
-  const handleBrandChange = (
-    value: string
-  ) => {
-    const params = new URLSearchParams(
-      searchParams
-    );
+  const handleBrandChange = (value: string) => {
+    const params = new URLSearchParams(searchParams);
 
     if (value) {
       params.set("brand", value);
@@ -185,12 +155,8 @@ function Products() {
     setSearchParams(params);
   };
 
-  const handleSortChange = (
-    value: string
-  ) => {
-    const params = new URLSearchParams(
-      searchParams
-    );
+  const handleSortChange = (value: string) => {
+    const params = new URLSearchParams(searchParams);
 
     if (value) {
       params.set("sort", value);
@@ -209,28 +175,21 @@ function Products() {
   return (
     <Layout>
       <div className="max-w-7xl mx-auto px-4 py-8">
-
         <div className="mb-8">
           <h1 className="text-2xl md:text-3xl font-black text-slate-900">
             محصولات
           </h1>
 
-          <p className="mt-2 text-slate-500">
-            مشاهده و انتخاب محصولات فروشگاه
-          </p>
+          <p className="mt-2 text-slate-500">مشاهده و انتخاب محصولات فروشگاه</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-
           {/* Filters */}
           <aside className="lg:col-span-1">
             <div className="bg-white rounded-2xl border border-slate-200 p-5">
-
               <button
                 type="button"
-                onClick={() =>
-                  setFilterOpen(!filterOpen)
-                }
+                onClick={() => setFilterOpen(!filterOpen)}
                 className="
                   lg:hidden
                   w-full
@@ -238,36 +197,35 @@ function Products() {
                   items-center
                   justify-between
                   mb-4
+                  rounded-xl
+                  px-3
+                  py-2
+                  transition-all
+                  duration-150
+                  hover:bg-slate-50
+                  active:scale-95
                 "
               >
-                <span className="font-bold text-slate-900">
-                  فیلترها
-                </span>
+                <span className="font-bold text-slate-900">فیلترها</span>
 
-                <SlidersHorizontal size={20} />
+                <SlidersHorizontal
+                  size={20}
+                  className={`
+                    transition-transform
+                    duration-300
+                    ${filterOpen ? "rotate-90" : ""}
+                  `}
+                />
               </button>
 
               <div
-                className={
-                  filterOpen
-                    ? "block"
-                    : "hidden lg:block"
-                }
+                className={filterOpen ? "block animate-in" : "hidden lg:block"}
               >
-
                 <div className="flex items-center justify-between mb-5">
-
                   <div className="flex items-center gap-2">
+                    <Filter size={20} className="text-blue-600" />
 
-                    <Filter
-                      size={20}
-                      className="text-blue-600"
-                    />
-
-                    <h2 className="font-bold text-slate-900">
-                      فیلتر محصولات
-                    </h2>
-
+                    <h2 className="font-bold text-slate-900">فیلتر محصولات</h2>
                   </div>
 
                   <button
@@ -277,32 +235,27 @@ function Products() {
                       text-xs
                       text-blue-600
                       hover:text-blue-700
+                      transition-all
+                      duration-150
+                      hover:-translate-y-0.5
+                      active:scale-95
                     "
                   >
                     حذف فیلترها
                   </button>
-
                 </div>
 
                 {/* Search */}
-                <form
-                  onSubmit={handleSearch}
-                  className="mb-6"
-                >
+                <form onSubmit={handleSearch} className="mb-6">
                   <label className="block text-sm font-bold text-slate-700 mb-2">
                     جستجو
                   </label>
 
                   <div className="relative">
-
                     <input
                       type="text"
                       value={searchInput}
-                      onChange={(event) =>
-                        setSearchInput(
-                          event.target.value
-                        )
-                      }
+                      onChange={(event) => setSearchInput(event.target.value)}
                       placeholder="نام محصول..."
                       className="
                         w-full
@@ -313,9 +266,12 @@ function Products() {
                         pr-10
                         pl-3
                         outline-none
+                        transition-all
+                        duration-200
                         focus:border-blue-500
                         focus:ring-2
                         focus:ring-blue-100
+                        focus:shadow-sm
                       "
                     />
 
@@ -326,9 +282,11 @@ function Products() {
                         right-3
                         top-3.5
                         text-slate-400
+                        transition-colors
+                        duration-200
+                        peer-focus:text-blue-500
                       "
                     />
-
                   </div>
 
                   <button
@@ -342,7 +300,10 @@ function Products() {
                       py-2.5
                       font-bold
                       hover:bg-blue-700
-                      transition
+                      hover:shadow-md
+                      transition-all
+                      duration-150
+                      active:scale-95
                     "
                   >
                     جستجو
@@ -351,7 +312,6 @@ function Products() {
 
                 {/* Category */}
                 <div className="mb-6">
-
                   <label className="block text-sm font-bold text-slate-700 mb-2">
                     دسته‌بندی
                   </label>
@@ -359,9 +319,7 @@ function Products() {
                   <select
                     value={category}
                     onChange={(event) =>
-                      handleCategoryChange(
-                        event.target.value
-                      )
+                      handleCategoryChange(event.target.value)
                     }
                     className="
                       w-full
@@ -371,39 +329,32 @@ function Products() {
                       px-3
                       py-3
                       outline-none
+                      transition-all
+                      duration-200
                       focus:border-blue-500
+                      focus:ring-2
+                      focus:ring-blue-100
                     "
                   >
-                    <option value="">
-                      همه دسته‌بندی‌ها
-                    </option>
+                    <option value="">همه دسته‌بندی‌ها</option>
 
                     {categories.map((item) => (
-                      <option
-                        key={item.id}
-                        value={item.slug}
-                      >
+                      <option key={item.id} value={item.slug}>
                         {item.name}
                       </option>
                     ))}
                   </select>
-
                 </div>
 
                 {/* Brand */}
                 <div className="mb-6">
-
                   <label className="block text-sm font-bold text-slate-700 mb-2">
                     برند
                   </label>
 
                   <select
                     value={brand}
-                    onChange={(event) =>
-                      handleBrandChange(
-                        event.target.value
-                      )
-                    }
+                    onChange={(event) => handleBrandChange(event.target.value)}
                     className="
                       w-full
                       rounded-xl
@@ -412,33 +363,28 @@ function Products() {
                       px-3
                       py-3
                       outline-none
+                      transition-all
+                      duration-200
                       focus:border-blue-500
+                      focus:ring-2
+                      focus:ring-blue-100
                     "
                   >
-                    <option value="">
-                      همه برندها
-                    </option>
+                    <option value="">همه برندها</option>
 
                     {brands.map((item) => (
-                      <option
-                        key={item.id}
-                        value={item.slug}
-                      >
+                      <option key={item.id} value={item.slug}>
                         {item.name}
                       </option>
                     ))}
                   </select>
-
                 </div>
-
               </div>
-
             </div>
           </aside>
 
           {/* Products */}
           <main className="lg:col-span-3">
-
             {/* Toolbar */}
             <div
               className="
@@ -457,36 +403,28 @@ function Products() {
                 gap-4
               "
             >
-
               <div className="text-sm text-slate-500">
                 {loading
                   ? "در حال دریافت محصولات..."
-                  : `${products.length.toLocaleString(
-                      "fa-IR"
-                    )} محصول`}
+                  : `${products.length.toLocaleString("fa-IR")} محصول`}
               </div>
 
               <div className="flex items-center gap-2 w-full md:w-auto">
-
                 {sort === "price_asc" ? (
                   <ArrowUpAZ
                     size={18}
-                    className="text-slate-500"
+                    className="text-slate-500 transition-transform duration-200"
                   />
                 ) : (
                   <ArrowDownAZ
                     size={18}
-                    className="text-slate-500"
+                    className="text-slate-500 transition-transform duration-200"
                   />
                 )}
 
                 <select
                   value={sort}
-                  onChange={(event) =>
-                    handleSortChange(
-                      event.target.value
-                    )
-                  }
+                  onChange={(event) => handleSortChange(event.target.value)}
                   className="
                     w-full
                     md:w-auto
@@ -496,32 +434,24 @@ function Products() {
                     px-4
                     py-2.5
                     outline-none
+                    transition-all
+                    duration-200
                     focus:border-blue-500
+                    focus:ring-2
+                    focus:ring-blue-100
                   "
                 >
-                  <option value="newest">
-                    جدیدترین
-                  </option>
+                  <option value="newest">جدیدترین</option>
 
-                  <option value="price_asc">
-                    ارزان‌ترین
-                  </option>
+                  <option value="price_asc">ارزان‌ترین</option>
 
-                  <option value="price_desc">
-                    گران‌ترین
-                  </option>
+                  <option value="price_desc">گران‌ترین</option>
 
-                  <option value="name_asc">
-                    نام: الف تا ی
-                  </option>
+                  <option value="name_asc">نام: الف تا ی</option>
 
-                  <option value="name_desc">
-                    نام: ی تا الف
-                  </option>
+                  <option value="name_desc">نام: ی تا الف</option>
                 </select>
-
               </div>
-
             </div>
 
             {/* Loading */}
@@ -535,11 +465,10 @@ function Products() {
                   gap-5
                 "
               >
-                {Array.from({ length: 6 }).map(
-                  (_, index) => (
-                    <div
-                      key={index}
-                      className="
+                {Array.from({ length: 6 }).map((_, index) => (
+                  <div
+                    key={index}
+                    className="
                         bg-white
                         rounded-2xl
                         border
@@ -547,25 +476,20 @@ function Products() {
                         overflow-hidden
                         animate-pulse
                       "
-                    >
-                      <div className="h-56 bg-slate-100" />
+                  >
+                    <div className="h-56 bg-slate-100" />
 
-                      <div className="p-5">
+                    <div className="p-5">
+                      <div className="h-5 bg-slate-100 rounded mb-3" />
 
-                        <div className="h-5 bg-slate-100 rounded mb-3" />
+                      <div className="h-4 bg-slate-100 rounded mb-5 w-2/3" />
 
-                        <div className="h-4 bg-slate-100 rounded mb-5 w-2/3" />
-
-                        <div className="h-10 bg-slate-100 rounded" />
-
-                      </div>
+                      <div className="h-10 bg-slate-100 rounded" />
                     </div>
-                  )
-                )}
+                  </div>
+                ))}
               </div>
-
             ) : products.length === 0 ? (
-
               /* Empty */
               <div
                 className="
@@ -577,14 +501,8 @@ function Products() {
                   text-center
                 "
               >
-
                 <div className="text-slate-400 mb-4">
-
-                  <Search
-                    size={48}
-                    className="mx-auto"
-                  />
-
+                  <Search size={48} className="mx-auto" />
                 </div>
 
                 <h2 className="text-xl font-bold text-slate-800 mb-2">
@@ -609,16 +527,16 @@ function Products() {
                     py-3
                     font-bold
                     hover:bg-blue-700
-                    transition
+                    hover:shadow-lg
+                    transition-all
+                    duration-150
+                    active:scale-95
                   "
                 >
                   نمایش همه محصولات
                 </button>
-
               </div>
-
             ) : (
-
               /* Product Grid */
               <div
                 className="
@@ -630,19 +548,12 @@ function Products() {
                 "
               >
                 {products.map((product) => (
-                  <ProductCard
-                    key={product.id}
-                    product={product}
-                  />
+                  <ProductCard key={product.id} product={product} />
                 ))}
               </div>
-
             )}
-
           </main>
-
         </div>
-
       </div>
     </Layout>
   );

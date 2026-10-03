@@ -1,11 +1,6 @@
 import { FormEvent, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import {
-  ArrowRight,
-  CheckCircle2,
-  Loader2,
-  ShoppingBag,
-} from "lucide-react";
+import { ArrowRight, CheckCircle2, Loader2, ShoppingBag } from "lucide-react";
 
 import Layout from "../components/Layout";
 import { useCart } from "../context/CartContext";
@@ -44,22 +39,15 @@ function Checkout() {
   const cartOriginalTotal = useMemo(() => {
     return items.reduce(
       (total, item) =>
-        total +
-        (item.originalPrice ?? item.price) *
-          item.quantity,
-      0
+        total + (item.originalPrice ?? item.price) * item.quantity,
+      0,
     );
   }, [items]);
 
-  const cartDiscount = Math.max(
-    0,
-    cartOriginalTotal - cartTotal
-  );
+  const cartDiscount = Math.max(0, cartOriginalTotal - cartTotal);
 
   const handleChange = (
-    event: React.ChangeEvent<
-      HTMLInputElement | HTMLTextAreaElement
-    >
+    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
     const { name, value } = event.target;
 
@@ -69,9 +57,7 @@ function Checkout() {
     }));
   };
 
-  const handleSubmit = async (
-    event: FormEvent<HTMLFormElement>
-  ) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     setError("");
@@ -94,9 +80,7 @@ function Checkout() {
       !form.city.trim() ||
       !form.address.trim()
     ) {
-      setError(
-        "لطفاً تمام اطلاعات ضروری را وارد کنید."
-      );
+      setError("لطفاً تمام اطلاعات ضروری را وارد کنید.");
       return;
     }
 
@@ -107,8 +91,7 @@ function Checkout() {
         recipient_name: `${form.firstName.trim()} ${form.lastName.trim()}`,
         phone: form.phone.trim(),
         address: `${form.province.trim()}، ${form.city.trim()}، ${form.address.trim()}`,
-        postal_code:
-          form.postalCode.trim() || null,
+        postal_code: form.postalCode.trim() || null,
         notes: null,
 
         // قیمت را از فرانت‌اند ارسال نمی‌کنیم.
@@ -119,62 +102,38 @@ function Checkout() {
         })),
       });
 
-      const orderNumber =
-        response?.data?.data?.order_number;
+      const orderNumber = response?.data?.data?.order_number;
 
       if (!orderNumber) {
-        setError(
-          "سفارش ایجاد شد اما شماره سفارش دریافت نشد."
-        );
+        setError("سفارش ایجاد شد اما شماره سفارش دریافت نشد.");
         return;
       }
 
       navigate(`/payment/${orderNumber}`);
     } catch (error: any) {
-      console.error(
-        "Checkout error:",
-        error
-      );
+      console.error("Checkout error:", error);
 
-      if (
-        error?.response?.status === 401
-      ) {
+      if (error?.response?.status === 401) {
         navigate("/login");
         return;
       }
 
-      if (
-        error?.response?.status === 422
-      ) {
-        const errors =
-          error?.response?.data?.errors;
+      if (error?.response?.status === 422) {
+        const errors = error?.response?.data?.errors;
 
-        if (
-          errors &&
-          typeof errors === "object"
-        ) {
-          const firstKey =
-            Object.keys(errors)[0];
+        if (errors && typeof errors === "object") {
+          const firstKey = Object.keys(errors)[0];
 
-          const firstMessage =
-            errors[firstKey];
+          const firstMessage = errors[firstKey];
 
-          if (
-            Array.isArray(firstMessage) &&
-            firstMessage.length > 0
-          ) {
-            setError(
-              String(firstMessage[0])
-            );
+          if (Array.isArray(firstMessage) && firstMessage.length > 0) {
+            setError(String(firstMessage[0]));
           } else {
-            setError(
-              "اطلاعات واردشده معتبر نیست."
-            );
+            setError("اطلاعات واردشده معتبر نیست.");
           }
         } else {
           setError(
-            error?.response?.data?.message ||
-              "اطلاعات سفارش معتبر نیست."
+            error?.response?.data?.message || "اطلاعات سفارش معتبر نیست.",
           );
         }
 
@@ -183,7 +142,7 @@ function Checkout() {
 
       setError(
         error?.response?.data?.message ||
-          "ثبت سفارش با خطا مواجه شد. لطفاً دوباره تلاش کنید."
+          "ثبت سفارش با خطا مواجه شد. لطفاً دوباره تلاش کنید.",
       );
     } finally {
       setLoading(false);
@@ -222,32 +181,22 @@ function Checkout() {
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Breadcrumb */}
         <div className="flex items-center gap-2 text-sm text-gray-500 mb-8">
-          <Link
-            to="/"
-            className="hover:text-blue-600"
-          >
+          <Link to="/" className="hover:text-blue-600">
             خانه
           </Link>
 
           <span>/</span>
 
-          <Link
-            to="/cart"
-            className="hover:text-blue-600"
-          >
+          <Link to="/cart" className="hover:text-blue-600">
             سبد خرید
           </Link>
 
           <span>/</span>
 
-          <span className="text-gray-800">
-            تکمیل سفارش
-          </span>
+          <span className="text-gray-800">تکمیل سفارش</span>
         </div>
 
-        <h1 className="text-3xl font-bold text-gray-800 mb-8">
-          تکمیل سفارش
-        </h1>
+        <h1 className="text-3xl font-bold text-gray-800 mb-8">تکمیل سفارش</h1>
 
         <form onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -390,16 +339,11 @@ function Checkout() {
 
                 <div className="space-y-5 mb-6">
                   {items.map((item) => {
-                    const originalPrice =
-                      item.originalPrice ??
-                      item.price;
+                    const originalPrice = item.originalPrice ?? item.price;
 
-                    const discountPercent =
-                      item.discountPercent ?? 0;
+                    const discountPercent = item.discountPercent ?? 0;
 
-                    const itemTotal =
-                      item.price *
-                      item.quantity;
+                    const itemTotal = item.price * item.quantity;
 
                     return (
                       <div
@@ -413,40 +357,26 @@ function Checkout() {
                             </p>
 
                             <p className="text-xs text-gray-500 mt-1">
-                              تعداد:{" "}
-                              {item.quantity.toLocaleString(
-                                "fa-IR"
-                              )}
+                              تعداد: {item.quantity.toLocaleString("fa-IR")}
                             </p>
                           </div>
 
                           <div className="text-sm font-semibold text-gray-700 whitespace-nowrap">
-                            {itemTotal.toLocaleString(
-                              "fa-IR"
-                            )}{" "}
-                            تومان
+                            {itemTotal.toLocaleString("fa-IR")} تومان
                           </div>
                         </div>
 
-                        {discountPercent > 0 &&
-                          originalPrice >
-                            item.price && (
-                            <div className="mt-2 flex items-center gap-2">
-                              <span className="text-xs text-gray-400 line-through">
-                                {originalPrice.toLocaleString(
-                                  "fa-IR"
-                                )}{" "}
-                                تومان
-                              </span>
+                        {discountPercent > 0 && originalPrice > item.price && (
+                          <div className="mt-2 flex items-center gap-2">
+                            <span className="text-xs text-gray-400 line-through">
+                              {originalPrice.toLocaleString("fa-IR")} تومان
+                            </span>
 
-                              <span className="text-xs font-bold text-red-500">
-                                {discountPercent.toLocaleString(
-                                  "fa-IR"
-                                )}
-                                ٪ تخفیف
-                              </span>
-                            </div>
-                          )}
+                            <span className="text-xs font-bold text-red-500">
+                              {discountPercent.toLocaleString("fa-IR")}٪ تخفیف
+                            </span>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
@@ -454,42 +384,27 @@ function Checkout() {
 
                 <div className="border-t border-gray-100 pt-5 space-y-4">
                   <div className="flex items-center justify-between text-gray-600">
-                    <span>
-                      مبلغ کالاها
-                    </span>
+                    <span>مبلغ کالاها</span>
 
                     <span>
-                      {cartOriginalTotal.toLocaleString(
-                        "fa-IR"
-                      )}{" "}
-                      تومان
+                      {cartOriginalTotal.toLocaleString("fa-IR")} تومان
                     </span>
                   </div>
 
                   {cartDiscount > 0 && (
                     <div className="flex items-center justify-between">
-                      <span className="text-gray-600">
-                        تخفیف
-                      </span>
+                      <span className="text-gray-600">تخفیف</span>
 
                       <span className="text-red-500 font-medium">
-                        -{" "}
-                        {cartDiscount.toLocaleString(
-                          "fa-IR"
-                        )}{" "}
-                        تومان
+                        - {cartDiscount.toLocaleString("fa-IR")} تومان
                       </span>
                     </div>
                   )}
 
                   <div className="flex items-center justify-between text-gray-600">
-                    <span>
-                      هزینه ارسال
-                    </span>
+                    <span>هزینه ارسال</span>
 
-                    <span className="text-green-600 font-medium">
-                      رایگان
-                    </span>
+                    <span className="text-green-600 font-medium">رایگان</span>
                   </div>
 
                   <div className="border-t border-gray-100 pt-4 flex items-center justify-between">
@@ -498,12 +413,7 @@ function Checkout() {
                     </span>
 
                     <span className="text-xl font-bold text-blue-600">
-                      {Number(
-                        cartTotal
-                      ).toLocaleString(
-                        "fa-IR"
-                      )}{" "}
-                      تومان
+                      {Number(cartTotal).toLocaleString("fa-IR")} تومان
                     </span>
                   </div>
                 </div>

@@ -1,13 +1,8 @@
 import { Link, useNavigate } from "react-router-dom";
-import {
-  ArrowRight,
-  Minus,
-  Plus,
-  ShoppingCart,
-  Trash2,
-} from "lucide-react";
+import { ArrowRight, Minus, Plus, ShoppingCart, Trash2 } from "lucide-react";
 
 import Layout from "../components/Layout";
+import Button from "../components/Button";
 import { useCart } from "../context/CartContext";
 
 function Cart() {
@@ -23,23 +18,33 @@ function Cart() {
   } = useCart();
 
   const cartOriginalTotal = items.reduce(
-    (total, item) =>
-      total +
-      (item.originalPrice ?? item.price) * item.quantity,
-    0
+    (total, item) => total + (item.originalPrice ?? item.price) * item.quantity,
+    0,
   );
 
-  const cartDiscount = Math.max(
-    0,
-    cartOriginalTotal - cartTotal
-  );
+  const cartDiscount = Math.max(0, cartOriginalTotal - cartTotal);
 
   if (items.length === 0) {
     return (
       <Layout>
         <section className="max-w-5xl mx-auto px-6 py-16">
           <div className="bg-white rounded-3xl border border-slate-100 p-12 text-center">
-            <div className="w-20 h-20 mx-auto rounded-full bg-blue-50 text-blue-600 flex items-center justify-center">
+            <div
+              className="
+                w-20
+                h-20
+                mx-auto
+                rounded-full
+                bg-blue-50
+                text-blue-600
+                flex
+                items-center
+                justify-center
+                transition-transform
+                duration-300
+                hover:scale-110
+              "
+            >
               <ShoppingCart size={36} />
             </div>
 
@@ -61,12 +66,16 @@ function Cart() {
                 mt-7
                 bg-blue-600
                 hover:bg-blue-700
+                hover:shadow-lg
+                hover:-translate-y-0.5
                 text-white
                 px-6
                 py-3
                 rounded-xl
                 font-bold
-                transition
+                transition-all
+                duration-150
+                active:scale-95
               "
             >
               مشاهده محصولات
@@ -91,7 +100,9 @@ function Cart() {
               text-sm
               text-slate-500
               hover:text-blue-600
-              transition
+              hover:-translate-x-0.5
+              transition-all
+              duration-200
             "
           >
             <ArrowRight size={18} />
@@ -100,9 +111,7 @@ function Cart() {
 
           <div className="flex items-center justify-between mt-5">
             <div>
-              <h1 className="text-3xl font-black text-slate-900">
-                سبد خرید
-              </h1>
+              <h1 className="text-3xl font-black text-slate-900">سبد خرید</h1>
 
               <p className="text-slate-500 mt-2">
                 {cartCount.toLocaleString("fa-IR")} کالا در سبد خرید شما
@@ -119,7 +128,10 @@ function Cart() {
                 text-sm
                 text-red-500
                 hover:text-red-600
-                transition
+                hover:-translate-y-0.5
+                transition-all
+                duration-150
+                active:scale-95
               "
             >
               <Trash2 size={17} />
@@ -133,7 +145,9 @@ function Cart() {
           <div className="lg:col-span-2 space-y-4">
             {items.map((item) => {
               const originalPrice = item.originalPrice ?? item.price;
+
               const discountPercent = item.discountPercent ?? 0;
+
               const itemTotal = item.price * item.quantity;
 
               return (
@@ -149,6 +163,10 @@ function Cart() {
                     flex-col
                     sm:flex-row
                     gap-5
+                    transition-all
+                    duration-300
+                    hover:shadow-lg
+                    hover:-translate-y-0.5
                   "
                 >
                   {/* Product Image */}
@@ -165,13 +183,24 @@ function Cart() {
                       justify-center
                       overflow-hidden
                       shrink-0
+                      transition-all
+                      duration-300
+                      hover:shadow-md
                     "
                   >
                     {item.thumbnail ? (
                       <img
                         src={item.thumbnail}
                         alt={item.name}
-                        className="w-full h-full object-contain p-3"
+                        className="
+                          w-full
+                          h-full
+                          object-contain
+                          p-3
+                          transition-transform
+                          duration-300
+                          hover:scale-110
+                        "
                       />
                     ) : (
                       <span className="text-sm text-slate-400">
@@ -188,7 +217,8 @@ function Cart() {
                         font-bold
                         text-slate-900
                         hover:text-blue-600
-                        transition
+                        transition-colors
+                        duration-200
                       "
                     >
                       {item.name}
@@ -196,14 +226,26 @@ function Cart() {
 
                     {/* Prices */}
                     <div className="mt-3 flex flex-wrap items-center gap-2">
-                      {discountPercent > 0 &&
-                      originalPrice > item.price ? (
+                      {discountPercent > 0 && originalPrice > item.price ? (
                         <>
                           <span className="text-sm text-slate-400 line-through">
                             {originalPrice.toLocaleString("fa-IR")} تومان
                           </span>
 
-                          <span className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-lg">
+                          <span
+                            className="
+                              bg-red-500
+                              text-white
+                              text-xs
+                              font-bold
+                              px-2
+                              py-1
+                              rounded-lg
+                              transition-transform
+                              duration-200
+                              hover:scale-105
+                            "
+                          >
                             {discountPercent.toLocaleString("fa-IR")}٪ تخفیف
                           </span>
                         </>
@@ -229,12 +271,10 @@ function Cart() {
                         <button
                           type="button"
                           onClick={() =>
-                            updateQuantity(
-                              item.id,
-                              item.quantity - 1
-                            )
+                            updateQuantity(item.id, item.quantity - 1)
                           }
                           disabled={item.quantity <= 1}
+                          aria-label="کاهش تعداد"
                           className="
                             w-10
                             h-10
@@ -243,7 +283,13 @@ function Cart() {
                             justify-center
                             text-slate-600
                             hover:bg-slate-50
+                            hover:text-blue-600
+                            transition-all
+                            duration-150
+                            active:scale-90
                             disabled:opacity-40
+                            disabled:cursor-not-allowed
+                            disabled:active:scale-100
                           "
                         >
                           <Minus size={16} />
@@ -256,12 +302,10 @@ function Cart() {
                         <button
                           type="button"
                           onClick={() =>
-                            updateQuantity(
-                              item.id,
-                              item.quantity + 1
-                            )
+                            updateQuantity(item.id, item.quantity + 1)
                           }
                           disabled={item.quantity >= item.stock}
+                          aria-label="افزایش تعداد"
                           className="
                             w-10
                             h-10
@@ -270,7 +314,13 @@ function Cart() {
                             justify-center
                             text-slate-600
                             hover:bg-slate-50
+                            hover:text-blue-600
+                            transition-all
+                            duration-150
+                            active:scale-90
                             disabled:opacity-40
+                            disabled:cursor-not-allowed
+                            disabled:active:scale-100
                           "
                         >
                           <Plus size={16} />
@@ -288,7 +338,10 @@ function Cart() {
                           text-sm
                           text-red-500
                           hover:text-red-600
-                          transition
+                          hover:-translate-y-0.5
+                          transition-all
+                          duration-150
+                          active:scale-95
                         "
                       >
                         <Trash2 size={17} />
@@ -299,16 +352,13 @@ function Cart() {
 
                   {/* Item Total */}
                   <div className="sm:text-left sm:min-w-36">
-                    <div className="text-sm text-slate-400">
-                      مبلغ
-                    </div>
+                    <div className="text-sm text-slate-400">مبلغ</div>
 
                     <div className="font-black text-slate-900 mt-1">
                       {itemTotal.toLocaleString("fa-IR")} تومان
                     </div>
 
-                    {discountPercent > 0 &&
-                    originalPrice > item.price ? (
+                    {discountPercent > 0 && originalPrice > item.price ? (
                       <div className="text-xs text-emerald-600 font-bold mt-2">
                         صرفه‌جویی:{" "}
                         {(
@@ -327,15 +377,11 @@ function Cart() {
           {/* Summary */}
           <aside>
             <div className="bg-white rounded-2xl border border-slate-100 p-6 sticky top-5">
-              <h2 className="text-xl font-black text-slate-900">
-                خلاصه سفارش
-              </h2>
+              <h2 className="text-xl font-black text-slate-900">خلاصه سفارش</h2>
 
               <div className="space-y-4 mt-6">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-slate-500">
-                    تعداد کالا
-                  </span>
+                  <span className="text-slate-500">تعداد کالا</span>
 
                   <span className="font-bold text-slate-900">
                     {cartCount.toLocaleString("fa-IR")}
@@ -343,9 +389,7 @@ function Cart() {
                 </div>
 
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-slate-500">
-                    مبلغ کالاها
-                  </span>
+                  <span className="text-slate-500">مبلغ کالاها</span>
 
                   <span className="font-bold text-slate-900">
                     {cartOriginalTotal.toLocaleString("fa-IR")} تومان
@@ -354,9 +398,7 @@ function Cart() {
 
                 {cartDiscount > 0 ? (
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-slate-500">
-                      تخفیف
-                    </span>
+                    <span className="text-slate-500">تخفیف</span>
 
                     <span className="font-bold text-red-500">
                       - {cartDiscount.toLocaleString("fa-IR")} تومان
@@ -365,13 +407,9 @@ function Cart() {
                 ) : null}
 
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-slate-500">
-                    هزینه ارسال
-                  </span>
+                  <span className="text-slate-500">هزینه ارسال</span>
 
-                  <span className="font-bold text-emerald-600">
-                    رایگان
-                  </span>
+                  <span className="font-bold text-emerald-600">رایگان</span>
                 </div>
 
                 <div className="border-t border-slate-100 pt-5 flex items-center justify-between">
@@ -385,23 +423,16 @@ function Cart() {
                 </div>
               </div>
 
-              <button
+              <Button
                 type="button"
                 onClick={() => navigate("/checkout")}
-                className="
-                  w-full
-                  mt-6
-                  bg-blue-600
-                  hover:bg-blue-700
-                  text-white
-                  py-4
-                  rounded-xl
-                  font-bold
-                  transition
-                "
+                variant="primary"
+                size="lg"
+                fullWidth
+                icon={<ArrowRight size={19} />}
               >
                 ادامه فرایند خرید
-              </button>
+              </Button>
             </div>
           </aside>
         </div>
