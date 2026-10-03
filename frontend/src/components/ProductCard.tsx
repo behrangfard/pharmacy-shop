@@ -1,9 +1,13 @@
 import { useState } from "react";
+
 import { Link } from "react-router-dom";
+
 import { CheckCircle2, ShoppingCart } from "lucide-react";
 
 import { useCart } from "../context/CartContext";
+
 import { calculateProductPrice } from "../utils/price";
+
 import Button from "./Button";
 
 interface ProductImage {
@@ -32,7 +36,6 @@ interface Props {
 
 function ProductCard({ product }: Props) {
   const { addToCart } = useCart();
-
   const [addingToCart, setAddingToCart] = useState(false);
   const [addedToCart, setAddedToCart] = useState(false);
 
@@ -196,19 +199,43 @@ function ProductCard({ product }: Props) {
           </p>
         )}
 
-        <div className="mt-4">
+        <div
+          className="
+            mt-4
+            w-full
+            flex
+            flex-col
+            items-start
+            justify-start
+            text-left
+          "
+          style={{
+            direction: "ltr",
+            textAlign: "left",
+          }}
+        >
           {hasDiscount ? (
             <>
-              <div className="text-slate-400 text-sm line-through">
+              <div
+                className="
+                  w-full
+                  text-slate-400
+                  text-sm
+                  line-through
+                  text-left
+                "
+              >
                 {price.toLocaleString("fa-IR")} تومان
               </div>
 
               <div
                 className="
+                  w-full
                   text-blue-600
                   font-black
                   text-lg
                   mt-1
+                  text-left
                   transition-transform
                   duration-200
                   group-hover:translate-x-0.5
@@ -220,9 +247,11 @@ function ProductCard({ product }: Props) {
           ) : (
             <div
               className="
+                w-full
                 text-blue-600
                 font-black
                 text-lg
+                text-left
                 transition-transform
                 duration-200
                 group-hover:translate-x-0.5

@@ -12,7 +12,9 @@ import {
 } from "lucide-react";
 
 import Layout from "../components/Layout";
+
 import Button from "../components/Button";
+
 import api from "../services/api";
 
 interface ProductImage {
@@ -70,9 +72,13 @@ export default function OrderDetail() {
   }>();
 
   const [order, setOrder] = useState<Order | null>(null);
+
   const [loading, setLoading] = useState(true);
+
   const [cancelling, setCancelling] = useState(false);
+
   const [error, setError] = useState("");
+
   const [cancelMessage, setCancelMessage] = useState("");
 
   const fetchOrder = async () => {
@@ -210,7 +216,9 @@ export default function OrderDetail() {
     }
 
     setCancelling(true);
+
     setCancelMessage("");
+
     setError("");
 
     try {
@@ -287,6 +295,7 @@ export default function OrderDetail() {
       <div className="bg-gray-50 min-h-screen py-8 px-4">
         <div className="max-w-5xl mx-auto">
           {/* Header */}
+
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
             <div>
               <Link
@@ -308,6 +317,7 @@ export default function OrderDetail() {
           </div>
 
           {/* Messages */}
+
           {cancelMessage && (
             <div className="bg-green-50 border border-green-200 text-green-700 rounded-xl px-4 py-3 mb-6 animate-pulse">
               {cancelMessage}
@@ -321,6 +331,7 @@ export default function OrderDetail() {
           )}
 
           {/* Status */}
+
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-6 transition-all duration-300 hover:shadow-md">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="flex items-center gap-4 bg-gray-50 rounded-xl p-4 transition-all duration-200 hover:bg-gray-100 hover:shadow-sm hover:-translate-y-0.5">
@@ -364,8 +375,10 @@ export default function OrderDetail() {
           </div>
 
           {/* Main Content */}
+
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Products */}
+
             <div className="lg:col-span-2 bg-white rounded-2xl border border-gray-100 shadow-sm p-6 transition-all duration-300 hover:shadow-md">
               <h2 className="text-lg font-bold text-gray-900 mb-5">
                 محصولات سفارش
@@ -384,51 +397,113 @@ export default function OrderDetail() {
                         )}`
                     : null;
 
+                  const unitPrice = Number(item.unit_price);
+
+                  const totalPrice = Number(item.total_price);
+
                   return (
                     <div
                       key={item.id}
-                      className="flex items-center gap-4 border-b border-gray-100 pb-4 last:border-0 last:pb-0 rounded-xl p-2 -m-2 transition-all duration-200 hover:bg-gray-50 hover:shadow-sm"
+                      className="border-b border-gray-100 pb-4 last:border-0 last:pb-0"
                     >
-                      <div className="w-20 h-20 bg-gray-100 rounded-xl overflow-hidden flex-shrink-0">
-                        {imageUrl ? (
-                          <img
-                            src={imageUrl}
-                            alt={
-                              item.product?.images?.[0]?.alt ||
-                              item.product?.name ||
-                              item.product_name ||
-                              "محصول"
-                            }
-                            className="w-full h-full object-cover transition-transform duration-300 hover:scale-110"
-                            onError={(event) => {
-                              console.error("IMAGE LOAD ERROR:", imageUrl);
+                      <div className="flex flex-col sm:flex-row sm:items-start gap-4 rounded-xl p-2 -m-2 transition-all duration-200 hover:bg-gray-50 hover:shadow-sm">
+                        {/* Image */}
 
-                              event.currentTarget.style.display = "none";
-                            }}
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center text-gray-400">
-                            <Package className="w-8 h-8" />
+                        <div className="w-20 h-20 bg-gray-100 rounded-xl overflow-hidden flex-shrink-0">
+                          {imageUrl ? (
+                            <img
+                              src={imageUrl}
+                              alt={
+                                item.product?.images?.[0]?.alt ||
+                                item.product?.name ||
+                                item.product_name ||
+                                "محصول"
+                              }
+                              className="w-full h-full object-cover transition-transform duration-300 hover:scale-110"
+                              onError={(event) => {
+                                console.error("IMAGE LOAD ERROR:", imageUrl);
+
+                                event.currentTarget.style.display = "none";
+                              }}
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-gray-400">
+                              <Package className="w-8 h-8" />
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Product Information */}
+
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-semibold text-gray-900 leading-6">
+                            {item.product?.name || item.product_name || "محصول"}
+                          </h3>
+
+                          <div className="mt-2 text-sm text-gray-500">
+                            تعداد:{" "}
+                            <span
+                              className="font-medium"
+                              style={{
+                                direction: "ltr",
+                                display: "inline-block",
+                              }}
+                            >
+                              {item.quantity.toLocaleString("fa-IR")}
+                            </span>
                           </div>
-                        )}
-                      </div>
 
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-gray-900 truncate transition-colors duration-200 hover:text-blue-600">
-                          {item.product?.name || item.product_name || "محصول"}
-                        </h3>
+                          {/* Unit Price */}
 
-                        <p className="text-sm text-gray-500 mt-1">
-                          تعداد: {item.quantity}
-                        </p>
+                          <div
+                            className="mt-3 w-full flex flex-col items-start justify-start text-left"
+                            style={{
+                              direction: "ltr",
+                              textAlign: "left",
+                            }}
+                          >
+                            <span className="text-sm text-gray-500">
+                              قیمت واحد
+                            </span>
 
-                        <p className="text-sm text-gray-500">
-                          قیمت واحد: {formatPrice(item.unit_price)}
-                        </p>
-                      </div>
+                            <span className="mt-1 text-sm font-bold text-blue-600">
+                              {unitPrice.toLocaleString("fa-IR")} تومان
+                            </span>
+                          </div>
 
-                      <div className="font-bold text-gray-900 whitespace-nowrap transition-transform duration-200 hover:scale-105">
-                        {formatPrice(item.total_price)}
+                          {/* Quantity Calculation */}
+
+                          {item.quantity > 1 && (
+                            <div
+                              className="mt-1 text-xs text-gray-500 text-left"
+                              style={{
+                                direction: "ltr",
+                                textAlign: "left",
+                              }}
+                            >
+                              {unitPrice.toLocaleString("fa-IR")} ×{" "}
+                              {item.quantity.toLocaleString("fa-IR")}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Item Total */}
+
+                        <div
+                          className="w-full sm:w-44 bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-left sm:self-stretch sm:flex sm:flex-col sm:justify-center"
+                          style={{
+                            direction: "ltr",
+                            textAlign: "left",
+                          }}
+                        >
+                          <div className="text-xs text-gray-500 mb-1">
+                            جمع این کالا
+                          </div>
+
+                          <div className="text-lg font-black text-slate-800 whitespace-nowrap">
+                            {totalPrice.toLocaleString("fa-IR")} تومان
+                          </div>
+                        </div>
                       </div>
                     </div>
                   );
@@ -437,55 +512,91 @@ export default function OrderDetail() {
             </div>
 
             {/* Summary */}
+
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 h-fit transition-all duration-300 hover:shadow-md">
               <h2 className="text-lg font-bold text-gray-900 mb-5">
                 خلاصه سفارش
               </h2>
 
               <div className="space-y-4 text-sm">
-                <div className="flex justify-between transition-transform duration-150 hover:translate-x-[-2px]">
+                <div className="flex items-center justify-between gap-4">
                   <span className="text-gray-500">مبلغ کالاها</span>
 
-                  <span className="font-medium">
+                  <span
+                    className="font-medium text-left whitespace-nowrap"
+                    style={{
+                      direction: "ltr",
+                      textAlign: "left",
+                    }}
+                  >
                     {formatPrice(order.subtotal)}
                   </span>
                 </div>
 
-                <div className="flex justify-between transition-transform duration-150 hover:translate-x-[-2px]">
+                <div className="flex items-center justify-between gap-4">
                   <span className="text-gray-500">هزینه ارسال</span>
 
-                  <span className="font-medium">
-                    {formatPrice(order.shipping_cost)}
+                  <span
+                    className={`font-medium text-left whitespace-nowrap ${
+                      Number(order.shipping_cost) === 0
+                        ? "text-green-600"
+                        : "text-gray-800"
+                    }`}
+                    style={{
+                      direction: "ltr",
+                      textAlign: "left",
+                    }}
+                  >
+                    {Number(order.shipping_cost) === 0
+                      ? "رایگان"
+                      : formatPrice(order.shipping_cost)}
                   </span>
                 </div>
 
                 {Number(order.discount) > 0 && (
-                  <div className="flex justify-between text-green-600 transition-transform duration-150 hover:translate-x-[-2px]">
-                    <span>تخفیف</span>
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-gray-500">تخفیف</span>
 
-                    <span>- {formatPrice(order.discount)}</span>
+                    <span
+                      className="font-bold text-red-500 text-left whitespace-nowrap"
+                      style={{
+                        direction: "ltr",
+                        textAlign: "left",
+                      }}
+                    >
+                      - {formatPrice(order.discount)}
+                    </span>
                   </div>
                 )}
 
-                <div className="border-t border-gray-100 pt-4 flex justify-between items-center">
-                  <span className="font-bold text-gray-900">مبلغ نهایی</span>
+                <div className="border-t border-gray-100 pt-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="font-bold text-gray-900">مبلغ نهایی</span>
 
-                  <span className="text-xl font-bold text-blue-600 transition-transform duration-200 hover:scale-105">
-                    {formatPrice(order.total)}
-                  </span>
+                    <span
+                      className="text-xl font-black text-blue-600 text-left whitespace-nowrap"
+                      style={{
+                        direction: "ltr",
+                        textAlign: "left",
+                      }}
+                    >
+                      {formatPrice(order.total)}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
           {/* Receiver Information */}
+
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mt-6 transition-all duration-300 hover:shadow-md">
             <h2 className="text-lg font-bold text-gray-900 mb-5">
               اطلاعات گیرنده
             </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-              <div className="transition-transform duration-150 hover:translate-x-[-2px]">
+              <div>
                 <p className="text-sm text-gray-500 mb-1">نام گیرنده</p>
 
                 <p className="font-medium text-gray-900">
@@ -493,14 +604,14 @@ export default function OrderDetail() {
                 </p>
               </div>
 
-              <div className="transition-transform duration-150 hover:translate-x-[-2px]">
+              <div>
                 <p className="text-sm text-gray-500 mb-1">شماره تماس</p>
 
                 <p className="font-medium text-gray-900">{order.phone}</p>
               </div>
 
               {order.postal_code && (
-                <div className="transition-transform duration-150 hover:translate-x-[-2px]">
+                <div>
                   <p className="text-sm text-gray-500 mb-1">کد پستی</p>
 
                   <p className="font-medium text-gray-900">
@@ -509,7 +620,7 @@ export default function OrderDetail() {
                 </div>
               )}
 
-              <div className="md:col-span-2 transition-transform duration-150 hover:translate-x-[-2px]">
+              <div className="md:col-span-2">
                 <p className="text-sm text-gray-500 mb-1">آدرس</p>
 
                 <p className="font-medium text-gray-900 leading-7">
@@ -518,7 +629,7 @@ export default function OrderDetail() {
               </div>
 
               {order.notes && (
-                <div className="md:col-span-2 transition-transform duration-150 hover:translate-x-[-2px]">
+                <div className="md:col-span-2">
                   <p className="text-sm text-gray-500 mb-1">توضیحات سفارش</p>
 
                   <p className="font-medium text-gray-900 leading-7">
@@ -530,6 +641,7 @@ export default function OrderDetail() {
           </div>
 
           {/* Actions */}
+
           <div className="flex flex-col sm:flex-row gap-3 mt-6">
             <Button
               type="button"

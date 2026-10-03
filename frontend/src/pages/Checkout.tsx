@@ -1,10 +1,15 @@
 import { FormEvent, useMemo, useState } from "react";
+
 import { Link, useNavigate } from "react-router-dom";
+
 import { ArrowRight, CheckCircle2, Loader2, ShoppingBag } from "lucide-react";
 
 import Layout from "../components/Layout";
+
 import { useCart } from "../context/CartContext";
+
 import { useAuth } from "../context/AuthContext";
+
 import api from "../services/api";
 
 type CheckoutForm = {
@@ -21,6 +26,7 @@ function Checkout() {
   const navigate = useNavigate();
 
   const { items, cartTotal } = useCart();
+
   const { user } = useAuth();
 
   const [form, setForm] = useState<CheckoutForm>({
@@ -34,6 +40,7 @@ function Checkout() {
   });
 
   const [loading, setLoading] = useState(false);
+
   const [error, setError] = useState("");
 
   const cartOriginalTotal = useMemo(() => {
@@ -123,7 +130,6 @@ function Checkout() {
 
         if (errors && typeof errors === "object") {
           const firstKey = Object.keys(errors)[0];
-
           const firstMessage = errors[firstKey];
 
           if (Array.isArray(firstMessage) && firstMessage.length > 0) {
@@ -180,6 +186,7 @@ function Checkout() {
     <Layout>
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Breadcrumb */}
+
         <div className="flex items-center gap-2 text-sm text-gray-500 mb-8">
           <Link to="/" className="hover:text-blue-600">
             خانه
@@ -201,6 +208,7 @@ function Checkout() {
         <form onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* اطلاعات گیرنده */}
+
             <div className="lg:col-span-2">
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
                 <h2 className="text-xl font-bold text-gray-800 mb-6">
@@ -209,6 +217,7 @@ function Checkout() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   {/* نام */}
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       نام
@@ -225,6 +234,7 @@ function Checkout() {
                   </div>
 
                   {/* نام خانوادگی */}
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       نام خانوادگی
@@ -241,6 +251,7 @@ function Checkout() {
                   </div>
 
                   {/* موبایل */}
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       شماره موبایل
@@ -257,6 +268,7 @@ function Checkout() {
                   </div>
 
                   {/* استان */}
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       استان
@@ -273,6 +285,7 @@ function Checkout() {
                   </div>
 
                   {/* شهر */}
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       شهر
@@ -289,6 +302,7 @@ function Checkout() {
                   </div>
 
                   {/* کد پستی */}
+
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       کد پستی
@@ -305,6 +319,7 @@ function Checkout() {
                   </div>
 
                   {/* آدرس */}
+
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       آدرس کامل
@@ -322,6 +337,7 @@ function Checkout() {
                 </div>
 
                 {/* خطا */}
+
                 {error && (
                   <div className="mt-6 rounded-xl bg-red-50 border border-red-100 text-red-700 px-4 py-3 text-sm">
                     {error}
@@ -331,13 +347,14 @@ function Checkout() {
             </div>
 
             {/* خلاصه سفارش */}
+
             <div>
               <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sticky top-6">
                 <h2 className="text-xl font-bold text-gray-800 mb-6">
                   خلاصه سفارش
                 </h2>
 
-                <div className="space-y-5 mb-6">
+                <div className="space-y-4 mb-6">
                   {items.map((item) => {
                     const originalPrice = item.originalPrice ?? item.price;
 
@@ -345,48 +362,126 @@ function Checkout() {
 
                     const itemTotal = item.price * item.quantity;
 
+                    const itemSavings = Math.max(
+                      0,
+                      (originalPrice - item.price) * item.quantity,
+                    );
+
+                    const hasDiscount =
+                      discountPercent > 0 && originalPrice > item.price;
+
                     return (
                       <div
                         key={item.id}
                         className="border-b border-gray-100 pb-4 last:border-0 last:pb-0"
                       >
                         <div className="flex items-start justify-between gap-3">
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-800">
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-800 leading-6">
                               {item.name}
                             </p>
 
-                            <p className="text-xs text-gray-500 mt-1">
-                              تعداد: {item.quantity.toLocaleString("fa-IR")}
-                            </p>
-                          </div>
+                            <div className="mt-3 flex items-center gap-2 text-xs text-gray-500">
+                              <span>تعداد:</span>
 
-                          <div className="text-sm font-semibold text-gray-700 whitespace-nowrap">
-                            {itemTotal.toLocaleString("fa-IR")} تومان
+                              <span
+                                className="font-semibold"
+                                style={{
+                                  direction: "ltr",
+                                  display: "inline-block",
+                                }}
+                              >
+                                {item.quantity.toLocaleString("fa-IR")}
+                              </span>
+                            </div>
                           </div>
                         </div>
 
-                        {discountPercent > 0 && originalPrice > item.price && (
-                          <div className="mt-2 flex items-center gap-2">
-                            <span className="text-xs text-gray-400 line-through">
-                              {originalPrice.toLocaleString("fa-IR")} تومان
+                        {/* قیمت */}
+
+                        <div
+                          className="mt-3 w-full flex flex-col items-start justify-start text-left"
+                          style={{
+                            direction: "ltr",
+                            textAlign: "left",
+                          }}
+                        >
+                          {hasDiscount && (
+                            <div className="w-full flex flex-row items-center justify-start gap-2 mb-1">
+                              <span className="text-xs text-gray-400 line-through">
+                                {originalPrice.toLocaleString("fa-IR")} تومان
+                              </span>
+
+                              <span className="text-xs font-bold text-red-500">
+                                {discountPercent.toLocaleString("fa-IR")}٪
+                              </span>
+                            </div>
+                          )}
+
+                          <div className="w-full text-left">
+                            <span className="text-sm font-bold text-blue-600">
+                              {item.price.toLocaleString("fa-IR")} تومان
                             </span>
 
-                            <span className="text-xs font-bold text-red-500">
-                              {discountPercent.toLocaleString("fa-IR")}٪ تخفیف
+                            <span className="text-xs text-gray-400 mr-2">
+                              قیمت واحد
                             </span>
                           </div>
-                        )}
+
+                          {item.quantity > 1 && (
+                            <div className="w-full text-left mt-1">
+                              <span className="text-xs text-gray-500">
+                                {item.price.toLocaleString("fa-IR")} ×{" "}
+                                {item.quantity.toLocaleString("fa-IR")}
+                              </span>
+                            </div>
+                          )}
+
+                          {itemSavings > 0 && (
+                            <div className="w-full text-left mt-1">
+                              <span className="text-xs font-medium text-green-600">
+                                صرفه‌جویی: {itemSavings.toLocaleString("fa-IR")}{" "}
+                                تومان
+                              </span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* جمع این کالا */}
+
+                        <div
+                          className="mt-3 w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-left"
+                          style={{
+                            direction: "ltr",
+                            textAlign: "left",
+                          }}
+                        >
+                          <div className="text-xs text-gray-500 mb-1">
+                            جمع این کالا
+                          </div>
+
+                          <div className="text-base font-black text-slate-800">
+                            {itemTotal.toLocaleString("fa-IR")} تومان
+                          </div>
+                        </div>
                       </div>
                     );
                   })}
                 </div>
 
+                {/* جمع‌بندی مالی */}
+
                 <div className="border-t border-gray-100 pt-5 space-y-4">
                   <div className="flex items-center justify-between text-gray-600">
                     <span>مبلغ کالاها</span>
 
-                    <span>
+                    <span
+                      className="text-left"
+                      style={{
+                        direction: "ltr",
+                        textAlign: "left",
+                      }}
+                    >
                       {cartOriginalTotal.toLocaleString("fa-IR")} تومان
                     </span>
                   </div>
@@ -395,7 +490,13 @@ function Checkout() {
                     <div className="flex items-center justify-between">
                       <span className="text-gray-600">تخفیف</span>
 
-                      <span className="text-red-500 font-medium">
+                      <span
+                        className="text-red-500 font-medium text-left"
+                        style={{
+                          direction: "ltr",
+                          textAlign: "left",
+                        }}
+                      >
                         - {cartDiscount.toLocaleString("fa-IR")} تومان
                       </span>
                     </div>
@@ -407,16 +508,24 @@ function Checkout() {
                     <span className="text-green-600 font-medium">رایگان</span>
                   </div>
 
-                  <div className="border-t border-gray-100 pt-4 flex items-center justify-between">
+                  <div className="border-t border-gray-100 pt-4 flex items-center justify-between gap-4">
                     <span className="font-bold text-gray-800">
                       مبلغ قابل پرداخت
                     </span>
 
-                    <span className="text-xl font-bold text-blue-600">
+                    <span
+                      className="text-xl font-black text-blue-600 text-left whitespace-nowrap"
+                      style={{
+                        direction: "ltr",
+                        textAlign: "left",
+                      }}
+                    >
                       {Number(cartTotal).toLocaleString("fa-IR")} تومان
                     </span>
                   </div>
                 </div>
+
+                {/* ثبت سفارش */}
 
                 <button
                   type="submit"

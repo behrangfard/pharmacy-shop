@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
+
 import { Link, useParams } from "react-router-dom";
+
 import {
   ArrowRight,
   ShoppingCart,
@@ -47,19 +49,16 @@ interface Product {
   thumbnail?: string | null;
   short_description?: string | null;
   description?: string | null;
-
   category?: {
     id: number;
     name: string;
     slug: string;
   } | null;
-
   brand?: {
     id: number;
     name: string;
     slug: string;
   } | null;
-
   images?: ProductImage[];
   variants?: ProductVariant[];
 }
@@ -526,11 +525,47 @@ function ProductDetail() {
               )}
 
               {/* Price */}
-              <div className="mt-8">
+              <div
+                className="
+                  mt-8
+                  w-full
+                  flex
+                  flex-col
+                  items-start
+                  justify-start
+                  text-left
+                "
+                style={{
+                  direction: "ltr",
+                  textAlign: "left",
+                }}
+              >
                 {hasDiscount ? (
-                  <div>
-                    <div className="flex flex-wrap items-center gap-3 mb-3">
-                      <span className="inline-flex items-center bg-red-500 text-white px-3 py-1.5 rounded-lg text-sm font-bold">
+                  <>
+                    <div
+                      className="
+                        w-full
+                        flex
+                        flex-row
+                        items-center
+                        justify-start
+                        gap-3
+                        mb-3
+                      "
+                    >
+                      <span
+                        className="
+                          inline-flex
+                          items-center
+                          bg-red-500
+                          text-white
+                          px-3
+                          py-1.5
+                          rounded-lg
+                          text-sm
+                          font-bold
+                        "
+                      >
                         {discountPercent}% تخفیف
                       </span>
 
@@ -539,22 +574,48 @@ function ProductDetail() {
                           text-lg
                           text-slate-400
                           line-through
+                          text-left
                         "
                       >
                         {originalPrice.toLocaleString("fa-IR")} تومان
                       </span>
                     </div>
 
-                    <div className="text-3xl font-black text-blue-600">
+                    <div
+                      className="
+                        w-full
+                        text-3xl
+                        font-black
+                        text-blue-600
+                        text-left
+                      "
+                    >
                       {finalPrice.toLocaleString("fa-IR")} تومان
                     </div>
 
-                    <div className="text-green-600 text-sm font-medium mt-2">
+                    <div
+                      className="
+                        w-full
+                        text-green-600
+                        text-sm
+                        font-medium
+                        mt-2
+                        text-left
+                      "
+                    >
                       صرفه‌جویی {discountAmount.toLocaleString("fa-IR")} تومان
                     </div>
-                  </div>
+                  </>
                 ) : (
-                  <div className="text-3xl font-black text-blue-600">
+                  <div
+                    className="
+                      w-full
+                      text-3xl
+                      font-black
+                      text-blue-600
+                      text-left
+                    "
+                  >
                     {originalPrice.toLocaleString("fa-IR")} تومان
                   </div>
                 )}

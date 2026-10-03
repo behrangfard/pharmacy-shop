@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+
 import {
   ArrowLeft,
   ShieldCheck,
@@ -6,6 +7,7 @@ import {
   Headphones,
   RotateCcw,
 } from "lucide-react";
+
 import Layout from "../components/Layout";
 import { ButtonLink } from "../components/Button";
 import { api } from "../services/api";
@@ -46,20 +48,20 @@ function ProductImageBox({ product }: { product: Product }) {
     return (
       <div
         className="
-          h-40
-          rounded-xl
-          bg-gray-100
-          flex
-          items-center
-          justify-center
-          text-gray-400
-          mb-5
-          transition-all
-          duration-300
-          group-hover:bg-gray-50
-        "
+       h-40
+       rounded-xl
+       bg-gray-100
+       flex
+       items-center
+       justify-center
+       text-gray-400
+       mb-5
+       transition-all
+       duration-300
+       group-hover:bg-gray-50
+     "
       >
-        تصویر محصول
+        تصویر محصول{" "}
       </div>
     );
   }
@@ -67,33 +69,33 @@ function ProductImageBox({ product }: { product: Product }) {
   return (
     <div
       className="
-        h-40
-        rounded-xl
-        bg-gray-50
-        flex
-        items-center
-        justify-center
-        overflow-hidden
-        mb-5
-        transition-all
-        duration-300
-        group-hover:bg-blue-50/40
-      "
+     h-40
+     rounded-xl
+     bg-gray-50
+     flex
+     items-center
+     justify-center
+     overflow-hidden
+     mb-5
+     transition-all
+     duration-300
+     group-hover:bg-blue-50/40
+   "
     >
       <img
         src={imageUrl}
         alt={primaryImage?.alt || product.name}
         className="
-          w-full
-          h-full
-          object-contain
-          p-3
-          transition-transform
-          duration-500
-          ease-out
-          group-hover:scale-105
-        "
-      />
+w-full
+h-full
+object-contain
+p-3
+transition-transform
+duration-500
+ease-out
+group-hover:scale-105
+"
+      />{" "}
     </div>
   );
 }
@@ -108,36 +110,120 @@ function ProductPrice({ product }: { product: Product }) {
   } = calculateProductPrice(product.price, product.discount_percent);
 
   return (
-    <div className="mt-5">
+    <div
+      className="
+mt-5
+w-full
+flex
+flex-col
+items-start
+text-left
+"
+      style={{
+        direction: "ltr",
+        textAlign: "left",
+      }}
+    >
       {hasDiscount ? (
         <>
-          <div className="flex items-center gap-2 mb-2">
-            <span className="inline-flex items-center justify-center bg-red-500 text-white text-xs font-bold px-2.5 py-1 rounded-lg transition-transform duration-200 group-hover:scale-105">
-              {discountPercent}% تخفیف
+          {" "}
+          <div
+            className="
+           w-full
+           flex
+           flex-row
+           items-center
+           justify-start
+           gap-2
+           mb-2
+         "
+          >
+            {" "}
+            <span
+              className="
+             inline-flex
+             items-center
+             justify-center
+             bg-red-500
+             text-white
+             text-xs
+             font-bold
+             px-2.5
+             py-1
+             rounded-lg
+             transition-transform
+             duration-200
+             group-hover:scale-105
+           "
+            >
+              {discountPercent}% تخفیف{" "}
             </span>
-
-            <span className="text-gray-400 text-sm line-through">
+            <span
+              className="
+            text-gray-400
+            text-sm
+            line-through
+          "
+            >
               {originalPrice.toLocaleString("fa-IR")} تومان
             </span>
           </div>
-
-          <div className="text-blue-600 font-black text-xl transition-colors duration-200 group-hover:text-blue-700">
+          <div
+            className="
+          w-full
+          text-left
+          text-blue-600
+          font-black
+          text-xl
+          transition-colors
+          duration-200
+          group-hover:text-blue-700
+        "
+          >
             {finalPrice.toLocaleString("fa-IR")} تومان
           </div>
-
-          <div className="text-green-600 text-xs font-medium mt-1">
+          <div
+            className="
+          w-full
+          text-left
+          text-green-600
+          text-xs
+          font-medium
+          mt-1
+        "
+          >
             صرفه‌جویی {discountAmount.toLocaleString("fa-IR")} تومان
           </div>
         </>
       ) : (
         <>
-          <div className="text-blue-600 font-black text-xl transition-colors duration-200 group-hover:text-blue-700">
+          <div
+            className="
+          w-full
+          text-left
+          text-blue-600
+          font-black
+          text-xl
+          transition-colors
+          duration-200
+          group-hover:text-blue-700
+        "
+          >
             {originalPrice.toLocaleString("fa-IR")} تومان
           </div>
 
           {product.compare_price &&
             Number(product.compare_price) > originalPrice && (
-              <div className="text-gray-400 text-sm line-through mt-1">
+              <div
+                className="
+              w-full
+              text-left
+              text-gray-400
+              text-sm
+              line-through
+              mt-1
+            "
+              >
                 {Number(product.compare_price).toLocaleString("fa-IR")} تومان
               </div>
             )}
@@ -151,52 +237,58 @@ function ProductCardHome({ product }: { product: Product }) {
   return (
     <div
       className="
-        group
-        border
-        rounded-2xl
-        p-6
-        bg-white
-        hover:shadow-lg
-        hover:-translate-y-1
-        transition-all
-        duration-300
-        ease-out
-      "
+     group
+     border
+     rounded-2xl
+     p-6
+     bg-white
+     hover:shadow-lg
+     hover:-translate-y-1
+     transition-all
+     duration-300
+     ease-out
+   "
     >
+      {" "}
       <ProductImageBox product={product} />
-
-      <h3 className="font-bold text-lg leading-7 transition-colors duration-200 group-hover:text-blue-700">
+      <h3
+        className="
+      font-bold
+      text-lg
+      leading-7
+      transition-colors
+      duration-200
+      group-hover:text-blue-700
+    "
+      >
         {product.name}
       </h3>
-
       {product.short_description && (
         <p className="text-gray-500 mt-3 text-sm leading-6">
           {product.short_description}
         </p>
       )}
-
       <ProductPrice product={product} />
-
       <ButtonLink
         to={`/product/${product.slug}`}
         variant="primary"
         size="md"
         className="
-          w-full
-          mt-5
-          transition-all
-          duration-150
-          active:scale-95
-        "
+      w-full
+      mt-5
+      transition-all
+      duration-150
+      active:scale-95
+    "
       >
         مشاهده محصول
         <ArrowLeft
           size={18}
           className="
-            transition-transform
-            duration-200
-            group-hover:translate-x-1
-          "
+        transition-transform
+        duration-200
+        group-hover:translate-x-1
+      "
         />
       </ButtonLink>
     </div>
@@ -277,35 +369,35 @@ function Home() {
 
   return (
     <Layout>
-      {/* Hero */}
+      {/* Hero */}{" "}
       <section className="bg-gradient-to-l from-blue-700 to-blue-500 text-white">
+        {" "}
         <div className="max-w-7xl mx-auto px-6 py-16">
+          {" "}
           <div className="max-w-2xl">
+            {" "}
             <div className="inline-block bg-white/10 px-4 py-2 rounded-full text-sm mb-5">
-              آرسن شاپ
+              آرسن شاپ{" "}
             </div>
-
             <h1 className="text-4xl md:text-5xl font-black leading-tight">
               فروشگاه تجهیزات پزشکی و سلامت
             </h1>
-
             <p className="mt-6 text-lg text-blue-100 leading-8">
               خرید آسان و مطمئن انواع تجهیزات پزشکی، محصولات سلامت، بهداشت و
               مراقبت شخصی
             </p>
-
             <div className="flex flex-wrap gap-4 mt-8">
               <ButtonLink
                 to="/products"
                 variant="secondary"
                 size="lg"
                 className="
-    text-blue-700
-    hover:bg-blue-50
-    transition-all
-    duration-150
-    active:scale-95
-  "
+              text-blue-700
+              hover:bg-blue-50
+              transition-all
+              duration-150
+              active:scale-95
+            "
               >
                 <span className="inline-flex items-center justify-center gap-2 whitespace-nowrap">
                   <span>مشاهده محصولات</span>
@@ -322,15 +414,15 @@ function Home() {
                 variant="ghost"
                 size="lg"
                 className="
-                  border
-                  border-white/40
-                  text-white
-                  hover:bg-white/10
-                  hover:text-white
-                  transition-all
-                  duration-150
-                  active:scale-95
-                "
+              border
+              border-white/40
+              text-white
+              hover:bg-white/10
+              hover:text-white
+              transition-all
+              duration-150
+              active:scale-95
+            "
               >
                 تجهیزات پزشکی
               </ButtonLink>
@@ -338,7 +430,6 @@ function Home() {
           </div>
         </div>
       </section>
-
       {/* Benefits */}
       <section className="bg-white border-b">
         <div className="max-w-7xl mx-auto px-6 py-8">
@@ -399,7 +490,6 @@ function Home() {
           </div>
         </div>
       </section>
-
       {/* Categories */}
       <section className="py-12">
         <div className="max-w-7xl mx-auto px-6">
@@ -411,11 +501,11 @@ function Home() {
               variant="ghost"
               size="sm"
               className="
-                text-blue-600
-                transition-all
-                duration-150
-                active:scale-95
-              "
+            text-blue-600
+            transition-all
+            duration-150
+            active:scale-95
+          "
             >
               همه محصولات
               <ArrowLeft
@@ -431,17 +521,17 @@ function Home() {
               variant="ghost"
               size="lg"
               className="
-                bg-white
-                border
-                text-right
-                justify-start
-                hover:border-blue-400
-                hover:shadow-md
-                h-full
-                transition-all
-                duration-200
-                active:scale-[0.98]
-              "
+            bg-white
+            border
+            text-right
+            justify-start
+            hover:border-blue-400
+            hover:shadow-md
+            h-full
+            transition-all
+            duration-200
+            active:scale-[0.98]
+          "
             >
               <div>
                 <h3 className="font-bold">دارو و محصولات دارویی</h3>
@@ -457,17 +547,17 @@ function Home() {
               variant="ghost"
               size="lg"
               className="
-                bg-white
-                border
-                text-right
-                justify-start
-                hover:border-blue-400
-                hover:shadow-md
-                h-full
-                transition-all
-                duration-200
-                active:scale-[0.98]
-              "
+            bg-white
+            border
+            text-right
+            justify-start
+            hover:border-blue-400
+            hover:shadow-md
+            h-full
+            transition-all
+            duration-200
+            active:scale-[0.98]
+          "
             >
               <div>
                 <h3 className="font-bold">تجهیزات پزشکی</h3>
@@ -483,17 +573,17 @@ function Home() {
               variant="ghost"
               size="lg"
               className="
-                bg-white
-                border
-                text-right
-                justify-start
-                hover:border-blue-400
-                hover:shadow-md
-                h-full
-                transition-all
-                duration-200
-                active:scale-[0.98]
-              "
+            bg-white
+            border
+            text-right
+            justify-start
+            hover:border-blue-400
+            hover:shadow-md
+            h-full
+            transition-all
+            duration-200
+            active:scale-[0.98]
+          "
             >
               <div>
                 <h3 className="font-bold">بهداشت و مراقبت شخصی</h3>
@@ -509,17 +599,17 @@ function Home() {
               variant="ghost"
               size="lg"
               className="
-                bg-white
-                border
-                text-right
-                justify-start
-                hover:border-blue-400
-                hover:shadow-md
-                h-full
-                transition-all
-                duration-200
-                active:scale-[0.98]
-              "
+            bg-white
+            border
+            text-right
+            justify-start
+            hover:border-blue-400
+            hover:shadow-md
+            h-full
+            transition-all
+            duration-200
+            active:scale-[0.98]
+          "
             >
               <div>
                 <h3 className="font-bold">مکمل‌ها</h3>
@@ -535,17 +625,17 @@ function Home() {
               variant="ghost"
               size="lg"
               className="
-                bg-white
-                border
-                text-right
-                justify-start
-                hover:border-blue-400
-                hover:shadow-md
-                h-full
-                transition-all
-                duration-200
-                active:scale-[0.98]
-              "
+            bg-white
+            border
+            text-right
+            justify-start
+            hover:border-blue-400
+            hover:shadow-md
+            h-full
+            transition-all
+            duration-200
+            active:scale-[0.98]
+          "
             >
               <div>
                 <h3 className="font-bold">مادر و کودک</h3>
@@ -558,7 +648,6 @@ function Home() {
           </div>
         </div>
       </section>
-
       {/* Featured Products */}
       <section className="bg-white py-12">
         <div className="max-w-7xl mx-auto px-6">
@@ -570,11 +659,11 @@ function Home() {
               variant="ghost"
               size="sm"
               className="
-                text-blue-600
-                transition-all
-                duration-150
-                active:scale-95
-              "
+            text-blue-600
+            transition-all
+            duration-150
+            active:scale-95
+          "
             >
               مشاهده همه
               <ArrowLeft
@@ -609,7 +698,6 @@ function Home() {
           </div>
         </div>
       </section>
-
       {/* Newest Products */}
       <section className="py-12">
         <div className="max-w-7xl mx-auto px-6">
@@ -621,11 +709,11 @@ function Home() {
               variant="ghost"
               size="sm"
               className="
-                text-blue-600
-                transition-all
-                duration-150
-                active:scale-95
-              "
+            text-blue-600
+            transition-all
+            duration-150
+            active:scale-95
+          "
             >
               مشاهده همه
               <ArrowLeft
@@ -660,25 +748,24 @@ function Home() {
           </div>
         </div>
       </section>
-
       {/* Bottom CTA */}
       <section className="py-12">
         <div className="max-w-7xl mx-auto px-6">
           <div
             className="
-              bg-blue-50
-              border
-              border-blue-100
-              rounded-3xl
-              p-8
-              md:p-12
-              flex
-              flex-col
-              md:flex-row
-              items-center
-              justify-between
-              gap-6
-            "
+          bg-blue-50
+          border
+          border-blue-100
+          rounded-3xl
+          p-8
+          md:p-12
+          flex
+          flex-col
+          md:flex-row
+          items-center
+          justify-between
+          gap-6
+        "
           >
             <div>
               <h2 className="text-2xl font-black">
@@ -695,11 +782,11 @@ function Home() {
               variant="primary"
               size="lg"
               className="
-                whitespace-nowrap
-                transition-all
-                duration-150
-                active:scale-95
-              "
+            whitespace-nowrap
+            transition-all
+            duration-150
+            active:scale-95
+          "
             >
               مشاهده فروشگاه
             </ButtonLink>
