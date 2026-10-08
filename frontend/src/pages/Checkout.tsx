@@ -1,155 +1,125 @@
 import { FormEvent, useMemo, useState } from "react";
-
 import { Link, useNavigate } from "react-router-dom";
-
-import { ArrowRight, CheckCircle2, Loader2, ShoppingBag } from "lucide-react";
+import {
+  ArrowRight,
+  MapPin,
+  Phone,
+  User,
+  Mail,
+  ShoppingBag,
+  CreditCard,
+  Loader2,
+  ChevronLeft,
+  ShieldCheck,
+  Truck,
+  AlertCircle,
+} from "lucide-react";
 
 import Layout from "../components/Layout";
-
-import { useCart } from "../context/CartContext";
-
 import { useAuth } from "../context/AuthContext";
-
+import { useCart } from "../context/CartContext";
 import api from "../services/api";
-
-type CheckoutForm = {
-  firstName: string;
-  lastName: string;
-  phone: string;
-  province: string;
-  city: string;
-  address: string;
-  postalCode: string;
-};
 
 function Checkout() {
   const navigate = useNavigate();
-
-  const { items, cartTotal } = useCart();
-
   const { user } = useAuth();
-
-  const [form, setForm] = useState<CheckoutForm>({
-    firstName: "",
-    lastName: "",
-    phone: "",
-    province: "",
-    city: "",
-    address: "",
-    postalCode: "",
-  });
+  const { items, cartTotal } = useCart();
+  const [firstName, setFirstName] = useState(user?.name ?? "");
+  const [lastName, setLastName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [province, setProvince] = useState("");
+  const [city, setCity] = useState("");
+  const [address, setAddress] = useState("");
+  const [postalCode, setPostalCode] = useState("");
 
   const [loading, setLoading] = useState(false);
-
   const [error, setError] = useState("");
 
-  const cartOriginalTotal = useMemo(() => {
-    return items.reduce(
-      (total, item) =>
-        total + (item.originalPrice ?? item.price) * item.quantity,
-      0,
-    );
-  }, [items]);
+  const formatPrice = (value: string | number) => {
+    const numericValue = Number(value);
 
-  const cartDiscount = Math.max(0, cartOriginalTotal - cartTotal);
+    if (Number.isNaN(numericValue)) {
+      return "۰";
+    }
 
-  const handleChange = (
-    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
-  ) => {
-    const { name, value } = event.target;
-
-    setForm((previous) => ({
-      ...previous,
-      [name]: value,
-    }));
+    return numericValue.toLocaleString("fa-IR");
   };
 
+  const shippingCost = 0;
+
+  const cartOriginalTotal = useMemo(() => {
+    return items.reduce((total, item) => {
+      const originalPrice = item.originalPrice ?? item.price;
+      return total + originalPrice * item.quantity;
+    }, 0);
+  }, [items]);
+
+  const cartDiscount = useMemo(() => {
+    return Math.max(0, cartOriginalTotal - Number(cartTotal ?? 0));
+  }, [cartOriginalTotal, cartTotal]);
+
+  const finalTotal = useMemo(() => {
+    return Number(cartTotal ?? 0) + shippingCost;
+  }, [cartTotal]);
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-
-    setError("");
-
-    if (!user) {
-      navigate("/login");
-      return;
-    }
 
     if (items.length === 0) {
       setError("سبد خرید شما خالی است.");
       return;
     }
 
-    if (
-      !form.firstName.trim() ||
-      !form.lastName.trim() ||
-      !form.phone.trim() ||
-      !form.province.trim() ||
-      !form.city.trim() ||
-      !form.address.trim()
-    ) {
-      setError("لطفاً تمام اطلاعات ضروری را وارد کنید.");
-      return;
-    }
-
     setLoading(true);
+    setError("");
 
     try {
-      const response = await api.post("/orders", {
-        recipient_name: `${form.firstName.trim()} ${form.lastName.trim()}`,
-        phone: form.phone.trim(),
-        address: `${form.province.trim()}، ${form.city.trim()}، ${form.address.trim()}`,
-        postal_code: form.postalCode.trim() || null,
-        notes: null,
+      const orderItems = items.map((item: any) => ({
+        product_id: item.product_id ?? item.product?.id ?? item.id,
+        quantity: Number(item.quantity),
+      }));
 
-        // قیمت را از فرانت‌اند ارسال نمی‌کنیم.
-        // Backend قیمت و تخفیف واقعی را محاسبه می‌کند.
-        items: items.map((item) => ({
-          product_id: item.id,
-          quantity: item.quantity,
-        })),
+      const fullAddress = [province, city, address].filter(Boolean).join("، ");
+
+      const response = await api.post("/orders", {
+        recipient_name: `${firstName} ${lastName}`.trim(),
+        phone,
+        address: fullAddress,
+        postal_code: postalCode,
+        notes: null,
+        items: orderItems,
       });
 
-      const orderNumber = response?.data?.data?.order_number;
+      const order =
+        response.data?.data ?? response.data?.order ?? response.data;
+
+      const orderNumber = order?.order_number ?? response.data?.order_number;
 
       if (!orderNumber) {
-        setError("سفارش ایجاد شد اما شماره سفارش دریافت نشد.");
-        return;
+        throw new Error("شماره سفارش دریافت نشد.");
       }
 
       navigate(`/payment/${orderNumber}`);
     } catch (error: any) {
       console.error("Checkout error:", error);
 
-      if (error?.response?.status === 401) {
-        navigate("/login");
-        return;
+      const responseErrors = error?.response?.data?.errors;
+
+      if (responseErrors) {
+        const firstError = Object.values(responseErrors)
+          .flat()
+          .find((message) => typeof message === "string");
+
+        setError(
+          typeof firstError === "string"
+            ? firstError
+            : "اطلاعات واردشده صحیح نیست.",
+        );
+      } else {
+        setError(
+          error?.response?.data?.message ??
+            "ثبت سفارش با خطا مواجه شد. لطفاً دوباره تلاش کنید.",
+        );
       }
-
-      if (error?.response?.status === 422) {
-        const errors = error?.response?.data?.errors;
-
-        if (errors && typeof errors === "object") {
-          const firstKey = Object.keys(errors)[0];
-          const firstMessage = errors[firstKey];
-
-          if (Array.isArray(firstMessage) && firstMessage.length > 0) {
-            setError(String(firstMessage[0]));
-          } else {
-            setError("اطلاعات واردشده معتبر نیست.");
-          }
-        } else {
-          setError(
-            error?.response?.data?.message || "اطلاعات سفارش معتبر نیست.",
-          );
-        }
-
-        return;
-      }
-
-      setError(
-        error?.response?.data?.message ||
-          "ثبت سفارش با خطا مواجه شد. لطفاً دوباره تلاش کنید.",
-      );
     } finally {
       setLoading(false);
     }
@@ -158,412 +128,343 @@ function Checkout() {
   if (items.length === 0) {
     return (
       <Layout>
-        <div className="min-h-[60vh] flex items-center justify-center px-4">
-          <div className="text-center">
-            <ShoppingBag className="w-16 h-16 mx-auto text-gray-300 mb-4" />
+        <main className="max-w-4xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
+          <Link
+            to="/cart"
+            className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-blue-600 transition-colors"
+          >
+            <ArrowRight size={17} />
+            بازگشت به سبد خرید
+          </Link>
 
-            <h1 className="text-2xl font-bold text-gray-800 mb-3">
+          <div className="mt-6 bg-white rounded-3xl border border-slate-100 shadow-sm p-8 sm:p-12 text-center">
+            <div className="w-16 h-16 mx-auto rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
+              <ShoppingBag size={30} />
+            </div>
+
+            <h1 className="text-2xl font-black text-slate-900 mt-5">
               سبد خرید شما خالی است
             </h1>
 
-            <p className="text-gray-500 mb-6">
+            <p className="text-slate-500 mt-2">
               برای ادامه خرید، ابتدا محصولی به سبد خرید اضافه کنید.
             </p>
 
             <Link
               to="/products"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition"
+              className="inline-flex items-center justify-center gap-2 mt-6 rounded-xl bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 font-bold transition-colors"
             >
               مشاهده محصولات
+              <ChevronLeft size={18} />
             </Link>
           </div>
-        </div>
+        </main>
       </Layout>
     );
   }
 
   return (
     <Layout>
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Breadcrumb */}
-
-        <div className="flex items-center gap-2 text-sm text-gray-500 mb-8">
-          <Link to="/" className="hover:text-blue-600">
-            خانه
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+        <div className="mb-8">
+          <Link
+            to="/cart"
+            className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-blue-600 transition-colors"
+          >
+            <ArrowRight size={17} />
+            بازگشت به سبد خرید
           </Link>
 
-          <span>/</span>
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 mt-5">
+            تکمیل سفارش
+          </h1>
 
-          <Link to="/cart" className="hover:text-blue-600">
-            سبد خرید
-          </Link>
-
-          <span>/</span>
-
-          <span className="text-gray-800">تکمیل سفارش</span>
+          <p className="text-slate-500 mt-2">
+            اطلاعات ارسال سفارش خود را وارد کنید.
+          </p>
         </div>
 
-        <h1 className="text-3xl font-bold text-gray-800 mb-8">تکمیل سفارش</h1>
-
-        <form onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* اطلاعات گیرنده */}
-
-            <div className="lg:col-span-2">
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-                <h2 className="text-xl font-bold text-gray-800 mb-6">
-                  اطلاعات گیرنده
-                </h2>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  {/* نام */}
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      نام
-                    </label>
-
-                    <input
-                      type="text"
-                      name="firstName"
-                      value={form.firstName}
-                      onChange={handleChange}
-                      placeholder="نام"
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  {/* نام خانوادگی */}
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      نام خانوادگی
-                    </label>
-
-                    <input
-                      type="text"
-                      name="lastName"
-                      value={form.lastName}
-                      onChange={handleChange}
-                      placeholder="نام خانوادگی"
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  {/* موبایل */}
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      شماره موبایل
-                    </label>
-
-                    <input
-                      type="tel"
-                      name="phone"
-                      value={form.phone}
-                      onChange={handleChange}
-                      placeholder="09xxxxxxxxx"
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  {/* استان */}
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      استان
-                    </label>
-
-                    <input
-                      type="text"
-                      name="province"
-                      value={form.province}
-                      onChange={handleChange}
-                      placeholder="استان"
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  {/* شهر */}
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      شهر
-                    </label>
-
-                    <input
-                      type="text"
-                      name="city"
-                      value={form.city}
-                      onChange={handleChange}
-                      placeholder="شهر"
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  {/* کد پستی */}
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      کد پستی
-                    </label>
-
-                    <input
-                      type="text"
-                      name="postalCode"
-                      value={form.postalCode}
-                      onChange={handleChange}
-                      placeholder="کد پستی"
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-
-                  {/* آدرس */}
-
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      آدرس کامل
-                    </label>
-
-                    <textarea
-                      name="address"
-                      value={form.address}
-                      onChange={handleChange}
-                      rows={4}
-                      placeholder="آدرس کامل محل تحویل..."
-                      className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                    />
-                  </div>
+        <form onSubmit={handleSubmit} className="grid lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
+            <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 sm:p-7">
+              <div className="flex items-center gap-3 mb-7">
+                <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                  <MapPin size={24} />
                 </div>
 
-                {/* خطا */}
+                <div>
+                  <h2 className="text-xl font-black text-slate-900">
+                    اطلاعات گیرنده
+                  </h2>
 
-                {error && (
-                  <div className="mt-6 rounded-xl bg-red-50 border border-red-100 text-red-700 px-4 py-3 text-sm">
-                    {error}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* خلاصه سفارش */}
-
-            <div>
-              <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sticky top-6">
-                <h2 className="text-xl font-bold text-gray-800 mb-6">
-                  خلاصه سفارش
-                </h2>
-
-                <div className="space-y-4 mb-6">
-                  {items.map((item) => {
-                    const originalPrice = item.originalPrice ?? item.price;
-
-                    const discountPercent = item.discountPercent ?? 0;
-
-                    const itemTotal = item.price * item.quantity;
-
-                    const itemSavings = Math.max(
-                      0,
-                      (originalPrice - item.price) * item.quantity,
-                    );
-
-                    const hasDiscount =
-                      discountPercent > 0 && originalPrice > item.price;
-
-                    return (
-                      <div
-                        key={item.id}
-                        className="border-b border-gray-100 pb-4 last:border-0 last:pb-0"
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-gray-800 leading-6">
-                              {item.name}
-                            </p>
-
-                            <div className="mt-3 flex items-center gap-2 text-xs text-gray-500">
-                              <span>تعداد:</span>
-
-                              <span
-                                className="font-semibold"
-                                style={{
-                                  direction: "ltr",
-                                  display: "inline-block",
-                                }}
-                              >
-                                {item.quantity.toLocaleString("fa-IR")}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* قیمت */}
-
-                        <div
-                          className="mt-3 w-full flex flex-col items-start justify-start text-left"
-                          style={{
-                            direction: "ltr",
-                            textAlign: "left",
-                          }}
-                        >
-                          {hasDiscount && (
-                            <div className="w-full flex flex-row items-center justify-start gap-2 mb-1">
-                              <span className="text-xs text-gray-400 line-through">
-                                {originalPrice.toLocaleString("fa-IR")} تومان
-                              </span>
-
-                              <span className="text-xs font-bold text-red-500">
-                                {discountPercent.toLocaleString("fa-IR")}٪
-                              </span>
-                            </div>
-                          )}
-
-                          <div className="w-full text-left">
-                            <span className="text-sm font-bold text-blue-600">
-                              {item.price.toLocaleString("fa-IR")} تومان
-                            </span>
-
-                            <span className="text-xs text-gray-400 mr-2">
-                              قیمت واحد
-                            </span>
-                          </div>
-
-                          {item.quantity > 1 && (
-                            <div className="w-full text-left mt-1">
-                              <span className="text-xs text-gray-500">
-                                {item.price.toLocaleString("fa-IR")} ×{" "}
-                                {item.quantity.toLocaleString("fa-IR")}
-                              </span>
-                            </div>
-                          )}
-
-                          {itemSavings > 0 && (
-                            <div className="w-full text-left mt-1">
-                              <span className="text-xs font-medium text-green-600">
-                                صرفه‌جویی: {itemSavings.toLocaleString("fa-IR")}{" "}
-                                تومان
-                              </span>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* جمع این کالا */}
-
-                        <div
-                          className="mt-3 w-full bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 text-left"
-                          style={{
-                            direction: "ltr",
-                            textAlign: "left",
-                          }}
-                        >
-                          <div className="text-xs text-gray-500 mb-1">
-                            جمع این کالا
-                          </div>
-
-                          <div className="text-base font-black text-slate-800">
-                            {itemTotal.toLocaleString("fa-IR")} تومان
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-                {/* جمع‌بندی مالی */}
-
-                <div className="border-t border-gray-100 pt-5 space-y-4">
-                  <div className="flex items-center justify-between text-gray-600">
-                    <span>مبلغ کالاها</span>
-
-                    <span
-                      className="text-left"
-                      style={{
-                        direction: "ltr",
-                        textAlign: "left",
-                      }}
-                    >
-                      {cartOriginalTotal.toLocaleString("fa-IR")} تومان
-                    </span>
-                  </div>
-
-                  {cartDiscount > 0 && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-600">تخفیف</span>
-
-                      <span
-                        className="text-red-500 font-medium text-left"
-                        style={{
-                          direction: "ltr",
-                          textAlign: "left",
-                        }}
-                      >
-                        - {cartDiscount.toLocaleString("fa-IR")} تومان
-                      </span>
-                    </div>
-                  )}
-
-                  <div className="flex items-center justify-between text-gray-600">
-                    <span>هزینه ارسال</span>
-
-                    <span className="text-green-600 font-medium">رایگان</span>
-                  </div>
-
-                  <div className="border-t border-gray-100 pt-4 flex items-center justify-between gap-4">
-                    <span className="font-bold text-gray-800">
-                      مبلغ قابل پرداخت
-                    </span>
-
-                    <span
-                      className="text-xl font-black text-blue-600 text-left whitespace-nowrap"
-                      style={{
-                        direction: "ltr",
-                        textAlign: "left",
-                      }}
-                    >
-                      {Number(cartTotal).toLocaleString("fa-IR")} تومان
-                    </span>
-                  </div>
-                </div>
-
-                {/* ثبت سفارش */}
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full mt-6 flex items-center justify-center gap-2 px-5 py-3.5 rounded-xl bg-blue-600 text-white font-medium hover:bg-blue-700 disabled:opacity-60 disabled:cursor-not-allowed transition"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      در حال ثبت سفارش...
-                    </>
-                  ) : (
-                    <>
-                      ادامه و پرداخت
-                      <ArrowRight className="w-5 h-5" />
-                    </>
-                  )}
-                </button>
-
-                <Link
-                  to="/cart"
-                  className="w-full mt-3 flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 transition"
-                >
-                  بازگشت به سبد خرید
-                </Link>
-
-                <div className="mt-5 flex items-start gap-3 text-xs text-gray-500 bg-gray-50 rounded-xl p-4">
-                  <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" />
-
-                  <p>
-                    پس از ثبت سفارش، به صفحه پرداخت آزمایشی منتقل خواهید شد.
+                  <p className="text-sm text-slate-500 mt-1">
+                    اطلاعات لازم برای ارسال سفارش
                   </p>
                 </div>
               </div>
-            </div>
+
+              {error && (
+                <div className="mb-6 flex items-start gap-3 rounded-xl bg-red-50 border border-red-100 text-red-600 p-4 text-sm font-bold">
+                  <AlertCircle size={19} className="flex-shrink-0 mt-0.5" />
+
+                  <span>{error}</span>
+                </div>
+              )}
+
+              <div className="grid sm:grid-cols-2 gap-5">
+                <div>
+                  <label className="block text-sm font-bold mb-2 text-slate-700">
+                    نام
+                  </label>
+
+                  <div className="relative">
+                    <User
+                      size={18}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
+                    />
+
+                    <input
+                      type="text"
+                      value={firstName}
+                      onChange={(event) => setFirstName(event.target.value)}
+                      required
+                      className="w-full rounded-xl border border-slate-200 bg-white pr-11 pl-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold mb-2 text-slate-700">
+                    نام خانوادگی
+                  </label>
+
+                  <div className="relative">
+                    <User
+                      size={18}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
+                    />
+
+                    <input
+                      type="text"
+                      value={lastName}
+                      onChange={(event) => setLastName(event.target.value)}
+                      required
+                      className="w-full rounded-xl border border-slate-200 bg-white pr-11 pl-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition"
+                    />
+                  </div>
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="block text-sm font-bold mb-2 text-slate-700">
+                    شماره موبایل
+                  </label>
+
+                  <div className="relative">
+                    <Phone
+                      size={18}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
+                    />
+
+                    <input
+                      type="tel"
+                      value={phone}
+                      onChange={(event) => setPhone(event.target.value)}
+                      required
+                      dir="ltr"
+                      placeholder="09123456789"
+                      className="w-full rounded-xl border border-slate-200 bg-white pr-11 pl-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold mb-2 text-slate-700">
+                    استان
+                  </label>
+
+                  <input
+                    type="text"
+                    value={province}
+                    onChange={(event) => setProvince(event.target.value)}
+                    required
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold mb-2 text-slate-700">
+                    شهر
+                  </label>
+
+                  <input
+                    type="text"
+                    value={city}
+                    onChange={(event) => setCity(event.target.value)}
+                    required
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition"
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="block text-sm font-bold mb-2 text-slate-700">
+                    آدرس کامل
+                  </label>
+
+                  <textarea
+                    value={address}
+                    onChange={(event) => setAddress(event.target.value)}
+                    required
+                    rows={4}
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none resize-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition"
+                    placeholder="آدرس دقیق محل تحویل سفارش"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold mb-2 text-slate-700">
+                    کد پستی
+                  </label>
+
+                  <input
+                    type="text"
+                    value={postalCode}
+                    onChange={(event) => setPostalCode(event.target.value)}
+                    required
+                    maxLength={10}
+                    dir="ltr"
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition"
+                  />
+                </div>
+              </div>
+            </section>
+
+            <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 sm:p-7">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-xl bg-green-50 text-green-600 flex items-center justify-center">
+                  <Truck size={24} />
+                </div>
+
+                <div>
+                  <h2 className="text-xl font-black text-slate-900">
+                    روش ارسال
+                  </h2>
+
+                  <p className="text-sm text-slate-500 mt-1">
+                    ارسال سفارش برای شما
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-6 rounded-2xl border border-blue-200 bg-blue-50 p-5">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="font-black text-blue-900">ارسال معمولی</p>
+
+                    <p className="text-sm text-blue-600 mt-1">
+                      ارسال سفارش به آدرس ثبت‌شده
+                    </p>
+                  </div>
+
+                  <div className="text-sm font-black text-green-600">
+                    رایگان
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <div className="space-y-6">
+            <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 sm:p-6 lg:sticky lg:top-6">
+              <div className="flex items-center gap-3 pb-5 border-b border-slate-100">
+                <div className="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                  <ShoppingBag size={22} />
+                </div>
+
+                <div>
+                  <h2 className="font-black text-lg">خلاصه سفارش</h2>
+
+                  <p className="text-xs text-slate-500 mt-1">
+                    {items.length.toLocaleString("fa-IR")} محصول
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-5 space-y-4">
+                <div className="flex items-center justify-between gap-4 text-sm">
+                  <span className="text-slate-500">مبلغ کالاها</span>
+                  <span className="font-bold text-slate-800">
+                    {formatPrice(cartOriginalTotal)} تومان
+                  </span>
+                </div>
+                {cartDiscount > 0 && (
+                  <div className="flex items-center justify-between gap-4 text-sm">
+                    <span className="text-slate-500">تخفیف</span>
+                    <span className="font-bold text-green-600">
+                      - {formatPrice(cartDiscount)} تومان
+                    </span>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between gap-4 text-sm">
+                  <span className="text-slate-500">هزینه ارسال</span>
+
+                  <span className="font-bold text-green-600">رایگان</span>
+                </div>
+              </div>
+
+              <div className="mt-5 pt-5 border-t border-slate-100">
+                <div className="flex items-end justify-between gap-4">
+                  <div>
+                    <p className="text-xs text-slate-400">مبلغ نهایی</p>
+
+                    <p className="text-2xl font-black text-blue-700 mt-1">
+                      {formatPrice(finalTotal)}
+                    </p>
+                  </div>
+
+                  <span className="text-sm text-slate-500 mb-1">تومان</span>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="mt-6 w-full inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white py-3.5 font-black transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 size={19} className="animate-spin" />
+                    در حال ثبت سفارش...
+                  </>
+                ) : (
+                  <>
+                    <CreditCard size={19} />
+                    ادامه و پرداخت
+                  </>
+                )}
+              </button>
+
+              <div className="mt-4 flex items-center justify-center gap-2 text-xs text-slate-400">
+                <ShieldCheck size={15} />
+                اطلاعات شما با امنیت کامل ثبت می‌شود.
+              </div>
+            </section>
+
+            <Link
+              to="/cart"
+              className="block bg-slate-50 hover:bg-blue-50 rounded-2xl border border-slate-100 hover:border-blue-100 p-4 transition"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm font-bold text-slate-600">
+                  بازگشت و ویرایش سبد خرید
+                </span>
+
+                <ChevronLeft size={18} className="text-slate-400" />
+              </div>
+            </Link>
           </div>
         </form>
-      </div>
+      </main>
     </Layout>
   );
 }

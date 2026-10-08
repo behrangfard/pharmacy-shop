@@ -1,5 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent, type MouseEvent } from "react";
+
 import { Link, useNavigate } from "react-router-dom";
+
 import {
   ArrowRight,
   Mail,
@@ -17,6 +19,8 @@ import {
   CheckCircle2,
   Truck,
   Clock3,
+  Tag,
+  Trash2,
 } from "lucide-react";
 
 import Layout from "../components/Layout";
@@ -73,24 +77,43 @@ function Account() {
   const navigate = useNavigate();
 
   const { user, setUser, logout } = useAuth();
+
   const { cartCount } = useCart();
 
   const [orders, setOrders] = useState<Order[]>([]);
+
   const [ordersLoading, setOrdersLoading] = useState(false);
+
   const [ordersError, setOrdersError] = useState("");
 
+  const [deletingOrderNumber, setDeletingOrderNumber] = useState<string | null>(
+    null,
+  );
+
+  const [deleteOrderError, setDeleteOrderError] = useState("");
+
   const [editingProfile, setEditingProfile] = useState(false);
+
   const [profileName, setProfileName] = useState("");
+
   const [profileEmail, setProfileEmail] = useState("");
+
   const [profileLoading, setProfileLoading] = useState(false);
+
   const [profileMessage, setProfileMessage] = useState("");
+
   const [profileError, setProfileError] = useState("");
 
   const [currentPassword, setCurrentPassword] = useState("");
+
   const [newPassword, setNewPassword] = useState("");
+
   const [passwordConfirmation, setPasswordConfirmation] = useState("");
+
   const [passwordLoading, setPasswordLoading] = useState(false);
+
   const [passwordMessage, setPasswordMessage] = useState("");
+
   const [passwordError, setPasswordError] = useState("");
 
   useEffect(() => {
@@ -120,7 +143,6 @@ function Account() {
         setOrders(Array.isArray(data) ? data : []);
       } catch (error) {
         console.error("Orders error:", error);
-
         setOrdersError("دریافت سفارش‌ها با خطا مواجه شد.");
       } finally {
         setOrdersLoading(false);
@@ -130,14 +152,47 @@ function Account() {
     loadOrders();
   }, [user]);
 
+  const handleDeleteOrder = async (
+    event: MouseEvent<HTMLButtonElement>,
+    orderNumber: string,
+  ) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const confirmed = window.confirm(
+      "آیا مطمئن هستید که می‌خواهید این سفارش را از لیست سفارش‌های خود حذف کنید؟",
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setDeletingOrderNumber(orderNumber);
+    setDeleteOrderError("");
+
+    try {
+      await api.delete(`/orders/${orderNumber}`);
+
+      setOrders((currentOrders) =>
+        currentOrders.filter((order) => order.order_number !== orderNumber),
+      );
+    } catch (error: any) {
+      console.error("Delete order error:", error);
+
+      setDeleteOrderError(
+        error?.response?.data?.message ?? "حذف سفارش انجام نشد.",
+      );
+    } finally {
+      setDeletingOrderNumber(null);
+    }
+  };
+
   const handleLogout = async () => {
     await logout();
     navigate("/");
   };
 
-  const handleProfileSubmit = async (
-    event: React.FormEvent<HTMLFormElement>,
-  ) => {
+  const handleProfileSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     setProfileLoading(true);
@@ -174,9 +229,7 @@ function Account() {
     }
   };
 
-  const handlePasswordSubmit = async (
-    event: React.FormEvent<HTMLFormElement>,
-  ) => {
+  const handlePasswordSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     setPasswordMessage("");
@@ -293,37 +346,43 @@ function Account() {
     switch (status) {
       case "pending":
         return {
-          wrapper: "bg-amber-50 text-amber-700 border-amber-100",
+          wrapper: "bg-amber-50 text-amber-700 border-amber-200",
+          accent: "bg-amber-400",
           icon: Clock3,
         };
 
       case "processing":
         return {
-          wrapper: "bg-blue-50 text-blue-700 border-blue-100",
+          wrapper: "bg-blue-50 text-blue-700 border-blue-200",
+          accent: "bg-blue-500",
           icon: Package,
         };
 
       case "shipped":
         return {
-          wrapper: "bg-indigo-50 text-indigo-700 border-indigo-100",
+          wrapper: "bg-indigo-50 text-indigo-700 border-indigo-200",
+          accent: "bg-indigo-500",
           icon: Truck,
         };
 
       case "delivered":
         return {
-          wrapper: "bg-green-50 text-green-700 border-green-100",
+          wrapper: "bg-green-50 text-green-700 border-green-200",
+          accent: "bg-green-500",
           icon: CheckCircle2,
         };
 
       case "cancelled":
         return {
-          wrapper: "bg-red-50 text-red-700 border-red-100",
+          wrapper: "bg-red-50 text-red-700 border-red-200",
+          accent: "bg-red-500",
           icon: XCircle,
         };
 
       default:
         return {
-          wrapper: "bg-slate-50 text-slate-600 border-slate-100",
+          wrapper: "bg-slate-50 text-slate-600 border-slate-200",
+          accent: "bg-slate-400",
           icon: Package,
         };
     }
@@ -332,16 +391,16 @@ function Account() {
   const getPaymentStyle = (status: string) => {
     switch (status) {
       case "paid":
-        return "bg-green-50 text-green-700 border-green-100";
+        return "bg-green-50 text-green-700 border-green-200";
 
       case "failed":
-        return "bg-red-50 text-red-700 border-red-100";
+        return "bg-red-50 text-red-700 border-red-200";
 
       case "refunded":
-        return "bg-purple-50 text-purple-700 border-purple-100";
+        return "bg-purple-50 text-purple-700 border-purple-200";
 
       default:
-        return "bg-slate-50 text-slate-600 border-slate-100";
+        return "bg-slate-50 text-slate-600 border-slate-200";
     }
   };
 
@@ -355,6 +414,7 @@ function Account() {
     }
 
     const cleanPath = path.replace(/^\/+/, "");
+
     return `http://127.0.0.1:8000/storage/${cleanPath}`;
   };
 
@@ -388,42 +448,12 @@ function Account() {
     return (
       <Layout>
         <main className="max-w-4xl mx-auto px-6 py-16">
-          <div
-            className="
-              bg-white
-              rounded-3xl
-              border
-              border-slate-100
-              shadow-sm
-              p-10
-              text-center
-            "
-          >
-            <div
-              className="
-                w-16
-                h-16
-                mx-auto
-                rounded-2xl
-                bg-blue-50
-                text-blue-600
-                flex
-                items-center
-                justify-center
-              "
-            >
+          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-10 text-center">
+            <div className="w-16 h-16 mx-auto rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
               <User size={30} />
             </div>
 
-            <h1
-              className="
-                text-2xl
-                font-black
-                mt-5
-              "
-            >
-              ورود به حساب کاربری
-            </h1>
+            <h1 className="text-2xl font-black mt-5">ورود به حساب کاربری</h1>
 
             <p className="text-slate-500 mt-2">
               برای مشاهده اطلاعات حساب، ابتدا وارد شوید.
@@ -431,16 +461,7 @@ function Account() {
 
             <Link
               to="/login"
-              className="
-                inline-flex
-                mt-6
-                bg-blue-600
-                text-white
-                px-6
-                py-3
-                rounded-xl
-                font-bold
-              "
+              className="inline-flex mt-6 bg-blue-600 text-white px-6 py-3 rounded-xl font-bold"
             >
               ورود به حساب
             </Link>
@@ -452,31 +473,17 @@ function Account() {
 
   return (
     <Layout>
-      <main className="max-w-5xl mx-auto px-6 py-12">
+      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
         <div className="mb-8">
           <Link
             to="/"
-            className="
-              inline-flex
-              items-center
-              gap-2
-              text-sm
-              text-slate-500
-              hover:text-blue-600
-            "
+            className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-blue-600 transition-colors"
           >
             <ArrowRight size={17} />
             بازگشت به فروشگاه
           </Link>
 
-          <h1
-            className="
-              text-3xl
-              font-black
-              text-slate-900
-              mt-5
-            "
-          >
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 mt-5">
             حساب کاربری من
           </h1>
 
@@ -487,59 +494,17 @@ function Account() {
 
         <div className="grid md:grid-cols-3 gap-6">
           <div className="md:col-span-2 space-y-6">
-            <div
-              className="
-                bg-white
-                rounded-3xl
-                border
-                border-slate-100
-                shadow-sm
-                p-7
-              "
-            >
-              <div
-                className="
-                  flex
-                  items-center
-                  justify-between
-                  gap-4
-                  pb-6
-                  border-b
-                  border-slate-100
-                "
-              >
-                <div
-                  className="
-                    flex
-                    items-center
-                    gap-4
-                  "
-                >
-                  <div
-                    className="
-                      w-16
-                      h-16
-                      rounded-2xl
-                      bg-blue-50
-                      text-blue-600
-                      flex
-                      items-center
-                      justify-center
-                    "
-                  >
+            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 sm:p-7">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-slate-100">
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
                     <User size={30} />
                   </div>
 
                   <div>
                     <h2 className="text-xl font-black">{user.name}</h2>
 
-                    <p
-                      className="
-                        text-slate-500
-                        text-sm
-                        mt-1
-                      "
-                    >
+                    <p className="text-slate-500 text-sm mt-1">
                       حساب کاربری آرسن شاپ
                     </p>
                   </div>
@@ -553,18 +518,7 @@ function Account() {
                       setProfileError("");
                       setEditingProfile(true);
                     }}
-                    className="
-                      inline-flex
-                      items-center
-                      gap-2
-                      rounded-xl
-                      bg-blue-50
-                      text-blue-600
-                      px-4
-                      py-2
-                      font-bold
-                      text-sm
-                    "
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-50 text-blue-600 px-4 py-2 font-bold text-sm"
                   >
                     <Pencil size={17} />
                     ویرایش
@@ -573,33 +527,13 @@ function Account() {
               </div>
 
               {profileMessage && (
-                <div
-                  className="
-                    mt-5
-                    bg-green-50
-                    text-green-700
-                    rounded-xl
-                    p-4
-                    text-sm
-                    font-bold
-                  "
-                >
+                <div className="mt-5 bg-green-50 text-green-700 rounded-xl p-4 text-sm font-bold">
                   {profileMessage}
                 </div>
               )}
 
               {profileError && (
-                <div
-                  className="
-                    mt-5
-                    bg-red-50
-                    text-red-600
-                    rounded-xl
-                    p-4
-                    text-sm
-                    font-bold
-                  "
-                >
+                <div className="mt-5 bg-red-50 text-red-600 rounded-xl p-4 text-sm font-bold">
                   {profileError}
                 </div>
               )}
@@ -607,17 +541,7 @@ function Account() {
               {!editingProfile ? (
                 <div className="mt-7 space-y-5">
                   <div className="flex items-center gap-4">
-                    <div
-                      className="
-                        w-11
-                        h-11
-                        rounded-xl
-                        bg-slate-50
-                        flex
-                        items-center
-                        justify-center
-                      "
-                    >
+                    <div className="w-11 h-11 rounded-xl bg-slate-50 flex items-center justify-center">
                       <User size={20} />
                     </div>
 
@@ -631,17 +555,7 @@ function Account() {
                   </div>
 
                   <div className="flex items-center gap-4">
-                    <div
-                      className="
-                        w-11
-                        h-11
-                        rounded-xl
-                        bg-slate-50
-                        flex
-                        items-center
-                        justify-center
-                      "
-                    >
+                    <div className="w-11 h-11 rounded-xl bg-slate-50 flex items-center justify-center">
                       <Mail size={20} />
                     </div>
 
@@ -655,14 +569,7 @@ function Account() {
               ) : (
                 <form onSubmit={handleProfileSubmit} className="mt-7 space-y-5">
                   <div>
-                    <label
-                      className="
-                        block
-                        text-sm
-                        font-bold
-                        mb-2
-                      "
-                    >
+                    <label className="block text-sm font-bold mb-2">
                       نام و نام خانوادگی
                     </label>
 
@@ -671,30 +578,12 @@ function Account() {
                       value={profileName}
                       onChange={(event) => setProfileName(event.target.value)}
                       required
-                      className="
-                        w-full
-                        rounded-xl
-                        border
-                        border-slate-200
-                        px-4
-                        py-3
-                        outline-none
-                        focus:border-blue-500
-                        focus:ring-2
-                        focus:ring-blue-100
-                      "
+                      className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                     />
                   </div>
 
                   <div>
-                    <label
-                      className="
-                        block
-                        text-sm
-                        font-bold
-                        mb-2
-                      "
-                    >
+                    <label className="block text-sm font-bold mb-2">
                       ایمیل
                     </label>
 
@@ -704,38 +593,15 @@ function Account() {
                       onChange={(event) => setProfileEmail(event.target.value)}
                       required
                       dir="ltr"
-                      className="
-                        w-full
-                        rounded-xl
-                        border
-                        border-slate-200
-                        px-4
-                        py-3
-                        outline-none
-                        focus:border-blue-500
-                        focus:ring-2
-                        focus:ring-blue-100
-                      "
+                      className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                     />
                   </div>
 
-                  <div className="flex gap-3 pt-2">
+                  <div className="flex flex-col sm:flex-row gap-3 pt-2">
                     <button
                       type="submit"
                       disabled={profileLoading}
-                      className="
-                        inline-flex
-                        items-center
-                        justify-center
-                        gap-2
-                        flex-1
-                        rounded-xl
-                        bg-blue-600
-                        text-white
-                        py-3
-                        font-bold
-                        disabled:opacity-60
-                      "
+                      className="inline-flex items-center justify-center gap-2 flex-1 rounded-xl bg-blue-600 text-white py-3 font-bold disabled:opacity-60"
                     >
                       {profileLoading ? (
                         <>
@@ -759,14 +625,7 @@ function Account() {
                         setProfileMessage("");
                         setEditingProfile(false);
                       }}
-                      className="
-                        rounded-xl
-                        bg-slate-100
-                        text-slate-700
-                        px-5
-                        py-3
-                        font-bold
-                      "
+                      className="rounded-xl bg-slate-100 text-slate-700 px-5 py-3 font-bold"
                     >
                       انصراف
                     </button>
@@ -778,110 +637,43 @@ function Account() {
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="
-                    mt-8
-                    w-full
-                    rounded-xl
-                    bg-red-50
-                    text-red-600
-                    py-3
-                    font-bold
-                  "
+                  className="mt-8 w-full rounded-xl bg-red-50 text-red-600 py-3 font-bold"
                 >
                   خروج از حساب کاربری
                 </button>
               )}
             </div>
 
-            <div
-              className="
-                bg-white
-                rounded-3xl
-                border
-                border-slate-100
-                shadow-sm
-                p-7
-              "
-            >
-              <div
-                className="
-                  flex
-                  items-center
-                  gap-3
-                  mb-6
-                "
-              >
-                <div
-                  className="
-                    w-12
-                    h-12
-                    rounded-xl
-                    bg-amber-50
-                    text-amber-600
-                    flex
-                    items-center
-                    justify-center
-                  "
-                >
+            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 sm:p-7">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
                   <Lock size={24} />
                 </div>
 
                 <div>
                   <h2 className="text-xl font-black">تغییر رمز عبور</h2>
 
-                  <p
-                    className="
-                      text-sm
-                      text-slate-500
-                    "
-                  >
+                  <p className="text-sm text-slate-500">
                     برای امنیت بیشتر، رمز حساب خود را مدیریت کنید
                   </p>
                 </div>
               </div>
 
               {passwordMessage && (
-                <div
-                  className="
-                    mb-5
-                    bg-green-50
-                    text-green-700
-                    rounded-xl
-                    p-4
-                    text-sm
-                    font-bold
-                  "
-                >
+                <div className="mb-5 bg-green-50 text-green-700 rounded-xl p-4 text-sm font-bold">
                   {passwordMessage}
                 </div>
               )}
 
               {passwordError && (
-                <div
-                  className="
-                    mb-5
-                    bg-red-50
-                    text-red-600
-                    rounded-xl
-                    p-4
-                    text-sm
-                    font-bold
-                  "
-                >
+                <div className="mb-5 bg-red-50 text-red-600 rounded-xl p-4 text-sm font-bold">
                   {passwordError}
                 </div>
               )}
 
               <form onSubmit={handlePasswordSubmit} className="space-y-5">
                 <div>
-                  <label
-                    className="
-                      block
-                      text-sm
-                      font-bold
-                      mb-2
-                    "
-                  >
+                  <label className="block text-sm font-bold mb-2">
                     رمز عبور فعلی
                   </label>
 
@@ -891,30 +683,12 @@ function Account() {
                     onChange={(event) => setCurrentPassword(event.target.value)}
                     required
                     autoComplete="current-password"
-                    className="
-                      w-full
-                      rounded-xl
-                      border
-                      border-slate-200
-                      px-4
-                      py-3
-                      outline-none
-                      focus:border-blue-500
-                      focus:ring-2
-                      focus:ring-blue-100
-                    "
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                   />
                 </div>
 
                 <div>
-                  <label
-                    className="
-                      block
-                      text-sm
-                      font-bold
-                      mb-2
-                    "
-                  >
+                  <label className="block text-sm font-bold mb-2">
                     رمز عبور جدید
                   </label>
 
@@ -926,30 +700,12 @@ function Account() {
                     minLength={8}
                     autoComplete="new-password"
                     placeholder="حداقل ۸ کاراکتر"
-                    className="
-                      w-full
-                      rounded-xl
-                      border
-                      border-slate-200
-                      px-4
-                      py-3
-                      outline-none
-                      focus:border-blue-500
-                      focus:ring-2
-                      focus:ring-blue-100
-                    "
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                   />
                 </div>
 
                 <div>
-                  <label
-                    className="
-                      block
-                      text-sm
-                      font-bold
-                      mb-2
-                    "
-                  >
+                  <label className="block text-sm font-bold mb-2">
                     تکرار رمز عبور جدید
                   </label>
 
@@ -963,37 +719,14 @@ function Account() {
                     minLength={8}
                     autoComplete="new-password"
                     placeholder="تکرار رمز عبور جدید"
-                    className="
-                      w-full
-                      rounded-xl
-                      border
-                      border-slate-200
-                      px-4
-                      py-3
-                      outline-none
-                      focus:border-blue-500
-                      focus:ring-2
-                      focus:ring-blue-100
-                    "
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                   />
                 </div>
 
                 <button
                   type="submit"
                   disabled={passwordLoading}
-                  className="
-                    inline-flex
-                    items-center
-                    justify-center
-                    gap-2
-                    w-full
-                    rounded-xl
-                    bg-slate-900
-                    text-white
-                    py-3.5
-                    font-bold
-                    disabled:opacity-60
-                  "
+                  className="inline-flex items-center justify-center gap-2 w-full rounded-xl bg-slate-900 text-white py-3.5 font-bold disabled:opacity-60"
                 >
                   {passwordLoading ? (
                     <>
@@ -1010,145 +743,61 @@ function Account() {
               </form>
             </div>
 
-            <div
-              className="
-                bg-white
-                rounded-3xl
-                border
-                border-slate-100
-                shadow-sm
-                p-7
-              "
-            >
-              <div
-                className="
-                  flex
-                  items-center
-                  gap-3
-                  mb-6
-                "
-              >
-                <div
-                  className="
-                    w-12
-                    h-12
-                    rounded-xl
-                    bg-blue-50
-                    text-blue-600
-                    flex
-                    items-center
-                    justify-center
-                  "
-                >
+            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 sm:p-7">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
                   <Package size={24} />
                 </div>
 
                 <div>
                   <h2 className="text-xl font-black">سفارش‌های من</h2>
 
-                  <p
-                    className="
-                      text-sm
-                      text-slate-500
-                    "
-                  >
+                  <p className="text-sm text-slate-500">
                     تاریخچه سفارش‌های ثبت شده
                   </p>
                 </div>
 
                 {orders.length > 0 && (
-                  <span
-                    className="
-                      mr-auto
-                      min-w-8
-                      h-8
-                      px-2
-                      rounded-full
-                      bg-blue-50
-                      text-blue-600
-                      flex
-                      items-center
-                      justify-center
-                      text-sm
-                      font-black
-                    "
-                  >
+                  <span className="mr-auto min-w-8 h-8 px-2 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-sm font-black">
                     {orders.length.toLocaleString("fa-IR")}
                   </span>
                 )}
               </div>
 
+              {deleteOrderError && (
+                <div className="mb-5 bg-red-50 text-red-600 rounded-xl p-4 text-sm font-bold">
+                  {deleteOrderError}
+                </div>
+              )}
+
               {ordersLoading && (
                 <div className="py-10 text-center">
                   <Loader2
                     size={32}
-                    className="
-                      mx-auto
-                      animate-spin
-                      text-blue-600
-                    "
+                    className="mx-auto animate-spin text-blue-600"
                   />
 
-                  <p
-                    className="
-                      mt-4
-                      text-slate-500
-                    "
-                  >
+                  <p className="mt-4 text-slate-500">
                     در حال دریافت سفارش‌ها...
                   </p>
                 </div>
               )}
 
               {!ordersLoading && ordersError && (
-                <div
-                  className="
-                    bg-red-50
-                    text-red-600
-                    rounded-xl
-                    p-5
-                  "
-                >
+                <div className="bg-red-50 text-red-600 rounded-xl p-5">
                   {ordersError}
                 </div>
               )}
 
               {!ordersLoading && !ordersError && orders.length === 0 && (
-                <div
-                  className="
-                      text-center
-                      py-10
-                    "
-                >
-                  <Package
-                    size={48}
-                    className="
-                        mx-auto
-                        text-slate-300
-                      "
-                  />
+                <div className="text-center py-10">
+                  <Package size={48} className="mx-auto text-slate-300" />
 
-                  <h3
-                    className="
-                        font-black
-                        mt-4
-                      "
-                  >
-                    هنوز سفارشی ثبت نکرده‌اید
-                  </h3>
+                  <h3 className="font-black mt-4">هنوز سفارشی ثبت نکرده‌اید</h3>
 
                   <Link
                     to="/products"
-                    className="
-                        inline-flex
-                        mt-5
-                        bg-blue-600
-                        text-white
-                        px-6
-                        py-3
-                        rounded-xl
-                        font-bold
-                      "
+                    className="inline-flex mt-5 bg-blue-600 text-white px-6 py-3 rounded-xl font-bold"
                   >
                     مشاهده محصولات
                   </Link>
@@ -1156,7 +805,7 @@ function Account() {
               )}
 
               {!ordersLoading && !ordersError && orders.length > 0 && (
-                <div className="space-y-4">
+                <div className="space-y-5">
                   {orders.map((order) => {
                     const statusStyle = getStatusStyle(order.status);
 
@@ -1172,296 +821,259 @@ function Account() {
 
                     const firstItem = order.items?.[0];
 
+                    const originalAmount = Number(order.subtotal ?? 0);
+
+                    const discountAmount = Number(order.discount ?? 0);
+
+                    const finalAmount = Number(order.total ?? 0);
+
+                    const shippingCost = Number(order.shipping_cost ?? 0);
+
+                    const isDeleting =
+                      deletingOrderNumber === order.order_number;
+
                     return (
-                      <Link
+                      <div
                         key={order.id}
-                        to={`/account/orders/${order.order_number}`}
-                        className="
-                            group
-                            block
-                            border
-                            border-slate-100
-                            rounded-2xl
-                            overflow-hidden
-                            hover:border-blue-300
-                            hover:shadow-md
-                            transition-all
-                          "
+                        className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
                       >
-                        <div className="p-5">
-                          <div
-                            className="
-                                flex
-                                items-start
-                                justify-between
-                                gap-4
-                              "
-                          >
-                            <div className="flex items-center gap-4">
-                              <div
-                                className="
-                                    w-16
-                                    h-16
-                                    rounded-2xl
-                                    bg-slate-50
-                                    border
-                                    border-slate-100
-                                    overflow-hidden
-                                    flex-shrink-0
-                                  "
-                              >
-                                {orderImage ? (
-                                  <img
-                                    src={orderImage}
-                                    alt={
-                                      firstItem?.product?.name ??
-                                      firstItem?.product_name ??
-                                      "محصول سفارش"
-                                    }
-                                    className="
-                                        w-full
-                                        h-full
-                                        object-contain
-                                        p-1
-                                      "
-                                    onError={(event) => {
-                                      event.currentTarget.style.display =
-                                        "none";
-                                    }}
-                                  />
-                                ) : (
-                                  <div
-                                    className="
-                                        w-full
-                                        h-full
-                                        flex
-                                        items-center
-                                        justify-center
-                                        text-slate-300
-                                      "
-                                  >
-                                    <Package size={27} />
-                                  </div>
-                                )}
-                              </div>
+                        <div
+                          className={`absolute right-0 top-0 bottom-0 w-1.5 ${statusStyle.accent}`}
+                        />
 
-                              <div>
-                                <p
-                                  className="
-                                      text-xs
-                                      text-slate-400
-                                    "
-                                >
-                                  شماره سفارش
-                                </p>
+                        <Link
+                          to={`/account/orders/${order.order_number}`}
+                          className="group block"
+                        >
+                          <div className="p-4 sm:p-5 pr-5 sm:pr-6">
+                            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+                              <div className="flex items-start gap-4 min-w-0">
+                                <div className="w-16 h-16 rounded-2xl bg-slate-50 border border-slate-200 overflow-hidden flex-shrink-0">
+                                  {orderImage ? (
+                                    <img
+                                      src={orderImage}
+                                      alt={
+                                        firstItem?.product?.name ??
+                                        firstItem?.product_name ??
+                                        "محصول سفارش"
+                                      }
+                                      className="w-full h-full object-contain p-1"
+                                      onError={(event) => {
+                                        event.currentTarget.style.display =
+                                          "none";
+                                      }}
+                                    />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-slate-300">
+                                      <Package size={27} />
+                                    </div>
+                                  )}
+                                </div>
 
-                                <p
-                                  className="
-                                      font-black
-                                      text-blue-600
-                                      mt-1
-                                    "
-                                  dir="ltr"
-                                >
-                                  {order.order_number}
-                                </p>
-
-                                {firstItem && (
-                                  <p
-                                    className="
-                                        text-sm
-                                        text-slate-500
-                                        mt-1
-                                        max-w-[220px]
-                                        truncate
-                                      "
-                                  >
-                                    {firstItem.product?.name ??
-                                      firstItem.product_name}
-
-                                    {order.items.length > 1 &&
-                                      ` و ${order.items.length - 1} کالای دیگر`}
+                                <div className="min-w-0">
+                                  <p className="text-xs text-slate-400">
+                                    شماره سفارش
                                   </p>
-                                )}
+
+                                  <p
+                                    className="font-black text-blue-600 mt-1"
+                                    dir="ltr"
+                                  >
+                                    {order.order_number}
+                                  </p>
+
+                                  {firstItem && (
+                                    <p className="text-sm text-slate-500 mt-1 max-w-[260px] truncate">
+                                      {firstItem.product?.name ??
+                                        firstItem.product_name}
+
+                                      {order.items.length > 1 &&
+                                        ` و ${
+                                          order.items.length - 1
+                                        } کالای دیگر`}
+                                    </p>
+                                  )}
+                                </div>
                               </div>
+
+                              <div className="flex flex-row sm:flex-col items-start sm:items-end gap-2">
+                                <span
+                                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-bold ${statusStyle.wrapper}`}
+                                >
+                                  <StatusIcon size={14} />
+                                  {getOrderStatus(order.status)}
+                                </span>
+
+                                <span
+                                  className={`inline-flex items-center px-3 py-1.5 rounded-full border text-xs font-bold ${getPaymentStyle(
+                                    order.payment_status,
+                                  )}`}
+                                >
+                                  <CreditCard size={13} className="ml-1" />
+
+                                  {getPaymentStatus(order.payment_status)}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-5">
+                              <div
+                                className="rounded-xl bg-slate-50 border border-slate-200 p-4"
+                                style={{
+                                  direction: "ltr",
+                                  textAlign: "left",
+                                }}
+                              >
+                                <div className="text-xs text-slate-400 mb-1">
+                                  مبلغ اصلی کالاها
+                                </div>
+
+                                <div className="text-base font-bold text-slate-700 whitespace-nowrap">
+                                  {formatPrice(originalAmount)} تومان
+                                </div>
+                              </div>
+
+                              {discountAmount > 0 ? (
+                                <div
+                                  className="rounded-xl bg-red-50 border border-red-100 p-4"
+                                  style={{
+                                    direction: "ltr",
+                                    textAlign: "left",
+                                  }}
+                                >
+                                  <div className="flex items-center gap-1.5 text-xs text-red-500 mb-1">
+                                    <Tag size={13} />
+                                    تخفیف
+                                  </div>
+
+                                  <div className="text-base font-black text-red-600 whitespace-nowrap">
+                                    - {formatPrice(discountAmount)} تومان
+                                  </div>
+                                </div>
+                              ) : (
+                                <div
+                                  className="rounded-xl bg-slate-50 border border-slate-200 p-4"
+                                  style={{
+                                    direction: "ltr",
+                                    textAlign: "left",
+                                  }}
+                                >
+                                  <div className="text-xs text-slate-400 mb-1">
+                                    تخفیف
+                                  </div>
+
+                                  <div className="text-base font-bold text-slate-500">
+                                    بدون تخفیف
+                                  </div>
+                                </div>
+                              )}
                             </div>
 
                             <div
-                              className="
-                                  flex
-                                  flex-col
-                                  items-end
-                                  gap-2
-                                "
+                              className="mt-3 rounded-xl bg-blue-50 border border-blue-100 p-4"
+                              style={{
+                                direction: "ltr",
+                                textAlign: "left",
+                              }}
                             >
-                              <span
-                                className={`
-                                    inline-flex
-                                    items-center
-                                    gap-1.5
-                                    px-3
-                                    py-1.5
-                                    rounded-full
-                                    border
-                                    text-xs
-                                    font-bold
-                                    ${statusStyle.wrapper}
-                                  `}
-                              >
-                                <StatusIcon size={14} />
+                              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                                <div>
+                                  <div className="text-xs text-blue-500 mb-1">
+                                    مبلغ نهایی سفارش
+                                  </div>
 
-                                {getOrderStatus(order.status)}
-                              </span>
+                                  <div className="text-xl font-black text-blue-700 whitespace-nowrap">
+                                    {formatPrice(finalAmount)} تومان
+                                  </div>
+                                </div>
 
-                              <span
-                                className={`
-                                    inline-flex
-                                    items-center
-                                    px-3
-                                    py-1.5
-                                    rounded-full
-                                    border
-                                    text-xs
-                                    font-bold
-                                    ${getPaymentStyle(order.payment_status)}
-                                  `}
-                              >
-                                <CreditCard size={13} className="ml-1" />
+                                <div className="text-xs text-slate-500">
+                                  {shippingCost === 0
+                                    ? "ارسال رایگان"
+                                    : `هزینه ارسال: ${formatPrice(
+                                        shippingCost,
+                                      )} تومان`}
+                                </div>
+                              </div>
+                            </div>
 
-                                {getPaymentStatus(order.payment_status)}
-                              </span>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-5 pt-5 border-t border-slate-100">
+                              <div>
+                                <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                                  <CalendarDays size={14} />
+                                  تاریخ
+                                </div>
+
+                                <p className="font-bold text-slate-800 mt-1">
+                                  {formatDate(order.created_at)}
+                                </p>
+                              </div>
+
+                              <div>
+                                <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                                  <Package size={14} />
+                                  تعداد کالا
+                                </div>
+
+                                <p className="font-bold text-slate-800 mt-1">
+                                  {itemCount.toLocaleString("fa-IR")} کالا
+                                </p>
+                              </div>
+
+                              <div className="col-span-2 md:col-span-1">
+                                <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                                  <CreditCard size={14} />
+                                  وضعیت پرداخت
+                                </div>
+
+                                <p className="font-bold text-slate-800 mt-1">
+                                  {getPaymentStatus(order.payment_status)}
+                                </p>
+                              </div>
                             </div>
                           </div>
 
-                          <div
-                            className="
-                                grid
-                                grid-cols-2
-                                md:grid-cols-3
-                                gap-4
-                                mt-5
-                                pt-5
-                                border-t
-                                border-slate-100
-                              "
-                          >
-                            <div>
-                              <div
-                                className="
-                                    flex
-                                    items-center
-                                    gap-1.5
-                                    text-xs
-                                    text-slate-400
-                                  "
-                              >
-                                <CreditCard size={14} />
-                                مبلغ سفارش
-                              </div>
+                          <div className="px-5 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-3 group-hover:bg-blue-50 transition">
+                            <span className="text-sm font-bold text-slate-500 group-hover:text-blue-600">
+                              مشاهده جزئیات سفارش
+                            </span>
 
-                              <p
-                                className="
-                                    font-black
-                                    text-slate-800
-                                    mt-1
-                                  "
-                              >
-                                {formatPrice(order.total)}{" "}
-                                <span className="text-xs font-normal text-slate-500">
-                                  تومان
-                                </span>
-                              </p>
-                            </div>
-
-                            <div>
-                              <div
-                                className="
-                                    flex
-                                    items-center
-                                    gap-1.5
-                                    text-xs
-                                    text-slate-400
-                                  "
-                              >
-                                <CalendarDays size={14} />
-                                تاریخ
-                              </div>
-
-                              <p
-                                className="
-                                    font-bold
-                                    text-slate-800
-                                    mt-1
-                                  "
-                              >
-                                {formatDate(order.created_at)}
-                              </p>
-                            </div>
-
-                            <div>
-                              <div
-                                className="
-                                    flex
-                                    items-center
-                                    gap-1.5
-                                    text-xs
-                                    text-slate-400
-                                  "
-                              >
-                                <Package size={14} />
-                                تعداد کالا
-                              </div>
-
-                              <p
-                                className="
-                                    font-bold
-                                    text-slate-800
-                                    mt-1
-                                  "
-                              >
-                                {itemCount.toLocaleString("fa-IR")} کالا
-                              </p>
-                            </div>
+                            <ChevronLeft
+                              size={18}
+                              className="text-slate-400 group-hover:text-blue-600 group-hover:-translate-x-1 transition"
+                            />
                           </div>
-                        </div>
+                        </Link>
 
-                        <div
-                          className="
-                              px-5
-                              py-3
-                              bg-slate-50
-                              border-t
-                              border-slate-100
-                              flex
-                              items-center
-                              justify-between
-                              gap-3
-                              group-hover:bg-blue-50
-                              transition
-                            "
-                        >
-                          <span
-                            className="
-                                text-sm
-                                font-bold
-                                text-slate-500
-                                group-hover:text-blue-600
-                              "
-                          >
-                            مشاهده جزئیات سفارش
-                          </span>
+                        {order.status === "cancelled" && (
+                          <div className="px-5 py-3 border-t border-red-100 bg-red-50 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+                            <span className="text-xs sm:text-sm text-red-500">
+                              این سفارش لغو شده است.
+                            </span>
 
-                          <ChevronLeft
-                            size={18}
-                            className="
-                                text-slate-400
-                                group-hover:text-blue-600
-                                group-hover:-translate-x-1
-                                transition
-                              "
-                          />
-                        </div>
-                      </Link>
+                            <button
+                              type="button"
+                              onClick={(event) =>
+                                handleDeleteOrder(event, order.order_number)
+                              }
+                              disabled={isDeleting}
+                              className="inline-flex items-center justify-center gap-2 rounded-xl bg-white border border-red-200 text-red-600 hover:bg-red-600 hover:text-white px-4 py-2 text-sm font-bold transition disabled:opacity-60 disabled:cursor-not-allowed"
+                            >
+                              {isDeleting ? (
+                                <>
+                                  <Loader2 size={16} className="animate-spin" />
+                                  در حال حذف...
+                                </>
+                              ) : (
+                                <>
+                                  <Trash2 size={16} />
+                                  حذف از لیست
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     );
                   })}
                 </div>
@@ -1472,107 +1084,33 @@ function Account() {
           <div className="space-y-6">
             <Link
               to="/cart"
-              className="
-                block
-                bg-white
-                rounded-3xl
-                border
-                border-slate-100
-                shadow-sm
-                p-6
-                hover:border-blue-200
-                hover:shadow-md
-                transition
-              "
+              className="block bg-white rounded-3xl border border-slate-100 shadow-sm p-6 hover:border-blue-200 hover:shadow-md transition"
             >
-              <div
-                className="
-                  w-12
-                  h-12
-                  rounded-xl
-                  bg-blue-50
-                  text-blue-600
-                  flex
-                  items-center
-                  justify-center
-                "
-              >
+              <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
                 <ShoppingCart size={24} />
               </div>
 
-              <h3
-                className="
-                  font-black
-                  mt-5
-                "
-              >
-                سبد خرید
-              </h3>
+              <h3 className="font-black mt-5">سبد خرید</h3>
 
-              <p
-                className="
-                  text-sm
-                  text-slate-500
-                  mt-2
-                "
-              >
+              <p className="text-sm text-slate-500 mt-2">
                 {cartCount > 0
                   ? `${cartCount.toLocaleString("fa-IR")} کالا در سبد خرید`
                   : "سبد خرید شما خالی است"}
               </p>
 
-              <div
-                className="
-                  mt-5
-                  flex
-                  items-center
-                  justify-between
-                  text-sm
-                  font-bold
-                  text-blue-600
-                "
-              >
+              <div className="mt-5 flex items-center justify-between text-sm font-bold text-blue-600">
                 <span>مشاهده سبد خرید</span>
 
                 <ChevronLeft size={17} />
               </div>
             </Link>
 
-            <div
-              className="
-                bg-slate-900
-                text-white
-                rounded-3xl
-                p-6
-              "
-            >
-              <p
-                className="
-                  text-sm
-                  text-slate-300
-                "
-              >
-                خوش آمدید
-              </p>
+            <div className="bg-slate-900 text-white rounded-3xl p-6">
+              <p className="text-sm text-slate-300">خوش آمدید</p>
 
-              <h3
-                className="
-                  font-black
-                  text-lg
-                  mt-2
-                "
-              >
-                {user.name}
-              </h3>
+              <h3 className="font-black text-lg mt-2">{user.name}</h3>
 
-              <p
-                className="
-                  text-sm
-                  text-slate-400
-                  mt-3
-                  leading-6
-                "
-              >
+              <p className="text-sm text-slate-400 mt-3 leading-6">
                 از حساب کاربری خود برای مدیریت خریدها و سفارش‌های آینده استفاده
                 کنید.
               </p>

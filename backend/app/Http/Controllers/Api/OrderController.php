@@ -26,17 +26,11 @@ class OrderController extends Controller
         $user = $request->user();
 
         $order = DB::transaction(function () use ($validated, $user) {
-
-            // مجموع قیمت اصلی محصولات
             $subtotal = 0;
-
-            // مجموع مبلغ تخفیف
             $discount = 0;
-
             $orderItems = [];
 
             foreach ($validated['items'] as $item) {
-
                 $product = Product::query()
                     ->where('id', $item['product_id'])
                     ->where('is_active', true)
@@ -69,31 +63,26 @@ class OrderController extends Controller
                     100
                 );
 
-                // مبلغ تخفیف یک واحد محصول
                 $unitDiscount = round(
                     ($originalUnitPrice * $discountPercent) / 100,
                     2
                 );
 
-                // قیمت نهایی یک واحد محصول
                 $finalUnitPrice = round(
                     $originalUnitPrice - $unitDiscount,
                     2
                 );
 
-                // مجموع قیمت اصلی این محصول
                 $itemSubtotal = round(
                     $originalUnitPrice * $quantity,
                     2
                 );
 
-                // مجموع تخفیف این محصول
                 $itemDiscount = round(
                     $unitDiscount * $quantity,
                     2
                 );
 
-                // مجموع قیمت نهایی این محصول
                 $totalPrice = round(
                     $finalUnitPrice * $quantity,
                     2
@@ -107,15 +96,10 @@ class OrderController extends Controller
                     'product_name' => $product->name,
                     'sku' => $product->sku,
                     'quantity' => $quantity,
-
-                    // قیمتی که واقعاً مشتری برای هر واحد می‌پردازد
                     'unit_price' => $finalUnitPrice,
-
-                    // مبلغ نهایی این ردیف
                     'total_price' => $totalPrice,
                 ];
 
-                // رزرو موجودی محصول
                 $product->decrement('stock', $quantity);
             }
 
@@ -150,24 +134,12 @@ class OrderController extends Controller
             $order = Order::create([
                 'user_id' => $user->id,
                 'order_number' => $orderNumber,
-
-                // مجموع قیمت قبل از تخفیف
                 'subtotal' => $subtotal,
-
                 'shipping_cost' => $shippingCost,
-
-                // مجموع تخفیف
                 'discount' => $discount,
-
-                // مبلغ نهایی قابل پرداخت
                 'total' => $total,
-
-                // وضعیت اولیه سفارش
                 'status' => 'pending',
-
-                // هنوز پرداخت نشده
                 'payment_status' => 'unpaid',
-
                 'recipient_name' => $validated['recipient_name'],
                 'phone' => $validated['phone'],
                 'address' => $validated['address'],
@@ -261,7 +233,6 @@ class OrderController extends Controller
         }
 
         DB::transaction(function () use ($order) {
-
             foreach ($order->items as $item) {
                 Product::where('id', $item->product_id)
                     ->increment('stock', $item->quantity);
@@ -279,6 +250,40 @@ class OrderController extends Controller
             'data' => $order
                 ->fresh()
                 ->load('items.product.images'),
+        ]);
+    }
+
+    public function destroy(Request $request, string $orderNumber)
+    {
+        $user = $request->user();
+
+        $order = Order::query()
+            ->where('user_id', $user->id)
+            ->where('order_number', $orderNumber)
+            ->first();
+
+        if (!$order) {
+            return response()->json([
+                'success' => false,
+                'message' => 'سفارش موردنظر پیدا نشد.',
+            ], 404);
+        }
+
+        if ($order->status !== 'cancelled') {
+            return response()->json([
+                'success' => false,
+                'message' => 'فقط سفارش‌های لغوشده قابل حذف هستند.',
+            ], 422);
+        }
+
+        DB::transaction(function () use ($order) {
+            $order->items()->delete();
+            $order->delete();
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => 'سفارش با موفقیت از لیست سفارش‌ها حذف شد.',
         ]);
     }
 
