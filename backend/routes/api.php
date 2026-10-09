@@ -1,9 +1,10 @@
 <?php
 
-use App\Http\Controllers\Api\OrderController;
+use App\Http\Controllers\Api\AdminController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BrandController;
 use App\Http\Controllers\Api\CategoryController;
+use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\ProductController;
 use Illuminate\Support\Facades\Route;
 
@@ -66,6 +67,17 @@ Route::prefix('v1')->group(function () {
             '/orders/{orderNumber}/pay',
             [OrderController::class, 'pay']
         );
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Admin
+        |--------------------------------------------------------------------------
+        */
+
+        Route::middleware('admin')->prefix('admin')->group(function () {
+            Route::get('/dashboard', [AdminController::class, 'dashboard']);
+        });
     });
 
 

@@ -8,10 +8,13 @@ import {
 
 import api from "../services/api";
 
+export type UserRole = "admin" | "customer";
+
 export interface AuthUser {
   id: number;
   name: string;
   email: string;
+  role: UserRole;
 }
 
 interface AuthContextType {
@@ -77,8 +80,7 @@ function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await api.post("/auth/logout");
     } catch {
-      // حتی اگر درخواست خروج به سرور نرسید،
-      // اطلاعات ورود محلی را پاک می‌کنیم.
+      // Ignore logout API errors and clear local authentication state.
     } finally {
       localStorage.removeItem("pharmacy-shop-token");
       localStorage.removeItem("pharmacy-shop-user");
