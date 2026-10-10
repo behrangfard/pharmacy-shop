@@ -9,11 +9,13 @@ use Symfony\Component\HttpFoundation\Response;
 class AdminMiddleware
 {
     /**
-     * Handle an incoming request.
+     * بررسی دسترسی مدیر به درخواست
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (!$request->user() || !$request->user()->isAdmin()) {
+        $user = $request->user();
+
+        if (!$user || !$user->isAdmin()) {
             return response()->json([
                 'success' => false,
                 'message' => 'شما دسترسی لازم برای این بخش را ندارید.',
