@@ -1,55 +1,33 @@
 import { useEffect, useState } from "react";
-
 import { Link, useParams } from "react-router-dom";
-
 import {
   ArrowRight,
-  Package,
-  Loader2,
   CalendarDays,
-  CreditCard,
-  Truck,
-  Clock3,
   CheckCircle2,
-  XCircle,
+  Clock,
   MapPin,
-  Phone,
-  User,
-  Tag,
-  ShoppingBag,
-  ChevronLeft,
-  ReceiptText,
+  Package,
+  Receipt,
+  Truck,
+  XCircle,
 } from "lucide-react";
-
-import Layout from "../components/Layout";
-
 import api from "../services/api";
-
-type ProductImage = {
-  id: number;
-  path: string;
-  alt?: string | null;
-  sort_order?: number;
-  is_primary?: boolean;
-};
-
-type Product = {
-  id: number;
-  name: string;
-  slug: string;
-  thumbnail?: string | null;
-  images?: ProductImage[];
-};
-
 type OrderItem = {
   id: number;
-  product_id: number;
-  product_name: string;
-  sku?: string | null;
+  product_id?: number;
+  product_name?: string;
+  name?: string;
   quantity: number;
-  unit_price: string | number;
-  total_price: string | number;
-  product?: Product | null;
+  unit_price?: string | number;
+  total_price?: string | number;
+  price?: string | number;
+  total?: string | number;
+  product?: {
+    name?: string;
+    title?: string;
+    image?: string;
+    images?: { path?: string; url?: string }[];
+  };
 };
 
 type Order = {
@@ -58,6 +36,8 @@ type Order = {
   subtotal: string | number;
   shipping_cost: string | number;
   discount: string | number;
+  tax_percent?: string | number;
+  tax_amount?: string | number;
   total: string | number;
   status: string;
   payment_status: string;
@@ -70,887 +50,456 @@ type Order = {
   items: OrderItem[];
 };
 
-type OrderResponse = {
-  data?: Order;
-  order?: Order;
+const formatPrice = (value: number) =>
+  new Intl.NumberFormat("fa-IR").format(value);
+
+const formatDate = (value: string) => {
+  if (!value) return "—";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return new Intl.DateTimeFormat("fa-IR", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
 };
 
-function OrderDetail() {
+const orderStatusLabels: Record<string, string> = {
+  pending: "در انتظار بررسی",
+  processing: "در حال پردازش",
+  completed: "تکمیل‌شده",
+  shipped: "ارسال‌شده",
+  delivered: "تحویل‌شده",
+  cancelled: "لغوشده",
+  canceled: "لغوشده",
+  refunded: "مستردشده",
+};
+
+const paymentStatusLabels: Record<string, string> = {
+  unpaid: "پرداخت‌نشده",
+  paid: "پرداخت‌شده",
+  pending: "در انتظار پرداخت",
+  failed: "پرداخت ناموفق",
+  refunded: "مستردشده",
+};
+
+const getImageUrl = (path?: string) => {
+  if (!path) return "";
+  if (/^https?:\/\//i.test(path)) return path;
+
+  const cleanPath = path.replace(/^\/+/, "");
+  return cleanPath.startsWith("storage/")
+    ? `/${cleanPath}`
+    : `/storage/${cleanPath}`;
+};
+
+const getItemName = (item: OrderItem) =>
+  item.product_name ||
+  item.name ||
+  item.product?.name ||
+  item.product?.title ||
+  "محصول";
+
+const getItemImage = (item: OrderItem) =>
+  getImageUrl(
+    item.product?.image ||
+      item.product?.images?.[0]?.url ||
+      item.product?.images?.[0]?.path,
+  );
+
+export default function OrderDetail() {
   const { orderNumber } = useParams<{ orderNumber: string }>();
 
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const [cancelLoading, setCancelLoading] = useState(false);
-  const [cancelMessage, setCancelMessage] = useState("");
-  const [cancelError, setCancelError] = useState("");
-
   useEffect(() => {
-    if (!orderNumber) {
-      setError("شماره سفارش نامعتبر است.");
-      setLoading(false);
-      return;
-    }
+    let active = true;
 
-    const loadOrder = async () => {
-      setLoading(true);
-      setError("");
+    const fetchOrder = async () => {
+      if (!orderNumber) {
+        setError("شماره سفارش مشخص نیست.");
+        setLoading(false);
+        return;
+      }
 
       try {
+        setLoading(true);
+        setError("");
+
         const response = await api.get(`/orders/${orderNumber}`);
+        const payload = response.data?.data ?? response.data;
+        const orderData = payload?.order ?? payload;
 
-        const responseData = response.data as OrderResponse | Order;
-
-        const data =
-          (responseData as OrderResponse)?.data ??
-          (responseData as OrderResponse)?.order ??
-          responseData;
-
-        if (!data || !("order_number" in data)) {
-          setError("اطلاعات سفارش پیدا نشد.");
-          return;
+        if (!orderData?.order_number) {
+          throw new Error("اطلاعات سفارش دریافت نشد.");
         }
 
-        setOrder(data as Order);
-      } catch (requestError) {
-        console.error("Order detail error:", requestError);
-        setError("دریافت اطلاعات سفارش با خطا مواجه شد.");
+        if (active) setOrder(orderData as Order);
+      } catch (err: any) {
+        if (active) {
+          setError(
+            err?.response?.data?.message ||
+              err?.message ||
+              "دریافت اطلاعات سفارش ناموفق بود.",
+          );
+        }
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     };
 
-    loadOrder();
+    void fetchOrder();
+
+    return () => {
+      active = false;
+    };
   }, [orderNumber]);
-
-  const formatPrice = (value: string | number) => {
-    const numericValue = Number(value);
-
-    if (Number.isNaN(numericValue)) {
-      return "۰";
-    }
-
-    return numericValue.toLocaleString("fa-IR");
-  };
-
-  const formatDate = (value: string) => {
-    return new Date(value).toLocaleDateString("fa-IR");
-  };
-
-  const formatDateTime = (value: string) => {
-    return new Date(value).toLocaleString("fa-IR", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  const getStorageUrl = (path?: string | null) => {
-    if (!path) {
-      return null;
-    }
-
-    if (path.startsWith("http://") || path.startsWith("https://")) {
-      return path;
-    }
-
-    const cleanPath = path.replace(/^\/+/, "");
-
-    return `http://127.0.0.1:8000/storage/${cleanPath}`;
-  };
-
-  const getProductImage = (item: OrderItem) => {
-    if (item.product?.thumbnail) {
-      return getStorageUrl(item.product.thumbnail);
-    }
-
-    const images = item.product?.images ?? [];
-
-    if (images.length === 0) {
-      return null;
-    }
-
-    const primaryImage = images.find((image) => image.is_primary);
-
-    const selectedImage =
-      primaryImage ??
-      [...images].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))[0];
-
-    return getStorageUrl(selectedImage?.path);
-  };
-
-  const getOrderStatus = (status: string) => {
-    switch (status) {
-      case "pending":
-        return "در انتظار بررسی";
-
-      case "processing":
-        return "در حال پردازش";
-
-      case "shipped":
-        return "ارسال شده";
-
-      case "delivered":
-        return "تحویل شده";
-
-      case "cancelled":
-        return "لغو شده";
-
-      default:
-        return status;
-    }
-  };
-
-  const getPaymentStatus = (status: string) => {
-    switch (status) {
-      case "paid":
-        return "پرداخت شده";
-
-      case "pending":
-      case "unpaid":
-        return "پرداخت نشده";
-
-      case "failed":
-        return "پرداخت ناموفق";
-
-      case "refunded":
-        return "مسترد شده";
-
-      default:
-        return status;
-    }
-  };
-
-  const getStatusStyle = (status: string) => {
-    switch (status) {
-      case "pending":
-        return {
-          wrapper: "bg-amber-50 text-amber-700 border-amber-100",
-          icon: Clock3,
-        };
-
-      case "processing":
-        return {
-          wrapper: "bg-blue-50 text-blue-700 border-blue-100",
-          icon: Package,
-        };
-
-      case "shipped":
-        return {
-          wrapper: "bg-indigo-50 text-indigo-700 border-indigo-100",
-          icon: Truck,
-        };
-
-      case "delivered":
-        return {
-          wrapper: "bg-green-50 text-green-700 border-green-100",
-          icon: CheckCircle2,
-        };
-
-      case "cancelled":
-        return {
-          wrapper: "bg-red-50 text-red-700 border-red-100",
-          icon: XCircle,
-        };
-
-      default:
-        return {
-          wrapper: "bg-slate-50 text-slate-600 border-slate-100",
-          icon: Package,
-        };
-    }
-  };
-
-  const getPaymentStyle = (status: string) => {
-    switch (status) {
-      case "paid":
-        return "bg-green-50 text-green-700 border-green-100";
-
-      case "failed":
-        return "bg-red-50 text-red-700 border-red-100";
-
-      case "refunded":
-        return "bg-purple-50 text-purple-700 border-purple-100";
-
-      default:
-        return "bg-slate-50 text-slate-600 border-slate-100";
-    }
-  };
-
-  const canCancelOrder = (status: string) => {
-    return status === "pending";
-  };
-
-  const canPayOrder = (currentOrder: Order) => {
-    return (
-      currentOrder.payment_status !== "paid" &&
-      currentOrder.status !== "cancelled"
-    );
-  };
-
-  const handleCancelOrder = async () => {
-    if (!order) {
-      return;
-    }
-
-    const confirmed = window.confirm(
-      "آیا مطمئن هستید که می‌خواهید این سفارش را لغو کنید؟",
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
-    setCancelLoading(true);
-    setCancelMessage("");
-    setCancelError("");
-
-    try {
-      const response = await api.post(`/orders/${order.order_number}/cancel`);
-
-      const updatedOrder = response.data?.data ?? response.data?.order ?? null;
-
-      if (updatedOrder) {
-        setOrder(updatedOrder);
-      } else {
-        setOrder({
-          ...order,
-          status: "cancelled",
-        });
-      }
-
-      setCancelMessage("سفارش با موفقیت لغو شد.");
-    } catch (requestError: any) {
-      console.error("Cancel order error:", requestError);
-
-      setCancelError(
-        requestError?.response?.data?.message ??
-          "لغو سفارش انجام نشد. لطفاً دوباره تلاش کنید.",
-      );
-    } finally {
-      setCancelLoading(false);
-    }
-  };
 
   if (loading) {
     return (
-      <Layout>
-        <main className="max-w-5xl mx-auto px-4 sm:px-6 py-12">
-          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-10 text-center">
-            <Loader2 size={38} className="mx-auto animate-spin text-blue-600" />
-
-            <p className="mt-5 text-slate-500">
-              در حال دریافت اطلاعات سفارش...
-            </p>
-          </div>
-        </main>
-      </Layout>
+      <div className="mx-auto max-w-5xl px-4 py-16 text-center" dir="rtl">
+        <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-slate-800" />
+        <p className="text-slate-600">در حال دریافت اطلاعات سفارش...</p>
+      </div>
     );
   }
 
   if (error || !order) {
     return (
-      <Layout>
-        <main className="max-w-5xl mx-auto px-4 sm:px-6 py-12">
-          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-8 sm:p-10 text-center">
-            <div className="w-16 h-16 mx-auto rounded-2xl bg-red-50 text-red-500 flex items-center justify-center">
-              <XCircle size={30} />
-            </div>
-
-            <h1 className="text-xl sm:text-2xl font-black text-slate-900 mt-5">
-              سفارش پیدا نشد
-            </h1>
-
-            <p className="text-slate-500 mt-2">
-              {error || "اطلاعات این سفارش در دسترس نیست."}
-            </p>
-
-            <Link
-              to="/account"
-              className="inline-flex items-center gap-2 mt-6 bg-blue-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-blue-700 transition"
-            >
-              <ArrowRight size={18} />
-              بازگشت به حساب کاربری
-            </Link>
-          </div>
-        </main>
-      </Layout>
+      <div className="mx-auto max-w-5xl px-4 py-16 text-center" dir="rtl">
+        <div className="rounded-2xl border border-red-100 bg-red-50 p-6">
+          <XCircle className="mx-auto mb-3 h-10 w-10 text-red-500" />
+          <h1 className="mb-2 text-xl font-bold text-slate-900">
+            دریافت سفارش ناموفق بود
+          </h1>
+          <p className="mb-5 text-sm text-red-700">{error}</p>
+          <Link
+            to="/account"
+            className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-sm font-bold text-white hover:bg-slate-700"
+          >
+            <ArrowRight size={18} />
+            بازگشت به حساب کاربری
+          </Link>
+        </div>
+      </div>
     );
   }
-
-  const statusStyle = getStatusStyle(order.status);
-  const StatusIcon = statusStyle.icon;
 
   const subtotal = Number(order.subtotal ?? 0);
   const discount = Number(order.discount ?? 0);
   const shippingCost = Number(order.shipping_cost ?? 0);
+  const taxPercent = Number(order.tax_percent ?? 0);
+  const taxAmount = Number(order.tax_amount ?? 0);
   const total = Number(order.total ?? 0);
 
-  const itemCount =
-    order.items?.reduce((sum, item) => sum + Number(item.quantity), 0) ?? 0;
+  const orderStatus =
+    orderStatusLabels[order.status] || order.status || "نامشخص";
+  const paymentStatus =
+    paymentStatusLabels[order.payment_status] ||
+    order.payment_status ||
+    "نامشخص";
+
+  const isCancelled =
+    order.status === "cancelled" || order.status === "canceled";
+  const isPaid = order.payment_status === "paid";
 
   return (
-    <Layout>
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
-        <div className="mb-8">
-          <Link
-            to="/account"
-            className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-blue-600 transition-colors"
-          >
-            <ArrowRight size={17} />
-            بازگشت به حساب کاربری
-          </Link>
+    <main className="min-h-screen bg-slate-50 py-8 sm:py-12" dir="rtl">
+      <div className="mx-auto max-w-6xl px-4 sm:px-6">
+        <Link
+          to="/account"
+          className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-slate-950"
+        >
+          <ArrowRight size={18} />
+          بازگشت به حساب کاربری
+        </Link>
 
-          <div className="mt-5 flex flex-col lg:flex-row lg:items-end lg:justify-between gap-5">
-            <div>
-              <p className="text-sm text-slate-400">جزئیات سفارش</p>
-
-              <h1
-                className="text-2xl sm:text-3xl font-black text-slate-900 mt-2"
-                dir="ltr"
-              >
-                {order.order_number}
-              </h1>
-
-              <p className="text-slate-500 mt-2">
-                ثبت شده در {formatDateTime(order.created_at)}
-              </p>
+        <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+          <div>
+            <div className="mb-2 flex items-center gap-2 text-sm text-slate-500">
+              <Receipt size={18} />
+              جزئیات سفارش
             </div>
+            <h1 className="text-2xl font-black text-slate-950 sm:text-3xl">
+              سفارش {order.order_number}
+            </h1>
+            <p className="mt-2 flex items-center gap-2 text-sm text-slate-500">
+              <CalendarDays size={16} />
+              {formatDate(order.created_at)}
+            </p>
+          </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-              <span
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-bold ${statusStyle.wrapper}`}
-              >
-                <StatusIcon size={14} />
-                {getOrderStatus(order.status)}
-              </span>
+          <div className="flex flex-wrap gap-2">
+            <span
+              className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-bold ${
+                isCancelled
+                  ? "bg-red-100 text-red-700"
+                  : "bg-blue-100 text-blue-700"
+              }`}
+            >
+              {isCancelled ? <XCircle size={16} /> : <Package size={16} />}
+              {orderStatus}
+            </span>
 
-              <span
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-bold ${getPaymentStyle(
-                  order.payment_status,
-                )}`}
-              >
-                <CreditCard size={13} />
-                {getPaymentStatus(order.payment_status)}
-              </span>
-            </div>
+            <span
+              className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-bold ${
+                isPaid
+                  ? "bg-emerald-100 text-emerald-700"
+                  : "bg-amber-100 text-amber-700"
+              }`}
+            >
+              {isPaid ? <CheckCircle2 size={16} /> : <Clock size={16} />}
+              {paymentStatus}
+            </span>
           </div>
         </div>
 
-        {cancelMessage && (
-          <div className="mb-6 bg-green-50 text-green-700 rounded-2xl border border-green-100 p-4 text-sm font-bold">
-            {cancelMessage}
-          </div>
-        )}
-
-        {cancelError && (
-          <div className="mb-6 bg-red-50 text-red-600 rounded-2xl border border-red-100 p-4 text-sm font-bold">
-            {cancelError}
-          </div>
-        )}
-
-        <div className="space-y-6">
-          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 sm:p-7">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-                <Package size={24} />
-              </div>
-
-              <div>
-                <h2 className="text-xl font-black text-slate-900">
-                  اقلام سفارش
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+          <div className="space-y-6 lg:col-span-2">
+            <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <div className="border-b border-slate-100 px-5 py-4 sm:px-6">
+                <h2 className="text-lg font-bold text-slate-900">
+                  محصولات سفارش
                 </h2>
-
-                <p className="text-sm text-slate-500 mt-1">
-                  {itemCount.toLocaleString("fa-IR")} کالا در این سفارش
-                </p>
               </div>
-            </div>
 
-            <div className="space-y-3">
-              {order.items.map((item) => {
-                const imageUrl = getProductImage(item);
-                const unitPrice = Number(item.unit_price ?? 0);
-                const itemTotal = Number(item.total_price ?? 0);
-
-                return (
-                  <div
-                    key={item.id}
-                    className="rounded-2xl border border-slate-100 bg-slate-50/60 p-4 sm:p-5 hover:border-blue-200 hover:bg-blue-50/30 transition"
-                  >
-                    <div className="flex flex-col sm:flex-row gap-4">
-                      <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-white border border-slate-100 overflow-hidden flex-shrink-0 flex items-center justify-center">
-                        {imageUrl ? (
-                          <img
-                            src={imageUrl}
-                            alt={
-                              item.product?.name ??
-                              item.product_name ??
-                              "محصول سفارش"
-                            }
-                            className="w-full h-full object-contain p-2"
-                            onError={(event) => {
-                              event.currentTarget.style.display = "none";
-                            }}
-                          />
-                        ) : (
-                          <Package size={30} className="text-slate-300" />
-                        )}
-                      </div>
-
-                      <div className="flex-1 min-w-0">
-                        <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
-                          <div className="min-w-0">
-                            {item.product?.slug ? (
-                              <Link
-                                to={`/product/${item.product.slug}`}
-                                className="font-black text-slate-900 hover:text-blue-600 transition-colors"
-                              >
-                                {item.product.name}
-                              </Link>
-                            ) : (
-                              <p className="font-black text-slate-900">
-                                {item.product_name}
-                              </p>
-                            )}
-
-                            {item.sku && (
-                              <p
-                                className="text-xs text-slate-400 mt-2"
-                                dir="ltr"
-                              >
-                                SKU: {item.sku}
-                              </p>
-                            )}
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 text-blue-600 border border-blue-100 px-3 py-1.5 text-xs font-bold">
-                              <ShoppingBag size={13} />
-                              تعداد:{" "}
-                              {Number(item.quantity).toLocaleString("fa-IR")}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-5">
-                          <div className="rounded-xl bg-white border border-slate-100 p-4">
-                            <p className="text-xs text-slate-400 mb-1">
-                              نهایی قیمت واحد
-                            </p>
-
-                            <p
-                              className="font-bold text-slate-700 whitespace-nowrap"
-                              dir="ltr"
-                            >
-                              {formatPrice(unitPrice)} تومان
-                            </p>
-                          </div>
-
-                          <div className="rounded-xl bg-white border border-slate-100 p-4">
-                            <p className="text-xs text-slate-400 mb-1">
-                              مجموع این کالا
-                            </p>
-
-                            <p
-                              className="font-black text-blue-700 whitespace-nowrap"
-                              dir="ltr"
-                            >
-                              {formatPrice(itemTotal)} تومان
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="grid lg:grid-cols-2 gap-6">
-            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 sm:p-7">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-                  <User size={24} />
+              {!order.items?.length ? (
+                <div className="p-8 text-center text-sm text-slate-500">
+                  محصولی برای این سفارش ثبت نشده است.
                 </div>
+              ) : (
+                <div className="divide-y divide-slate-100">
+                  {order.items.map((item, index) => {
+                    const name = getItemName(item);
+                    const imageUrl = getItemImage(item);
+                    const quantity = Number(item.quantity ?? 0);
 
+                    const unitPrice = Number(
+                      item.unit_price ?? item.price ?? 0,
+                    );
+
+                    const lineTotal =
+                      item.total_price != null
+                        ? Number(item.total_price)
+                        : item.total != null
+                          ? Number(item.total)
+                          : unitPrice * quantity;
+
+                    return (
+                      <div
+                        key={item.id ?? `${name}-${index}`}
+                        className="flex items-center gap-4 p-4 sm:p-5"
+                      >
+                        <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-100">
+                          {imageUrl ? (
+                            <img
+                              src={imageUrl}
+                              alt={name}
+                              className="h-full w-full object-cover"
+                              onError={(event) => {
+                                event.currentTarget.style.display = "none";
+                              }}
+                            />
+                          ) : (
+                            <Package size={28} className="text-slate-400" />
+                          )}
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+                          <h3 className="line-clamp-2 font-bold text-slate-900">
+                            {name}
+                          </h3>
+                          <p className="mt-2 text-sm text-slate-500">
+                            تعداد: {formatPrice(quantity)}
+                          </p>
+                          <p className="mt-1 text-sm text-slate-500">
+                            قیمت واحد: {formatPrice(unitPrice)} تومان
+                          </p>
+                        </div>
+
+                        <div className="shrink-0 text-left">
+                          <p className="font-black text-slate-900">
+                            {formatPrice(lineTotal)}
+                          </p>
+                          <p className="mt-1 text-xs text-slate-500">تومان</p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </section>
+
+            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+              <div className="mb-5 flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100">
+                  <MapPin size={21} className="text-slate-700" />
+                </div>
                 <div>
-                  <h2 className="text-xl font-black text-slate-900">
-                    اطلاعات گیرنده
+                  <h2 className="font-bold text-slate-900">
+                    اطلاعات گیرنده و ارسال
                   </h2>
-
-                  <p className="text-sm text-slate-500 mt-1">
-                    اطلاعات ارسال سفارش
+                  <p className="mt-1 text-xs text-slate-500">
+                    اطلاعات ثبت‌شده برای این سفارش
                   </p>
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center flex-shrink-0">
-                    <User size={18} className="text-slate-500" />
-                  </div>
-
-                  <div>
-                    <p className="text-xs text-slate-400">نام گیرنده</p>
-
-                    <p className="font-bold text-slate-800 mt-1">
-                      {order.recipient_name}
-                    </p>
-                  </div>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="rounded-xl bg-slate-50 p-4">
+                  <p className="mb-1 text-xs text-slate-500">نام گیرنده</p>
+                  <p className="font-bold text-slate-900">
+                    {order.recipient_name || "—"}
+                  </p>
                 </div>
 
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center flex-shrink-0">
-                    <Phone size={18} className="text-slate-500" />
-                  </div>
-
-                  <div>
-                    <p className="text-xs text-slate-400">شماره تماس</p>
-
-                    <p className="font-bold text-slate-800 mt-1" dir="ltr">
-                      {order.phone}
-                    </p>
-                  </div>
+                <div className="rounded-xl bg-slate-50 p-4">
+                  <p className="mb-1 text-xs text-slate-500">شماره تماس</p>
+                  <p className="font-bold text-slate-900" dir="ltr">
+                    {order.phone || "—"}
+                  </p>
                 </div>
 
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center flex-shrink-0">
-                    <MapPin size={18} className="text-slate-500" />
-                  </div>
-
-                  <div>
-                    <p className="text-xs text-slate-400">آدرس</p>
-
-                    <p className="font-bold text-slate-800 mt-1 leading-7">
-                      {order.address}
-                    </p>
-                  </div>
+                <div className="rounded-xl bg-slate-50 p-4 sm:col-span-2">
+                  <p className="mb-1 text-xs text-slate-500">نشانی</p>
+                  <p className="leading-7 text-slate-800">
+                    {order.address || "—"}
+                  </p>
                 </div>
 
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center flex-shrink-0">
-                    <ReceiptText size={18} className="text-slate-500" />
-                  </div>
-
-                  <div>
-                    <p className="text-xs text-slate-400">کد پستی</p>
-
-                    <p className="font-bold text-slate-800 mt-1" dir="ltr">
-                      {order.postal_code}
-                    </p>
-                  </div>
+                <div className="rounded-xl bg-slate-50 p-4">
+                  <p className="mb-1 text-xs text-slate-500">کد پستی</p>
+                  <p className="font-bold text-slate-900">
+                    {order.postal_code || "—"}
+                  </p>
                 </div>
 
-                {order.notes && (
-                  <div className="rounded-2xl bg-amber-50 border border-amber-100 p-4">
-                    <p className="text-xs text-amber-600 font-bold mb-2">
-                      توضیحات سفارش
-                    </p>
-
-                    <p className="text-sm text-amber-800 leading-6">
-                      {order.notes}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 sm:p-7">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-                  <CreditCard size={24} />
-                </div>
-
-                <div>
-                  <h2 className="text-xl font-black text-slate-900">
-                    خلاصه پرداخت
-                  </h2>
-
-                  <p className="text-sm text-slate-500 mt-1">
-                    جزئیات مبلغ سفارش
+                <div className="rounded-xl bg-slate-50 p-4">
+                  <p className="mb-1 text-xs text-slate-500">هزینه ارسال</p>
+                  <p className="font-bold text-slate-900">
+                    {shippingCost === 0
+                      ? "رایگان"
+                      : `${formatPrice(shippingCost)} تومان`}
                   </p>
                 </div>
               </div>
 
-              <div className="space-y-3">
-                <div
-                  className="rounded-xl bg-slate-50 border border-slate-100 p-4"
-                  style={{
-                    direction: "ltr",
-                    textAlign: "left",
-                  }}
-                >
-                  <div className="flex items-center justify-between gap-4">
-                    <span className="text-sm text-slate-500">مبلغ کالاها</span>
-
-                    <span className="font-bold text-slate-800 whitespace-nowrap">
-                      {formatPrice(subtotal)} تومان
-                    </span>
-                  </div>
+              {order.notes && (
+                <div className="mt-4 rounded-xl border border-slate-200 p-4">
+                  <p className="mb-1 text-xs text-slate-500">توضیحات سفارش</p>
+                  <p className="text-sm leading-7 text-slate-700">
+                    {order.notes}
+                  </p>
                 </div>
-
-                {discount > 0 && (
-                  <div
-                    className="rounded-xl bg-red-50 border border-red-100 p-4"
-                    style={{
-                      direction: "ltr",
-                      textAlign: "left",
-                    }}
-                  >
-                    <div className="flex items-center justify-between gap-4">
-                      <span className="flex items-center gap-1.5 text-sm text-red-500">
-                        <Tag size={14} />
-                        تخفیف
-                      </span>
-
-                      <span className="font-black text-red-600 whitespace-nowrap">
-                        - {formatPrice(discount)} تومان
-                      </span>
-                    </div>
-                  </div>
-                )}
-
-                <div
-                  className="rounded-xl bg-slate-50 border border-slate-100 p-4"
-                  style={{
-                    direction: "ltr",
-                    textAlign: "left",
-                  }}
-                >
-                  <div className="flex items-center justify-between gap-4">
-                    <span className="text-sm text-slate-500">هزینه ارسال</span>
-
-                    <span className="font-bold text-slate-800 whitespace-nowrap">
-                      {shippingCost === 0
-                        ? "رایگان"
-                        : `${formatPrice(shippingCost)} تومان`}
-                    </span>
-                  </div>
-                </div>
-
-                <div
-                  className="rounded-xl bg-blue-50 border border-blue-100 p-5 mt-4"
-                  style={{
-                    direction: "ltr",
-                    textAlign: "left",
-                  }}
-                >
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                    <div>
-                      <p className="text-xs text-blue-500 mb-1">
-                        مبلغ نهایی سفارش
-                      </p>
-
-                      <p className="text-2xl font-black text-blue-700 whitespace-nowrap">
-                        {formatPrice(total)} تومان
-                      </p>
-                    </div>
-
-                    <div className="flex items-center gap-1.5 text-sm text-slate-500">
-                      <CreditCard size={16} />
-                      {getPaymentStatus(order.payment_status)}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+              )}
+            </section>
           </div>
 
-          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 sm:p-7">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <aside className="h-fit rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+            <div className="mb-5 flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100">
+                <Receipt size={21} className="text-slate-700" />
+              </div>
               <div>
-                <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-xl bg-slate-50 text-slate-600 flex items-center justify-center">
-                    <CalendarDays size={24} />
-                  </div>
+                <h2 className="font-bold text-slate-900">خلاصه پرداخت</h2>
+                <p className="mt-1 text-xs text-slate-500">
+                  جزئیات مبالغ سفارش
+                </p>
+              </div>
+            </div>
 
-                  <div>
-                    <h2 className="text-xl font-black text-slate-900">
-                      وضعیت سفارش
-                    </h2>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between gap-3 text-sm">
+                <span className="text-slate-500">مبلغ کالاها</span>
+                <span className="whitespace-nowrap font-semibold text-slate-900">
+                  {formatPrice(subtotal)} تومان
+                </span>
+              </div>
 
-                    <p className="text-sm text-slate-500 mt-1">
-                      وضعیت فعلی سفارش شما
-                    </p>
+              {discount > 0 && (
+                <div className="flex items-center justify-between gap-3 text-sm">
+                  <span className="text-emerald-700">تخفیف</span>
+                  <span className="whitespace-nowrap font-bold text-emerald-700">
+                    − {formatPrice(discount)} تومان
+                  </span>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between gap-3 text-sm">
+                <span className="text-slate-500">هزینه ارسال</span>
+                <span className="whitespace-nowrap font-semibold text-slate-900">
+                  {shippingCost === 0
+                    ? "رایگان"
+                    : `${formatPrice(shippingCost)} تومان`}
+                </span>
+              </div>
+
+              {taxAmount > 0 && (
+                <div className="rounded-xl border border-amber-100 bg-amber-50 p-4">
+                  <div className="flex items-center justify-between gap-3 text-sm">
+                    <span className="text-amber-800">
+                      ارزش افزوده ({formatPrice(taxPercent)}٪)
+                    </span>
+                    <span className="whitespace-nowrap font-bold text-amber-900">
+                      {formatPrice(taxAmount)} تومان
+                    </span>
                   </div>
                 </div>
-              </div>
+              )}
 
-              <div
-                className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl border text-sm font-bold ${statusStyle.wrapper}`}
-              >
-                <StatusIcon size={17} />
-                {getOrderStatus(order.status)}
-              </div>
-            </div>
-
-            <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div
-                className={`rounded-2xl border p-4 ${
-                  order.status === "pending"
-                    ? "bg-amber-50 border-amber-100"
-                    : "bg-slate-50 border-slate-100"
-                }`}
-              >
-                <Clock3
-                  size={20}
-                  className={
-                    order.status === "pending"
-                      ? "text-amber-600"
-                      : "text-slate-400"
-                  }
-                />
-
-                <p className="text-xs text-slate-400 mt-3">ثبت سفارش</p>
-
-                <p className="font-bold text-slate-800 mt-1 text-sm">
-                  انجام شده
-                </p>
-              </div>
-
-              <div
-                className={`rounded-2xl border p-4 ${
-                  order.status === "processing"
-                    ? "bg-blue-50 border-blue-100"
-                    : "bg-slate-50 border-slate-100"
-                }`}
-              >
-                <Package
-                  size={20}
-                  className={
-                    order.status === "processing"
-                      ? "text-blue-600"
-                      : "text-slate-400"
-                  }
-                />
-
-                <p className="text-xs text-slate-400 mt-3">پردازش</p>
-
-                <p className="font-bold text-slate-800 mt-1 text-sm">
-                  {order.status === "processing" ? "در حال انجام" : "در انتظار"}
-                </p>
-              </div>
-
-              <div
-                className={`rounded-2xl border p-4 ${
-                  order.status === "shipped"
-                    ? "bg-indigo-50 border-indigo-100"
-                    : "bg-slate-50 border-slate-100"
-                }`}
-              >
-                <Truck
-                  size={20}
-                  className={
-                    order.status === "shipped"
-                      ? "text-indigo-600"
-                      : "text-slate-400"
-                  }
-                />
-
-                <p className="text-xs text-slate-400 mt-3">ارسال</p>
-
-                <p className="font-bold text-slate-800 mt-1 text-sm">
-                  {order.status === "shipped" ? "ارسال شده" : "در انتظار"}
-                </p>
-              </div>
-
-              <div
-                className={`rounded-2xl border p-4 ${
-                  order.status === "delivered"
-                    ? "bg-green-50 border-green-100"
-                    : "bg-slate-50 border-slate-100"
-                }`}
-              >
-                <CheckCircle2
-                  size={20}
-                  className={
-                    order.status === "delivered"
-                      ? "text-green-600"
-                      : "text-slate-400"
-                  }
-                />
-
-                <p className="text-xs text-slate-400 mt-3">تحویل</p>
-
-                <p className="font-bold text-slate-800 mt-1 text-sm">
-                  {order.status === "delivered" ? "تحویل شده" : "در انتظار"}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {canPayOrder(order) && (
-            <div className="bg-blue-50 rounded-3xl border border-blue-100 p-5 sm:p-6">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div>
-                  <h3 className="font-black text-blue-700">پرداخت سفارش</h3>
-
-                  <p className="text-sm text-blue-600 mt-1 leading-6">
-                    این سفارش هنوز پرداخت نشده است. برای تکمیل سفارش، پرداخت را
-                    انجام دهید.
+              <div className="border-t border-dashed border-slate-200 pt-4">
+                <div className="rounded-xl bg-slate-900 p-4 text-white">
+                  <p className="text-sm text-slate-300">مبلغ نهایی سفارش</p>
+                  <p className="mt-2 text-2xl font-black">
+                    {formatPrice(total)}
+                    <span className="mr-2 text-sm font-medium text-slate-300">
+                      تومان
+                    </span>
+                  </p>
+                  <p className="mt-2 text-xs leading-6 text-slate-300">
+                    مبلغ نهایی مطابق اطلاعات ثبت‌شده برای این سفارش است.
                   </p>
                 </div>
-
-                <Link
-                  to={`/payment/${order.order_number}`}
-                  className="inline-flex w-full sm:w-[180px] h-12 items-center justify-center gap-2 rounded-xl bg-blue-600 text-white px-5 font-bold hover:bg-blue-700 transition flex-shrink-0"
-                >
-                  <CreditCard size={18} />
-                  پرداخت سفارش
-                </Link>
               </div>
             </div>
-          )}
 
-          {canCancelOrder(order.status) && (
-            <div className="bg-red-50 rounded-3xl border border-red-100 p-5 sm:p-6">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="mt-5 rounded-xl border border-slate-200 p-4">
+              <div className="flex items-start gap-3">
+                {isPaid ? (
+                  <CheckCircle2
+                    size={20}
+                    className="mt-0.5 shrink-0 text-emerald-600"
+                  />
+                ) : (
+                  <Clock size={20} className="mt-0.5 shrink-0 text-amber-600" />
+                )}
                 <div>
-                  <h3 className="font-black text-red-700">لغو سفارش</h3>
-
-                  <p className="text-sm text-red-600 mt-1 leading-6">
-                    اگر دیگر به این سفارش نیاز ندارید، می‌توانید آن را لغو کنید.
+                  <p className="font-bold text-slate-900">وضعیت پرداخت</p>
+                  <p className="mt-1 text-sm leading-6 text-slate-600">
+                    {isPaid
+                      ? "پرداخت این سفارش با موفقیت ثبت شده است."
+                      : "وضعیت پرداخت این سفارش هنوز پرداخت‌شده نیست."}
                   </p>
                 </div>
-
-                <button
-                  type="button"
-                  onClick={handleCancelOrder}
-                  disabled={cancelLoading}
-                  className="inline-flex w-full sm:w-[180px] h-12 items-center justify-center gap-2 rounded-xl bg-red-600 text-white px-5 font-bold hover:bg-red-700 transition disabled:opacity-60 flex-shrink-0"
-                >
-                  {cancelLoading ? (
-                    <>
-                      <Loader2 size={18} className="animate-spin" />
-                      در حال لغو...
-                    </>
-                  ) : (
-                    <>
-                      <XCircle size={18} />
-                      لغو سفارش
-                    </>
-                  )}
-                </button>
               </div>
             </div>
-          )}
 
-          <Link
-            to="/account"
-            className="flex items-center justify-between gap-3 bg-slate-50 border border-slate-100 rounded-2xl px-5 py-4 text-sm font-bold text-slate-600 hover:bg-blue-50 hover:border-blue-100 hover:text-blue-600 transition"
-          >
-            <span>بازگشت به سفارش‌های من</span>
-            <ChevronLeft size={18} />
-          </Link>
+            <Link
+              to="/products"
+              className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl border border-slate-300 px-4 py-3 text-sm font-bold text-slate-800 transition hover:bg-slate-50"
+            >
+              <Truck size={18} />
+              ادامه خرید
+            </Link>
+          </aside>
         </div>
-      </main>
-    </Layout>
+      </div>
+    </main>
   );
 }
-
-export default OrderDetail;

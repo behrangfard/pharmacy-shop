@@ -296,18 +296,20 @@ function ProductDetail() {
         >
           <div className="grid grid-cols-1 lg:grid-cols-2">
             {/* Images */}
-            <div className="p-6 lg:p-8">
+            <div className="min-w-0 p-6 lg:p-8">
               <div
                 className="
-                  min-h-[420px]
-                  bg-slate-50
-                  rounded-2xl
+                  relative
                   flex
+                  min-h-[420px]
+                  w-full
                   items-center
                   justify-center
-                  p-8
-                  relative
                   overflow-hidden
+                  rounded-2xl
+                  bg-slate-50
+                  p-6
+                  sm:p-8
                 "
               >
                 {imageUrl ? (
@@ -315,8 +317,9 @@ function ProductDetail() {
                     src={imageUrl}
                     alt={selectedImage?.alt || product.name}
                     className="
-                      max-w-full
+                      block
                       max-h-[420px]
+                      max-w-full
                       object-contain
                       transition
                       duration-300
@@ -330,14 +333,14 @@ function ProductDetail() {
                   <span
                     className="
                       absolute
-                      top-5
-                      right-5
+                      right-4
+                      top-4
+                      rounded-full
                       bg-red-500
-                      text-white
                       px-4
                       py-2
-                      rounded-full
                       font-bold
+                      text-white
                     "
                   >
                     {discountPercent}% تخفیف
@@ -351,22 +354,22 @@ function ProductDetail() {
                       onClick={handlePreviousImage}
                       className="
                         absolute
-                        right-4
+                        right-3
                         top-1/2
-                        -translate-y-1/2
-                        w-10
-                        h-10
-                        rounded-full
-                        bg-white
-                        shadow-md
                         flex
+                        h-10
+                        w-10
+                        -translate-y-1/2
                         items-center
                         justify-center
+                        rounded-full
+                        bg-white
                         text-slate-700
-                        hover:bg-blue-600
-                        hover:text-white
+                        shadow-md
                         transition-all
                         duration-200
+                        hover:bg-blue-600
+                        hover:text-white
                         active:scale-90
                       "
                       aria-label="تصویر قبلی"
@@ -379,22 +382,22 @@ function ProductDetail() {
                       onClick={handleNextImage}
                       className="
                         absolute
-                        left-4
+                        left-3
                         top-1/2
-                        -translate-y-1/2
-                        w-10
-                        h-10
-                        rounded-full
-                        bg-white
-                        shadow-md
                         flex
+                        h-10
+                        w-10
+                        -translate-y-1/2
                         items-center
                         justify-center
+                        rounded-full
+                        bg-white
                         text-slate-700
-                        hover:bg-blue-600
-                        hover:text-white
+                        shadow-md
                         transition-all
                         duration-200
+                        hover:bg-blue-600
+                        hover:text-white
                         active:scale-90
                       "
                       aria-label="تصویر بعدی"
@@ -406,7 +409,22 @@ function ProductDetail() {
               </div>
 
               {galleryImages.length > 0 && (
-                <div className="mt-4 flex gap-3 overflow-x-auto pb-2">
+                <div
+                  className="
+                    relative
+                    mt-5
+                    flex
+                    w-full
+                    min-w-0
+                    flex-nowrap
+                    items-center
+                    gap-3
+                    overflow-x-auto
+                    overflow-y-hidden
+                    px-1
+                    py-2
+                  "
+                >
                   {galleryImages.map((image, index) => {
                     const thumbnailUrl = getImageUrl(image.path);
 
@@ -415,19 +433,23 @@ function ProductDetail() {
                         key={image.id || index}
                         type="button"
                         onClick={() => setSelectedImageIndex(index)}
+                        aria-label={`نمایش تصویر شماره ${index + 1}`}
+                        aria-pressed={selectedImageIndex === index}
                         className={`
-                          shrink-0
-                          w-20
+                          relative
+                          box-border
                           h-20
+                          w-20
+                          shrink-0
+                          overflow-hidden
                           rounded-xl
                           border-2
                           bg-slate-50
-                          overflow-hidden
                           transition-all
                           duration-200
                           ${
                             selectedImageIndex === index
-                              ? "border-blue-600 ring-2 ring-blue-100 scale-105"
+                              ? "scale-100 border-blue-600 ring-2 ring-blue-100"
                               : "border-slate-200 hover:border-blue-300"
                           }
                         `}
@@ -436,15 +458,10 @@ function ProductDetail() {
                           <img
                             src={thumbnailUrl}
                             alt={image.alt || product.name}
-                            className="
-                              w-full
-                              h-full
-                              object-contain
-                              p-2
-                            "
+                            className="block h-full w-full object-contain p-2"
                           />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-slate-400">
+                          <div className="flex h-full w-full items-center justify-center text-slate-400">
                             <Package size={22} />
                           </div>
                         )}
@@ -455,7 +472,7 @@ function ProductDetail() {
               )}
 
               {galleryImages.length > 1 && (
-                <div className="text-center text-xs text-slate-400 mt-2">
+                <div className="mt-1 text-center text-xs text-slate-400">
                   {(selectedImageIndex + 1).toLocaleString("fa-IR")} از{" "}
                   {galleryImages.length.toLocaleString("fa-IR")} تصویر
                 </div>

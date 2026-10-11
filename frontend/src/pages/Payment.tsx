@@ -23,6 +23,8 @@ type OrderData = {
   subtotal: string | number;
   shipping_cost: string | number;
   discount: string | number;
+  tax_percent?: string | number;
+  tax_amount?: string | number;
   total: string | number;
   payment_status: string;
   status: string;
@@ -45,36 +47,47 @@ function Payment() {
       return;
     }
 
+    let active = true;
+
     const loadOrder = async () => {
       setLoading(true);
       setError("");
 
       try {
         const response = await api.get(`/orders/${orderNumber}`);
-
         const data =
           response.data?.data ?? response.data?.order ?? response.data;
 
-        setOrder(data);
+        if (active) {
+          setOrder(data);
+        }
       } catch (error: any) {
         console.error("Payment order error:", error);
 
-        setError(
-          error?.response?.data?.message ??
-            "دریافت اطلاعات سفارش با خطا مواجه شد.",
-        );
+        if (active) {
+          setError(
+            error?.response?.data?.message ??
+              "دریافت اطلاعات سفارش با خطا مواجه شد.",
+          );
+        }
       } finally {
-        setLoading(false);
+        if (active) {
+          setLoading(false);
+        }
       }
     };
 
-    loadOrder();
+    void loadOrder();
+
+    return () => {
+      active = false;
+    };
   }, [orderNumber]);
 
   const formatPrice = (value: string | number) => {
     const numericValue = Number(value);
 
-    if (Number.isNaN(numericValue)) {
+    if (!Number.isFinite(numericValue)) {
       return "۰";
     }
 
@@ -85,24 +98,20 @@ function Payment() {
     switch (status) {
       case "paid":
         return "پرداخت شده";
-
       case "pending":
       case "unpaid":
         return "پرداخت نشده";
-
       case "failed":
         return "پرداخت ناموفق";
-
       case "refunded":
         return "مسترد شده";
-
       default:
         return status;
     }
   };
 
   const handlePayment = async () => {
-    if (!orderNumber) {
+    if (!orderNumber || paying || !order) {
       return;
     }
 
@@ -111,9 +120,7 @@ function Payment() {
 
     try {
       await api.post(`/orders/${orderNumber}/pay`);
-
       clearCart();
-
       navigate(`/account/orders/${orderNumber}`);
     } catch (error: any) {
       console.error("Payment error:", error);
@@ -190,6 +197,8 @@ function Payment() {
   const subtotal = Number(order.subtotal ?? 0);
   const shippingCost = Number(order.shipping_cost ?? 0);
   const discount = Number(order.discount ?? 0);
+  const taxPercent = Number(order.tax_percent ?? 0);
+  const taxAmount = Number(order.tax_amount ?? 0);
   const total = Number(order.total ?? 0);
 
   const alreadyPaid = order.payment_status === "paid";
@@ -251,7 +260,6 @@ function Payment() {
               {error && (
                 <div className="mt-5 flex items-start gap-3 rounded-xl bg-red-50 border border-red-100 text-red-600 p-4 text-sm font-bold">
                   <AlertCircle size={19} className="flex-shrink-0 mt-0.5" />
-
                   <span>{error}</span>
                 </div>
               )}
@@ -304,35 +312,29 @@ function Payment() {
                   <div className="mt-6 grid sm:grid-cols-3 gap-3">
                     <div className="rounded-xl bg-slate-50 border border-slate-100 p-4">
                       <p className="text-xs text-slate-400">مبلغ کالاها</p>
-
                       <p className="font-bold text-slate-800 mt-1">
                         {formatPrice(subtotal)}
                       </p>
-
                       <p className="text-xs text-slate-400 mt-1">تومان</p>
                     </div>
 
                     <div className="rounded-xl bg-red-50 border border-red-100 p-4">
                       <p className="text-xs text-red-500">تخفیف</p>
-
                       <p className="font-bold text-red-600 mt-1">
                         {discount > 0
                           ? `- ${formatPrice(discount)}`
                           : "بدون تخفیف"}
                       </p>
-
                       <p className="text-xs text-red-400 mt-1">تومان</p>
                     </div>
 
                     <div className="rounded-xl bg-green-50 border border-green-100 p-4">
                       <p className="text-xs text-green-600">هزینه ارسال</p>
-
                       <p className="font-bold text-green-700 mt-1">
                         {shippingCost === 0
                           ? "رایگان"
                           : formatPrice(shippingCost)}
                       </p>
-
                       {shippingCost > 0 && (
                         <p className="text-xs text-green-500 mt-1">تومان</p>
                       )}
@@ -350,7 +352,6 @@ function Payment() {
 
                 <div>
                   <h2 className="text-lg font-black">اطلاعات پرداخت</h2>
-
                   <p className="text-sm text-slate-500 mt-1">
                     پرداخت امن سفارش از طریق درگاه
                   </p>
@@ -362,7 +363,6 @@ function Payment() {
                   پس از انتخاب گزینه پرداخت، سفارش شما به‌عنوان پرداخت‌شده ثبت
                   خواهد شد.
                 </p>
-
                 <p>اطلاعات سفارش شما در حساب کاربری قابل مشاهده خواهد بود.</p>
               </div>
 
@@ -382,7 +382,6 @@ function Payment() {
 
                 <div>
                   <h2 className="font-black text-lg">خلاصه پرداخت</h2>
-
                   <p className="text-xs text-slate-500 mt-1">
                     مبلغ قابل پرداخت
                   </p>
@@ -392,7 +391,6 @@ function Payment() {
               <div className="mt-5 space-y-4">
                 <div className="flex items-center justify-between gap-4 text-sm">
                   <span className="text-slate-500">مبلغ کالاها</span>
-
                   <span className="font-bold text-slate-800">
                     {formatPrice(subtotal)}
                   </span>
@@ -401,7 +399,6 @@ function Payment() {
                 {discount > 0 && (
                   <div className="flex items-center justify-between gap-4 text-sm">
                     <span className="text-red-500">تخفیف</span>
-
                     <span className="font-bold text-red-600">
                       - {formatPrice(discount)}
                     </span>
@@ -410,11 +407,23 @@ function Payment() {
 
                 <div className="flex items-center justify-between gap-4 text-sm">
                   <span className="text-slate-500">ارسال</span>
-
                   <span className="font-bold text-green-600">
-                    {shippingCost === 0 ? "رایگان" : formatPrice(shippingCost)}
+                    {shippingCost === 0
+                      ? "رایگان"
+                      : `${formatPrice(shippingCost)} تومان`}
                   </span>
                 </div>
+
+                {taxPercent > 0 && (
+                  <div className="flex items-center justify-between gap-4 text-sm">
+                    <span className="text-slate-500">
+                      ارزش افزوده ({formatPrice(taxPercent)}٪)
+                    </span>
+                    <span className="font-bold text-slate-800">
+                      {formatPrice(taxAmount)} تومان
+                    </span>
+                  </div>
+                )}
               </div>
 
               <div className="mt-5 pt-5 border-t border-slate-100">
@@ -426,11 +435,9 @@ function Payment() {
                   }}
                 >
                   <p className="text-xs text-blue-500">مبلغ نهایی</p>
-
                   <p className="text-2xl font-black text-blue-700 mt-1 whitespace-nowrap">
                     {formatPrice(total)}
                   </p>
-
                   <p className="text-xs text-blue-500 mt-1">تومان</p>
                 </div>
               </div>

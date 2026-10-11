@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent, type MouseEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 
 import { Link, useNavigate } from "react-router-dom";
 
@@ -20,7 +20,6 @@ import {
   Truck,
   Clock3,
   Tag,
-  Trash2,
 } from "lucide-react";
 
 import Layout from "../components/Layout";
@@ -86,11 +85,7 @@ function Account() {
 
   const [ordersError, setOrdersError] = useState("");
 
-  const [deletingOrderNumber, setDeletingOrderNumber] = useState<string | null>(
-    null,
-  );
-
-  const [deleteOrderError, setDeleteOrderError] = useState("");
+  const [cancellingOrderNumber, setCancellingOrderNumber] = useState<string | null>(null);
 
   const [editingProfile, setEditingProfile] = useState(false);
 
@@ -152,41 +147,36 @@ function Account() {
     loadOrders();
   }, [user]);
 
-  const handleDeleteOrder = async (
-    event: MouseEvent<HTMLButtonElement>,
-    orderNumber: string,
-  ) => {
-    event.preventDefault();
-    event.stopPropagation();
 
-    const confirmed = window.confirm(
-      "آیا مطمئن هستید که می‌خواهید این سفارش را از لیست سفارش‌های خود حذف کنید؟",
-    );
-
-    if (!confirmed) {
+  const handleCancelOrder = async (orderNumber: string) => {
+    if (!window.confirm("آیا از لغو این سفارش اطمینان دارید؟")) {
       return;
     }
 
-    setDeletingOrderNumber(orderNumber);
-    setDeleteOrderError("");
+    setCancellingOrderNumber(orderNumber);
 
     try {
-      await api.delete(`/orders/${orderNumber}`);
+      await api.post(`/orders/${orderNumber}/cancel`);
 
       setOrders((currentOrders) =>
-        currentOrders.filter((order) => order.order_number !== orderNumber),
+        currentOrders.map((order) =>
+          order.order_number === orderNumber
+            ? { ...order, status: "cancelled" }
+            : order,
+        ),
       );
-    } catch (error: any) {
-      console.error("Delete order error:", error);
 
-      setDeleteOrderError(
-        error?.response?.data?.message ?? "حذف سفارش انجام نشد.",
+      window.alert("سفارش با موفقیت لغو شد.");
+    } catch (error: any) {
+      console.error("Cancel order error:", error);
+      window.alert(
+        error?.response?.data?.message ??
+          "لغو سفارش انجام نشد. لطفاً دوباره تلاش کنید.",
       );
     } finally {
-      setDeletingOrderNumber(null);
+      setCancellingOrderNumber(null);
     }
   };
-
   const handleLogout = async () => {
     await logout();
     navigate("/");
@@ -764,11 +754,6 @@ function Account() {
                 )}
               </div>
 
-              {deleteOrderError && (
-                <div className="mb-5 bg-red-50 text-red-600 rounded-xl p-4 text-sm font-bold">
-                  {deleteOrderError}
-                </div>
-              )}
 
               {ordersLoading && (
                 <div className="py-10 text-center">
@@ -828,9 +813,6 @@ function Account() {
                     const finalAmount = Number(order.total ?? 0);
 
                     const shippingCost = Number(order.shipping_cost ?? 0);
-
-                    const isDeleting =
-                      deletingOrderNumber === order.order_number;
 
                     return (
                       <div
@@ -1044,35 +1026,28 @@ function Account() {
                             />
                           </div>
                         </Link>
-
-                        {order.status === "cancelled" && (
-                          <div className="px-5 py-3 border-t border-red-100 bg-red-50 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-                            <span className="text-xs sm:text-sm text-red-500">
-                              این سفارش لغو شده است.
-                            </span>
-
-                            <button
-                              type="button"
-                              onClick={(event) =>
-                                handleDeleteOrder(event, order.order_number)
-                              }
-                              disabled={isDeleting}
-                              className="inline-flex items-center justify-center gap-2 rounded-xl bg-white border border-red-200 text-red-600 hover:bg-red-600 hover:text-white px-4 py-2 text-sm font-bold transition disabled:opacity-60 disabled:cursor-not-allowed"
-                            >
-                              {isDeleting ? (
-                                <>
+                        {order.payment_status !== "paid" &&
+                          !["shipped", "delivered", "cancelled", "canceled"].includes(order.status) && (
+                            <div className="flex justify-end border-t border-slate-200 bg-white px-5 py-3">
+                              <button
+                                type="button"
+                                onClick={() => handleCancelOrder(order.order_number)}
+                                disabled={cancellingOrderNumber === order.order_number}
+                                className="inline-flex items-center gap-2 rounded-xl border border-red-200 px-4 py-2 text-sm font-bold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                              >
+                                {cancellingOrderNumber === order.order_number ? (
                                   <Loader2 size={16} className="animate-spin" />
-                                  در حال حذف...
-                                </>
-                              ) : (
-                                <>
-                                  <Trash2 size={16} />
-                                  حذف از لیست
-                                </>
-                              )}
-                            </button>
-                          </div>
-                        )}
+                                ) : (
+                                  <XCircle size={16} />
+                                )}
+                                {cancellingOrderNumber === order.order_number
+                                  ? "در حال لغو..."
+                                  : "لغو سفارش"}
+                              </button>
+                            </div>
+                          )}
+
+
                       </div>
                     );
                   })}

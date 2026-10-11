@@ -12,11 +12,14 @@ class Order extends Model
     use HasFactory;
 
     protected $fillable = [
+        'recipient_name',
         'user_id',
         'order_number',
         'subtotal',
         'shipping_cost',
         'discount',
+        'tax_percent',
+        'tax_amount',
         'total',
         'status',
         'payment_status',
@@ -31,6 +34,8 @@ class Order extends Model
         'subtotal' => 'decimal:2',
         'shipping_cost' => 'decimal:2',
         'discount' => 'decimal:2',
+        'tax_percent' => 'decimal:2',
+        'tax_amount' => 'decimal:2',
         'total' => 'decimal:2',
     ];
 

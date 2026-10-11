@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\StoreSetting;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -106,12 +107,43 @@ class OrderController extends Controller
             $subtotal = round($subtotal, 2);
             $discount = round($discount, 2);
 
-            $shippingCost = 0;
 
-            $total = round(
-                $subtotal + $shippingCost - $discount,
-                2
-            );
+$shippingCost = 0;
+
+// خواندن تنظیمات ارزش افزوده از دیتابیس
+$vatEnabled = filter_var(
+    (string) StoreSetting::getValue('vat_enabled', '0'),
+    FILTER_VALIDATE_BOOLEAN
+);
+
+$vatPercent = $vatEnabled
+    ? min(
+        max(
+            (float) StoreSetting::getValue('vat_percent', 10),
+            0
+        ),
+        100
+    )
+    : 0;
+
+// محاسبه مبلغ پس از تخفیف و هزینه ارسال
+$taxableAmount = round(
+    $subtotal - $discount + $shippingCost,
+    2
+);
+
+// محاسبه ارزش افزوده
+$taxAmount = round(
+    $taxableAmount * $vatPercent / 100,
+    2
+);
+
+// مبلغ نهایی سفارش
+$total = round(
+    $taxableAmount + $taxAmount,
+    2
+);
+
 
             do {
                 $orderNumber =
@@ -131,21 +163,25 @@ class OrderController extends Controller
                 Order::where('order_number', $orderNumber)->exists()
             );
 
-            $order = Order::create([
-                'user_id' => $user->id,
-                'order_number' => $orderNumber,
-                'subtotal' => $subtotal,
-                'shipping_cost' => $shippingCost,
-                'discount' => $discount,
-                'total' => $total,
-                'status' => 'pending',
-                'payment_status' => 'unpaid',
-                'recipient_name' => $validated['recipient_name'],
-                'phone' => $validated['phone'],
-                'address' => $validated['address'],
-                'postal_code' => $validated['postal_code'] ?? null,
-                'notes' => $validated['notes'] ?? null,
-            ]);
+
+$order = Order::create([
+    'user_id' => $user->id,
+    'order_number' => $orderNumber,
+    'subtotal' => $subtotal,
+    'shipping_cost' => $shippingCost,
+    'discount' => $discount,
+    'tax_percent' => $vatPercent,
+    'tax_amount' => $taxAmount,
+    'total' => $total,
+    'status' => 'pending',
+    'payment_status' => 'unpaid',
+    'recipient_name' => $validated['recipient_name'],
+    'phone' => $validated['phone'],
+    'address' => $validated['address'],
+    'postal_code' => $validated['postal_code'] ?? null,
+    'notes' => $validated['notes'] ?? null,
+]);
+
 
             foreach ($orderItems as $item) {
                 $order->items()->create($item);
@@ -197,62 +233,72 @@ class OrderController extends Controller
     }
 
     public function cancel(Request $request, string $orderNumber)
-    {
-        $user = $request->user();
+{
+    $user = $request->user();
 
+    $result = DB::transaction(function () use ($user, $orderNumber) {
         $order = Order::query()
             ->where('user_id', $user->id)
             ->where('order_number', $orderNumber)
-            ->with('items.product.images')
+            ->lockForUpdate()
             ->first();
 
         if (!$order) {
-            return response()->json([
-                'success' => false,
-                'message' => 'سفارش موردنظر پیدا نشد.',
-            ], 404);
+            return [
+                'error' => 'سفارش موردنظر پیدا نشد.',
+                'status' => 404,
+            ];
         }
 
-        if (
-            in_array(
-                $order->status,
-                ['shipped', 'delivered', 'cancelled']
-            )
-        ) {
-            return response()->json([
-                'success' => false,
-                'message' => 'این سفارش در حال حاضر قابل لغو نیست.',
-            ], 422);
+        if (in_array($order->status, [
+            'shipped',
+            'delivered',
+            'cancelled',
+            'canceled',
+        ], true)) {
+            return [
+                'error' => 'این سفارش در وضعیت فعلی قابل لغو نیست.',
+                'status' => 422,
+            ];
         }
 
         if ($order->payment_status === 'paid') {
-            return response()->json([
-                'success' => false,
-                'message' => 'سفارش پرداخت‌شده قابل لغو مستقیم نیست.',
-            ], 422);
+            return [
+                'error' => 'سفارش پرداخت‌شده قابل لغو مستقیم نیست.',
+                'status' => 422,
+            ];
         }
 
-        DB::transaction(function () use ($order) {
-            foreach ($order->items as $item) {
-                Product::where('id', $item->product_id)
-                    ->increment('stock', $item->quantity);
-            }
+        $items = $order->items()->get();
 
-            $order->update([
-                'status' => 'cancelled',
-                'payment_status' => 'unpaid',
-            ]);
-        });
+        foreach ($items as $item) {
+            Product::query()
+                ->where('id', $item->product_id)
+                ->increment('stock', $item->quantity);
+        }
 
-        return response()->json([
-            'success' => true,
-            'message' => 'سفارش با موفقیت لغو شد.',
-            'data' => $order
-                ->fresh()
-                ->load('items.product.images'),
+        $order->update([
+            'status' => 'cancelled',
         ]);
+
+        return [
+            'order' => $order->fresh()->load('items.product.images'),
+        ];
+    }, 3);
+
+    if (isset($result['error'])) {
+        return response()->json([
+            'success' => false,
+            'message' => $result['error'],
+        ], $result['status']);
     }
 
+    return response()->json([
+        'success' => true,
+        'message' => 'سفارش با موفقیت لغو شد.',
+        'data' => $result['order'],
+    ]);
+}
     public function destroy(Request $request, string $orderNumber)
     {
         $user = $request->user();
@@ -291,35 +337,45 @@ class OrderController extends Controller
      * پرداخت آزمایشی سفارش
      */
     public function pay(Request $request, string $orderNumber)
-    {
-        $user = $request->user();
+{
+    $user = $request->user();
 
+    $result = DB::transaction(function () use ($user, $orderNumber) {
         $order = Order::query()
             ->where('user_id', $user->id)
             ->where('order_number', $orderNumber)
-            ->with('items.product.images')
+            ->lockForUpdate()
             ->first();
 
         if (!$order) {
-            return response()->json([
-                'success' => false,
-                'message' => 'سفارش موردنظر پیدا نشد.',
-            ], 404);
+            return [
+                'error' => 'سفارش موردنظر پیدا نشد.',
+                'status' => 404,
+            ];
         }
 
-        if ($order->status === 'cancelled') {
-            return response()->json([
-                'success' => false,
-                'message' => 'این سفارش لغو شده است.',
-            ], 422);
+        if (in_array($order->status, [
+            'cancelled',
+            'canceled',
+        ], true)) {
+            return [
+                'error' => 'این سفارش لغو شده و امکان پرداخت آن وجود ندارد.',
+                'status' => 422,
+            ];
         }
 
         if ($order->payment_status === 'paid') {
-            return response()->json([
-                'success' => true,
-                'message' => 'این سفارش قبلاً پرداخت شده است.',
-                'data' => $order,
-            ]);
+            return [
+                'order' => $order->load('items.product.images'),
+                'already_paid' => true,
+            ];
+        }
+
+        if ($order->payment_status !== 'unpaid') {
+            return [
+                'error' => 'وضعیت پرداخت سفارش اجازه انجام این عملیات را نمی‌دهد.',
+                'status' => 422,
+            ];
         }
 
         $order->update([
@@ -327,12 +383,25 @@ class OrderController extends Controller
             'status' => 'processing',
         ]);
 
+        return [
+            'order' => $order->fresh()->load('items.product.images'),
+            'already_paid' => false,
+        ];
+    }, 3);
+
+    if (isset($result['error'])) {
         return response()->json([
-            'success' => true,
-            'message' => 'پرداخت با موفقیت انجام شد.',
-            'data' => $order
-                ->fresh()
-                ->load('items.product.images'),
-        ]);
+            'success' => false,
+            'message' => $result['error'],
+        ], $result['status']);
     }
+
+    return response()->json([
+        'success' => true,
+        'message' => $result['already_paid']
+            ? 'این سفارش قبلاً پرداخت شده است.'
+            : 'پرداخت آزمایشی با موفقیت ثبت شد.',
+        'data' => $result['order'],
+    ]);
+}
 }

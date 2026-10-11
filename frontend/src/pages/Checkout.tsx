@@ -1,4 +1,4 @@
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   ArrowRight,
@@ -35,6 +35,35 @@ function Checkout() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const [vatEnabled, setVatEnabled] = useState(false);
+  const [vatPercent, setVatPercent] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+
+    const loadTaxSettings = async () => {
+      try {
+        const response = await api.get("/store-settings/tax");
+        const settings = response.data?.data;
+
+        if (active && settings) {
+          setVatEnabled(settings.vat_enabled === true);
+          setVatPercent(
+            Math.min(Math.max(Number(settings.vat_percent) || 0, 0), 100),
+          );
+        }
+      } catch (error) {
+        console.error("Failed to load tax settings:", error);
+      }
+    };
+
+    void loadTaxSettings();
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const formatPrice = (value: string | number) => {
     const numericValue = Number(value);
 
@@ -58,9 +87,16 @@ function Checkout() {
     return Math.max(0, cartOriginalTotal - Number(cartTotal ?? 0));
   }, [cartOriginalTotal, cartTotal]);
 
+  const taxableAmount = Math.max(0, Number(cartTotal ?? 0) + shippingCost);
+
+  const taxAmount = useMemo(() => {
+    return vatEnabled ? Math.round(taxableAmount * vatPercent) / 100 : 0;
+  }, [taxableAmount, vatEnabled, vatPercent]);
+
   const finalTotal = useMemo(() => {
-    return Number(cartTotal ?? 0) + shippingCost;
-  }, [cartTotal]);
+    return taxableAmount + taxAmount;
+  }, [taxableAmount, taxAmount]);
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -410,6 +446,18 @@ function Checkout() {
 
                   <span className="font-bold text-green-600">رایگان</span>
                 </div>
+
+                {vatEnabled && (
+                  <div className="flex items-center justify-between gap-4 text-sm">
+                    <span className="text-slate-500">
+                      ارزش افزوده ({formatPrice(vatPercent)}٪)
+                    </span>
+
+                    <span className="font-bold text-slate-800">
+                      {formatPrice(taxAmount)} تومان
+                    </span>
+                  </div>
+                )}
               </div>
 
               <div className="mt-5 pt-5 border-t border-slate-100">

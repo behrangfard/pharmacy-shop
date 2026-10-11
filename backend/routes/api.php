@@ -1,4 +1,5 @@
 <?php
+use App\Http\Controllers\Api\StoreSettingController;
 use App\Http\Controllers\Api\AdminOrderController;
 use App\Http\Controllers\Api\AdminController;
 use App\Http\Controllers\Api\AdminProductController;
@@ -142,7 +143,16 @@ Route::patch(
 );
         });
     });
+/*
+|--------------------------------------------------------------------------
+| Public Store Settings
+|--------------------------------------------------------------------------
+*/
 
+Route::get(
+    '/store-settings/tax',
+    [StoreSettingController::class, 'tax']
+);
     /*
     |--------------------------------------------------------------------------
     | Public Categories
