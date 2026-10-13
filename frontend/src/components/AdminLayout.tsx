@@ -1,10 +1,10 @@
 import { Link, NavLink, Outlet } from "react-router-dom";
-
+import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 
 function AdminLayout() {
   const { user, logout } = useAuth();
-
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navItems = [
     {
       to: "/admin",
@@ -19,10 +19,6 @@ function AdminLayout() {
       to: "/admin/orders",
       label: "سفارش‌ها",
     },
-    {
-      to: "/admin/users",
-      label: "کاربران",
-    },
   ];
 
   return (
@@ -34,9 +30,18 @@ function AdminLayout() {
         background: "#f5f7fb",
       }}
     >
+      {mobileMenuOpen && (
+        <button
+          type="button"
+          className="admin-mobile-overlay"
+          aria-label="بستن منو"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
       <aside
+        className={`admin-sidebar ${mobileMenuOpen ? "is-open" : ""}`}
         style={{
-          width: "250px",
+          width: "220px",
           minHeight: "100vh",
           background: "#111827",
           color: "#fff",
@@ -50,6 +55,14 @@ function AdminLayout() {
           flexDirection: "column",
         }}
       >
+        <button
+          type="button"
+          className="admin-mobile-close-button"
+          onClick={() => setMobileMenuOpen(false)}
+          aria-label="بستن منو"
+        >
+          ✕ بستن منو
+        </button>
         <Link
           to="/admin"
           style={{
@@ -73,6 +86,7 @@ function AdminLayout() {
         >
           {navItems.map((item) => (
             <NavLink
+              onClick={() => setMobileMenuOpen(false)}
               key={item.to}
               to={item.to}
               end={item.end}
@@ -144,14 +158,26 @@ function AdminLayout() {
       </aside>
 
       <main
+        className="admin-main"
         style={{
           flex: 1,
-          marginRight: "250px",
+          marginRight: "220px",
           minHeight: "100vh",
-          padding: "32px",
+          padding: "16px",
           boxSizing: "border-box",
         }}
       >
+        <button
+          type="button"
+          className="admin-mobile-menu-button"
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          aria-label="باز و بسته کردن منو"
+          aria-expanded={mobileMenuOpen}
+        >
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
         <Outlet />
       </main>
     </div>

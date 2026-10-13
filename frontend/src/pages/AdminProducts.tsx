@@ -235,7 +235,9 @@ function AdminProducts() {
         }}
       >
         <div>
-          <h1 style={{ margin: "0 0 8px", fontSize: 25 }}>مدیریت محصولات</h1>
+          <h1 style={{ margin: "0 0 8px", fontSize: "28px", fontWeight: 800 }}>
+            مدیریت محصولات
+          </h1>
           <p style={{ margin: 0, color: "#6b7280", fontSize: 14 }}>
             مشاهده، جست‌وجو، ویرایش و مدیریت وضعیت محصولات فروشگاه
           </p>
@@ -414,6 +416,7 @@ function AdminProducts() {
         ) : (
           <div style={{ overflowX: "auto" }}>
             <table
+              className="admin-products-desktop-table"
               style={{
                 width: "100%",
                 borderCollapse: "collapse",
@@ -691,6 +694,291 @@ function AdminProducts() {
                 })}
               </tbody>
             </table>
+          </div>
+        )}
+        {!loading && products.length > 0 && (
+          <div className="admin-products-mobile-cards">
+            {products.map((product) => {
+              const {
+                originalPrice,
+                discountPercent,
+                finalPrice,
+                hasDiscount,
+              } = calculateProductPrice(
+                product.price,
+                product.discount_percent,
+              );
+
+              return (
+                <article
+                  key={product.id}
+                  style={{
+                    border: "1px solid #e5e7eb",
+                    borderRadius: 12,
+                    padding: 14,
+                    background: "#fff",
+                    minWidth: 0,
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 12,
+                      marginBottom: 14,
+                    }}
+                  >
+                    <div
+                      style={{
+                        width: 60,
+                        height: 60,
+                        flexShrink: 0,
+                        borderRadius: 8,
+                        overflow: "hidden",
+                        background: "#f3f4f6",
+                        display: "grid",
+                        placeItems: "center",
+                      }}
+                    >
+                      {getProductImage(product) &&
+                      !failedImages.includes(product.id) ? (
+                        <img
+                          src={getProductImage(product)!}
+                          alt={product.name}
+                          onError={() =>
+                            setFailedImages((previous) =>
+                              previous.includes(product.id)
+                                ? previous
+                                : [...previous, product.id],
+                            )
+                          }
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
+                          }}
+                        />
+                      ) : (
+                        <span style={{ fontSize: 10, color: "#9ca3af" }}>
+                          بدون تصویر
+                        </span>
+                      )}
+                    </div>
+
+                    <div style={{ minWidth: 0, flex: 1 }}>
+                      <div
+                        style={{
+                          fontWeight: 700,
+                          overflowWrap: "anywhere",
+                          lineHeight: 1.8,
+                        }}
+                      >
+                        {product.name}
+                      </div>
+
+                      <div
+                        style={{
+                          fontSize: 12,
+                          color: "#6b7280",
+                          marginTop: 4,
+                        }}
+                      >
+                        شناسه: {formatNumber(product.id)}
+                      </div>
+
+                      {(product.is_featured || product.is_new) && (
+                        <div style={{ marginTop: 5, fontSize: 11 }}>
+                          {product.is_featured && (
+                            <span style={{ color: "#b45309", marginLeft: 8 }}>
+                              ویژه
+                            </span>
+                          )}
+                          {product.is_new && (
+                            <span style={{ color: "#1d4ed8" }}>جدید</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
+                      gap: 12,
+                      marginBottom: 14,
+                    }}
+                  >
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ color: "#6b7280", fontSize: 12 }}>
+                        دسته‌بندی
+                      </div>
+                      <div
+                        style={{
+                          marginTop: 5,
+                          overflowWrap: "anywhere",
+                          fontSize: 13,
+                        }}
+                      >
+                        {product.category?.name || "بدون دسته‌بندی"}
+                      </div>
+                      {product.brand?.name && (
+                        <div
+                          style={{
+                            color: "#9ca3af",
+                            fontSize: 12,
+                            marginTop: 4,
+                          }}
+                        >
+                          {product.brand.name}
+                        </div>
+                      )}
+                    </div>
+
+                    <div style={{ minWidth: 0 }}>
+                      <div style={{ color: "#6b7280", fontSize: 12 }}>
+                        موجودی
+                      </div>
+                      <div
+                        style={{
+                          marginTop: 5,
+                          fontWeight: 700,
+                          color:
+                            Number(product.stock) > 0 ? "#15803d" : "#b91c1c",
+                        }}
+                      >
+                        {formatNumber(product.stock)}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      borderTop: "1px solid #f3f4f6",
+                      borderBottom: "1px solid #f3f4f6",
+                      padding: "12px 0",
+                      marginBottom: 12,
+                    }}
+                  >
+                    <div style={{ color: "#6b7280", fontSize: 12 }}>قیمت</div>
+
+                    {hasDiscount && (
+                      <div
+                        style={{
+                          color: "#9ca3af",
+                          textDecoration: "line-through",
+                          fontSize: 12,
+                          marginTop: 5,
+                        }}
+                      >
+                        {formatNumber(originalPrice)} تومان
+                      </div>
+                    )}
+
+                    <div
+                      style={{
+                        color: hasDiscount ? "#15803d" : "#111827",
+                        fontWeight: 700,
+                        marginTop: 5,
+                      }}
+                    >
+                      {formatNumber(hasDiscount ? finalPrice : originalPrice)}{" "}
+                      تومان
+                    </div>
+
+                    {hasDiscount && (
+                      <span
+                        style={{
+                          display: "inline-block",
+                          marginTop: 6,
+                          padding: "3px 7px",
+                          borderRadius: 6,
+                          background: "#fef2f2",
+                          color: "#b91c1c",
+                          fontSize: 11,
+                        }}
+                      >
+                        {formatNumber(discountPercent)}٪ تخفیف
+                      </span>
+                    )}
+                  </div>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 10,
+                      flexWrap: "wrap",
+                      marginBottom: 12,
+                    }}
+                  >
+                    <span style={{ fontSize: 12, color: "#6b7280" }}>
+                      وضعیت محصول
+                    </span>
+
+                    <span
+                      style={{
+                        padding: "5px 9px",
+                        borderRadius: 20,
+                        fontSize: 12,
+                        background: product.is_active ? "#dcfce7" : "#fee2e2",
+                        color: product.is_active ? "#166534" : "#991b1b",
+                      }}
+                    >
+                      {product.is_active ? "فعال" : "غیرفعال"}
+                    </span>
+                  </div>
+
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 8,
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    <Link
+                      to={`/admin/products/${product.id}/edit`}
+                      style={{
+                        ...buttonStyle,
+                        flex: "1 1 100px",
+                        textAlign: "center",
+                        background: "#eff6ff",
+                        color: "#1d4ed8",
+                        borderColor: "#bfdbfe",
+                        minHeight: 42,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      ویرایش
+                    </Link>
+
+                    <button
+                      type="button"
+                      disabled={busyId === product.id}
+                      onClick={() => toggleStatus(product)}
+                      style={{
+                        ...buttonStyle,
+                        flex: "1 1 130px",
+                        minHeight: 42,
+                        background: product.is_active ? "#fff7ed" : "#f0fdf4",
+                        color: product.is_active ? "#c2410c" : "#15803d",
+                        borderColor: product.is_active ? "#fed7aa" : "#bbf7d0",
+                        opacity: busyId === product.id ? 0.6 : 1,
+                      }}
+                    >
+                      {busyId === product.id
+                        ? "در حال انجام..."
+                        : product.is_active
+                          ? "غیرفعال‌سازی"
+                          : "فعال‌سازی"}
+                    </button>
+                  </div>
+                </article>
+              );
+            })}
           </div>
         )}
       </div>

@@ -804,10 +804,10 @@ function ProductDetail() {
 
               <div className="mt-8 pt-6 border-t border-slate-100">
                 <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
+                  <div className="flex items-center whitespace-nowrap">
                     <span className="text-slate-400">کد محصول:</span>
 
-                    <span className="font-bold text-slate-700 mr-2">
+                    <span className="font-bold text-slate-700 mr-2 whitespace-nowrap">
                       {product.sku}
                     </span>
                   </div>

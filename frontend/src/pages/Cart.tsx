@@ -112,7 +112,6 @@ function Cart() {
             <ArrowRight size={18} />
             ادامه خرید{" "}
           </Link>
-          ```
           <div className="flex items-center justify-between mt-5">
             <div>
               <h1 className="text-3xl font-black text-slate-900">سبد خرید</h1>
@@ -215,14 +214,12 @@ function Cart() {
                   <div className="flex-1 min-w-0">
                     <Link
                       to={`/product/${item.slug}`}
-                      className="
-                    block
-                    font-bold
-                    text-slate-900
-                    hover:text-blue-600
-                    transition-colors
-                    duration-200
-                  "
+                      className="block w-full min-w-0 font-bold text-slate-900 hover:text-blue-600 transition-colors duration-200"
+                      style={{
+                        whiteSpace: "nowrap",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
                     >
                       {item.name}
                     </Link>

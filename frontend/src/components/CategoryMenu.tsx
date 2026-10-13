@@ -1,50 +1,31 @@
 import { Link } from "react-router-dom";
 
 function CategoryMenu() {
-return ( <nav className="bg-white border-b"> <div className="max-w-7xl mx-auto px-6"> <div className="flex gap-8 overflow-x-auto py-4">
+  const categories = [
+    { to: "/products?category=medicine", label: "دارو و محصولات دارویی" },
+    { to: "/products?category=medical-equipment", label: "تجهیزات پزشکی" },
+    { to: "/products?category=personal-care", label: "بهداشت و مراقبت شخصی" },
+    { to: "/products?category=supplements", label: "مکمل‌ها" },
+    { to: "/products?category=mother-child", label: "مادر و کودک" },
+  ];
 
-
-      <Link
-        to="/products?category=medicine"
-        className="whitespace-nowrap text-gray-700 hover:text-blue-600 font-medium transition"
-      >
-        دارو و محصولات دارویی
-      </Link>
-
-      <Link
-        to="/products?category=medical-equipment"
-        className="whitespace-nowrap text-gray-700 hover:text-blue-600 font-medium transition"
-      >
-        تجهیزات پزشکی
-      </Link>
-
-      <Link
-        to="/products?category=personal-care"
-        className="whitespace-nowrap text-gray-700 hover:text-blue-600 font-medium transition"
-      >
-        بهداشت و مراقبت شخصی
-      </Link>
-
-      <Link
-        to="/products?category=supplements"
-        className="whitespace-nowrap text-gray-700 hover:text-blue-600 font-medium transition"
-      >
-        مکمل‌ها
-      </Link>
-
-      <Link
-        to="/products?category=mother-child"
-        className="whitespace-nowrap text-gray-700 hover:text-blue-600 font-medium transition"
-      >
-        مادر و کودک
-      </Link>
-
-    </div>
-  </div>
-</nav>
-
-
-);
+  return (
+    <nav className="bg-white border-b">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6">
+        <div className="flex items-center gap-5 sm:gap-8 overflow-x-auto py-3 sm:py-4 whitespace-nowrap">
+          {categories.map((category) => (
+            <Link
+              key={category.to}
+              to={category.to}
+              className="shrink-0 text-sm sm:text-base text-gray-700 hover:text-blue-600 font-medium transition"
+            >
+              {category.label}
+            </Link>
+          ))}
+        </div>
+      </div>
+    </nav>
+  );
 }
 
 export default CategoryMenu;

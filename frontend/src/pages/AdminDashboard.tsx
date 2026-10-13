@@ -180,6 +180,7 @@ function AdminDashboard() {
       </div>
 
       <div
+        className="admin-dashboard-stats"
         style={{
           display: "grid",
           gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
@@ -234,6 +235,7 @@ function AdminDashboard() {
       </div>
 
       <div
+        className="admin-dashboard-panels"
         style={{
           display: "grid",
           gridTemplateColumns: "1fr 1fr",
@@ -261,6 +263,7 @@ function AdminDashboard() {
           </h2>
 
           <div
+            className="admin-dashboard-order-statuses"
             style={{
               display: "grid",
               gridTemplateColumns: "repeat(2, minmax(0, 1fr))",

@@ -657,7 +657,7 @@ function AdminProductForm() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit}>
+      <form className="admin-product-form" onSubmit={handleSubmit}>
         <section style={sectionStyle}>
           <h2 style={{ margin: "0 0 18px", fontSize: "17px" }}>
             اطلاعات اصلی محصول

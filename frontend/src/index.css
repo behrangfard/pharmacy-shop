@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800;900&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800;900&display=swap");
 
 @import "tailwindcss";
 
@@ -21,4 +21,260 @@ body {
   margin: 0;
   background: #f8fafc;
   color: #0f172a;
+}
+
+/* دکمه منوی موبایل */
+.admin-mobile-menu-button {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 5px;
+  width: 44px;
+  height: 44px;
+  padding: 10px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.admin-mobile-menu-button span {
+  display: block;
+  width: 20px;
+  height: 2px;
+  border-radius: 2px;
+  background: #111827;
+}
+
+@media (max-width: 768px) {
+  .admin-main {
+    width: 100%;
+    min-width: 0;
+    margin-right: 0 !important;
+    padding: 16px !important;
+  }
+  .admin-mobile-menu-button {
+    display: flex;
+    margin-bottom: 16px;
+  }
+
+  .admin-sidebar {
+    z-index: 1000;
+    transition: transform 0.25s ease;
+    transform: translateX(100%);
+  }
+
+  .admin-sidebar.is-open {
+    transform: translateX(0);
+  }
+}
+.admin-mobile-overlay {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .admin-orders-mobile-cards {
+    display: none;
+  }
+
+  @media (max-width: 768px) {
+    .admin-orders-desktop-table {
+      display: none;
+    }
+
+    .admin-orders-mobile-cards {
+      display: block;
+    }
+  }
+  .admin-order-details-modal {
+    padding: 14px !important;
+    border-radius: 12px !important;
+    width: 100% !important;
+    max-height: 94vh !important;
+  }
+
+  .admin-order-details-modal h2 {
+    font-size: 18px !important;
+    overflow-wrap: anywhere;
+  }
+
+  .admin-order-details-modal table {
+    font-size: 12px;
+  }
+  .admin-mobile-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 999;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: rgba(15, 23, 42, 0.45);
+  }
+
+  .admin-sidebar {
+    z-index: 1000;
+  }
+}
+.admin-mobile-close-button {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .admin-orders-filters {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 12px;
+  }
+
+  .admin-orders-filters label {
+    min-width: 0;
+  }
+
+  .admin-orders-filters input,
+  .admin-orders-filters select {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .admin-orders-filters button[type="submit"] {
+    width: 100%;
+    min-height: 44px;
+  }
+  .admin-mobile-close-button {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    width: 100%;
+    padding: 10px 12px;
+    margin-bottom: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 8px;
+    background: transparent;
+    color: #fff;
+    font-family: inherit;
+    font-size: 14px;
+    cursor: pointer;
+  }
+}
+
+/* نمایش واکنش‌گرای فهرست محصولات مدیریت */
+.admin-products-mobile-cards {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .admin-products-desktop-table {
+    display: none;
+  }
+
+  .admin-products-mobile-cards {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    padding: 12px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .admin-products-mobile-cards article {
+    box-sizing: border-box;
+    overflow-wrap: anywhere;
+  }
+}
+/* واکنش‌گرایی داشبورد مدیریت */
+@media (max-width: 768px) {
+  .admin-dashboard-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 12px !important;
+  }
+
+  .admin-dashboard-stats > div {
+    min-width: 0;
+    padding: 14px !important;
+    overflow-wrap: anywhere;
+  }
+
+  .admin-dashboard-stats > div > div:nth-child(2) {
+    font-size: 20px !important;
+    overflow-wrap: anywhere;
+  }
+
+  .admin-dashboard-panels {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 16px !important;
+  }
+
+  .admin-dashboard-panels > section {
+    min-width: 0;
+    padding: 16px !important;
+  }
+
+  .admin-dashboard-order-statuses {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .admin-dashboard-order-statuses > div {
+    min-width: 0;
+    padding: 14px !important;
+    gap: 10px;
+  }
+
+  .admin-dashboard-order-statuses > div > span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .admin-dashboard-panels section h2 {
+    font-size: 17px !important;
+  }
+}
+
+@media (max-width: 380px) {
+  .admin-dashboard-stats {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+}
+/* Responsive admin product form */
+@media (max-width: 768px) {
+  .admin-product-form {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .admin-product-form input,
+  .admin-product-form select,
+  .admin-product-form textarea {
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .admin-product-form img {
+    max-width: 100%;
+    height: auto;
+  }
+
+  .admin-product-form section {
+    padding: 14px !important;
+    border-radius: 12px !important;
+  }
+
+  .admin-product-form button {
+    max-width: 100%;
+    min-height: 42px;
+    box-sizing: border-box;
+  }
+}
+
+@media (max-width: 380px) {
+  .admin-product-form section {
+    padding: 10px !important;
+  }
+
+  .admin-product-form button {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
 }

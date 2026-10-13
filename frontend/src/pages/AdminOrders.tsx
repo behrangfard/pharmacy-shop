@@ -425,6 +425,7 @@ function AdminOrders() {
       </div>
 
       <form
+        className="admin-orders-filters"
         onSubmit={applySearch}
         style={{
           ...cardStyle,
@@ -589,6 +590,7 @@ function AdminOrders() {
           </div>
         ) : (
           <table
+            className="admin-orders-desktop-table"
             style={{
               width: "100%",
               minWidth: "900px",
@@ -599,6 +601,7 @@ function AdminOrders() {
             <thead style={{ background: "#f9fafb" }}>
               <tr>
                 {[
+                  "ردیف",
                   "شماره سفارش",
                   "نام گیرنده",
                   "مبلغ نهایی",
@@ -625,8 +628,10 @@ function AdminOrders() {
             </thead>
 
             <tbody>
-              {orders.map((order) => (
+              {orders.map((order, index) => (
                 <tr key={order.id}>
+                  <td style={cellStyle}>{(page - 1) * 15 + index + 1}</td>
+
                   <td style={cellStyle}>
                     <strong>{order.order_number}</strong>
                   </td>
@@ -696,7 +701,174 @@ function AdminOrders() {
           </table>
         )}
       </div>
+      {!loading && orders.length > 0 && (
+        <div className="admin-orders-mobile-cards">
+          {orders.map((order, index) => (
+            <article
+              key={order.id}
+              style={{
+                background: "#fff",
+                border: "1px solid #e5e7eb",
+                borderRadius: "14px",
+                padding: "16px",
+                marginBottom: "12px",
+                boxShadow: "0 2px 8px rgba(15, 23, 42, 0.04)",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "flex-start",
+                  gap: "10px",
+                  marginBottom: "14px",
+                }}
+              >
+                <div style={{ minWidth: 0 }}>
+                  <div
+                    style={{
+                      fontSize: "12px",
+                      color: "#6b7280",
+                      marginBottom: "5px",
+                    }}
+                  >
+                    شماره سفارش
+                  </div>
+                  <strong style={{ overflowWrap: "anywhere" }}>
+                    {order.order_number}
+                  </strong>
+                </div>
 
+                <span
+                  style={{
+                    fontSize: "12px",
+                    color: "#6b7280",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  ردیف{" "}
+                  {new Intl.NumberFormat("fa-IR").format(
+                    (page - 1) * 15 + index + 1,
+                  )}
+                </span>
+              </div>
+
+              <div style={{ marginBottom: "12px", overflowWrap: "anywhere" }}>
+                <span style={{ color: "#6b7280", fontSize: "13px" }}>
+                  گیرنده:{" "}
+                </span>
+                <strong>{order.recipient_name || "—"}</strong>
+              </div>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                  gap: "14px 10px",
+                  marginBottom: "16px",
+                }}
+              >
+                <div>
+                  <div
+                    style={{
+                      color: "#6b7280",
+                      fontSize: "12px",
+                      marginBottom: "6px",
+                    }}
+                  >
+                    مبلغ نهایی
+                  </div>
+                  <strong style={{ fontSize: "14px" }}>
+                    {formatPrice(order.total)}
+                  </strong>
+                </div>
+
+                <div>
+                  <div
+                    style={{
+                      color: "#6b7280",
+                      fontSize: "12px",
+                      marginBottom: "6px",
+                    }}
+                  >
+                    تاریخ
+                  </div>
+                  <span style={{ fontSize: "13px" }}>
+                    {formatDate(order.created_at)}
+                  </span>
+                </div>
+
+                <div>
+                  <div
+                    style={{
+                      color: "#6b7280",
+                      fontSize: "12px",
+                      marginBottom: "6px",
+                    }}
+                  >
+                    وضعیت سفارش
+                  </div>
+                  <span
+                    style={{
+                      ...statusColors[order.status],
+                      display: "inline-block",
+                      borderRadius: "20px",
+                      padding: "5px 9px",
+                      fontSize: "12px",
+                    }}
+                  >
+                    {statusLabels[order.status] || order.status}
+                  </span>
+                </div>
+
+                <div>
+                  <div
+                    style={{
+                      color: "#6b7280",
+                      fontSize: "12px",
+                      marginBottom: "6px",
+                    }}
+                  >
+                    وضعیت پرداخت
+                  </div>
+                  <span
+                    style={{
+                      ...paymentColors[order.payment_status],
+                      display: "inline-block",
+                      borderRadius: "20px",
+                      padding: "5px 9px",
+                      fontSize: "12px",
+                    }}
+                  >
+                    {paymentLabels[order.payment_status] ||
+                      order.payment_status}
+                  </span>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => void openOrderDetails(order.order_number)}
+                style={{
+                  width: "100%",
+                  minHeight: "44px",
+                  border: "1px solid #bfdbfe",
+                  background: "#eff6ff",
+                  color: "#1d4ed8",
+                  borderRadius: "9px",
+                  padding: "10px",
+                  fontFamily: "inherit",
+                  fontSize: "14px",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                مشاهده جزئیات سفارش
+              </button>
+            </article>
+          ))}
+        </div>
+      )}
       <div
         style={{
           display: "flex",
@@ -754,6 +926,7 @@ function AdminOrders() {
           }}
         >
           <section
+            className="admin-order-details-modal"
             role="dialog"
             aria-modal="true"
             aria-labelledby="order-details-title"
