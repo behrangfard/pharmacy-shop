@@ -230,14 +230,22 @@ function AdminProducts() {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          gap: 12,
+          gap: 16,
           flexWrap: "wrap",
+          marginBottom: 26,
         }}
       >
         <div>
-          <h1 style={{ margin: "0 0 8px", fontSize: "28px", fontWeight: 800 }}>
+          <h1
+            style={{
+              margin: "0 0 8px",
+              fontSize: "28px",
+              fontWeight: 800,
+            }}
+          >
             مدیریت محصولات
           </h1>
+
           <p style={{ margin: 0, color: "#6b7280", fontSize: 14 }}>
             مشاهده، جست‌وجو، ویرایش و مدیریت وضعیت محصولات فروشگاه
           </p>
