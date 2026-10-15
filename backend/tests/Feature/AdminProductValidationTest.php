@@ -45,6 +45,37 @@ class AdminProductValidationTest extends TestCase
         ]);
     }
 
+    public function test_product_update_saves_valid_changes(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $product = $this->createProduct();
+
+        $response = $this->putJson(
+            '/api/v1/admin/products/' . $product->id,
+            [
+                'name' => 'Updated Validation Product',
+                'price' => 150000,
+                'views_count' => 999999,
+                'sales_count' => 999999,
+            ]
+        );
+
+        $response->assertOk();
+
+        $this->assertDatabaseHas('products', [
+            'id' => $product->id,
+            'name' => 'Updated Validation Product',
+            'price' => 150000,
+            'views_count' => 12,
+            'sales_count' => 7,
+        ]);
+    }
+
     public function test_product_list_rejects_invalid_per_page_values(): void
     {
         $admin = User::factory()->create([
