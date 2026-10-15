@@ -51,9 +51,21 @@ class AdminProductController extends Controller
             }
         }
 
+        $validated = $request->validate([
+            'per_page' => [
+                'sometimes',
+                'required',
+                'integer',
+                'min:1',
+                'max:100',
+            ],
+        ]);
+
+        $perPage = (int) ($validated['per_page'] ?? 15);
+
         $products = $query
             ->latest()
-            ->paginate($request->integer('per_page', 15));
+            ->paginate($perPage);
 
         return response()->json([
             'success' => true,
@@ -341,8 +353,10 @@ class AdminProductController extends Controller
     /**
      * Update product active status.
      */
-    public function updateStatus(Request $request, Product $product): JsonResponse
-    {
+    public function updateStatus(
+        Request $request,
+        Product $product
+    ): JsonResponse {
         $validated = $request->validate([
             'is_active' => [
                 'required',
@@ -384,8 +398,7 @@ class AdminProductController extends Controller
         $imagePaths = $product->images()
             ->pluck('path')
             ->filter(
-                fn ($path) =>
-                    is_string($path) && trim($path) !== ''
+                fn ($path) => is_string($path) && trim($path) !== ''
             )
             ->unique()
             ->values()
