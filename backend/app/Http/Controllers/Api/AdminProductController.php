@@ -175,6 +175,10 @@ class AdminProductController extends Controller
                 'sometimes',
                 'boolean',
             ],
+            'is_taxable' => [
+                'sometimes',
+                'boolean',
+            ],
             'meta_title' => [
                 'nullable',
                 'string',
@@ -197,6 +201,7 @@ class AdminProductController extends Controller
         $validated['is_active'] = $validated['is_active'] ?? true;
         $validated['is_featured'] = $validated['is_featured'] ?? false;
         $validated['is_new'] = $validated['is_new'] ?? false;
+        $validated['is_taxable'] = $validated['is_taxable'] ?? false;
 
         $product = Product::create($validated);
 
@@ -308,6 +313,10 @@ class AdminProductController extends Controller
                 'boolean',
             ],
             'is_new' => [
+                'sometimes',
+                'boolean',
+            ],
+            'is_taxable' => [
                 'sometimes',
                 'boolean',
             ],

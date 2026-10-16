@@ -76,6 +76,111 @@ class AdminProductValidationTest extends TestCase
         ]);
     }
 
+    public function test_product_update_can_enable_taxable_status(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $product = $this->createProduct();
+
+        $response = $this->putJson(
+            '/api/v1/admin/products/' . $product->id,
+            [
+                'is_taxable' => true,
+            ]
+        );
+
+        $response->assertOk();
+
+        $this->assertDatabaseHas('products', [
+            'id' => $product->id,
+            'is_taxable' => true,
+        ]);
+    }
+
+    public function test_product_update_can_disable_taxable_status(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $product = $this->createProduct();
+
+        $product->update([
+            'is_taxable' => true,
+        ]);
+
+        $response = $this->putJson(
+            '/api/v1/admin/products/' . $product->id,
+            [
+                'is_taxable' => false,
+            ]
+        );
+
+        $response->assertOk();
+
+        $this->assertDatabaseHas('products', [
+            'id' => $product->id,
+            'is_taxable' => false,
+        ]);
+       }
+
+    public function test_product_creation_saves_taxable_status_when_enabled(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $category = $this->createProduct()->category;
+
+        $response = $this->postJson('/api/v1/admin/products', [
+            'category_id' => $category->id,
+            'name' => 'Taxable Creation Test Product',
+            'sku' => 'TAXABLE-CREATION-TEST-SKU',
+            'price' => 100000,
+            'is_taxable' => true,
+        ]);
+
+        $response->assertCreated();
+
+        $this->assertDatabaseHas('products', [
+            'sku' => 'TAXABLE-CREATION-TEST-SKU',
+            'is_taxable' => true,
+        ]);
+    }
+
+    public function test_product_creation_defaults_taxable_status_to_false(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $category = $this->createProduct()->category;
+
+        $response = $this->postJson('/api/v1/admin/products', [
+            'category_id' => $category->id,
+            'name' => 'Non Taxable Creation Test Product',
+            'sku' => 'NON-TAXABLE-CREATION-TEST-SKU',
+            'price' => 100000,
+        ]);
+
+        $response->assertCreated();
+
+        $this->assertDatabaseHas('products', [
+            'sku' => 'NON-TAXABLE-CREATION-TEST-SKU',
+            'is_taxable' => false,
+        ]);
+    }
+
     public function test_product_list_rejects_invalid_per_page_values(): void
     {
         $admin = User::factory()->create([
@@ -126,6 +231,7 @@ class AdminProductValidationTest extends TestCase
             'is_active' => true,
             'is_featured' => false,
             'is_new' => false,
+            'is_taxable' => false,
             'views_count' => 12,
             'sales_count' => 7,
         ]);

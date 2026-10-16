@@ -6,6 +6,7 @@ use App\Models\Category;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
+use App\Models\StoreSetting;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -105,5 +106,82 @@ class OrderPaymentTest extends TestCase
                 ->where('order_number', 'ORD-PAYMENT-TEST-001')
                 ->count()
         );
+    }
+
+    public function test_vat_is_calculated_only_for_taxable_products(): void
+    {
+        $user = User::factory()->create([
+            'role' => 'user',
+        ]);
+
+        $category = Category::query()->create([
+            'name' => 'VAT Test Category',
+            'slug' => 'vat-test-category',
+            'is_active' => true,
+            'sort_order' => 0,
+        ]);
+
+        $taxableProduct = Product::query()->create([
+            'category_id' => $category->id,
+            'name' => 'Taxable Product',
+            'slug' => 'taxable-product',
+            'sku' => 'VAT-TEST-001',
+            'price' => 100000,
+            'stock' => 10,
+            'discount_percent' => 0,
+            'is_active' => true,
+            'is_taxable' => true,
+        ]);
+
+        $nonTaxableProduct = Product::query()->create([
+            'category_id' => $category->id,
+            'name' => 'Non Taxable Product',
+            'slug' => 'non-taxable-product',
+            'sku' => 'VAT-TEST-002',
+            'price' => 200000,
+            'stock' => 10,
+            'discount_percent' => 0,
+            'is_active' => true,
+            'is_taxable' => false,
+        ]);
+
+        StoreSetting::setValue('vat_enabled', true);
+        StoreSetting::setValue('vat_percent', 10);
+
+        Sanctum::actingAs($user);
+
+        $response = $this->postJson('/api/v1/orders', [
+            'recipient_name' => 'Test User',
+            'phone' => '09120000000',
+            'address' => 'Test address',
+            'postal_code' => '1234567890',
+            'notes' => null,
+            'items' => [
+                [
+                    'product_id' => $taxableProduct->id,
+                    'quantity' => 1,
+                ],
+                [
+                    'product_id' => $nonTaxableProduct->id,
+                    'quantity' => 1,
+                ],
+            ],
+        ]);
+
+        $response->assertSuccessful();
+
+        $order = Order::query()
+            ->where('user_id', $user->id)
+            ->latest('id')
+            ->firstOrFail();
+
+        $this->assertEquals(300000, $order->subtotal);
+        $this->assertEquals(0, $order->discount);
+        $this->assertEquals(10, $order->tax_percent);
+        $this->assertEquals(10000, $order->tax_amount);
+        $this->assertEquals(310000, $order->total);
+
+        $this->assertEquals(9, $taxableProduct->fresh()->stock);
+        $this->assertEquals(9, $nonTaxableProduct->fresh()->stock);
     }
 }

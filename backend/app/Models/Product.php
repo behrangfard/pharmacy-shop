@@ -26,6 +26,7 @@ class Product extends Model
         'is_active',
         'is_featured',
         'is_new',
+        'is_taxable',
         'views_count',
         'sales_count',
         'meta_title',
@@ -40,6 +41,7 @@ class Product extends Model
         'is_active' => 'boolean',
         'is_featured' => 'boolean',
         'is_new' => 'boolean',
+        'is_taxable' => 'boolean',
     ];
 
     public function category()

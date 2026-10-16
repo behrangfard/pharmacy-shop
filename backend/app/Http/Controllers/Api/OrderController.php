@@ -29,6 +29,7 @@ class OrderController extends Controller
         $order = DB::transaction(function () use ($validated, $user) {
             $subtotal = 0;
             $discount = 0;
+            $taxableAmount = 0;
             $orderItems = [];
 
             foreach ($validated['items'] as $item) {
@@ -92,6 +93,10 @@ class OrderController extends Controller
                 $subtotal += $itemSubtotal;
                 $discount += $itemDiscount;
 
+                if ($product->is_taxable) {
+                    $taxableAmount += $totalPrice;
+                }
+
                 $orderItems[] = [
                     'product_id' => $product->id,
                     'product_name' => $product->name,
@@ -107,42 +112,38 @@ class OrderController extends Controller
             $subtotal = round($subtotal, 2);
             $discount = round($discount, 2);
 
+            $shippingCost = 0;
 
-$shippingCost = 0;
+            $vatEnabled = filter_var(
+                (string) StoreSetting::getValue('vat_enabled', '0'),
+                FILTER_VALIDATE_BOOLEAN
+            );
 
-// خواندن تنظیمات ارزش افزوده از دیتابیس
-$vatEnabled = filter_var(
-    (string) StoreSetting::getValue('vat_enabled', '0'),
-    FILTER_VALIDATE_BOOLEAN
-);
+            $vatPercent = $vatEnabled
+                ? min(
+                    max(
+                        (float) StoreSetting::getValue('vat_percent', 10),
+                        0
+                    ),
+                    100
+                )
+                : 0;
 
-$vatPercent = $vatEnabled
-    ? min(
-        max(
-            (float) StoreSetting::getValue('vat_percent', 10),
-            0
-        ),
-        100
-    )
-    : 0;
+             // محاسبه پایه مالیات فقط بر اساس محصولات مشمول مالیات
+            $taxableAmount = round(
+                $taxableAmount + $shippingCost,
+                2
+            );
 
-// محاسبه مبلغ پس از تخفیف و هزینه ارسال
-$taxableAmount = round(
-    $subtotal - $discount + $shippingCost,
-    2
-);
+            $taxAmount = round(
+                $taxableAmount * $vatPercent / 100,
+                2
+            );
 
-// محاسبه ارزش افزوده
-$taxAmount = round(
-    $taxableAmount * $vatPercent / 100,
-    2
-);
-
-// مبلغ نهایی سفارش
-$total = round(
-    $taxableAmount + $taxAmount,
-    2
-);
+            $total = round(
+                $subtotal - $discount + $shippingCost + $taxAmount,
+                2
+            );
 
 
             do {

@@ -40,6 +40,7 @@ interface Product {
   is_active: boolean;
   is_featured: boolean;
   is_new: boolean;
+  is_taxable: boolean;
   meta_title: string | null;
   meta_description: string | null;
   images?: ProductImage[];
@@ -62,6 +63,7 @@ interface ProductFormData {
   is_active: boolean;
   is_featured: boolean;
   is_new: boolean;
+  is_taxable: boolean;
   meta_title: string;
   meta_description: string;
 }
@@ -85,6 +87,7 @@ const emptyForm: ProductFormData = {
   is_active: true,
   is_featured: false,
   is_new: false,
+  is_taxable: false,
   meta_title: "",
   meta_description: "",
 };
@@ -141,6 +144,7 @@ function readProduct(product: Product): ProductFormData {
     is_active: Boolean(product.is_active),
     is_featured: Boolean(product.is_featured),
     is_new: Boolean(product.is_new),
+    is_taxable: Boolean(product.is_taxable),
     meta_title: product.meta_title ?? "",
     meta_description: product.meta_description ?? "",
   };
@@ -435,6 +439,7 @@ function AdminProductForm() {
       is_active: form.is_active,
       is_featured: form.is_featured,
       is_new: form.is_new,
+      is_taxable: form.is_taxable,
       meta_title: form.meta_title.trim() || null,
       meta_description: form.meta_description.trim() || null,
       ...(form.slug.trim() ? { slug: form.slug.trim() } : {}),
@@ -570,7 +575,7 @@ function AdminProductForm() {
   }
 
   function checkboxField(
-    key: "is_active" | "is_featured" | "is_new",
+    key: "is_active" | "is_featured" | "is_new" | "is_taxable",
     label: string,
   ) {
     return (
@@ -1044,6 +1049,7 @@ function AdminProductForm() {
             {checkboxField("is_active", "محصول فعال باشد")}
             {checkboxField("is_featured", "محصول ویژه باشد")}
             {checkboxField("is_new", "محصول جدید باشد")}
+            {checkboxField("is_taxable", "مشمول ارزش افزوده")}
           </div>
         </section>
 
