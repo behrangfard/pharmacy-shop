@@ -24,6 +24,7 @@ function Checkout() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { items, cartTotal } = useCart();
+
   const [firstName, setFirstName] = useState(user?.name ?? "");
   const [lastName, setLastName] = useState("");
   const [phone, setPhone] = useState("");
@@ -164,31 +165,31 @@ function Checkout() {
   if (items.length === 0) {
     return (
       <Layout>
-        <main className="max-w-4xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
+        <main className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
           <Link
             to="/cart"
-            className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-blue-600 transition-colors"
+            className="inline-flex items-center gap-2 text-sm text-slate-500 transition-colors hover:text-purple-600"
           >
             <ArrowRight size={17} />
             بازگشت به سبد خرید
           </Link>
 
-          <div className="mt-6 bg-white rounded-3xl border border-slate-100 shadow-sm p-8 sm:p-12 text-center">
-            <div className="w-16 h-16 mx-auto rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
+          <div className="mt-6 rounded-3xl border border-slate-100 bg-white p-8 text-center shadow-sm sm:p-12">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-purple-50 text-purple-600">
               <ShoppingBag size={30} />
             </div>
 
-            <h1 className="text-2xl font-black text-slate-900 mt-5">
+            <h1 className="mt-5 text-2xl font-black text-slate-900">
               سبد خرید شما خالی است
             </h1>
 
-            <p className="text-slate-500 mt-2">
+            <p className="mt-2 text-slate-500">
               برای ادامه خرید، ابتدا محصولی به سبد خرید اضافه کنید.
             </p>
 
             <Link
               to="/products"
-              className="inline-flex items-center justify-center gap-2 mt-6 rounded-xl bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 font-bold transition-colors"
+              className="mt-6 inline-flex items-center justify-center gap-2 rounded-xl bg-purple-600 px-6 py-3 font-bold text-white transition-colors hover:bg-purple-700"
             >
               مشاهده محصولات
               <ChevronLeft size={18} />
@@ -201,30 +202,30 @@ function Checkout() {
 
   return (
     <Layout>
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
         <div className="mb-8">
           <Link
             to="/cart"
-            className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-blue-600 transition-colors"
+            className="inline-flex items-center gap-2 text-sm text-slate-500 transition-colors hover:text-purple-600"
           >
             <ArrowRight size={17} />
             بازگشت به سبد خرید
           </Link>
 
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 mt-5">
+          <h1 className="mt-5 text-2xl font-black text-slate-900 sm:text-3xl">
             تکمیل سفارش
           </h1>
 
-          <p className="text-slate-500 mt-2">
+          <p className="mt-2 text-slate-500">
             اطلاعات ارسال سفارش خود را وارد کنید.
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="grid lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2 space-y-6">
-            <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 sm:p-7">
-              <div className="flex items-center gap-3 mb-7">
-                <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+        <form onSubmit={handleSubmit} className="grid gap-6 lg:grid-cols-3">
+          <div className="space-y-6 lg:col-span-2">
+            <section className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm sm:p-7">
+              <div className="mb-7 flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-purple-50 text-purple-600">
                   <MapPin size={24} />
                 </div>
 
@@ -232,24 +233,22 @@ function Checkout() {
                   <h2 className="text-xl font-black text-slate-900">
                     اطلاعات گیرنده
                   </h2>
-
-                  <p className="text-sm text-slate-500 mt-1">
+                  <p className="mt-1 text-sm text-slate-500">
                     اطلاعات لازم برای ارسال سفارش
                   </p>
                 </div>
               </div>
 
               {error && (
-                <div className="mb-6 flex items-start gap-3 rounded-xl bg-red-50 border border-red-100 text-red-600 p-4 text-sm font-bold">
-                  <AlertCircle size={19} className="flex-shrink-0 mt-0.5" />
-
+                <div className="mb-6 flex items-start gap-3 rounded-xl border border-red-100 bg-red-50 p-4 text-sm font-bold text-red-600">
+                  <AlertCircle size={19} className="mt-0.5 flex-shrink-0" />
                   <span>{error}</span>
                 </div>
               )}
 
-              <div className="grid sm:grid-cols-2 gap-5">
+              <div className="grid gap-5 sm:grid-cols-2">
                 <div>
-                  <label className="block text-sm font-bold mb-2 text-slate-700">
+                  <label className="mb-2 block text-sm font-bold text-slate-700">
                     نام
                   </label>
 
@@ -258,19 +257,18 @@ function Checkout() {
                       size={18}
                       className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
                     />
-
                     <input
                       type="text"
                       value={firstName}
                       onChange={(event) => setFirstName(event.target.value)}
                       required
-                      className="w-full rounded-xl border border-slate-200 bg-white pr-11 pl-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition"
+                      className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-4 pr-11 outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-100"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold mb-2 text-slate-700">
+                  <label className="mb-2 block text-sm font-bold text-slate-700">
                     نام خانوادگی
                   </label>
 
@@ -279,19 +277,18 @@ function Checkout() {
                       size={18}
                       className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
                     />
-
                     <input
                       type="text"
                       value={lastName}
                       onChange={(event) => setLastName(event.target.value)}
                       required
-                      className="w-full rounded-xl border border-slate-200 bg-white pr-11 pl-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition"
+                      className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-4 pr-11 outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-100"
                     />
                   </div>
                 </div>
 
                 <div className="sm:col-span-2">
-                  <label className="block text-sm font-bold mb-2 text-slate-700">
+                  <label className="mb-2 block text-sm font-bold text-slate-700">
                     شماره موبایل
                   </label>
 
@@ -300,7 +297,6 @@ function Checkout() {
                       size={18}
                       className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
                     />
-
                     <input
                       type="tel"
                       value={phone}
@@ -308,59 +304,55 @@ function Checkout() {
                       required
                       dir="ltr"
                       placeholder="09123456789"
-                      className="w-full rounded-xl border border-slate-200 bg-white pr-11 pl-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition"
+                      className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-4 pr-11 outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-100"
                     />
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold mb-2 text-slate-700">
+                  <label className="mb-2 block text-sm font-bold text-slate-700">
                     استان
                   </label>
-
                   <input
                     type="text"
                     value={province}
                     onChange={(event) => setProvince(event.target.value)}
                     required
-                    className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition"
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-100"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold mb-2 text-slate-700">
+                  <label className="mb-2 block text-sm font-bold text-slate-700">
                     شهر
                   </label>
-
                   <input
                     type="text"
                     value={city}
                     onChange={(event) => setCity(event.target.value)}
                     required
-                    className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition"
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-100"
                   />
                 </div>
 
                 <div className="sm:col-span-2">
-                  <label className="block text-sm font-bold mb-2 text-slate-700">
+                  <label className="mb-2 block text-sm font-bold text-slate-700">
                     آدرس کامل
                   </label>
-
                   <textarea
                     value={address}
                     onChange={(event) => setAddress(event.target.value)}
                     required
                     rows={4}
-                    className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none resize-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition"
+                    className="w-full resize-none rounded-xl border border-slate-200 px-4 py-3 outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-100"
                     placeholder="آدرس دقیق محل تحویل سفارش"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold mb-2 text-slate-700">
+                  <label className="mb-2 block text-sm font-bold text-slate-700">
                     کد پستی
                   </label>
-
                   <input
                     type="text"
                     value={postalCode}
@@ -368,15 +360,15 @@ function Checkout() {
                     required
                     maxLength={10}
                     dir="ltr"
-                    className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition"
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none transition focus:border-purple-500 focus:ring-2 focus:ring-purple-100"
                   />
                 </div>
               </div>
             </section>
 
-            <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 sm:p-7">
+            <section className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm sm:p-7">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-xl bg-green-50 text-green-600 flex items-center justify-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-green-50 text-green-600">
                   <Truck size={24} />
                 </div>
 
@@ -384,19 +376,17 @@ function Checkout() {
                   <h2 className="text-xl font-black text-slate-900">
                     روش ارسال
                   </h2>
-
-                  <p className="text-sm text-slate-500 mt-1">
+                  <p className="mt-1 text-sm text-slate-500">
                     ارسال سفارش برای شما
                   </p>
                 </div>
               </div>
 
-              <div className="mt-6 rounded-2xl border border-blue-200 bg-blue-50 p-5">
+              <div className="mt-6 rounded-2xl border border-purple-200 bg-purple-50 p-5">
                 <div className="flex items-center justify-between gap-4">
                   <div>
-                    <p className="font-black text-blue-900">ارسال معمولی</p>
-
-                    <p className="text-sm text-blue-600 mt-1">
+                    <p className="font-black text-purple-900">ارسال معمولی</p>
+                    <p className="mt-1 text-sm text-purple-700">
                       ارسال سفارش به آدرس ثبت‌شده
                     </p>
                   </div>
@@ -410,16 +400,15 @@ function Checkout() {
           </div>
 
           <div className="space-y-6">
-            <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 sm:p-6 lg:sticky lg:top-6">
-              <div className="flex items-center gap-3 pb-5 border-b border-slate-100">
-                <div className="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+            <section className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm sm:p-6 lg:sticky lg:top-6">
+              <div className="flex items-center gap-3 border-b border-slate-100 pb-5">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-purple-50 text-purple-600">
                   <ShoppingBag size={22} />
                 </div>
 
                 <div>
-                  <h2 className="font-black text-lg">خلاصه سفارش</h2>
-
-                  <p className="text-xs text-slate-500 mt-1">
+                  <h2 className="text-lg font-black">خلاصه سفارش</h2>
+                  <p className="mt-1 text-xs text-slate-500">
                     {items.length.toLocaleString("fa-IR")} محصول
                   </p>
                 </div>
@@ -432,6 +421,7 @@ function Checkout() {
                     {formatPrice(cartOriginalTotal)} تومان
                   </span>
                 </div>
+
                 {cartDiscount > 0 && (
                   <div className="flex items-center justify-between gap-4 text-sm">
                     <span className="text-slate-500">تخفیف</span>
@@ -443,7 +433,6 @@ function Checkout() {
 
                 <div className="flex items-center justify-between gap-4 text-sm">
                   <span className="text-slate-500">هزینه ارسال</span>
-
                   <span className="font-bold text-green-600">رایگان</span>
                 </div>
 
@@ -452,7 +441,6 @@ function Checkout() {
                     <span className="text-slate-500">
                       ارزش افزوده ({formatPrice(vatPercent)}٪)
                     </span>
-
                     <span className="font-bold text-slate-800">
                       {formatPrice(taxAmount)} تومان
                     </span>
@@ -460,24 +448,22 @@ function Checkout() {
                 )}
               </div>
 
-              <div className="mt-5 pt-5 border-t border-slate-100">
+              <div className="mt-5 border-t border-slate-100 pt-5">
                 <div className="flex items-end justify-between gap-4">
                   <div>
                     <p className="text-xs text-slate-400">مبلغ نهایی</p>
-
-                    <p className="text-2xl font-black text-blue-700 mt-1">
+                    <p className="mt-1 text-2xl font-black text-purple-700">
                       {formatPrice(finalTotal)}
                     </p>
                   </div>
-
-                  <span className="text-sm text-slate-500 mb-1">تومان</span>
+                  <span className="mb-1 text-sm text-slate-500">تومان</span>
                 </div>
               </div>
 
               <button
                 type="submit"
                 disabled={loading}
-                className="mt-6 w-full inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white py-3.5 font-black transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-purple-600 py-3.5 font-black text-white transition-colors hover:bg-purple-700 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {loading ? (
                   <>
@@ -500,14 +486,16 @@ function Checkout() {
 
             <Link
               to="/cart"
-              className="block bg-slate-50 hover:bg-blue-50 rounded-2xl border border-slate-100 hover:border-blue-100 p-4 transition"
+              className="block rounded-2xl border border-slate-100 bg-slate-50 p-4 transition hover:border-purple-100 hover:bg-purple-50"
             >
               <div className="flex items-center justify-between gap-3">
                 <span className="text-sm font-bold text-slate-600">
                   بازگشت و ویرایش سبد خرید
                 </span>
-
-                <ChevronLeft size={18} className="text-slate-400" />
+                <ChevronLeft
+                  size={18}
+                  className="text-slate-400 transition-colors hover:text-purple-600"
+                />
               </div>
             </Link>
           </div>

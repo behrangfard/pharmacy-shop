@@ -13,6 +13,7 @@ import {
   ShoppingBag,
 } from "lucide-react";
 
+import { Link } from "react-router-dom";
 import Layout from "../components/Layout";
 import { ButtonLink } from "../components/Button";
 import { api } from "../services/api";
@@ -406,18 +407,60 @@ function Home() {
       <section className="relative overflow-hidden bg-slate-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-5">
           <div className="relative overflow-hidden rounded-[2rem] shadow-sm">
-            <img
-              src="/images/women-sport-hero.png"
-              alt="لباس زنانه و ورزشی"
+            <picture>
+              <source
+                media="(max-width: 639px)"
+                srcSet="/images/women-sport-hero-mobile.png"
+              />
+
+              <img
+                src="/images/women-sport-hero.png"
+                alt="لباس زنانه و ورزشی"
+                className="block w-full h-auto"
+              />
+            </picture>
+
+            {/* دکمه قابل کلیک در نسخه موبایل */}
+            <Link
+              to="/products"
+              aria-label="مشاهده محصولات"
+              title="مشاهده محصولات"
               className="
-                w-full
-                h-auto
-                min-h-[360px]
-                sm:min-h-[440px]
-                lg:min-h-[560px]
-                object-cover
-                object-center
-              "
+          absolute
+          left-[67%]
+          top-[67%]
+          w-[30%]
+          h-[8%]
+          z-20
+          rounded-full
+          cursor-pointer
+          focus-visible:outline
+          focus-visible:outline-2
+          focus-visible:outline-purple-600
+          sm:hidden
+        "
+            />
+
+            {/* دکمه قابل کلیک در نسخه دسکتاپ */}
+            <Link
+              to="/products"
+              aria-label="مشاهده محصولات"
+              title="مشاهده محصولات"
+              className="
+          hidden
+          sm:block
+          absolute
+          left-[6.8%]
+          top-[55.5%]
+          w-[14.5%]
+          h-[6%]
+          z-20
+          rounded-full
+          cursor-pointer
+          focus-visible:outline
+          focus-visible:outline-2
+          focus-visible:outline-purple-600
+        "
             />
 
             <div className="absolute inset-0 pointer-events-none bg-gradient-to-r from-transparent via-transparent to-purple-900/5" />
