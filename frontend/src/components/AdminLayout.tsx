@@ -16,6 +16,10 @@ function AdminLayout() {
       label: "محصولات",
     },
     {
+      to: "/admin/categories",
+      label: "دسته‌بندی‌ها",
+    },
+    {
       to: "/admin/orders",
       label: "سفارش‌ها",
     },

@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
-
 import { Link, useParams } from "react-router-dom";
-
 import {
   ArrowRight,
   ShoppingCart,
@@ -10,7 +8,6 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
-
 import Layout from "../components/Layout";
 import Button from "../components/Button";
 import api from "../services/api";
@@ -188,13 +185,30 @@ function ProductDetail() {
       return null;
     }
 
-    if (path.startsWith("http://") || path.startsWith("https://")) {
-      return path;
+    const trimmedPath = path.trim();
+
+    if (!trimmedPath) {
+      return null;
     }
 
-    const cleanPath = path.replace(/^\/+/, "");
+    if (/^https?:\/\//i.test(trimmedPath) || trimmedPath.startsWith("data:")) {
+      return trimmedPath;
+    }
 
-    return `http://127.0.0.1:8000/storage/${cleanPath}`;
+    // VITE_API_URL may be either the API root (for example, /api) or
+    // the backend root. Image files are served from the backend /storage path.
+    const configuredApiUrl = import.meta.env.VITE_API_URL as string | undefined;
+    const backendUrl = (configuredApiUrl?.trim() || "http://127.0.0.1:8000")
+      .replace(/\/+$/, "")
+      .replace(/\/api$/i, "");
+
+    // Handle paths stored as "products/file.jpg", "/products/file.jpg",
+    // or "storage/products/file.jpg" without duplicating /storage.
+    const cleanPath = trimmedPath
+      .replace(/^\/+/, "")
+      .replace(/^storage\//i, "");
+
+    return `${backendUrl}/storage/${cleanPath}`;
   };
 
   const imageUrl = getImageUrl(selectedImage?.path);
@@ -718,15 +732,15 @@ function ProductDetail() {
                           items-center
                           justify-center
                           text-lg
-                          hover:bg-slate-50
                           transition-all
                           duration-150
+                          hover:bg-purple-50
+                          hover:text-purple-700
                           active:scale-90
                         "
                       >
                         −
                       </button>
-
                       <div
                         className="
                           w-12
@@ -750,9 +764,10 @@ function ProductDetail() {
                           items-center
                           justify-center
                           text-lg
-                          hover:bg-slate-50
                           transition-all
                           duration-150
+                          hover:bg-purple-50
+                          hover:text-purple-700
                           active:scale-90
                         "
                       >

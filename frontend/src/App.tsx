@@ -14,6 +14,7 @@ const Login = lazy(() => import("./pages/Login"));
 const Register = lazy(() => import("./pages/Register"));
 const Account = lazy(() => import("./pages/Account"));
 const OrderDetail = lazy(() => import("./pages/OrderDetail"));
+const AdminCategories = lazy(() => import("./pages/AdminCategories"));
 
 const AdminOrders = lazy(() => import("./pages/AdminOrders"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
@@ -65,6 +66,7 @@ function App() {
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<AdminDashboard />} />
               <Route path="products" element={<AdminProducts />} />
+              <Route path="categories" element={<AdminCategories />} />
               <Route path="orders" element={<AdminOrders />} />
               <Route path="products/create" element={<AdminProductForm />} />
               <Route path="products/:id/edit" element={<AdminProductForm />} />

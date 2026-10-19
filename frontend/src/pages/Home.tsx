@@ -56,7 +56,10 @@ function ProductImageBox({ product }: { product: Product }) {
     return (
       <div
         className="
-          h-56
+          h-52
+          sm:h-56
+          w-full
+          shrink-0
           rounded-2xl
           bg-slate-50
           flex
@@ -77,7 +80,10 @@ function ProductImageBox({ product }: { product: Product }) {
   return (
     <div
       className="
-        h-56
+        h-52
+        sm:h-56
+        w-full
+        shrink-0
         rounded-2xl
         bg-slate-50
         flex
@@ -123,10 +129,12 @@ function ProductPrice({ product }: { product: Product }) {
   return (
     <div
       className="
-        mt-5
+        mt-3
+        min-h-[84px]
         w-full
         flex
         flex-col
+        justify-end
         items-start
         text-left
       "
@@ -245,11 +253,15 @@ function ProductCardHome({ product }: { product: Product }) {
     <div
       className="
         group
+        flex
+        flex-col
+        h-full
+        min-w-0
         border
         border-slate-100
         rounded-3xl
-        p-5
-        sm:p-6
+        p-4
+        sm:p-5
         bg-white
         hover:border-purple-200
         hover:shadow-xl
@@ -272,8 +284,11 @@ function ProductCardHome({ product }: { product: Product }) {
         className="
           font-black
           text-lg
-          leading-7
+          leading-6
           text-slate-900
+          min-h-12
+          line-clamp-2
+          break-words
           transition-colors
           duration-200
           group-hover:text-purple-700
@@ -282,19 +297,19 @@ function ProductCardHome({ product }: { product: Product }) {
         {product.name}
       </h3>
 
-      {product.short_description && (
-        <p
-          className="
-            text-slate-500
-            mt-3
-            text-sm
-            leading-6
-            line-clamp-2
-          "
-        >
-          {product.short_description}
-        </p>
-      )}
+      <p
+        className="
+          mt-2
+          min-h-10
+          text-sm
+          leading-5
+          text-slate-500
+          line-clamp-2
+          break-words
+        "
+      >
+        {product.short_description || "\u00a0"}
+      </p>
 
       <ProductPrice product={product} />
 
@@ -304,7 +319,7 @@ function ProductCardHome({ product }: { product: Product }) {
         size="md"
         className="
           w-full
-          mt-5
+          mt-4
           !bg-purple-600
           hover:!bg-purple-700
           transition-all
@@ -816,7 +831,7 @@ function Home() {
             </ButtonLink>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 items-stretch gap-5 sm:gap-6">
             {featuredProducts.map((product) => (
               <ProductCardHome key={product.id} product={product} />
             ))}
@@ -874,7 +889,7 @@ function Home() {
             </ButtonLink>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 items-stretch gap-5 sm:gap-6">
             {newestProducts.map((product) => (
               <ProductCardHome key={product.id} product={product} />
             ))}

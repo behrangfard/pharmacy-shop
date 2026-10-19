@@ -233,7 +233,8 @@ $order = Order::create([
         ]);
     }
 
-    public function cancel(Request $request, string $orderNumber)
+    
+public function cancel(Request $request, string $orderNumber)
 {
     $user = $request->user();
 
@@ -251,21 +252,30 @@ $order = Order::create([
             ];
         }
 
-        if (in_array($order->status, [
-            'shipped',
-            'delivered',
-            'cancelled',
-            'canceled',
-        ], true)) {
+        if ($order->status === 'cancelled' || $order->status === 'canceled') {
             return [
-                'error' => 'این سفارش در وضعیت فعلی قابل لغو نیست.',
+                'error' => 'این سفارش قبلاً لغو شده است.',
                 'status' => 422,
             ];
         }
 
-        if ($order->payment_status === 'paid') {
+        if (in_array($order->status, ['shipped', 'delivered'], true)) {
             return [
-                'error' => 'سفارش پرداخت‌شده قابل لغو مستقیم نیست.',
+                'error' => 'سفارش ارسال‌شده یا تحویل‌شده قابل لغو نیست.',
+                'status' => 422,
+            ];
+        }
+
+        if ($order->payment_status !== 'unpaid') {
+            return [
+                'error' => 'فقط سفارش پرداخت‌نشده از این مسیر قابل لغو است.',
+                'status' => 422,
+            ];
+        }
+
+        if ($order->stock_restored_at !== null) {
+            return [
+                'error' => 'موجودی این سفارش قبلاً بازگردانده شده است.',
                 'status' => 422,
             ];
         }
@@ -273,14 +283,23 @@ $order = Order::create([
         $items = $order->items()->get();
 
         foreach ($items as $item) {
-            Product::query()
-                ->where('id', $item->product_id)
-                ->increment('stock', $item->quantity);
+            if ($item->product_id === null) {
+                continue;
+            }
+
+            $product = Product::query()
+                ->whereKey($item->product_id)
+                ->lockForUpdate()
+                ->first();
+
+            if ($product) {
+                $product->increment('stock', $item->quantity);
+            }
         }
 
-        $order->update([
-            'status' => 'cancelled',
-        ]);
+        $order->status = 'cancelled';
+        $order->stock_restored_at = now();
+        $order->save();
 
         return [
             'order' => $order->fresh()->load('items.product.images'),
@@ -296,10 +315,11 @@ $order = Order::create([
 
     return response()->json([
         'success' => true,
-        'message' => 'سفارش با موفقیت لغو شد.',
+        'message' => 'سفارش با موفقیت لغو شد و موجودی آن بررسی و ثبت شد.',
         'data' => $result['order'],
     ]);
 }
+
     public function destroy(Request $request, string $orderNumber)
     {
         $user = $request->user();

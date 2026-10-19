@@ -4,7 +4,9 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Models\Product;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class AdminOrderController extends Controller
@@ -54,7 +56,8 @@ class AdminOrderController extends Controller
                 )
             )
             ->when(
-                isset($validated['search']) && trim($validated['search']) !== '',
+                isset($validated['search'])
+                    && trim($validated['search']) !== '',
                 function ($query) use ($validated) {
                     $search = trim($validated['search']);
 
@@ -122,68 +125,140 @@ class AdminOrderController extends Controller
             ],
         ]);
 
-        $order = Order::query()
-            ->where('order_number', $orderNumber)
-            ->first();
+        $result = DB::transaction(function () use ($orderNumber, $validated) {
+            $order = Order::query()
+                ->where('order_number', $orderNumber)
+                ->lockForUpdate()
+                ->first();
 
-        if (!$order) {
-            return response()->json([
-                'success' => false,
-                'message' => 'سفارش موردنظر پیدا نشد.',
-            ], 404);
-        }
-
-        $newStatus = $validated['status'];
-
-        if ($order->status === 'cancelled' && $newStatus !== 'cancelled') {
-            return response()->json([
-                'success' => false,
-                'message' => 'سفارش لغوشده را نمی‌توان دوباره فعال کرد.',
-            ], 422);
-        }
-
-        if ($order->status === 'delivered' && $newStatus !== 'delivered') {
-            return response()->json([
-                'success' => false,
-                'message' => 'وضعیت سفارش تحویل‌شده قابل تغییر نیست.',
-            ], 422);
-        }
-
-        if ($newStatus === 'cancelled') {
-            if ($order->payment_status === 'paid') {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'لغو سفارش پرداخت‌شده از این مسیر امکان‌پذیر نیست.',
-                ], 422);
+            if (!$order) {
+                return [
+                    'error' => 'سفارش موردنظر پیدا نشد.',
+                    'status' => 404,
+                ];
             }
 
+            $currentStatus = $order->status;
+            $newStatus = $validated['status'];
+
+            if ($currentStatus === $newStatus) {
+                return [
+                    'order' => $order->fresh()->load([
+                        'items.product.images',
+                        'user',
+                    ]),
+                ];
+            }
+
+            if ($currentStatus === 'cancelled') {
+                return [
+                    'error' => 'سفارش لغوشده قابل فعال‌سازی مجدد نیست.',
+                    'status' => 422,
+                ];
+            }
+
+            if ($currentStatus === 'delivered') {
+                return [
+                    'error' => 'وضعیت سفارش تحویل‌شده قابل تغییر نیست.',
+                    'status' => 422,
+                ];
+            }
+
+            if (
+                $newStatus === 'cancelled'
+                && $currentStatus === 'shipped'
+            ) {
+                return [
+                    'error' => 'سفارش ارسال‌شده از این مسیر قابل لغو نیست.',
+                    'status' => 422,
+                ];
+            }
+
+            if (
+                in_array(
+                    $newStatus,
+                    ['processing', 'shipped', 'delivered'],
+                    true
+                )
+                && $order->payment_status !== 'paid'
+            ) {
+                return [
+                    'error' => 'برای انتخاب این وضعیت، سفارش باید پرداخت شده باشد.',
+                    'status' => 422,
+                ];
+            }
+
+            if (
+                $newStatus === 'cancelled'
+                && $order->payment_status === 'paid'
+            ) {
+                return [
+                    'error' => 'لغو سفارش پرداخت‌شده از این مسیر امکان‌پذیر نیست.',
+                    'status' => 422,
+                ];
+            }
+if (
+    $newStatus === 'cancelled'
+    && $order->payment_status !== 'paid'
+) {
+    return [
+        'error' => 'لغو سفارش پرداخت‌نشده از پنل مدیریت مجاز نیست.',
+        'status' => 422,
+    ];
+}
+            if ($newStatus === 'cancelled') {
+                if ($order->stock_restored_at !== null) {
+                    return [
+                        'error' => 'موجودی این سفارش قبلاً بازگردانده شده است.',
+                        'status' => 422,
+                    ];
+                }
+
+                $items = $order->items()->get();
+
+                foreach ($items as $item) {
+                    if ($item->product_id === null) {
+                        continue;
+                    }
+
+                    $product = Product::query()
+                        ->whereKey($item->product_id)
+                        ->lockForUpdate()
+                        ->first();
+
+                    // ممکن است محصول پس از ثبت سفارش حذف شده باشد.
+                    if ($product) {
+                        $product->increment('stock', $item->quantity);
+                    }
+                }
+
+                $order->stock_restored_at = now();
+                $order->status = 'cancelled';
+                $order->save();
+            } else {
+                $order->status = $newStatus;
+                $order->save();
+            }
+
+            return [
+                'order' => $order->fresh()->load([
+                    'items.product.images',
+                    'user',
+                ]),
+            ];
+        }, 3);
+
+        if (isset($result['error'])) {
             return response()->json([
                 'success' => false,
-                'message' => 'لغو سفارش تا زمان پیاده‌سازی بازگرداندن امن موجودی پشتیبانی نمی‌شود.',
-            ], 422);
+                'message' => $result['error'],
+            ], $result['status']);
         }
-
-        if (
-            in_array($newStatus, ['processing', 'shipped', 'delivered'], true)
-            && $order->payment_status !== 'paid'
-        ) {
-            return response()->json([
-                'success' => false,
-                'message' => 'برای انتخاب این وضعیت، سفارش باید پرداخت شده باشد.',
-            ], 422);
-        }
-
-        $order->update([
-            'status' => $newStatus,
-        ]);
 
         return response()->json([
             'success' => true,
             'message' => 'وضعیت سفارش با موفقیت به‌روزرسانی شد.',
-            'data' => $order->fresh()->load([
-                'items.product.images',
-                'user',
-            ]),
+            'data' => $result['order'],
         ]);
     }
 }

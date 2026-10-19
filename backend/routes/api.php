@@ -1,4 +1,5 @@
 <?php
+use App\Http\Controllers\Api\AdminCategoryController;
 use App\Http\Controllers\Api\StoreSettingController;
 use App\Http\Controllers\Api\AdminOrderController;
 use App\Http\Controllers\Api\AdminController;
@@ -71,6 +72,38 @@ Route::prefix('v1')->group(function () {
             Route::get(
                 '/dashboard',
                 [AdminController::class, 'dashboard']
+            );
+
+            // Category Management
+
+            Route::get(
+                '/categories',
+                [AdminCategoryController::class, 'index']
+            );
+
+            Route::post(
+                '/categories',
+                [AdminCategoryController::class, 'store']
+            );
+
+            Route::get(
+                '/categories/{category}',
+                [AdminCategoryController::class, 'show']
+            );
+
+            Route::put(
+                '/categories/{category}',
+                [AdminCategoryController::class, 'update']
+            );
+
+            Route::patch(
+                '/categories/{category}/status',
+                [AdminCategoryController::class, 'updateStatus']
+            );
+
+            Route::delete(
+                '/categories/{category}',
+                [AdminCategoryController::class, 'destroy']
             );
 
             // Product Management
@@ -171,11 +204,13 @@ Route::get(
     Route::get('/brands', [BrandController::class, 'index']);
     Route::get('/brands/{slug}', [BrandController::class, 'show']);
 
+ 
     /*
     |--------------------------------------------------------------------------
     | Public Products
     |--------------------------------------------------------------------------
     */
+
 
     Route::get('/products', [ProductController::class, 'index']);
 

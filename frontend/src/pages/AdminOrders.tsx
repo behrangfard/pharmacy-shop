@@ -262,15 +262,21 @@ function AdminOrders() {
     }
 
     if (selectedOrder.status === "delivered" && newStatus !== "delivered") {
-      setNotice("وضعیت سفارش تحویل‌شده قابل بازگشت نیست.");
+      setNotice("وضعیت سفارش تحویل‌شده قابل تغییر نیست.");
       return;
     }
 
     if (newStatus === "cancelled") {
-      setNotice(
-        "لغو سفارش از این صفحه پشتیبانی نمی‌شود؛ ابتدا باید بازگرداندن موجودی به‌صورت امن پیاده‌سازی شود.",
+      if (selectedOrder.payment_status === "paid") {
+        setNotice("سفارش پرداخت‌شده از این مسیر قابل لغو نیست.");
+        return;
+      }
+
+      const confirmed = window.confirm(
+        "سفارش لغو شود و موجودی محصولات به انبار بازگردد؟",
       );
-      return;
+
+      if (!confirmed) return;
     }
 
     if (
@@ -299,8 +305,10 @@ function AdminOrders() {
       setNotice(response.data.message || "وضعیت سفارش به‌روزرسانی شد.");
 
       await loadOrders();
-    } catch (requestError) {
-      setNotice(getErrorMessage(requestError, "تغییر وضعیت سفارش ناموفق بود."));
+    } catch (error: any) {
+      setNotice(
+        error?.response?.data?.message || "به‌روزرسانی وضعیت سفارش انجام نشد.",
+      );
     } finally {
       setUpdatingStatus(false);
     }
@@ -1167,6 +1175,8 @@ function AdminOrders() {
                     }}
                   >
                     <option value="pending">در انتظار</option>
+
+                    <option value="cancelled">لغو سفارش</option>
 
                     {selectedOrder.payment_status === "paid" && (
                       <>
