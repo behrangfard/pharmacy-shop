@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import api from "../services/api";
 
 interface Category {
@@ -29,7 +29,7 @@ interface CategoryForm {
   meta_description: string;
 }
 
-const emptyForm: CategoryForm = {
+const initialForm: CategoryForm = {
   name: "",
   slug: "",
   parent_id: "",
@@ -41,67 +41,78 @@ const emptyForm: CategoryForm = {
   meta_description: "",
 };
 
-const cardStyle = {
-  background: "#fff",
-  border: "1px solid #e5e7eb",
-  borderRadius: 12,
-  padding: 18,
-  marginBottom: 18,
-} as const;
-
-const inputStyle = {
-  width: "100%",
-  boxSizing: "border-box" as const,
-  border: "1px solid #d1d5db",
-  borderRadius: 8,
-  padding: "10px 12px",
-  fontSize: 14,
-  fontFamily: "inherit",
-  background: "#fff",
-};
-
-const buttonStyle = {
-  border: "1px solid #d1d5db",
-  borderRadius: 8,
-  padding: "9px 12px",
-  cursor: "pointer",
-  fontSize: 13,
-  fontFamily: "inherit",
-} as const;
-
-function formatNumber(value: number | undefined) {
-  return new Intl.NumberFormat("fa-IR").format(value ?? 0);
-}
+const formatNumber = (value: number | undefined) =>
+  new Intl.NumberFormat("fa-IR").format(value ?? 0);
 
 function getErrorMessage(error: unknown): string {
+  const fallback = "عملیات انجام نشد. لطفاً دوباره تلاش کنید.";
+
+  if (!error || typeof error !== "object") {
+    return fallback;
+  }
+
   const response = (
     error as {
       response?: {
         data?: {
           message?: string;
-          errors?: Record<string, string[]>;
+          errors?: Record<string, string[] | string>;
         };
       };
+      message?: string;
     }
-  )?.response?.data;
+  ).response?.data;
 
   if (response?.errors) {
-    const messages = Object.values(response.errors).flat();
-    if (messages.length) return messages.join(" ");
+    const validationMessages = Object.values(response.errors)
+      .flatMap((messages) => (Array.isArray(messages) ? messages : [messages]))
+      .filter((message): message is string => typeof message === "string");
+
+    if (validationMessages.length > 0) {
+      return validationMessages[0];
+    }
   }
 
-  return response?.message || "عملیات انجام نشد. دوباره تلاش کنید.";
+  if (response?.message) {
+    return response.message;
+  }
+
+  const message = (error as { message?: string }).message;
+
+  return message || fallback;
 }
 
-function AdminCategories() {
+function getDescendantIds(
+  categories: Category[],
+  categoryId: number,
+): Set<number> {
+  const descendants = new Set<number>();
+  const pending = [categoryId];
+
+  while (pending.length > 0) {
+    const currentId = pending.pop()!;
+
+    for (const category of categories) {
+      if (category.parent_id === currentId && !descendants.has(category.id)) {
+        descendants.add(category.id);
+        pending.push(category.id);
+      }
+    }
+  }
+
+  return descendants;
+}
+
+export default function AdminCategories() {
   const [categories, setCategories] = useState<Category[]>([]);
-  const [form, setForm] = useState<CategoryForm>(emptyForm);
+  const [form, setForm] = useState<CategoryForm>(initialForm);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [actionId, setActionId] = useState<number | null>(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const [search, setSearch] = useState("");
 
   const loadCategories = useCallback(async () => {
     setLoading(true);
@@ -109,13 +120,13 @@ function AdminCategories() {
 
     try {
       const response = await api.get("/admin/categories");
-      const data = response.data?.data;
+      const result = response.data?.data;
 
-      if (!Array.isArray(data)) {
+      if (!Array.isArray(result)) {
         throw new Error("ساختار پاسخ دسته‌بندی‌ها معتبر نیست.");
       }
 
-      setCategories(data);
+      setCategories(result);
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
@@ -127,12 +138,31 @@ function AdminCategories() {
     void loadCategories();
   }, [loadCategories]);
 
-  function resetForm() {
-    setForm(emptyForm);
-    setEditingId(null);
-    setError("");
-    setSuccess("");
-  }
+  const availableParents = useMemo(() => {
+    if (editingId === null) {
+      return categories;
+    }
+
+    const excludedIds = getDescendantIds(categories, editingId);
+    excludedIds.add(editingId);
+
+    return categories.filter((category) => !excludedIds.has(category.id));
+  }, [categories, editingId]);
+
+  const filteredCategories = useMemo(() => {
+    const query = search.trim().toLocaleLowerCase();
+
+    if (!query) {
+      return categories;
+    }
+
+    return categories.filter((category) => {
+      const parentName = category.parent?.name ?? "";
+      return [category.name, category.slug, parentName].some((value) =>
+        value.toLocaleLowerCase().includes(query),
+      );
+    });
+  }, [categories, search]);
 
   function updateField<K extends keyof CategoryForm>(
     field: K,
@@ -141,8 +171,16 @@ function AdminCategories() {
     setForm((current) => ({ ...current, [field]: value }));
   }
 
+  function resetForm() {
+    setForm(initialForm);
+    setEditingId(null);
+  }
+
   function startEditing(category: Category) {
+    setError("");
+    setSuccess("");
     setEditingId(category.id);
+
     setForm({
       name: category.name ?? "",
       slug: category.slug ?? "",
@@ -154,8 +192,6 @@ function AdminCategories() {
       meta_title: category.meta_title ?? "",
       meta_description: category.meta_description ?? "",
     });
-    setError("");
-    setSuccess("");
 
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -165,24 +201,41 @@ function AdminCategories() {
     setError("");
     setSuccess("");
 
-    if (!form.name.trim()) {
+    const name = form.name.trim();
+
+    if (!name) {
       setError("نام دسته‌بندی را وارد کنید.");
       return;
     }
 
-    if (editingId !== null && form.parent_id === String(editingId)) {
+    const parentId = form.parent_id ? Number(form.parent_id) : null;
+
+    if (editingId !== null && parentId === editingId) {
       setError("یک دسته‌بندی نمی‌تواند والد خودش باشد.");
       return;
     }
 
+    if (
+      editingId !== null &&
+      parentId !== null &&
+      getDescendantIds(categories, editingId).has(parentId)
+    ) {
+      setError("انتخاب یکی از زیردسته‌ها به‌عنوان والد مجاز نیست.");
+      return;
+    }
+
+    const parsedSortOrder = Number.parseInt(form.sort_order, 10);
+
     const payload = {
-      name: form.name.trim(),
+      name,
       slug: form.slug.trim() || null,
-      parent_id: form.parent_id ? Number(form.parent_id) : null,
+      parent_id: parentId,
       description: form.description.trim() || null,
       image: form.image.trim() || null,
       is_active: form.is_active,
-      sort_order: Math.max(0, Number(form.sort_order) || 0),
+      sort_order: Number.isFinite(parsedSortOrder)
+        ? Math.max(0, parsedSortOrder)
+        : 0,
       meta_title: form.meta_title.trim() || null,
       meta_description: form.meta_description.trim() || null,
     };
@@ -198,8 +251,7 @@ function AdminCategories() {
         setSuccess("دسته‌بندی جدید با موفقیت ایجاد شد.");
       }
 
-      setForm(emptyForm);
-      setEditingId(null);
+      resetForm();
       await loadCategories();
     } catch (err) {
       setError(getErrorMessage(err));
@@ -211,28 +263,34 @@ function AdminCategories() {
   async function toggleStatus(category: Category) {
     setError("");
     setSuccess("");
+    setActionId(category.id);
 
     try {
       await api.patch(`/admin/categories/${category.id}/status`, {
         is_active: !category.is_active,
       });
 
-      setSuccess("وضعیت دسته‌بندی تغییر کرد.");
+      setSuccess("وضعیت دسته‌بندی با موفقیت تغییر کرد.");
       await loadCategories();
     } catch (err) {
       setError(getErrorMessage(err));
+    } finally {
+      setActionId(null);
     }
   }
 
   async function deleteCategory(category: Category) {
     const confirmed = window.confirm(
-      `آیا از حذف دسته‌بندی «${category.name}» مطمئن هستید؟`,
+      `آیا از حذف دسته‌بندی «${category.name}» مطمئن هستید؟\n\nاگر دسته‌بندی دارای محصول یا زیردسته باشد، حذف آن امکان‌پذیر نیست.`,
     );
 
-    if (!confirmed) return;
+    if (!confirmed) {
+      return;
+    }
 
     setError("");
     setSuccess("");
+    setActionId(category.id);
 
     try {
       await api.delete(`/admin/categories/${category.id}`);
@@ -241,55 +299,75 @@ function AdminCategories() {
         resetForm();
       }
 
-      setSuccess("دسته‌بندی حذف شد.");
+      setSuccess("دسته‌بندی با موفقیت حذف شد.");
       await loadCategories();
     } catch (err) {
       setError(getErrorMessage(err));
+    } finally {
+      setActionId(null);
     }
   }
 
-  const filteredCategories = categories.filter((category) => {
-    const value = search.trim().toLocaleLowerCase();
+  const inputStyle: React.CSSProperties = {
+    width: "100%",
+    padding: "10px 12px",
+    border: "1px solid #d1d5db",
+    borderRadius: 8,
+    fontSize: 14,
+    boxSizing: "border-box",
+    background: "#fff",
+    color: "#111827",
+  };
 
-    if (!value) return true;
+  const labelStyle: React.CSSProperties = {
+    display: "block",
+    marginBottom: 6,
+    fontSize: 14,
+    fontWeight: 600,
+    color: "#374151",
+  };
 
-    return (
-      category.name.toLocaleLowerCase().includes(value) ||
-      category.slug.toLocaleLowerCase().includes(value) ||
-      (category.parent?.name ?? "").toLocaleLowerCase().includes(value)
-    );
-  });
-
-  const availableParents = categories.filter(
-    (category) => category.id !== editingId,
-  );
+  const buttonStyle: React.CSSProperties = {
+    border: 0,
+    borderRadius: 8,
+    padding: "9px 14px",
+    cursor: "pointer",
+    fontSize: 13,
+    fontWeight: 600,
+    whiteSpace: "nowrap",
+  };
 
   return (
     <div dir="rtl" style={{ maxWidth: 1400, margin: "0 auto" }}>
       <div
         style={{
           display: "flex",
-          alignItems: "center",
           justifyContent: "space-between",
-          gap: 12,
+          alignItems: "center",
           flexWrap: "wrap",
-          marginBottom: 22,
+          gap: 12,
+          marginBottom: 24,
         }}
       >
         <div>
-          <h1 style={{ margin: "0 0 8px", fontSize: 25 }}>
+          <h1 style={{ margin: "0 0 8px", fontSize: 26, color: "#111827" }}>
             مدیریت دسته‌بندی‌ها
           </h1>
-          <p style={{ color: "#6b7280", margin: 0, fontSize: 14 }}>
+          <p style={{ margin: 0, color: "#6b7280", fontSize: 14 }}>
             ایجاد و مدیریت دسته‌بندی‌های فروشگاه
           </p>
         </div>
 
         <button
           type="button"
-          style={buttonStyle}
           onClick={() => void loadCategories()}
           disabled={loading}
+          style={{
+            ...buttonStyle,
+            background: "#f3f4f6",
+            color: "#374151",
+            opacity: loading ? 0.6 : 1,
+          }}
         >
           {loading ? "در حال دریافت..." : "بارگذاری مجدد"}
         </button>
@@ -299,10 +377,13 @@ function AdminCategories() {
         <div
           role="alert"
           style={{
-            ...cardStyle,
+            marginBottom: 16,
+            padding: 12,
+            borderRadius: 8,
             background: "#fef2f2",
             color: "#b91c1c",
-            borderColor: "#fecaca",
+            border: "1px solid #fecaca",
+            fontSize: 14,
           }}
         >
           {error}
@@ -313,18 +394,30 @@ function AdminCategories() {
         <div
           role="status"
           style={{
-            ...cardStyle,
-            background: "#f0fdf4",
-            color: "#166534",
-            borderColor: "#bbf7d0",
+            marginBottom: 16,
+            padding: 12,
+            borderRadius: 8,
+            background: "#ecfdf5",
+            color: "#047857",
+            border: "1px solid #a7f3d0",
+            fontSize: 14,
           }}
         >
           {success}
         </div>
       )}
 
-      <section style={cardStyle}>
-        <h2 style={{ marginTop: 0, fontSize: 19 }}>
+      <section
+        style={{
+          background: "#fff",
+          border: "1px solid #e5e7eb",
+          borderRadius: 12,
+          padding: 20,
+          marginBottom: 24,
+          boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+        }}
+      >
+        <h2 style={{ margin: "0 0 20px", fontSize: 19, color: "#111827" }}>
           {editingId !== null ? "ویرایش دسته‌بندی" : "افزودن دسته‌بندی جدید"}
         </h2>
 
@@ -336,44 +429,47 @@ function AdminCategories() {
               gap: 16,
             }}
           >
-            <label>
-              <span style={{ display: "block", marginBottom: 7 }}>
+            <div>
+              <label htmlFor="category-name" style={labelStyle}>
                 نام دسته‌بندی *
-              </span>
+              </label>
               <input
-                style={inputStyle}
+                id="category-name"
                 value={form.name}
                 onChange={(event) => updateField("name", event.target.value)}
-                maxLength={255}
                 required
-                placeholder="مثلاً محصولات مراقبت پوست"
-              />
-            </label>
-
-            <label>
-              <span style={{ display: "block", marginBottom: 7 }}>
-                اسلاگ (اختیاری)
-              </span>
-              <input
+                maxLength={255}
                 style={inputStyle}
+                placeholder="مثلاً تجهیزات پزشکی"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="category-slug" style={labelStyle}>
+                اسلاگ (اختیاری)
+              </label>
+              <input
+                id="category-slug"
                 value={form.slug}
                 onChange={(event) => updateField("slug", event.target.value)}
                 maxLength={255}
-                placeholder="مثلاً skin-care"
+                style={inputStyle}
+                placeholder="medical-equipment"
                 dir="ltr"
               />
-            </label>
+            </div>
 
-            <label>
-              <span style={{ display: "block", marginBottom: 7 }}>
+            <div>
+              <label htmlFor="category-parent" style={labelStyle}>
                 دسته‌بندی والد
-              </span>
+              </label>
               <select
-                style={inputStyle}
+                id="category-parent"
                 value={form.parent_id}
                 onChange={(event) =>
                   updateField("parent_id", event.target.value)
                 }
+                style={inputStyle}
               >
                 <option value="">بدون والد (دسته‌بندی اصلی)</option>
                 {availableParents.map((category) => (
@@ -382,14 +478,14 @@ function AdminCategories() {
                   </option>
                 ))}
               </select>
-            </label>
+            </div>
 
-            <label>
-              <span style={{ display: "block", marginBottom: 7 }}>
+            <div>
+              <label htmlFor="category-sort-order" style={labelStyle}>
                 ترتیب نمایش
-              </span>
+              </label>
               <input
-                style={inputStyle}
+                id="category-sort-order"
                 type="number"
                 min="0"
                 step="1"
@@ -397,87 +493,98 @@ function AdminCategories() {
                 onChange={(event) =>
                   updateField("sort_order", event.target.value)
                 }
-              />
-            </label>
-
-            <label style={{ gridColumn: "1 / -1" }}>
-              <span style={{ display: "block", marginBottom: 7 }}>
-                آدرس تصویر (اختیاری)
-              </span>
-              <input
                 style={inputStyle}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="category-image" style={labelStyle}>
+                آدرس تصویر (اختیاری)
+              </label>
+              <input
+                id="category-image"
                 value={form.image}
                 onChange={(event) => updateField("image", event.target.value)}
-                maxLength={2048}
-                placeholder="آدرس تصویر دسته‌بندی"
+                style={inputStyle}
+                placeholder="/storage/categories/example.jpg"
                 dir="ltr"
               />
-            </label>
+            </div>
 
-            <label style={{ gridColumn: "1 / -1" }}>
-              <span style={{ display: "block", marginBottom: 7 }}>توضیحات</span>
-              <textarea
-                style={{ ...inputStyle, minHeight: 90, resize: "vertical" }}
-                value={form.description}
-                onChange={(event) =>
-                  updateField("description", event.target.value)
-                }
-              />
-            </label>
-
-            <label>
-              <span style={{ display: "block", marginBottom: 7 }}>
+            <div>
+              <label htmlFor="category-meta-title" style={labelStyle}>
                 عنوان سئو
-              </span>
+              </label>
               <input
-                style={inputStyle}
+                id="category-meta-title"
                 value={form.meta_title}
                 onChange={(event) =>
                   updateField("meta_title", event.target.value)
                 }
                 maxLength={255}
+                style={inputStyle}
               />
-            </label>
+            </div>
 
-            <label>
-              <span style={{ display: "block", marginBottom: 7 }}>
-                توضیحات سئو
-              </span>
+            <div style={{ gridColumn: "1 / -1" }}>
+              <label htmlFor="category-description" style={labelStyle}>
+                توضیحات
+              </label>
               <textarea
-                style={{ ...inputStyle, minHeight: 42, resize: "vertical" }}
+                id="category-description"
+                value={form.description}
+                onChange={(event) =>
+                  updateField("description", event.target.value)
+                }
+                rows={3}
+                style={{ ...inputStyle, resize: "vertical" }}
+              />
+            </div>
+
+            <div style={{ gridColumn: "1 / -1" }}>
+              <label htmlFor="category-meta-description" style={labelStyle}>
+                توضیحات سئو
+              </label>
+              <textarea
+                id="category-meta-description"
                 value={form.meta_description}
                 onChange={(event) =>
                   updateField("meta_description", event.target.value)
                 }
+                rows={2}
+                style={{ ...inputStyle, resize: "vertical" }}
               />
+            </div>
+
+            <label
+              htmlFor="category-active"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                fontSize: 14,
+                color: "#374151",
+                cursor: "pointer",
+              }}
+            >
+              <input
+                id="category-active"
+                type="checkbox"
+                checked={form.is_active}
+                onChange={(event) =>
+                  updateField("is_active", event.target.checked)
+                }
+              />
+              دسته‌بندی فعال باشد
             </label>
           </div>
-
-          <label
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 8,
-              marginTop: 18,
-              cursor: "pointer",
-            }}
-          >
-            <input
-              type="checkbox"
-              checked={form.is_active}
-              onChange={(event) =>
-                updateField("is_active", event.target.checked)
-              }
-            />
-            دسته‌بندی فعال باشد
-          </label>
 
           <div
             style={{
               display: "flex",
               gap: 10,
               flexWrap: "wrap",
-              marginTop: 18,
+              marginTop: 20,
             }}
           >
             <button
@@ -486,9 +593,8 @@ function AdminCategories() {
               style={{
                 ...buttonStyle,
                 background: "#2563eb",
-                borderColor: "#2563eb",
                 color: "#fff",
-                opacity: saving ? 0.65 : 1,
+                opacity: saving ? 0.6 : 1,
               }}
             >
               {saving
@@ -501,71 +607,91 @@ function AdminCategories() {
             {editingId !== null && (
               <button
                 type="button"
-                style={buttonStyle}
                 onClick={resetForm}
                 disabled={saving}
+                style={{
+                  ...buttonStyle,
+                  background: "#f3f4f6",
+                  color: "#374151",
+                }}
               >
-                انصراف از ویرایش
+                لغو ویرایش
               </button>
             )}
           </div>
         </form>
       </section>
 
-      <section style={cardStyle}>
+      <section
+        style={{
+          background: "#fff",
+          border: "1px solid #e5e7eb",
+          borderRadius: 12,
+          padding: 20,
+          boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
+        }}
+      >
         <div
           style={{
             display: "flex",
-            alignItems: "center",
             justifyContent: "space-between",
-            gap: 12,
+            alignItems: "center",
             flexWrap: "wrap",
-            marginBottom: 16,
+            gap: 12,
+            marginBottom: 18,
           }}
         >
-          <h2 style={{ margin: 0, fontSize: 19 }}>
-            فهرست دسته‌بندی‌ها ({formatNumber(filteredCategories.length)})
+          <h2 style={{ margin: 0, fontSize: 19, color: "#111827" }}>
+            فهرست دسته‌بندی‌ها
           </h2>
 
           <input
-            style={{ ...inputStyle, maxWidth: 320 }}
+            aria-label="جست‌وجوی دسته‌بندی‌ها"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="جست‌وجوی نام، اسلاگ یا والد..."
+            style={{ ...inputStyle, maxWidth: 320 }}
           />
         </div>
 
         {loading ? (
-          <p style={{ color: "#6b7280" }}>در حال دریافت دسته‌بندی‌ها...</p>
+          <p style={{ color: "#6b7280", textAlign: "center", padding: 24 }}>
+            در حال دریافت دسته‌بندی‌ها...
+          </p>
         ) : filteredCategories.length === 0 ? (
-          <p style={{ color: "#6b7280" }}>دسته‌بندی‌ای برای نمایش پیدا نشد.</p>
+          <p style={{ color: "#6b7280", textAlign: "center", padding: 24 }}>
+            دسته‌بندی‌ای برای نمایش پیدا نشد.
+          </p>
         ) : (
           <div style={{ overflowX: "auto" }}>
             <table
               style={{
                 width: "100%",
                 borderCollapse: "collapse",
-                fontSize: 13,
                 minWidth: 760,
+                fontSize: 14,
               }}
             >
               <thead>
-                <tr style={{ background: "#f9fafb", textAlign: "right" }}>
+                <tr style={{ background: "#f9fafb", color: "#4b5563" }}>
                   {[
                     "نام",
                     "اسلاگ",
                     "والد",
                     "محصولات",
-                    "زیر‌دسته‌ها",
+                    "زیردسته‌ها",
                     "وضعیت",
                     "عملیات",
                   ].map((heading) => (
                     <th
                       key={heading}
+                      scope="col"
                       style={{
-                        padding: 12,
+                        padding: "12px 10px",
+                        textAlign: "right",
                         borderBottom: "1px solid #e5e7eb",
                         whiteSpace: "nowrap",
+                        fontWeight: 600,
                       }}
                     >
                       {heading}
@@ -575,115 +701,148 @@ function AdminCategories() {
               </thead>
 
               <tbody>
-                {filteredCategories.map((category) => (
-                  <tr key={category.id}>
-                    <td
-                      style={{
-                        padding: 12,
-                        borderBottom: "1px solid #e5e7eb",
-                        fontWeight: 600,
-                      }}
-                    >
-                      {category.name}
-                    </td>
-                    <td
-                      dir="ltr"
-                      style={{
-                        padding: 12,
-                        borderBottom: "1px solid #e5e7eb",
-                        textAlign: "right",
-                      }}
-                    >
-                      {category.slug}
-                    </td>
-                    <td
-                      style={{
-                        padding: 12,
-                        borderBottom: "1px solid #e5e7eb",
-                      }}
-                    >
-                      {category.parent?.name || "—"}
-                    </td>
-                    <td
-                      style={{
-                        padding: 12,
-                        borderBottom: "1px solid #e5e7eb",
-                      }}
-                    >
-                      {formatNumber(category.products_count)}
-                    </td>
-                    <td
-                      style={{
-                        padding: 12,
-                        borderBottom: "1px solid #e5e7eb",
-                      }}
-                    >
-                      {formatNumber(category.children_count)}
-                    </td>
-                    <td
-                      style={{
-                        padding: 12,
-                        borderBottom: "1px solid #e5e7eb",
-                      }}
-                    >
-                      <span
+                {filteredCategories.map((category) => {
+                  const busy = actionId === category.id;
+
+                  return (
+                    <tr key={category.id}>
+                      <td
                         style={{
-                          color: category.is_active ? "#166534" : "#b91c1c",
-                          background: category.is_active
-                            ? "#dcfce7"
-                            : "#fee2e2",
-                          padding: "5px 8px",
-                          borderRadius: 20,
-                          whiteSpace: "nowrap",
+                          padding: 12,
+                          borderBottom: "1px solid #f3f4f6",
+                          color: "#111827",
+                          fontWeight: 600,
                         }}
                       >
-                        {category.is_active ? "فعال" : "غیرفعال"}
-                      </span>
-                    </td>
-                    <td
-                      style={{
-                        padding: 12,
-                        borderBottom: "1px solid #e5e7eb",
-                      }}
-                    >
-                      <div
+                        {category.name}
+                      </td>
+
+                      <td
+                        dir="ltr"
                         style={{
-                          display: "flex",
-                          gap: 6,
-                          flexWrap: "wrap",
+                          padding: 12,
+                          borderBottom: "1px solid #f3f4f6",
+                          textAlign: "left",
+                          color: "#6b7280",
                         }}
                       >
-                        <button
-                          type="button"
-                          style={buttonStyle}
-                          onClick={() => startEditing(category)}
-                        >
-                          ویرایش
-                        </button>
-                        <button
-                          type="button"
+                        {category.slug}
+                      </td>
+
+                      <td
+                        style={{
+                          padding: 12,
+                          borderBottom: "1px solid #f3f4f6",
+                          color: "#6b7280",
+                        }}
+                      >
+                        {category.parent?.name ?? "—"}
+                      </td>
+
+                      <td
+                        style={{
+                          padding: 12,
+                          borderBottom: "1px solid #f3f4f6",
+                        }}
+                      >
+                        {formatNumber(category.products_count)}
+                      </td>
+
+                      <td
+                        style={{
+                          padding: 12,
+                          borderBottom: "1px solid #f3f4f6",
+                        }}
+                      >
+                        {formatNumber(category.children_count)}
+                      </td>
+
+                      <td
+                        style={{
+                          padding: 12,
+                          borderBottom: "1px solid #f3f4f6",
+                        }}
+                      >
+                        <span
                           style={{
-                            ...buttonStyle,
-                            color: category.is_active ? "#92400e" : "#166534",
+                            display: "inline-block",
+                            padding: "4px 8px",
+                            borderRadius: 20,
+                            fontSize: 12,
+                            fontWeight: 600,
+                            background: category.is_active
+                              ? "#d1fae5"
+                              : "#fee2e2",
+                            color: category.is_active ? "#065f46" : "#991b1b",
                           }}
-                          onClick={() => void toggleStatus(category)}
                         >
-                          {category.is_active ? "غیرفعال‌سازی" : "فعال‌سازی"}
-                        </button>
-                        <button
-                          type="button"
+                          {category.is_active ? "فعال" : "غیرفعال"}
+                        </span>
+                      </td>
+
+                      <td
+                        style={{
+                          padding: 12,
+                          borderBottom: "1px solid #f3f4f6",
+                        }}
+                      >
+                        <div
                           style={{
-                            ...buttonStyle,
-                            color: "#b91c1c",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 6,
+                            flexWrap: "wrap",
                           }}
-                          onClick={() => void deleteCategory(category)}
                         >
-                          حذف
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                          <button
+                            type="button"
+                            onClick={() => startEditing(category)}
+                            disabled={busy}
+                            style={{
+                              ...buttonStyle,
+                              background: "#dbeafe",
+                              color: "#1d4ed8",
+                            }}
+                          >
+                            ویرایش
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => void toggleStatus(category)}
+                            disabled={busy}
+                            style={{
+                              ...buttonStyle,
+                              background: category.is_active
+                                ? "#fef3c7"
+                                : "#d1fae5",
+                              color: category.is_active ? "#92400e" : "#065f46",
+                            }}
+                          >
+                            {busy
+                              ? "در حال انجام..."
+                              : category.is_active
+                                ? "غیرفعال‌سازی"
+                                : "فعال‌سازی"}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => void deleteCategory(category)}
+                            disabled={busy}
+                            style={{
+                              ...buttonStyle,
+                              background: "#fee2e2",
+                              color: "#991b1b",
+                            }}
+                          >
+                            حذف
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -692,5 +851,3 @@ function AdminCategories() {
     </div>
   );
 }
-
-export default AdminCategories;

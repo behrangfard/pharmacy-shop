@@ -5,6 +5,7 @@ import { useAuth } from "../context/AuthContext";
 function AdminLayout() {
   const { user, logout } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
   const navItems = [
     {
       to: "/admin",
@@ -42,6 +43,7 @@ function AdminLayout() {
           onClick={() => setMobileMenuOpen(false)}
         />
       )}
+
       <aside
         className={`admin-sidebar ${mobileMenuOpen ? "is-open" : ""}`}
         style={{
@@ -67,6 +69,7 @@ function AdminLayout() {
         >
           ✕ بستن منو
         </button>
+
         <Link
           to="/admin"
           style={{
@@ -78,10 +81,11 @@ function AdminLayout() {
             marginBottom: "30px",
           }}
         >
-          پنل مدیریت{" "}
+          پنل مدیریت
         </Link>
 
         <nav
+          aria-label="منوی مدیریت"
           style={{
             display: "flex",
             flexDirection: "column",
@@ -182,6 +186,7 @@ function AdminLayout() {
           <span></span>
           <span></span>
         </button>
+
         <Outlet />
       </main>
     </div>
