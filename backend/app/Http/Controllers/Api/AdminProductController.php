@@ -20,7 +20,7 @@ class AdminProductController extends Controller
     public function index(Request $request): JsonResponse
     {
         $query = Product::query()
-            ->with(['category', 'brand', 'images', 'variants']);
+            ->with(['category', 'brand', 'images']);
 
         if ($request->filled('search')) {
             $search = trim($request->string('search')->toString());
