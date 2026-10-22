@@ -78,7 +78,6 @@ function getErrorMessage(error: unknown): string {
   }
 
   const message = (error as { message?: string }).message;
-
   return message || fallback;
 }
 
@@ -158,6 +157,7 @@ export default function AdminCategories() {
 
     return categories.filter((category) => {
       const parentName = category.parent?.name ?? "";
+
       return [category.name, category.slug, parentName].some((value) =>
         value.toLocaleLowerCase().includes(query),
       );
@@ -337,23 +337,81 @@ export default function AdminCategories() {
     whiteSpace: "nowrap",
   };
 
-  return (
-    <div dir="rtl" style={{ maxWidth: 1400, margin: "0 auto" }}>
-      <div
+  function renderCategoryActions(category: Category) {
+    const busy = actionId === category.id;
+
+    return (
+      <div className="admin-category-actions">
+        <button
+          type="button"
+          onClick={() => startEditing(category)}
+          disabled={busy || saving}
+          style={{
+            ...buttonStyle,
+            background: "#dbeafe",
+            color: "#1d4ed8",
+          }}
+        >
+          ویرایش
+        </button>
+
+        <button
+          type="button"
+          onClick={() => void toggleStatus(category)}
+          disabled={busy || saving}
+          style={{
+            ...buttonStyle,
+            background: category.is_active ? "#fef3c7" : "#d1fae5",
+            color: category.is_active ? "#92400e" : "#065f46",
+          }}
+        >
+          {busy
+            ? "در حال انجام..."
+            : category.is_active
+              ? "غیرفعال‌سازی"
+              : "فعال‌سازی"}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => void deleteCategory(category)}
+          disabled={busy || saving}
+          style={{
+            ...buttonStyle,
+            background: "#fee2e2",
+            color: "#991b1b",
+          }}
+        >
+          حذف
+        </button>
+      </div>
+    );
+  }
+
+  function renderStatus(category: Category) {
+    return (
+      <span
+        className="admin-category-status"
         style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          flexWrap: "wrap",
-          gap: 12,
-          marginBottom: 24,
+          background: category.is_active ? "#d1fae5" : "#fee2e2",
+          color: category.is_active ? "#065f46" : "#991b1b",
         }}
       >
+        {category.is_active ? "فعال" : "غیرفعال"}
+      </span>
+    );
+  }
+
+  return (
+    <div
+      dir="rtl"
+      className="admin-categories-page"
+      style={{ maxWidth: 1400, margin: "0 auto" }}
+    >
+      <div className="admin-categories-heading">
         <div>
-          <h1 style={{ margin: "0 0 8px", fontSize: 26, color: "#111827" }}>
-            مدیریت دسته‌بندی‌ها
-          </h1>
-          <p style={{ margin: 0, color: "#6b7280", fontSize: 14 }}>
+          <h1 className="admin-categories-title">مدیریت دسته‌بندی‌ها</h1>
+          <p className="admin-categories-subtitle">
             ایجاد و مدیریت دسته‌بندی‌های فروشگاه
           </p>
         </div>
@@ -375,16 +433,8 @@ export default function AdminCategories() {
 
       {error && (
         <div
+          className="admin-categories-alert admin-categories-error"
           role="alert"
-          style={{
-            marginBottom: 16,
-            padding: 12,
-            borderRadius: 8,
-            background: "#fef2f2",
-            color: "#b91c1c",
-            border: "1px solid #fecaca",
-            fontSize: 14,
-          }}
         >
           {error}
         </div>
@@ -392,43 +442,20 @@ export default function AdminCategories() {
 
       {success && (
         <div
+          className="admin-categories-alert admin-categories-success"
           role="status"
-          style={{
-            marginBottom: 16,
-            padding: 12,
-            borderRadius: 8,
-            background: "#ecfdf5",
-            color: "#047857",
-            border: "1px solid #a7f3d0",
-            fontSize: 14,
-          }}
         >
           {success}
         </div>
       )}
 
-      <section
-        style={{
-          background: "#fff",
-          border: "1px solid #e5e7eb",
-          borderRadius: 12,
-          padding: 20,
-          marginBottom: 24,
-          boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
-        }}
-      >
-        <h2 style={{ margin: "0 0 20px", fontSize: 19, color: "#111827" }}>
+      <section className="admin-categories-panel admin-categories-form-panel">
+        <h2 className="admin-categories-section-title">
           {editingId !== null ? "ویرایش دسته‌بندی" : "افزودن دسته‌بندی جدید"}
         </h2>
 
         <form onSubmit={handleSubmit}>
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-              gap: 16,
-            }}
-          >
+          <div className="admin-categories-form-grid">
             <div>
               <label htmlFor="category-name" style={labelStyle}>
                 نام دسته‌بندی *
@@ -526,7 +553,7 @@ export default function AdminCategories() {
               />
             </div>
 
-            <div style={{ gridColumn: "1 / -1" }}>
+            <div className="admin-categories-full-width">
               <label htmlFor="category-description" style={labelStyle}>
                 توضیحات
               </label>
@@ -541,7 +568,7 @@ export default function AdminCategories() {
               />
             </div>
 
-            <div style={{ gridColumn: "1 / -1" }}>
+            <div className="admin-categories-full-width">
               <label htmlFor="category-meta-description" style={labelStyle}>
                 توضیحات سئو
               </label>
@@ -556,17 +583,7 @@ export default function AdminCategories() {
               />
             </div>
 
-            <label
-              htmlFor="category-active"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                fontSize: 14,
-                color: "#374151",
-                cursor: "pointer",
-              }}
-            >
+            <label className="admin-categories-checkbox">
               <input
                 id="category-active"
                 type="checkbox"
@@ -579,14 +596,7 @@ export default function AdminCategories() {
             </label>
           </div>
 
-          <div
-            style={{
-              display: "flex",
-              gap: 10,
-              flexWrap: "wrap",
-              marginTop: 20,
-            }}
-          >
+          <div className="admin-categories-form-actions">
             <button
               type="submit"
               disabled={saving}
@@ -622,28 +632,9 @@ export default function AdminCategories() {
         </form>
       </section>
 
-      <section
-        style={{
-          background: "#fff",
-          border: "1px solid #e5e7eb",
-          borderRadius: 12,
-          padding: 20,
-          boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            flexWrap: "wrap",
-            gap: 12,
-            marginBottom: 18,
-          }}
-        >
-          <h2 style={{ margin: 0, fontSize: 19, color: "#111827" }}>
-            فهرست دسته‌بندی‌ها
-          </h2>
+      <section className="admin-categories-panel">
+        <div className="admin-categories-list-heading">
+          <h2 className="admin-categories-section-title">فهرست دسته‌بندی‌ها</h2>
 
           <input
             aria-label="جست‌وجوی دسته‌بندی‌ها"
@@ -655,197 +646,106 @@ export default function AdminCategories() {
         </div>
 
         {loading ? (
-          <p style={{ color: "#6b7280", textAlign: "center", padding: 24 }}>
+          <p className="admin-categories-message">
             در حال دریافت دسته‌بندی‌ها...
           </p>
         ) : filteredCategories.length === 0 ? (
-          <p style={{ color: "#6b7280", textAlign: "center", padding: 24 }}>
+          <p className="admin-categories-message">
             دسته‌بندی‌ای برای نمایش پیدا نشد.
           </p>
         ) : (
-          <div style={{ overflowX: "auto" }}>
-            <table
-              style={{
-                width: "100%",
-                borderCollapse: "collapse",
-                minWidth: 760,
-                fontSize: 14,
-              }}
-            >
-              <thead>
-                <tr style={{ background: "#f9fafb", color: "#4b5563" }}>
-                  {[
-                    "نام",
-                    "اسلاگ",
-                    "والد",
-                    "محصولات",
-                    "زیردسته‌ها",
-                    "وضعیت",
-                    "عملیات",
-                  ].map((heading) => (
-                    <th
-                      key={heading}
-                      scope="col"
-                      style={{
-                        padding: "12px 10px",
-                        textAlign: "right",
-                        borderBottom: "1px solid #e5e7eb",
-                        whiteSpace: "nowrap",
-                        fontWeight: 600,
-                      }}
-                    >
-                      {heading}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-
-              <tbody>
-                {filteredCategories.map((category) => {
-                  const busy = actionId === category.id;
-
-                  return (
-                    <tr key={category.id}>
-                      <td
-                        style={{
-                          padding: 12,
-                          borderBottom: "1px solid #f3f4f6",
-                          color: "#111827",
-                          fontWeight: 600,
-                        }}
-                      >
-                        {category.name}
-                      </td>
-
-                      <td
-                        dir="ltr"
-                        style={{
-                          padding: 12,
-                          borderBottom: "1px solid #f3f4f6",
-                          textAlign: "left",
-                          color: "#6b7280",
-                        }}
-                      >
-                        {category.slug}
-                      </td>
-
-                      <td
-                        style={{
-                          padding: 12,
-                          borderBottom: "1px solid #f3f4f6",
-                          color: "#6b7280",
-                        }}
-                      >
-                        {category.parent?.name ?? "—"}
-                      </td>
-
-                      <td
-                        style={{
-                          padding: 12,
-                          borderBottom: "1px solid #f3f4f6",
-                        }}
-                      >
-                        {formatNumber(category.products_count)}
-                      </td>
-
-                      <td
-                        style={{
-                          padding: 12,
-                          borderBottom: "1px solid #f3f4f6",
-                        }}
-                      >
-                        {formatNumber(category.children_count)}
-                      </td>
-
-                      <td
-                        style={{
-                          padding: 12,
-                          borderBottom: "1px solid #f3f4f6",
-                        }}
-                      >
-                        <span
-                          style={{
-                            display: "inline-block",
-                            padding: "4px 8px",
-                            borderRadius: 20,
-                            fontSize: 12,
-                            fontWeight: 600,
-                            background: category.is_active
-                              ? "#d1fae5"
-                              : "#fee2e2",
-                            color: category.is_active ? "#065f46" : "#991b1b",
-                          }}
-                        >
-                          {category.is_active ? "فعال" : "غیرفعال"}
-                        </span>
-                      </td>
-
-                      <td
-                        style={{
-                          padding: 12,
-                          borderBottom: "1px solid #f3f4f6",
-                        }}
-                      >
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 6,
-                            flexWrap: "wrap",
-                          }}
-                        >
-                          <button
-                            type="button"
-                            onClick={() => startEditing(category)}
-                            disabled={busy}
-                            style={{
-                              ...buttonStyle,
-                              background: "#dbeafe",
-                              color: "#1d4ed8",
-                            }}
-                          >
-                            ویرایش
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => void toggleStatus(category)}
-                            disabled={busy}
-                            style={{
-                              ...buttonStyle,
-                              background: category.is_active
-                                ? "#fef3c7"
-                                : "#d1fae5",
-                              color: category.is_active ? "#92400e" : "#065f46",
-                            }}
-                          >
-                            {busy
-                              ? "در حال انجام..."
-                              : category.is_active
-                                ? "غیرفعال‌سازی"
-                                : "فعال‌سازی"}
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => void deleteCategory(category)}
-                            disabled={busy}
-                            style={{
-                              ...buttonStyle,
-                              background: "#fee2e2",
-                              color: "#991b1b",
-                            }}
-                          >
-                            حذف
-                          </button>
-                        </div>
-                      </td>
+          <>
+            {/* جدول دسکتاپ؛ ستون‌ها و اطلاعات جدول حفظ شده‌اند */}
+            <div className="admin-categories-desktop">
+              <div className="admin-categories-table-scroll">
+                <table className="admin-categories-table">
+                  <thead>
+                    <tr>
+                      {[
+                        "نام",
+                        "اسلاگ",
+                        "والد",
+                        "محصولات",
+                        "زیردسته‌ها",
+                        "وضعیت",
+                        "عملیات",
+                      ].map((heading) => (
+                        <th key={heading} scope="col">
+                          {heading}
+                        </th>
+                      ))}
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                  </thead>
+
+                  <tbody>
+                    {filteredCategories.map((category) => (
+                      <tr key={category.id}>
+                        <td className="admin-category-name">{category.name}</td>
+
+                        <td className="admin-category-slug" dir="ltr">
+                          {category.slug || "—"}
+                        </td>
+
+                        <td>{category.parent?.name ?? "—"}</td>
+
+                        <td>{formatNumber(category.products_count)}</td>
+
+                        <td>{formatNumber(category.children_count)}</td>
+
+                        <td>{renderStatus(category)}</td>
+
+                        <td>{renderCategoryActions(category)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* کارت موبایل؛ فقط در صفحه‌های کوچک نمایش داده می‌شود */}
+            <div className="admin-categories-mobile">
+              {filteredCategories.map((category) => (
+                <article key={category.id} className="admin-category-card">
+                  <div className="admin-category-card-header">
+                    <div className="admin-category-card-title">
+                      <span className="admin-category-card-id">
+                        شناسه: {formatNumber(category.id)}
+                      </span>
+                      <h3>{category.name}</h3>
+                    </div>
+
+                    {renderStatus(category)}
+                  </div>
+
+                  <div className="admin-category-card-details">
+                    <div className="admin-category-detail">
+                      <span>اسلاگ</span>
+                      <strong dir="ltr">{category.slug || "—"}</strong>
+                    </div>
+
+                    <div className="admin-category-detail">
+                      <span>دسته‌بندی والد</span>
+                      <strong>{category.parent?.name ?? "دسته اصلی"}</strong>
+                    </div>
+
+                    <div className="admin-category-stat">
+                      <span>محصولات</span>
+                      <strong>{formatNumber(category.products_count)}</strong>
+                    </div>
+
+                    <div className="admin-category-stat">
+                      <span>زیردسته‌ها</span>
+                      <strong>{formatNumber(category.children_count)}</strong>
+                    </div>
+                  </div>
+
+                  <div className="admin-category-card-actions">
+                    {renderCategoryActions(category)}
+                  </div>
+                </article>
+              ))}
+            </div>
+          </>
         )}
       </section>
     </div>

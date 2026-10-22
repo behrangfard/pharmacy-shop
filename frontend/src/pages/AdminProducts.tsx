@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import api from "../services/api";
 import { calculateProductPrice } from "../utils/price";
@@ -65,7 +65,7 @@ function getProductImage(product: Product): string {
   return imageUrl(product.thumbnail || firstImage?.path);
 }
 
-function formatNumber(value: string | number) {
+function formatNumber(value: string | number | undefined) {
   return new Intl.NumberFormat("fa-IR").format(Number(value ?? 0));
 }
 
@@ -104,28 +104,77 @@ function AdminProducts() {
   const [notice, setNotice] = useState("");
   const [failedImages, setFailedImages] = useState<number[]>([]);
 
+  const requestIdRef = useRef(0);
+  const inFlightRequestRef = useRef<{
+    key: string;
+    promise: Promise<any>;
+  } | null>(null);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      const nextSearch = searchInput.trim();
+
+      setSearch((currentSearch) =>
+        currentSearch === nextSearch ? currentSearch : nextSearch,
+      );
+
+      setPage(1);
+    }, 350);
+
+    return () => window.clearTimeout(timeout);
+  }, [searchInput]);
+
   const loadProducts = useCallback(async () => {
+    const requestId = ++requestIdRef.current;
+
     setLoading(true);
     setError("");
 
-    try {
-      const params: Record<string, string | number> = {
-        page,
-        per_page: 10,
+    const params: Record<string, string | number> = {
+      page,
+      per_page: 10,
+    };
+
+    if (search) {
+      params.search = search;
+    }
+
+    if (status !== "all") {
+      params.status = status;
+    }
+
+    const requestKey = JSON.stringify(params);
+
+    let request = inFlightRequestRef.current;
+
+    if (!request || request.key !== requestKey) {
+      const promise = api.get("/admin/products", { params });
+
+      request = {
+        key: requestKey,
+        promise,
       };
 
-      if (search.trim()) {
-        params.search = search.trim();
+      inFlightRequestRef.current = request;
+    }
+
+    try {
+      let response;
+
+      try {
+        response = await request.promise;
+      } finally {
+        if (inFlightRequestRef.current === request) {
+          inFlightRequestRef.current = null;
+        }
       }
 
-      if (status !== "all") {
-        params.status = status;
+      if (requestId !== requestIdRef.current) {
+        return;
       }
 
-      const response = await api.get("/admin/products", { params });
       const result = response.data?.data;
 
-      // Laravel paginator returns products inside result.data.
       const productList = Array.isArray(result)
         ? result
         : Array.isArray(result?.data)
@@ -135,22 +184,44 @@ function AdminProducts() {
       setProducts(productList);
       setFailedImages([]);
 
+      const lastPage = Math.max(1, Number(result?.last_page ?? 1));
+      const currentPage = Number(result?.current_page ?? page);
+
       setPagination({
-        current_page: Number(result?.current_page ?? 1),
-        last_page: Number(result?.last_page ?? 1),
+        current_page: currentPage,
+        last_page: lastPage,
         total: Number(result?.total ?? productList.length),
       });
-    } catch (err: any) {
+
+      if (page > lastPage) {
+        setPage(1);
+      }
+    } catch (err: unknown) {
+      if (requestId !== requestIdRef.current) {
+        return;
+      }
+
+      const apiError = err as {
+        response?: { data?: { message?: string } };
+      };
+
       setError(
-        err?.response?.data?.message || "دریافت فهرست محصولات با خطا مواجه شد.",
+        apiError.response?.data?.message ||
+          "دریافت فهرست محصولات با خطا مواجه شد.",
       );
     } finally {
-      setLoading(false);
+      if (requestId === requestIdRef.current) {
+        setLoading(false);
+      }
     }
   }, [page, search, status]);
 
   useEffect(() => {
-    loadProducts();
+    void loadProducts();
+
+    return () => {
+      requestIdRef.current += 1;
+    };
   }, [loadProducts]);
 
   useEffect(() => {
@@ -171,12 +242,6 @@ function AdminProducts() {
 
     return () => window.clearTimeout(timeout);
   }, [notice]);
-
-  function handleSearch(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setPage(1);
-    setSearch(searchInput);
-  }
 
   async function toggleStatus(product: Product) {
     const nextStatus = !product.is_active;
@@ -201,13 +266,25 @@ function AdminProducts() {
 
       setNotice(`وضعیت محصول «${product.name}» با موفقیت تغییر کرد.`);
       await loadProducts();
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const apiError = err as {
+        response?: { data?: { message?: string } };
+      };
+
       setError(
-        err?.response?.data?.message || "تغییر وضعیت محصول با خطا مواجه شد.",
+        apiError.response?.data?.message ||
+          "تغییر وضعیت محصول با خطا مواجه شد.",
       );
     } finally {
       setBusyId(null);
     }
+  }
+
+  function clearFilters() {
+    setSearchInput("");
+    setSearch("");
+    setStatus("all");
+    setPage(1);
   }
 
   const activeCount = products.filter((product) => product.is_active).length;
@@ -219,10 +296,16 @@ function AdminProducts() {
   return (
     <div
       dir="rtl"
+      className="admin-products-page"
       style={{
         display: "grid",
+        gridTemplateColumns: "minmax(0, 1fr)",
         gap: 20,
         color: "#111827",
+        width: "100%",
+        maxWidth: "none",
+        minWidth: 0,
+        boxSizing: "border-box",
       }}
     >
       <div
@@ -233,13 +316,14 @@ function AdminProducts() {
           gap: 16,
           flexWrap: "wrap",
           marginBottom: 26,
+          minWidth: 0,
         }}
       >
         <div>
           <h1
             style={{
               margin: "0 0 8px",
-              fontSize: "28px",
+              fontSize: 28,
               fontWeight: 800,
             }}
           >
@@ -254,7 +338,7 @@ function AdminProducts() {
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <button
             type="button"
-            onClick={loadProducts}
+            onClick={() => void loadProducts()}
             disabled={loading}
             style={{
               ...buttonStyle,
@@ -316,6 +400,7 @@ function AdminProducts() {
           display: "grid",
           gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
           gap: 12,
+          minWidth: 0,
         }}
       >
         <div style={statCardStyle}>
@@ -345,14 +430,21 @@ function AdminProducts() {
         </div>
       </div>
 
-      <div style={panelStyle}>
-        <form
-          onSubmit={handleSearch}
+      <div
+        style={{
+          ...panelStyle,
+          width: "100%",
+          minWidth: 0,
+          boxSizing: "border-box",
+        }}
+      >
+        <div
           style={{
             display: "flex",
             gap: 10,
             flexWrap: "wrap",
             alignItems: "center",
+            minWidth: 0,
           }}
         >
           <input
@@ -364,7 +456,8 @@ function AdminProducts() {
             style={{
               ...inputStyle,
               flex: "1 1 260px",
-              minWidth: 180,
+              minWidth: 0,
+              boxSizing: "border-box",
             }}
           />
 
@@ -383,33 +476,27 @@ function AdminProducts() {
           </select>
 
           <button
-            type="submit"
-            style={{
-              ...buttonStyle,
-              background: "#111827",
-              color: "#fff",
-              borderColor: "#111827",
-            }}
-          >
-            جست‌وجو
-          </button>
-
-          <button
             type="button"
-            onClick={() => {
-              setSearchInput("");
-              setSearch("");
-              setStatus("all");
-              setPage(1);
-            }}
+            onClick={clearFilters}
             style={{ ...buttonStyle, background: "#fff", color: "#374151" }}
           >
             پاک کردن فیلترها
           </button>
-        </form>
+        </div>
       </div>
 
-      <div style={{ ...panelStyle, padding: 0, overflow: "hidden" }}>
+      <div
+        className="admin-products-panel"
+        style={{
+          ...panelStyle,
+          width: "100%",
+          maxWidth: "none",
+          minWidth: 0,
+          boxSizing: "border-box",
+          padding: 0,
+          overflow: "hidden",
+        }}
+      >
         {loading ? (
           <div style={{ padding: 35, textAlign: "center", color: "#6b7280" }}>
             در حال دریافت فهرست محصولات...
@@ -422,14 +509,26 @@ function AdminProducts() {
             </div>
           </div>
         ) : (
-          <div style={{ overflowX: "auto" }}>
+          <div
+            className="admin-products-table-wrapper"
+            style={{
+              display: "block",
+              width: "100%",
+              maxWidth: "none",
+              minWidth: 0,
+              overflowX: "auto",
+              boxSizing: "border-box",
+            }}
+          >
             <table
               className="admin-products-desktop-table"
               style={{
                 width: "100%",
-                borderCollapse: "collapse",
                 minWidth: 950,
+                maxWidth: "none",
+                borderCollapse: "collapse",
                 textAlign: "right",
+                tableLayout: "auto",
               }}
             >
               <thead>
@@ -593,10 +692,7 @@ function AdminProducts() {
                               </span>
 
                               <span
-                                style={{
-                                  color: "#15803d",
-                                  fontWeight: 700,
-                                }}
+                                style={{ color: "#15803d", fontWeight: 700 }}
                               >
                                 {formatNumber(finalPrice)} تومان
                               </span>
@@ -676,7 +772,7 @@ function AdminProducts() {
                           <button
                             type="button"
                             disabled={busyId === product.id}
-                            onClick={() => toggleStatus(product)}
+                            onClick={() => void toggleStatus(product)}
                             style={{
                               ...buttonStyle,
                               background: product.is_active
@@ -704,6 +800,7 @@ function AdminProducts() {
             </table>
           </div>
         )}
+
         {!loading && products.length > 0 && (
           <div className="admin-products-mobile-cards">
             {products.map((product) => {
@@ -717,6 +814,8 @@ function AdminProducts() {
                 product.discount_percent,
               );
 
+              const thumbnail = getProductImage(product);
+
               return (
                 <article
                   key={product.id}
@@ -726,6 +825,7 @@ function AdminProducts() {
                     padding: 14,
                     background: "#fff",
                     minWidth: 0,
+                    boxSizing: "border-box",
                   }}
                 >
                   <div
@@ -748,10 +848,9 @@ function AdminProducts() {
                         placeItems: "center",
                       }}
                     >
-                      {getProductImage(product) &&
-                      !failedImages.includes(product.id) ? (
+                      {thumbnail && !failedImages.includes(product.id) ? (
                         <img
-                          src={getProductImage(product)!}
+                          src={thumbnail}
                           alt={product.name}
                           onError={() =>
                             setFailedImages((previous) =>
@@ -955,9 +1054,6 @@ function AdminProducts() {
                         color: "#1d4ed8",
                         borderColor: "#bfdbfe",
                         minHeight: 42,
-                        display: "inline-flex",
-                        alignItems: "center",
-                        justifyContent: "center",
                       }}
                     >
                       ویرایش
@@ -966,7 +1062,7 @@ function AdminProducts() {
                     <button
                       type="button"
                       disabled={busyId === product.id}
-                      onClick={() => toggleStatus(product)}
+                      onClick={() => void toggleStatus(product)}
                       style={{
                         ...buttonStyle,
                         flex: "1 1 130px",
@@ -998,6 +1094,7 @@ function AdminProducts() {
           justifyContent: "space-between",
           gap: 12,
           flexWrap: "wrap",
+          minWidth: 0,
         }}
       >
         <span style={{ color: "#6b7280", fontSize: 13 }}>
@@ -1091,7 +1188,7 @@ const tableHeaderStyle = {
 } as const;
 
 const tableCellStyle = {
-  padding: "14px",
+  padding: 14,
   fontSize: 13,
   verticalAlign: "middle" as const,
   borderBottom: "1px solid #f3f4f6",

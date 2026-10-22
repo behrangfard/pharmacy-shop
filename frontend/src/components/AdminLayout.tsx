@@ -1,5 +1,15 @@
-import { Link, NavLink, Outlet } from "react-router-dom";
 import { useState } from "react";
+import { Link, NavLink, Outlet } from "react-router-dom";
+import {
+  LayoutDashboard,
+  Package,
+  Tags,
+  ShoppingCart,
+  Store,
+  LogOut,
+  X,
+  ShieldCheck,
+} from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
 function AdminLayout() {
@@ -11,30 +21,27 @@ function AdminLayout() {
       to: "/admin",
       label: "داشبورد",
       end: true,
+      icon: LayoutDashboard,
     },
     {
       to: "/admin/products",
       label: "محصولات",
+      icon: Package,
     },
     {
       to: "/admin/categories",
       label: "دسته‌بندی‌ها",
+      icon: Tags,
     },
     {
       to: "/admin/orders",
       label: "سفارش‌ها",
+      icon: ShoppingCart,
     },
   ];
 
   return (
-    <div
-      dir="rtl"
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        background: "#f5f7fb",
-      }}
-    >
+    <div className="admin-layout" dir="rtl">
       {mobileMenuOpen && (
         <button
           type="button"
@@ -44,150 +51,104 @@ function AdminLayout() {
         />
       )}
 
-      <aside
-        className={`admin-sidebar ${mobileMenuOpen ? "is-open" : ""}`}
-        style={{
-          width: "220px",
-          minHeight: "100vh",
-          background: "#111827",
-          color: "#fff",
-          padding: "24px 16px",
-          boxSizing: "border-box",
-          position: "fixed",
-          top: 0,
-          right: 0,
-          bottom: 0,
-          display: "flex",
-          flexDirection: "column",
-        }}
-      >
+      <aside className={`admin-sidebar ${mobileMenuOpen ? "is-open" : ""}`}>
         <button
           type="button"
           className="admin-mobile-close-button"
           onClick={() => setMobileMenuOpen(false)}
           aria-label="بستن منو"
         >
-          ✕ بستن منو
+          <X size={18} />
+          <span>بستن منو</span>
         </button>
 
-        <Link
-          to="/admin"
-          style={{
-            color: "#fff",
-            textDecoration: "none",
-            fontSize: "22px",
-            fontWeight: 800,
-            padding: "8px 12px",
-            marginBottom: "30px",
-          }}
-        >
-          پنل مدیریت
+        <Link to="/admin" className="admin-brand">
+          <span className="admin-brand-icon">
+            <ShieldCheck size={25} strokeWidth={2.1} />
+          </span>
+
+          <span className="admin-brand-text">
+            <strong>پنل مدیریت</strong>
+            <small>مدیریت فروشگاه</small>
+          </span>
         </Link>
 
-        <nav
-          aria-label="منوی مدیریت"
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "8px",
-          }}
-        >
-          {navItems.map((item) => (
-            <NavLink
-              onClick={() => setMobileMenuOpen(false)}
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              style={({ isActive }) => ({
-                color: "#fff",
-                textDecoration: "none",
-                padding: "12px 14px",
-                borderRadius: "10px",
-                background: isActive ? "rgba(255,255,255,0.12)" : "transparent",
-                fontWeight: isActive ? 700 : 500,
-              })}
-            >
-              {item.label}
-            </NavLink>
-          ))}
+        <div className="admin-nav-heading">منوی اصلی</div>
+
+        <nav className="admin-nav" aria-label="منوی مدیریت">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+
+            return (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.end}
+                onClick={() => setMobileMenuOpen(false)}
+                className={({ isActive }) =>
+                  `admin-nav-link ${isActive ? "is-active" : ""}`
+                }
+              >
+                <span className="admin-nav-icon">
+                  <Icon size={20} strokeWidth={1.9} />
+                </span>
+
+                <span className="admin-nav-label">{item.label}</span>
+
+                <span className="admin-nav-indicator" />
+              </NavLink>
+            );
+          })}
         </nav>
 
-        <div
-          style={{
-            marginTop: "auto",
-            borderTop: "1px solid rgba(255,255,255,0.1)",
-            paddingTop: "18px",
-          }}
-        >
-          <div
-            style={{
-              fontSize: "14px",
-              color: "#d1d5db",
-              marginBottom: "12px",
-              padding: "0 12px",
-            }}
-          >
-            {user?.name}
+        <div className="admin-sidebar-footer">
+          <div className="admin-user-card">
+            <div className="admin-user-avatar">
+              {(user?.name?.trim()?.charAt(0) || "ک").toUpperCase()}
+            </div>
+
+            <div className="admin-user-info">
+              <span className="admin-user-caption">حساب کاربری</span>
+              <strong className="admin-user-name">
+                {user?.name || "مدیر فروشگاه"}
+              </strong>
+            </div>
           </div>
 
-          <Link
-            to="/"
-            style={{
-              display: "block",
-              color: "#d1d5db",
-              textDecoration: "none",
-              padding: "10px 12px",
-              fontSize: "14px",
-            }}
-          >
-            مشاهده فروشگاه
+          <Link to="/" className="admin-store-link">
+            <Store size={19} strokeWidth={1.9} />
+            <span>مشاهده فروشگاه</span>
           </Link>
 
           <button
             type="button"
+            className="admin-logout-button"
             onClick={() => {
               void logout();
             }}
-            style={{
-              width: "100%",
-              border: 0,
-              background: "transparent",
-              color: "#fca5a5",
-              textAlign: "right",
-              padding: "10px 12px",
-              cursor: "pointer",
-              fontSize: "14px",
-              fontFamily: "inherit",
-            }}
           >
-            خروج از حساب
+            <LogOut size={19} strokeWidth={1.9} />
+            <span>خروج از حساب</span>
           </button>
         </div>
       </aside>
 
-      <main
-        className="admin-main"
-        style={{
-          flex: 1,
-          marginRight: "220px",
-          minHeight: "100vh",
-          padding: "16px",
-          boxSizing: "border-box",
-        }}
-      >
+      <main className="admin-main">
         <button
           type="button"
           className="admin-mobile-menu-button"
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          onClick={() => setMobileMenuOpen((open) => !open)}
           aria-label="باز و بسته کردن منو"
           aria-expanded={mobileMenuOpen}
         >
-          <span></span>
-          <span></span>
-          <span></span>
+          <span />
+          <span />
+          <span />
         </button>
 
-        <Outlet />
+        <div className="admin-page-content">
+          <Outlet />
+        </div>
       </main>
     </div>
   );

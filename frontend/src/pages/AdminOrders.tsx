@@ -262,21 +262,15 @@ function AdminOrders() {
     }
 
     if (selectedOrder.status === "delivered" && newStatus !== "delivered") {
-      setNotice("وضعیت سفارش تحویل‌شده قابل تغییر نیست.");
+      setNotice("وضعیت سفارش تحویل‌شده قابل بازگشت نیست.");
       return;
     }
 
     if (newStatus === "cancelled") {
-      if (selectedOrder.payment_status === "paid") {
-        setNotice("سفارش پرداخت‌شده از این مسیر قابل لغو نیست.");
-        return;
-      }
-
-      const confirmed = window.confirm(
-        "سفارش لغو شود و موجودی محصولات به انبار بازگردد؟",
+      setNotice(
+        "لغو سفارش از این صفحه پشتیبانی نمی‌شود؛ ابتدا باید بازگرداندن موجودی به‌صورت امن پیاده‌سازی شود.",
       );
-
-      if (!confirmed) return;
+      return;
     }
 
     if (
@@ -305,10 +299,8 @@ function AdminOrders() {
       setNotice(response.data.message || "وضعیت سفارش به‌روزرسانی شد.");
 
       await loadOrders();
-    } catch (error: any) {
-      setNotice(
-        error?.response?.data?.message || "به‌روزرسانی وضعیت سفارش انجام نشد.",
-      );
+    } catch (requestError) {
+      setNotice(getErrorMessage(requestError, "تغییر وضعیت سفارش ناموفق بود."));
     } finally {
       setUpdatingStatus(false);
     }
@@ -331,7 +323,15 @@ function AdminOrders() {
   };
 
   return (
-    <div dir="rtl" style={{ color: "#111827" }}>
+    <div
+      dir="rtl"
+      style={{
+        color: "#111827",
+        width: "100%",
+        minWidth: 0,
+        boxSizing: "border-box",
+      }}
+    >
       <div
         style={{
           display: "flex",
@@ -374,7 +374,7 @@ function AdminOrders() {
               background: "#059669",
             }}
           >
-            پاک کردن جستجو و نمایش همه سفارش‌ها
+            پاک کردن جست‌وجو و نمایش همه سفارش‌ها
           </button>
 
           <button
@@ -394,7 +394,8 @@ function AdminOrders() {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
+          gridTemplateColumns:
+            "repeat(auto-fit, minmax(min(100%, 170px), 1fr))",
           gap: "14px",
           marginBottom: "22px",
         }}
@@ -433,13 +434,16 @@ function AdminOrders() {
       </div>
 
       <form
-        className="admin-orders-filters"
         onSubmit={applySearch}
         style={{
           ...cardStyle,
           display: "grid",
           gridTemplateColumns:
-            "minmax(180px, 2fr) repeat(2, minmax(150px, 1fr)) auto",
+            "repeat(auto-fit, minmax(min(100%, 180px), 1fr))",
+          width: "100%",
+          maxWidth: "100%",
+          minWidth: 0,
+          boxSizing: "border-box",
           gap: "12px",
           alignItems: "end",
           marginBottom: "20px",
@@ -450,6 +454,7 @@ function AdminOrders() {
             display: "block",
             fontSize: "13px",
             color: "#4b5563",
+            minWidth: 0,
           }}
         >
           جست‌وجو
@@ -466,6 +471,7 @@ function AdminOrders() {
             display: "block",
             fontSize: "13px",
             color: "#4b5563",
+            minWidth: 0,
           }}
         >
           وضعیت سفارش
@@ -488,6 +494,7 @@ function AdminOrders() {
             display: "block",
             fontSize: "13px",
             color: "#4b5563",
+            minWidth: 0,
           }}
         >
           وضعیت پرداخت
@@ -519,6 +526,7 @@ function AdminOrders() {
             borderRadius: "10px",
             padding: "14px 16px",
             marginBottom: "18px",
+            overflowWrap: "anywhere",
           }}
         >
           {error}
@@ -535,6 +543,7 @@ function AdminOrders() {
             borderRadius: "10px",
             padding: "14px 16px",
             marginBottom: "18px",
+            overflowWrap: "anywhere",
           }}
         >
           {notice}
@@ -561,7 +570,11 @@ function AdminOrders() {
         style={{
           ...cardStyle,
           padding: 0,
-          overflowX: "auto",
+          width: "100%",
+          maxWidth: "100%",
+          minWidth: 0,
+          overflow: "hidden",
+          boxSizing: "border-box",
         }}
       >
         {loading ? (
@@ -597,286 +610,231 @@ function AdminOrders() {
             </button>
           </div>
         ) : (
-          <table
-            className="admin-orders-desktop-table"
-            style={{
-              width: "100%",
-              minWidth: "900px",
-              borderCollapse: "collapse",
-              textAlign: "right",
-            }}
-          >
-            <thead style={{ background: "#f9fafb" }}>
-              <tr>
-                {[
-                  "ردیف",
-                  "شماره سفارش",
-                  "نام گیرنده",
-                  "مبلغ نهایی",
-                  "وضعیت سفارش",
-                  "وضعیت پرداخت",
-                  "تاریخ",
-                  "جزئیات",
-                ].map((heading) => (
-                  <th
-                    key={heading}
+          <>
+            <div className="admin-orders-desktop-table">
+              <table
+                className="admin-orders-table"
+                style={{
+                  width: "100%",
+                  minWidth: "900px",
+                  borderCollapse: "collapse",
+                  textAlign: "right",
+                }}
+              >
+                <thead style={{ background: "#f9fafb" }}>
+                  <tr>
+                    {[
+                      "شماره سفارش",
+                      "نام گیرنده",
+                      "مبلغ نهایی",
+                      "وضعیت سفارش",
+                      "وضعیت پرداخت",
+                      "تاریخ",
+                      "جزئیات",
+                    ].map((heading) => (
+                      <th
+                        key={heading}
+                        style={{
+                          padding: "15px 16px",
+                          color: "#4b5563",
+                          fontSize: "13px",
+                          fontWeight: 700,
+                          whiteSpace: "nowrap",
+                          borderBottom: "1px solid #e5e7eb",
+                        }}
+                      >
+                        {heading}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {orders.map((order) => (
+                    <tr key={order.id}>
+                      <td style={cellStyle}>
+                        <strong>{order.order_number}</strong>
+                      </td>
+
+                      <td style={cellStyle}>{order.recipient_name || "—"}</td>
+
+                      <td
+                        style={{
+                          ...cellStyle,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {formatPrice(order.total)}
+                      </td>
+
+                      <td style={cellStyle}>
+                        <span
+                          style={{
+                            ...statusColors[order.status],
+                            display: "inline-block",
+                            borderRadius: "20px",
+                            padding: "5px 10px",
+                            fontSize: "12px",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {statusLabels[order.status] || order.status}
+                        </span>
+                      </td>
+
+                      <td style={cellStyle}>
+                        <span
+                          style={{
+                            ...paymentColors[order.payment_status],
+                            display: "inline-block",
+                            borderRadius: "20px",
+                            padding: "5px 10px",
+                            fontSize: "12px",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {paymentLabels[order.payment_status] ||
+                            order.payment_status}
+                        </span>
+                      </td>
+
+                      <td
+                        style={{
+                          ...cellStyle,
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {formatDate(order.created_at)}
+                      </td>
+
+                      <td style={cellStyle}>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            void openOrderDetails(order.order_number)
+                          }
+                          style={detailButtonStyle}
+                        >
+                          مشاهده
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="admin-orders-mobile-cards">
+              {orders.map((order) => (
+                <article
+                  key={order.id}
+                  style={{
+                    border: "1px solid #e5e7eb",
+                    borderRadius: "12px",
+                    padding: "14px",
+                    background: "#fff",
+                    minWidth: 0,
+                    boxSizing: "border-box",
+                  }}
+                >
+                  <div
                     style={{
-                      padding: "15px 16px",
-                      color: "#4b5563",
-                      fontSize: "13px",
-                      fontWeight: 700,
-                      whiteSpace: "nowrap",
-                      borderBottom: "1px solid #e5e7eb",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                      gap: "8px",
+                      marginBottom: "14px",
                     }}
                   >
-                    {heading}
-                  </th>
-                ))}
-              </tr>
-            </thead>
+                    <strong style={{ overflowWrap: "anywhere" }}>
+                      سفارش {order.order_number}
+                    </strong>
 
-            <tbody>
-              {orders.map((order, index) => (
-                <tr key={order.id}>
-                  <td style={cellStyle}>{(page - 1) * 15 + index + 1}</td>
-
-                  <td style={cellStyle}>
-                    <strong>{order.order_number}</strong>
-                  </td>
-
-                  <td style={cellStyle}>{order.recipient_name || "—"}</td>
-
-                  <td style={{ ...cellStyle, whiteSpace: "nowrap" }}>
-                    {formatPrice(order.total)}
-                  </td>
-
-                  <td style={cellStyle}>
-                    <span
-                      style={{
-                        ...statusColors[order.status],
-                        display: "inline-block",
-                        borderRadius: "20px",
-                        padding: "5px 10px",
-                        fontSize: "12px",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {statusLabels[order.status] || order.status}
-                    </span>
-                  </td>
-
-                  <td style={cellStyle}>
-                    <span
-                      style={{
-                        ...paymentColors[order.payment_status],
-                        display: "inline-block",
-                        borderRadius: "20px",
-                        padding: "5px 10px",
-                        fontSize: "12px",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {paymentLabels[order.payment_status] ||
-                        order.payment_status}
-                    </span>
-                  </td>
-
-                  <td style={{ ...cellStyle, whiteSpace: "nowrap" }}>
-                    {formatDate(order.created_at)}
-                  </td>
-
-                  <td style={cellStyle}>
                     <button
                       type="button"
                       onClick={() => void openOrderDetails(order.order_number)}
-                      style={{
-                        border: "1px solid #bfdbfe",
-                        background: "#eff6ff",
-                        color: "#1d4ed8",
-                        borderRadius: "8px",
-                        padding: "8px 12px",
-                        fontFamily: "inherit",
-                        cursor: "pointer",
-                        whiteSpace: "nowrap",
-                      }}
+                      style={detailButtonStyle}
                     >
-                      مشاهده
+                      مشاهده جزئیات
                     </button>
-                  </td>
-                </tr>
+                  </div>
+
+                  <div style={{ display: "grid", gap: "12px" }}>
+                    <div>
+                      <div style={mobileLabelStyle}>نام گیرنده</div>
+                      <div
+                        style={{
+                          marginTop: "4px",
+                          overflowWrap: "anywhere",
+                        }}
+                      >
+                        {order.recipient_name || "—"}
+                      </div>
+                    </div>
+
+                    <div>
+                      <div style={mobileLabelStyle}>مبلغ نهایی</div>
+                      <strong
+                        style={{
+                          display: "block",
+                          marginTop: "4px",
+                          overflowWrap: "anywhere",
+                        }}
+                      >
+                        {formatPrice(order.total)}
+                      </strong>
+                    </div>
+
+                    <div>
+                      <div style={mobileLabelStyle}>وضعیت سفارش</div>
+                      <div style={{ marginTop: "6px" }}>
+                        <span
+                          style={{
+                            ...statusColors[order.status],
+                            display: "inline-block",
+                            borderRadius: "20px",
+                            padding: "5px 10px",
+                            fontSize: "12px",
+                          }}
+                        >
+                          {statusLabels[order.status] || order.status}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div style={mobileLabelStyle}>وضعیت پرداخت</div>
+                      <div style={{ marginTop: "6px" }}>
+                        <span
+                          style={{
+                            ...paymentColors[order.payment_status],
+                            display: "inline-block",
+                            borderRadius: "20px",
+                            padding: "5px 10px",
+                            fontSize: "12px",
+                          }}
+                        >
+                          {paymentLabels[order.payment_status] ||
+                            order.payment_status}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div style={mobileLabelStyle}>تاریخ ثبت</div>
+                      <div style={{ marginTop: "4px" }}>
+                        {formatDate(order.created_at)}
+                      </div>
+                    </div>
+                  </div>
+                </article>
               ))}
-            </tbody>
-          </table>
+            </div>
+          </>
         )}
       </div>
-      {!loading && orders.length > 0 && (
-        <div className="admin-orders-mobile-cards">
-          {orders.map((order, index) => (
-            <article
-              key={order.id}
-              style={{
-                background: "#fff",
-                border: "1px solid #e5e7eb",
-                borderRadius: "14px",
-                padding: "16px",
-                marginBottom: "12px",
-                boxShadow: "0 2px 8px rgba(15, 23, 42, 0.04)",
-              }}
-            >
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "flex-start",
-                  gap: "10px",
-                  marginBottom: "14px",
-                }}
-              >
-                <div style={{ minWidth: 0 }}>
-                  <div
-                    style={{
-                      fontSize: "12px",
-                      color: "#6b7280",
-                      marginBottom: "5px",
-                    }}
-                  >
-                    شماره سفارش
-                  </div>
-                  <strong style={{ overflowWrap: "anywhere" }}>
-                    {order.order_number}
-                  </strong>
-                </div>
 
-                <span
-                  style={{
-                    fontSize: "12px",
-                    color: "#6b7280",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  ردیف{" "}
-                  {new Intl.NumberFormat("fa-IR").format(
-                    (page - 1) * 15 + index + 1,
-                  )}
-                </span>
-              </div>
-
-              <div style={{ marginBottom: "12px", overflowWrap: "anywhere" }}>
-                <span style={{ color: "#6b7280", fontSize: "13px" }}>
-                  گیرنده:{" "}
-                </span>
-                <strong>{order.recipient_name || "—"}</strong>
-              </div>
-
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-                  gap: "14px 10px",
-                  marginBottom: "16px",
-                }}
-              >
-                <div>
-                  <div
-                    style={{
-                      color: "#6b7280",
-                      fontSize: "12px",
-                      marginBottom: "6px",
-                    }}
-                  >
-                    مبلغ نهایی
-                  </div>
-                  <strong style={{ fontSize: "14px" }}>
-                    {formatPrice(order.total)}
-                  </strong>
-                </div>
-
-                <div>
-                  <div
-                    style={{
-                      color: "#6b7280",
-                      fontSize: "12px",
-                      marginBottom: "6px",
-                    }}
-                  >
-                    تاریخ
-                  </div>
-                  <span style={{ fontSize: "13px" }}>
-                    {formatDate(order.created_at)}
-                  </span>
-                </div>
-
-                <div>
-                  <div
-                    style={{
-                      color: "#6b7280",
-                      fontSize: "12px",
-                      marginBottom: "6px",
-                    }}
-                  >
-                    وضعیت سفارش
-                  </div>
-                  <span
-                    style={{
-                      ...statusColors[order.status],
-                      display: "inline-block",
-                      borderRadius: "20px",
-                      padding: "5px 9px",
-                      fontSize: "12px",
-                    }}
-                  >
-                    {statusLabels[order.status] || order.status}
-                  </span>
-                </div>
-
-                <div>
-                  <div
-                    style={{
-                      color: "#6b7280",
-                      fontSize: "12px",
-                      marginBottom: "6px",
-                    }}
-                  >
-                    وضعیت پرداخت
-                  </div>
-                  <span
-                    style={{
-                      ...paymentColors[order.payment_status],
-                      display: "inline-block",
-                      borderRadius: "20px",
-                      padding: "5px 9px",
-                      fontSize: "12px",
-                    }}
-                  >
-                    {paymentLabels[order.payment_status] ||
-                      order.payment_status}
-                  </span>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => void openOrderDetails(order.order_number)}
-                style={{
-                  width: "100%",
-                  minHeight: "44px",
-                  border: "1px solid #bfdbfe",
-                  background: "#eff6ff",
-                  color: "#1d4ed8",
-                  borderRadius: "9px",
-                  padding: "10px",
-                  fontFamily: "inherit",
-                  fontSize: "14px",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                }}
-              >
-                مشاهده جزئیات سفارش
-              </button>
-            </article>
-          ))}
-        </div>
-      )}
       <div
         style={{
           display: "flex",
@@ -934,7 +892,6 @@ function AdminOrders() {
           }}
         >
           <section
-            className="admin-order-details-modal"
             role="dialog"
             aria-modal="true"
             aria-labelledby="order-details-title"
@@ -997,7 +954,8 @@ function AdminOrders() {
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                gridTemplateColumns:
+                  "repeat(auto-fit, minmax(min(100%, 180px), 1fr))",
                 gap: "12px",
                 marginBottom: "22px",
               }}
@@ -1039,7 +997,7 @@ function AdminOrders() {
               اقلام سفارش
             </h3>
 
-            <div style={{ overflowX: "auto" }}>
+            <div style={{ overflowX: "auto", maxWidth: "100%" }}>
               <table
                 style={{
                   width: "100%",
@@ -1172,11 +1130,10 @@ function AdminOrders() {
                       ...inputStyle,
                       width: "auto",
                       minWidth: "190px",
+                      maxWidth: "100%",
                     }}
                   >
                     <option value="pending">در انتظار</option>
-
-                    <option value="cancelled">لغو سفارش</option>
 
                     {selectedOrder.payment_status === "paid" && (
                       <>
@@ -1238,6 +1195,7 @@ function InfoBox({ label, value }: { label: string; value?: string | null }) {
         borderRadius: "10px",
         padding: "13px",
         minWidth: 0,
+        overflowWrap: "anywhere",
       }}
     >
       <div
@@ -1294,6 +1252,22 @@ const cellStyle: React.CSSProperties = {
   borderBottom: "1px solid #e5e7eb",
   fontSize: "13px",
   verticalAlign: "middle",
+};
+
+const detailButtonStyle: React.CSSProperties = {
+  border: "1px solid #bfdbfe",
+  background: "#eff6ff",
+  color: "#1d4ed8",
+  borderRadius: "8px",
+  padding: "8px 12px",
+  fontFamily: "inherit",
+  cursor: "pointer",
+  whiteSpace: "nowrap",
+};
+
+const mobileLabelStyle: React.CSSProperties = {
+  color: "#6b7280",
+  fontSize: "12px",
 };
 
 const modalBackdropStyle: React.CSSProperties = {

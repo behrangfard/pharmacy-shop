@@ -1,6 +1,9 @@
 @import url("https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;600;700;800;900&display=swap");
-
 @import "tailwindcss";
+
+/* ==================================================
+   تنظیمات عمومی
+================================================== */
 
 :root {
   font-family: Vazirmatn, Tahoma, Arial, sans-serif;
@@ -21,9 +24,24 @@ body {
   margin: 0;
   background: #f8fafc;
   color: #0f172a;
+  font-family: Vazirmatn, Tahoma, Arial, sans-serif;
 }
 
-/* دکمه منوی موبایل */
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+img {
+  max-width: 100%;
+}
+
+/* ==================================================
+   منوی موبایل مدیریت
+================================================== */
+
 .admin-mobile-menu-button {
   display: none;
   align-items: center;
@@ -47,13 +65,436 @@ body {
   background: #111827;
 }
 
+.admin-mobile-close-button {
+  display: none;
+}
+
+.admin-mobile-overlay {
+  display: none;
+}
+
+/* ==================================================
+   جدول‌های دسکتاپ و کارت‌های موبایل
+================================================== */
+
+/* سفارش‌ها */
+.admin-orders-desktop-table {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.admin-orders-mobile-cards {
+  display: none;
+}
+
+.admin-orders-table {
+  width: 900px;
+  min-width: 900px;
+  border-collapse: collapse;
+  text-align: right;
+}
+
+/* محصولات */
+.admin-products-desktop-table {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.admin-products-mobile-cards {
+  display: none;
+}
+
+/* ==================================================
+   جزئیات سفارش
+================================================== */
+
+.admin-order-details-modal {
+  max-width: 100%;
+}
+
+.admin-order-details-modal table {
+  max-width: 100%;
+}
+
+/* ==================================================
+   فیلتر سفارش‌ها
+================================================== */
+
+.admin-orders-filters {
+  min-width: 0;
+}
+
+.admin-orders-filters label {
+  min-width: 0;
+}
+
+.admin-orders-filters input,
+.admin-orders-filters select {
+  max-width: 100%;
+}
+
+/* ==================================================
+   داشبورد مدیریت
+================================================== */
+
+.admin-dashboard-stats {
+  min-width: 0;
+}
+
+.admin-dashboard-stats > div {
+  min-width: 0;
+}
+
+.admin-dashboard-panels {
+  min-width: 0;
+}
+
+.admin-dashboard-panels > section {
+  min-width: 0;
+}
+
+.admin-dashboard-order-statuses {
+  min-width: 0;
+}
+
+/* ==================================================
+   فرم محصول
+================================================== */
+
+.admin-product-form {
+  width: 100%;
+  min-width: 0;
+}
+
+.admin-product-form input,
+.admin-product-form select,
+.admin-product-form textarea {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.admin-product-form img {
+  max-width: 100%;
+  height: auto;
+}
+
+/* ==================================================
+   مدیریت دسته‌بندی‌ها
+================================================== */
+
+.admin-categories-page {
+  width: 100%;
+  min-width: 0;
+  color: #111827;
+}
+
+.admin-categories-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.admin-categories-title {
+  margin: 0 0 8px;
+  font-size: 26px;
+  color: #111827;
+}
+
+.admin-categories-subtitle {
+  margin: 0;
+  color: #6b7280;
+  font-size: 14px;
+}
+
+.admin-categories-alert {
+  margin-bottom: 16px;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.admin-categories-error {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.admin-categories-success {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.admin-categories-panel {
+  min-width: 0;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.admin-categories-section-title {
+  margin: 0 0 20px;
+  font-size: 19px;
+  color: #111827;
+}
+
+.admin-categories-list-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.admin-categories-list-heading .admin-categories-section-title {
+  margin: 0;
+}
+
+.admin-categories-message {
+  color: #6b7280;
+  text-align: center;
+  padding: 24px;
+  margin: 0;
+}
+
+/* فرم دسته‌بندی */
+.admin-categories-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.admin-categories-full-width {
+  grid-column: 1 / -1;
+}
+
+.admin-categories-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #374151;
+  cursor: pointer;
+}
+
+.admin-categories-checkbox input {
+  accent-color: #2563eb;
+}
+
+.admin-categories-form-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+
+/* جدول دسکتاپ دسته‌بندی */
+.admin-categories-desktop {
+  display: block;
+  width: 100%;
+  min-width: 0;
+}
+
+.admin-categories-mobile {
+  display: none;
+}
+
+.admin-categories-table-scroll {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.admin-categories-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.admin-categories-table thead tr {
+  background: #f9fafb;
+  color: #4b5563;
+}
+
+.admin-categories-table th {
+  padding: 12px 10px;
+  text-align: right;
+  border-bottom: 1px solid #e5e7eb;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.admin-categories-table td {
+  padding: 12px;
+  border-bottom: 1px solid #f3f4f6;
+  vertical-align: middle;
+}
+
+.admin-categories-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.admin-categories-table tbody tr:hover {
+  background: #fafafa;
+}
+
+.admin-category-name {
+  color: #111827;
+  font-weight: 600;
+}
+
+.admin-category-slug {
+  text-align: left;
+  color: #6b7280;
+  overflow-wrap: anywhere;
+}
+
+.admin-category-status {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.admin-category-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* کارت موبایل دسته‌بندی */
+.admin-category-card {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.035);
+}
+
+.admin-category-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.admin-category-card-title {
+  min-width: 0;
+}
+
+.admin-category-card-title h3 {
+  margin: 5px 0 0;
+  color: #111827;
+  font-size: 16px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+
+.admin-category-card-id {
+  color: #9ca3af;
+  font-size: 11px;
+}
+
+.admin-category-card-details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 12px;
+  padding: 16px 0;
+}
+
+.admin-category-detail,
+.admin-category-stat {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.admin-category-detail > span,
+.admin-category-stat > span {
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.admin-category-detail > strong,
+.admin-category-stat > strong {
+  color: #374151;
+  font-size: 13px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.admin-category-detail > strong[dir="ltr"] {
+  text-align: left;
+}
+
+.admin-category-card-actions {
+  padding-top: 14px;
+  border-top: 1px solid #f3f4f6;
+}
+
+.admin-category-card-actions .admin-category-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.admin-category-card-actions .admin-category-actions button {
+  width: 100%;
+  min-height: 40px;
+  white-space: normal;
+}
+
+.admin-category-card-actions .admin-category-actions button:last-child {
+  grid-column: 1 / -1;
+}
+
+/* ==================================================
+   واکنش‌گرایی: تبلت و موبایل
+================================================== */
+
 @media (max-width: 768px) {
+  /* ساختار اصلی پنل مدیریت */
   .admin-main {
     width: 100%;
+    max-width: 100%;
     min-width: 0;
     margin-right: 0 !important;
     padding: 16px !important;
+    box-sizing: border-box;
+    overflow-x: hidden;
   }
+
+  .admin-main input,
+  .admin-main select,
+  .admin-main form,
+  .admin-main button {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* منوی موبایل */
   .admin-mobile-menu-button {
     display: flex;
     margin-bottom: 16px;
@@ -68,40 +509,7 @@ body {
   .admin-sidebar.is-open {
     transform: translateX(0);
   }
-}
-.admin-mobile-overlay {
-  display: none;
-}
 
-@media (max-width: 768px) {
-  .admin-orders-mobile-cards {
-    display: none;
-  }
-
-  @media (max-width: 768px) {
-    .admin-orders-desktop-table {
-      display: none;
-    }
-
-    .admin-orders-mobile-cards {
-      display: block;
-    }
-  }
-  .admin-order-details-modal {
-    padding: 14px !important;
-    border-radius: 12px !important;
-    width: 100% !important;
-    max-height: 94vh !important;
-  }
-
-  .admin-order-details-modal h2 {
-    font-size: 18px !important;
-    overflow-wrap: anywhere;
-  }
-
-  .admin-order-details-modal table {
-    font-size: 12px;
-  }
   .admin-mobile-overlay {
     display: block;
     position: fixed;
@@ -116,12 +524,44 @@ body {
   .admin-sidebar {
     z-index: 1000;
   }
-}
-.admin-mobile-close-button {
-  display: none;
-}
 
-@media (max-width: 768px) {
+  .admin-mobile-close-button {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    width: 100%;
+    padding: 10px 12px;
+    margin-bottom: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 8px;
+    background: transparent;
+    color: #fff;
+    font-family: inherit;
+    font-size: 14px;
+    cursor: pointer;
+  }
+
+  /* سفارش‌ها: جدول دسکتاپ و کارت موبایل */
+  .admin-orders-desktop-table {
+    display: none;
+  }
+
+  .admin-orders-mobile-cards {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    width: 100%;
+    min-width: 0;
+    padding: 12px;
+    box-sizing: border-box;
+  }
+
+  .admin-orders-mobile-cards article {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
   .admin-orders-filters {
     grid-template-columns: minmax(0, 1fr) !important;
     gap: 12px;
@@ -141,30 +581,31 @@ body {
     width: 100%;
     min-height: 44px;
   }
-  .admin-mobile-close-button {
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 8px;
-    width: 100%;
-    padding: 10px 12px;
-    margin-bottom: 16px;
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    border-radius: 8px;
-    background: transparent;
-    color: #fff;
-    font-family: inherit;
-    font-size: 14px;
-    cursor: pointer;
+
+  .admin-orders-table th,
+  .admin-orders-table td {
+    visibility: visible;
+    vertical-align: middle;
   }
-}
 
-/* نمایش واکنش‌گرای فهرست محصولات مدیریت */
-.admin-products-mobile-cards {
-  display: none;
-}
+  .admin-order-details-modal {
+    padding: 14px !important;
+    border-radius: 12px !important;
+    width: 100% !important;
+    max-height: 94vh !important;
+    overflow-y: auto;
+  }
 
-@media (max-width: 768px) {
+  .admin-order-details-modal h2 {
+    font-size: 18px !important;
+    overflow-wrap: anywhere;
+  }
+
+  .admin-order-details-modal table {
+    font-size: 12px;
+  }
+
+  /* محصولات: کارت موبایل */
   .admin-products-desktop-table {
     display: none;
   }
@@ -175,16 +616,16 @@ body {
     gap: 12px;
     padding: 12px;
     width: 100%;
+    min-width: 0;
     box-sizing: border-box;
   }
 
   .admin-products-mobile-cards article {
-    box-sizing: border-box;
+    min-width: 0;
     overflow-wrap: anywhere;
   }
-}
-/* واکنش‌گرایی داشبورد مدیریت */
-@media (max-width: 768px) {
+
+  /* داشبورد */
   .admin-dashboard-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
     gap: 12px !important;
@@ -229,15 +670,8 @@ body {
   .admin-dashboard-panels section h2 {
     font-size: 17px !important;
   }
-}
 
-@media (max-width: 380px) {
-  .admin-dashboard-stats {
-    grid-template-columns: minmax(0, 1fr) !important;
-  }
-}
-/* Responsive admin product form */
-@media (max-width: 768px) {
+  /* فرم محصول */
   .admin-product-form {
     width: 100%;
     min-width: 0;
@@ -266,9 +700,82 @@ body {
     min-height: 42px;
     box-sizing: border-box;
   }
+
+  /* دسته‌بندی‌ها: کارت به جای جدول */
+  .admin-categories-page {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .admin-categories-heading {
+    align-items: flex-start;
+    margin-bottom: 18px;
+  }
+
+  .admin-categories-title {
+    font-size: 22px;
+  }
+
+  .admin-categories-panel {
+    padding: 14px;
+    border-radius: 10px;
+    margin-bottom: 18px;
+  }
+
+  .admin-categories-section-title {
+    font-size: 17px;
+  }
+
+  .admin-categories-form-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  .admin-categories-full-width {
+    grid-column: auto;
+  }
+
+  .admin-categories-list-heading {
+    align-items: stretch;
+  }
+
+  .admin-categories-list-heading .admin-categories-section-title {
+    margin-bottom: 2px;
+  }
+
+  .admin-categories-list-heading input {
+    width: 100%;
+    max-width: none !important;
+  }
+
+  .admin-categories-desktop {
+    display: none !important;
+  }
+
+  .admin-categories-mobile {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .admin-categories-form-actions button {
+    flex: 1 1 auto;
+  }
 }
 
+/* ==================================================
+   واکنش‌گرایی: گوشی‌های کوچک
+================================================== */
+
 @media (max-width: 380px) {
+  /* داشبورد */
+  .admin-dashboard-stats {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  /* فرم محصول */
   .admin-product-form section {
     padding: 10px !important;
   }
@@ -276,5 +783,853 @@ body {
   .admin-product-form button {
     white-space: normal;
     overflow-wrap: anywhere;
+  }
+
+  /* کارت دسته‌بندی */
+  .admin-categories-panel {
+    padding: 11px;
+  }
+
+  .admin-category-card {
+    padding: 12px;
+  }
+
+  .admin-category-card-details {
+    gap: 12px 8px;
+  }
+
+  .admin-category-card-actions .admin-category-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-category-card-actions .admin-category-actions button:last-child {
+    grid-column: auto;
+  }
+}
+
+/* اصلاح عرض جدول محصولات در دسکتاپ */
+@media (min-width: 769px) {
+  .admin-products-desktop,
+  .admin-products-desktop .admin-table-wrapper,
+  .admin-products-desktop .table-wrapper {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    flex: 1 1 100%;
+  }
+
+  .admin-products-desktop table {
+    width: 100%;
+    min-width: 100%;
+    table-layout: auto;
+  }
+}
+
+/* اصلاح عرض صفحه محصولات در دسکتاپ */
+@media (min-width: 769px) {
+  .admin-main {
+    min-width: 0;
+  }
+
+  .admin-products-page {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .admin-products-panel {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .admin-products-table-wrapper {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  table.admin-products-desktop-table {
+    display: table;
+    width: 100%;
+    min-width: 950px;
+    max-width: none;
+    table-layout: auto;
+    border-collapse: collapse;
+  }
+
+  .admin-products-mobile-cards {
+    display: none;
+  }
+}
+
+/* حفظ نمایش کارت‌ها در موبایل */
+@media (max-width: 768px) {
+  .admin-main {
+    flex: 1 1 100% !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin-right: 0 !important;
+    overflow-x: hidden;
+  }
+
+  .admin-products-desktop-table {
+    display: none !important;
+  }
+
+  .admin-products-mobile-cards {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+}
+
+/* ==================================================
+   یکسان‌سازی عرض تمام صفحات پنل مدیریت
+   این بخش باید در انتهای index.css قرار بگیرد
+================================================== */
+
+/* جلوگیری از تغییر عرض محتوای قابل مشاهده به علت اسکرول عمودی */
+html {
+  scrollbar-gutter: stable;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  min-width: 0;
+}
+
+.admin-layout {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+  min-height: 100vh;
+  background: #f5f7fb;
+  box-sizing: border-box;
+}
+
+/* سایدبار در دسکتاپ همیشه عرض ثابتی دارد */
+.admin-sidebar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+  width: 220px;
+  min-width: 220px;
+  max-width: 220px;
+  min-height: 100vh;
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  box-sizing: border-box;
+  background: #111827;
+  color: #fff;
+}
+
+/* یکسان‌سازی اجزای منوی مدیریت */
+.admin-brand {
+  display: block;
+  margin-bottom: 30px;
+  padding: 8px 12px;
+  color: #fff;
+  font-size: 22px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.admin-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.admin-nav-link {
+  display: block;
+  padding: 12px 14px;
+  border-radius: 4px;
+  color: #fff;
+  font-weight: 500;
+  text-decoration: none;
+  background: transparent;
+  transition: background 0.15s ease;
+}
+
+.admin-nav-link:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.admin-nav-link.is-active {
+  background: rgba(255, 255, 255, 0.12);
+  font-weight: 700;
+}
+
+.admin-sidebar-footer {
+  margin-top: auto;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.admin-user-name {
+  margin-bottom: 12px;
+  padding: 0 12px;
+  color: #d1d5db;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.admin-store-link,
+.admin-logout-button {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: #d1d5db;
+  font-family: inherit;
+  font-size: 14px;
+  text-align: right;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.admin-logout-button {
+  color: #fca5a5;
+}
+
+/* محدوده ثابت محتوای تمام صفحات دسکتاپ */
+.admin-main {
+  display: block;
+  width: calc(100% - 220px);
+  max-width: calc(100% - 220px);
+  min-width: 0;
+  min-height: 100vh;
+  margin: 0 220px 0 0;
+  padding: 16px;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
+}
+
+/* تمام صفحات از عرض والد تجاوز نکنند */
+.admin-page-content {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.admin-page-content > * {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* عناصر داخلی نباید باعث بزرگ‌شدن عرض صفحه شوند */
+.admin-main *,
+.admin-page-content * {
+  box-sizing: border-box;
+}
+
+.admin-main img {
+  max-width: 100%;
+  height: auto;
+}
+
+.admin-main input,
+.admin-main select,
+.admin-main textarea {
+  max-width: 100%;
+  min-width: 0;
+}
+
+/* جدول‌ها فقط در محدوده خودشان اسکرول افقی داشته باشند */
+.admin-products-page,
+.admin-products-panel,
+.admin-products-desktop,
+.admin-products-table-wrapper,
+.admin-products-desktop .admin-table-wrapper,
+.admin-products-desktop .table-wrapper,
+.admin-products-desktop-table,
+.admin-orders-desktop-table,
+.admin-categories-page,
+.admin-categories-panel,
+.admin-categories-desktop,
+.admin-categories-table-scroll {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.admin-products-page,
+.admin-categories-page {
+  width: 100%;
+}
+
+.admin-products-panel,
+.admin-products-table-wrapper,
+.admin-orders-desktop-table,
+.admin-categories-table-scroll {
+  width: 100%;
+}
+
+.admin-products-table-wrapper,
+.admin-products-desktop .admin-table-wrapper,
+.admin-products-desktop .table-wrapper,
+.admin-orders-desktop-table,
+.admin-categories-table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* حداقل عرض جدول فقط داخل ظرف اسکرول اعمال می‌شود */
+table.admin-products-desktop-table {
+  width: 100%;
+  min-width: 950px;
+  max-width: none;
+  table-layout: auto;
+  border-collapse: collapse;
+}
+
+.admin-orders-table {
+  width: 900px;
+  min-width: 900px;
+  max-width: none;
+  border-collapse: collapse;
+  text-align: right;
+}
+
+.admin-categories-table {
+  width: 100%;
+  min-width: 760px;
+  max-width: none;
+  border-collapse: collapse;
+}
+
+/* کنترل عرض پنل‌ها و شبکه‌های داخلی داشبورد */
+.dashboard-quick-links,
+.dashboard-stats-grid,
+.dashboard-lower-grid,
+.admin-dashboard-stats,
+.admin-dashboard-panels {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.dashboard-quick-link,
+.dashboard-stat-card,
+.dashboard-panel,
+.admin-dashboard-stats > div,
+.admin-dashboard-panels > section {
+  min-width: 0;
+}
+
+/* موبایل و تبلت */
+@media (max-width: 768px) {
+  .admin-main {
+    display: block;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin: 0 !important;
+    padding: 16px !important;
+    overflow-x: clip;
+  }
+
+  .admin-page-content {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .admin-page-content > * {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .admin-mobile-menu-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 5px;
+    width: 44px;
+    height: 44px;
+    margin-bottom: 16px;
+    padding: 10px;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    background: #fff;
+    cursor: pointer;
+  }
+
+  .admin-mobile-menu-button span {
+    display: block;
+    width: 20px;
+    height: 2px;
+    border-radius: 2px;
+    background: #111827;
+  }
+
+  .admin-sidebar {
+    z-index: 1000;
+    width: 220px;
+    min-width: 220px;
+    max-width: 220px;
+    transform: translateX(100%);
+    transition: transform 0.25s ease;
+  }
+
+  .admin-sidebar.is-open {
+    transform: translateX(0);
+  }
+
+  .admin-mobile-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 999;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: rgba(15, 23, 42, 0.45);
+  }
+
+  .admin-mobile-close-button {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    width: 100%;
+    margin-bottom: 16px;
+    padding: 10px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 4px;
+    background: transparent;
+    color: #fff;
+    font-family: inherit;
+    font-size: 14px;
+    cursor: pointer;
+  }
+
+  /* نمایش کارت محصولات به جای جدول */
+  .admin-products-desktop-table {
+    display: none !important;
+  }
+
+  .admin-products-mobile-cards {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    padding: 12px;
+    box-sizing: border-box;
+  }
+
+  .admin-products-mobile-cards article {
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  /* نمایش کارت سفارش‌ها به جای جدول */
+  .admin-orders-desktop-table {
+    display: none !important;
+  }
+
+  .admin-orders-mobile-cards {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    padding: 12px;
+    box-sizing: border-box;
+  }
+
+  .admin-orders-mobile-cards article {
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  /* نمایش کارت دسته‌بندی‌ها به جای جدول */
+  .admin-categories-desktop {
+    display: none !important;
+  }
+
+  .admin-categories-mobile {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  /* جلوگیری از ایجاد عرض اضافه در فیلترها */
+  .admin-orders-filters {
+    grid-template-columns: minmax(0, 1fr) !important;
+    min-width: 0;
+  }
+
+  .admin-orders-filters input,
+  .admin-orders-filters select {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+}
+
+/* گوشی‌های بسیار کوچک */
+@media (max-width: 380px) {
+  .admin-main {
+    padding: 12px !important;
+  }
+}
+
+/* احترام به تنظیمات کاهش حرکت سیستم */
+@media (prefers-reduced-motion: reduce) {
+  .admin-sidebar,
+  .admin-nav-link {
+    transition: none;
+  }
+}
+
+/* یکسان‌سازی عرض صفحه دسته‌بندی‌ها با سایر صفحات مدیریت */
+.admin-categories-page {
+  width: 100% !important;
+  max-width: none !important;
+  min-width: 0 !important;
+  margin-right: 0 !important;
+  margin-left: 0 !important;
+  box-sizing: border-box !important;
+}
+
+.admin-categories-page > *,
+.admin-categories-page .admin-categories-panel,
+.admin-categories-page .admin-categories-content,
+.admin-categories-page .admin-categories-card {
+  max-width: none !important;
+  box-sizing: border-box !important;
+}
+
+.admin-categories-page .admin-categories-panel,
+.admin-categories-page .admin-categories-content,
+.admin-categories-page .admin-categories-card {
+  width: 100% !important;
+}
+
+/* Modern admin sidebar icons */
+
+.admin-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+}
+
+.admin-brand-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  color: #c7d2fe;
+  background: linear-gradient(145deg, #3730a3, #4f46e5);
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  border-radius: 14px;
+  box-shadow: 0 6px 18px rgba(79, 70, 229, 0.24);
+}
+
+.admin-brand-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.admin-brand-text strong {
+  color: #f9fafb;
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.admin-brand-text small {
+  color: #9ca3af;
+  font-size: 11px;
+}
+
+.admin-nav-heading {
+  margin: 22px 12px 10px;
+  color: #9ca3af;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.admin-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  padding: 10px 12px;
+  color: #cbd5e1;
+  text-decoration: none;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  transition:
+    background-color 180ms ease,
+    color 180ms ease,
+    border-color 180ms ease,
+    transform 180ms ease;
+}
+
+.admin-nav-link:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.admin-nav-link:active {
+  transform: scale(0.985);
+}
+
+.admin-nav-link.is-active {
+  color: #fff;
+  background: linear-gradient(
+    100deg,
+    rgba(79, 70, 229, 0.28),
+    rgba(99, 102, 241, 0.12)
+  );
+  border-color: rgba(129, 140, 248, 0.24);
+}
+
+.admin-nav-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  color: #9ca3af;
+  background: rgba(255, 255, 255, 0.045);
+  border-radius: 10px;
+  transition:
+    color 180ms ease,
+    background-color 180ms ease;
+}
+
+.admin-nav-link:hover .admin-nav-icon {
+  color: #e0e7ff;
+  background: rgba(99, 102, 241, 0.16);
+}
+
+.admin-nav-link.is-active .admin-nav-icon {
+  color: #c7d2fe;
+  background: rgba(99, 102, 241, 0.24);
+}
+
+.admin-nav-label {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.admin-nav-indicator {
+  width: 5px;
+  height: 5px;
+  flex: 0 0 5px;
+  background: transparent;
+  border-radius: 50%;
+}
+
+.admin-nav-link.is-active .admin-nav-indicator {
+  background: #a5b4fc;
+  box-shadow: 0 0 10px rgba(165, 180, 252, 0.6);
+}
+
+.admin-sidebar-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.admin-user-card {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+  margin-bottom: 12px;
+  padding: 13px 10px;
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 13px;
+}
+
+.admin-user-avatar {
+  display: grid;
+  place-items: center;
+  flex: 0 0 38px;
+  width: 38px;
+  height: 38px;
+  color: #e0e7ff;
+  background: linear-gradient(145deg, #4338ca, #6366f1);
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.admin-user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.admin-user-caption {
+  color: #9ca3af;
+  font-size: 10px;
+}
+
+.admin-user-name {
+  overflow: hidden;
+  color: #f3f4f6;
+  font-size: 13px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-store-link,
+.admin-logout-button {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  min-height: 43px;
+  padding: 10px 12px;
+  color: #cbd5e1;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 13px;
+  text-align: right;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    color 180ms ease,
+    background-color 180ms ease;
+}
+
+.admin-store-link:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.admin-logout-button {
+  color: #fca5a5;
+}
+
+.admin-logout-button:hover {
+  color: #fecaca;
+  background: rgba(239, 68, 68, 0.11);
+}
+
+.admin-mobile-close-button {
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+@media (max-width: 768px) {
+  .admin-brand-icon {
+    flex-basis: 40px;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+  }
+
+  .admin-nav-link {
+    min-height: 46px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-nav-link,
+  .admin-nav-icon,
+  .admin-store-link,
+  .admin-logout-button {
+    transition: none;
+  }
+}
+
+.dashboard-quick-link-icon,
+.dashboard-stat-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  box-shadow: 0 3px 8px rgba(15, 23, 42, 0.04);
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.dashboard-quick-link-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: 14px;
+}
+
+.dashboard-stat-icon {
+  width: 43px;
+  height: 43px;
+  border-radius: 12px;
+}
+
+.dashboard-quick-link:hover .dashboard-quick-link-icon {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.09);
+}
+
+.dashboard-open-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+
+.dashboard-quick-link:hover .dashboard-open-icon {
+  border-color: #cbd5e1;
+  background: #f1f5f9;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-quick-link-icon,
+  .dashboard-stat-icon {
+    transition: none;
   }
 }
