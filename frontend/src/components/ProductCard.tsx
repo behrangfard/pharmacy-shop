@@ -1,13 +1,8 @@
 import { useState } from "react";
-
 import { Link } from "react-router-dom";
-
-import { CheckCircle2, ShoppingCart } from "lucide-react";
-
+import { CheckCircle2, ShoppingCart, ImageOff } from "lucide-react";
 import { useCart } from "../context/CartContext";
-
 import { calculateProductPrice } from "../utils/price";
-
 import Button from "./Button";
 
 interface ProductImage {
@@ -38,15 +33,14 @@ function ProductCard({ product }: Props) {
   const { addToCart } = useCart();
   const [addingToCart, setAddingToCart] = useState(false);
   const [addedToCart, setAddedToCart] = useState(false);
+  const [imageFailed, setImageFailed] = useState(false);
 
   const primaryImage =
     product.images?.find((image) => image.is_primary) ?? product.images?.[0];
 
   const imageUrl = primaryImage
     ? `http://127.0.0.1:8000/storage/${primaryImage.path}`
-    : product.thumbnail
-      ? product.thumbnail
-      : null;
+    : product.thumbnail || null;
 
   const {
     originalPrice: price,
@@ -54,6 +48,10 @@ function ProductCard({ product }: Props) {
     finalPrice,
     hasDiscount,
   } = calculateProductPrice(product.price, product.discount_percent);
+
+  const productUrl = product.slug
+    ? `/product/${product.slug}`
+    : `/products/${product.id}`;
 
   const handleAddToCart = () => {
     if (product.stock <= 0 || addingToCart) {
@@ -69,7 +67,7 @@ function ProductCard({ product }: Props) {
       slug: product.slug || "",
       price: finalPrice,
       originalPrice: price,
-      discountPercent: discountPercent,
+      discountPercent,
       thumbnail: imageUrl,
       stock: product.stock,
     });
@@ -85,199 +83,127 @@ function ProductCard({ product }: Props) {
   };
 
   return (
-    <div
+    <article
       className="
-        group
-        bg-white
-        rounded-2xl
-        shadow-sm
-        border
-        border-slate-100
-        overflow-hidden
-        transition-all
-        duration-300
-        hover:-translate-y-1
-        hover:shadow-xl
+        group flex h-full flex-col overflow-hidden
+        rounded-3xl border border-[#e8eee5]
+        bg-white shadow-sm
+        transition-all duration-300
+        hover:-translate-y-1 hover:border-[#cbdcc9]
+        hover:shadow-[0_14px_36px_rgba(61,92,63,0.10)]
       "
     >
-      <Link
-        to={
-          product.slug ? `/product/${product.slug}` : `/products/${product.id}`
-        }
-        className="block"
-      >
+      <Link to={productUrl} className="block">
         <div
           className="
-            h-48
-            bg-slate-50
-            flex
-            items-center
-            justify-center
-            overflow-hidden
-            relative
+            relative flex h-52 items-center justify-center
+            overflow-hidden bg-[#f8f7f1]
+            sm:h-56
           "
         >
-          {imageUrl ? (
+          {imageUrl && !imageFailed ? (
             <img
               src={imageUrl}
               alt={primaryImage?.alt || product.name}
+              loading="lazy"
+              onError={() => setImageFailed(true)}
               className="
-                w-full
-                h-full
-                object-contain
-                p-5
-                transition-transform
-                duration-500
-                group-hover:scale-110
+                h-full w-full object-contain p-5
+                transition-transform duration-500
+                group-hover:scale-105
               "
             />
           ) : (
-            <span className="text-slate-400 text-sm">تصویر محصول</span>
+            <div className="flex flex-col items-center gap-2 text-[#9ba99a]">
+              <ImageOff size={32} strokeWidth={1.5} />
+              <span className="text-xs">تصویر محصول موجود نیست</span>
+            </div>
           )}
 
           {hasDiscount && (
             <span
               className="
-                absolute
-                top-3
-                right-3
-                bg-red-500
-                text-white
-                text-xs
-                font-black
-                px-3
-                py-1.5
-                rounded-full
-                transition-transform
-                duration-300
-                group-hover:scale-105
+                absolute right-3 top-3 rounded-full
+                bg-[#e8b7c5] px-3 py-1.5
+                text-xs font-extrabold text-[#713d50]
+                shadow-sm
               "
             >
               {discountPercent}% تخفیف
             </span>
           )}
+
+          {product.stock <= 0 && (
+            <div className="absolute inset-0 flex items-center justify-center bg-white/65">
+              <span className="rounded-full bg-slate-800/90 px-4 py-2 text-sm font-bold text-white">
+                ناموجود
+              </span>
+            </div>
+          )}
         </div>
       </Link>
 
-      <div className="p-5">
-        <Link
-          to={
-            product.slug
-              ? `/product/${product.slug}`
-              : `/products/${product.id}`
-          }
-          className="block"
-        >
+      <div className="flex flex-1 flex-col p-4 sm:p-5">
+        <Link to={productUrl} className="block">
           <h3
             className="
-              font-bold
-              text-lg
-              leading-7
-              text-slate-900
-              line-clamp-2
-              transition-all
-              duration-200
-              hover:text-blue-600
-              hover:translate-x-0.5
+              line-clamp-2 min-h-14
+              text-base font-extrabold leading-7
+              text-[#283b2d]
+              transition-colors duration-200
+              group-hover:text-[#537d58]
             "
           >
             {product.name}
           </h3>
         </Link>
 
-        {product.short_description && (
-          <p
-            className="
-              text-slate-500
-              text-sm
-              mt-2
-              line-clamp-2
-              min-h-10
-            "
-          >
+        {product.short_description ? (
+          <p className="mt-2 line-clamp-2 min-h-10 text-sm leading-6 text-[#7b847b]">
             {product.short_description}
           </p>
+        ) : (
+          <div className="mt-2 min-h-10" />
         )}
 
         <div
-          className="
-            mt-4
-            w-full
-            flex
-            flex-col
-            items-start
-            justify-start
-            text-left
-          "
-          style={{
-            direction: "ltr",
-            textAlign: "left",
-          }}
+          className="mt-4 flex flex-col items-start text-left"
+          style={{ direction: "ltr", textAlign: "left" }}
         >
-          {hasDiscount ? (
-            <>
-              <div
-                className="
-                  w-full
-                  text-slate-400
-                  text-sm
-                  line-through
-                  text-left
-                "
-              >
-                {price.toLocaleString("fa-IR")} تومان
-              </div>
-
-              <div
-                className="
-                  w-full
-                  text-blue-600
-                  font-black
-                  text-lg
-                  mt-1
-                  text-left
-                  transition-transform
-                  duration-200
-                  group-hover:translate-x-0.5
-                "
-              >
-                {finalPrice.toLocaleString("fa-IR")} تومان
-              </div>
-            </>
-          ) : (
-            <div
-              className="
-                w-full
-                text-blue-600
-                font-black
-                text-lg
-                text-left
-                transition-transform
-                duration-200
-                group-hover:translate-x-0.5
-              "
-            >
+          {hasDiscount && (
+            <span className="text-sm text-[#9ca39a] line-through">
               {price.toLocaleString("fa-IR")} تومان
-            </div>
+            </span>
           )}
+
+          <span
+            className={`
+              mt-1 text-lg font-black
+              ${hasDiscount ? "text-[#537d58]" : "text-[#344d38]"}
+            `}
+          >
+            {finalPrice.toLocaleString("fa-IR")} تومان
+          </span>
         </div>
 
-        <div
-          className="
-            mt-4
-            flex
-            items-center
-            justify-between
-            gap-3
-          "
-        >
-          <span
-            className={`text-xs font-bold ${
-              product.stock > 0 ? "text-emerald-600" : "text-red-500"
-            }`}
-          >
-            {product.stock > 0 ? "موجود در انبار" : "ناموجود"}
-          </span>
+        <div className="mt-auto pt-5">
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <span
+              className={`
+                inline-flex items-center gap-1.5
+                text-xs font-bold
+                ${product.stock > 0 ? "text-[#537d58]" : "text-[#c45c67]"}
+              `}
+            >
+              <span
+                className={`
+                  h-2 w-2 rounded-full
+                  ${product.stock > 0 ? "bg-[#83aa7d]" : "bg-[#d9828b]"}
+                `}
+              />
+              {product.stock > 0 ? "موجود در انبار" : "ناموجود"}
+            </span>
+          </div>
 
           <Button
             type="button"
@@ -293,16 +219,17 @@ function ProductCard({ product }: Props) {
                 <ShoppingCart size={18} />
               )
             }
+            className="w-full !rounded-xl"
           >
             {product.stock <= 0
               ? "ناموجود"
               : addedToCart
                 ? "به سبد اضافه شد"
-                : "افزودن به سبد"}
+                : "افزودن به سبد خرید"}
           </Button>
         </div>
       </div>
-    </div>
+    </article>
   );
 }
 

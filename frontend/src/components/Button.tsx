@@ -1,5 +1,4 @@
 import { ReactNode } from "react";
-
 import { Link, LinkProps } from "react-router-dom";
 
 interface ButtonProps {
@@ -37,24 +36,26 @@ interface ButtonLinkProps extends LinkProps {
 }
 
 const baseClasses =
-  "inline-flex flex-row items-center justify-center gap-2 font-bold rounded-xl transition-all duration-200 select-none whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-offset-2 active:scale-95";
+  "inline-flex flex-row items-center justify-center gap-2 rounded-xl font-bold transition-all duration-200 select-none whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[0.98]";
 
 const variantClasses = {
   primary:
-    "bg-purple-600 text-white hover:bg-purple-700 focus:ring-purple-500 shadow-sm hover:shadow-md",
+    "bg-[#4f7754] text-white shadow-sm hover:bg-[#385e3e] hover:shadow-md focus-visible:ring-[#4f7754]",
+
   secondary:
-    "bg-gray-100 text-gray-800 hover:bg-gray-200 focus:ring-gray-400 shadow-sm hover:shadow-md",
+    "bg-[#e8efe2] text-[#385e3e] shadow-sm hover:bg-[#dce7d5] focus-visible:ring-[#8da68a]",
 
   danger:
-    "bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 shadow-sm hover:shadow-md",
+    "bg-red-600 text-white shadow-sm hover:bg-red-700 hover:shadow-md focus-visible:ring-red-500",
 
   success:
-    "bg-green-600 text-white hover:bg-green-700 focus:ring-green-500 shadow-sm hover:shadow-md",
+    "bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 hover:shadow-md focus-visible:ring-emerald-500",
 
   outline:
-    "bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 hover:border-gray-300 focus:ring-gray-400 shadow-sm hover:shadow-md",
+    "border border-[#dce5d7] bg-white text-[#385e3e] shadow-sm hover:border-[#a8bea1] hover:bg-[#faf9f4] hover:shadow-md focus-visible:ring-[#8da68a]",
 
-  ghost: "bg-transparent text-gray-700 hover:bg-gray-100 focus:ring-gray-400",
+  ghost:
+    "bg-transparent text-[#4b5f4a] hover:bg-[#e8efe2] focus-visible:ring-[#8da68a]",
 };
 
 const sizeClasses = {
@@ -66,7 +67,7 @@ const sizeClasses = {
 function Spinner() {
   return (
     <span
-      className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin shrink-0"
+      className="h-5 w-5 shrink-0 animate-spin rounded-full border-2 border-current border-t-transparent"
       aria-hidden="true"
     />
   );
@@ -91,6 +92,7 @@ export default function Button({
       type={type}
       disabled={isDisabled}
       onClick={onClick}
+      aria-busy={loading || undefined}
       className={`
         ${baseClasses}
         ${variantClasses[variant]}
@@ -98,7 +100,7 @@ export default function Button({
         ${fullWidth ? "w-full" : ""}
         ${
           isDisabled
-            ? "opacity-60 cursor-not-allowed hover:translate-y-0 active:scale-100"
+            ? "cursor-not-allowed opacity-60 active:scale-100"
             : "cursor-pointer"
         }
         ${className}
@@ -108,13 +110,13 @@ export default function Button({
         <Spinner />
       ) : (
         icon && (
-          <span className="shrink-0 transition-transform duration-200">
+          <span className="shrink-0" aria-hidden="true">
             {icon}
           </span>
         )
       )}
 
-      <span className="inline-flex flex-row items-center gap-2 whitespace-nowrap transition-transform duration-200">
+      <span className="inline-flex flex-row items-center gap-2 whitespace-nowrap">
         {children}
       </span>
     </button>
@@ -146,7 +148,7 @@ export function ButtonLink({
       </span>
 
       {icon && (
-        <span className="shrink-0 transition-transform duration-200">
+        <span className="shrink-0" aria-hidden="true">
           {icon}
         </span>
       )}

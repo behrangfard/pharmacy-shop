@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import api from "../services/api";
+import { adminApi } from "../services/api";
 
 type OrderStatus =
   | "pending"
@@ -9,6 +9,16 @@ type OrderStatus =
   | "cancelled";
 
 type PaymentStatus = "paid" | "unpaid" | "failed" | "refunded";
+
+type SortKey =
+  | "order_number"
+  | "recipient_name"
+  | "total"
+  | "status"
+  | "payment_status"
+  | "created_at";
+
+type SortDirection = "asc" | "desc";
 
 interface OrderItem {
   id: number;
@@ -59,6 +69,25 @@ interface PaginatedOrders {
   per_page: number;
 }
 
+const colors = {
+  ink: "#344b3a",
+  muted: "#7c877b",
+  green: "#587b5b",
+  greenDark: "#426747",
+  greenSoft: "#edf4e9",
+  cream: "#fffefa",
+  border: "#e7ecdf",
+  background: "#f4f6fb",
+  lilac: "#eee7f5",
+  lilacText: "#80649b",
+  teal: "#e4f0ed",
+  tealText: "#527f7b",
+  amber: "#fbf1e2",
+  amberText: "#a77639",
+  red: "#faeae5",
+  redText: "#b65c49",
+};
+
 const statusLabels: Record<OrderStatus, string> = {
   pending: "در انتظار",
   processing: "در حال پردازش",
@@ -76,25 +105,37 @@ const paymentLabels: Record<PaymentStatus, string> = {
 
 const statusColors: Record<OrderStatus, { color: string; background: string }> =
   {
-    pending: { color: "#92400e", background: "#fef3c7" },
-    processing: { color: "#1d4ed8", background: "#dbeafe" },
-    shipped: { color: "#6d28d9", background: "#ede9fe" },
-    delivered: { color: "#166534", background: "#dcfce7" },
-    cancelled: { color: "#991b1b", background: "#fee2e2" },
+    pending: { color: "#85652b", background: "#f8efd9" },
+    processing: { color: "#385e3e", background: "#e8efe2" },
+    shipped: { color: colors.lilacText, background: colors.lilac },
+    delivered: { color: "#385e3e", background: "#e0ebdd" },
+    cancelled: { color: colors.redText, background: colors.red },
   };
 
 const paymentColors: Record<
   PaymentStatus,
   { color: string; background: string }
 > = {
-  paid: { color: "#166534", background: "#dcfce7" },
-  unpaid: { color: "#92400e", background: "#fef3c7" },
-  failed: { color: "#991b1b", background: "#fee2e2" },
-  refunded: { color: "#6d28d9", background: "#ede9fe" },
+  paid: { color: "#385e3e", background: "#e0ebdd" },
+  unpaid: { color: "#85652b", background: "#f8efd9" },
+  failed: { color: colors.redText, background: colors.red },
+  refunded: { color: colors.lilacText, background: colors.lilac },
 };
 
+const sortLabels: Record<SortKey, string> = {
+  order_number: "شماره سفارش",
+  recipient_name: "نام گیرنده",
+  total: "مبلغ نهایی",
+  status: "وضعیت سفارش",
+  payment_status: "وضعیت پرداخت",
+  created_at: "تاریخ",
+};
+
+const formatNumber = (value: number) =>
+  new Intl.NumberFormat("fa-IR").format(value);
+
 function formatPrice(value: string | number | null | undefined) {
-  return `${new Intl.NumberFormat("fa-IR").format(Number(value ?? 0))} تومان`;
+  return `${formatNumber(Number(value ?? 0))} تومان`;
 }
 
 function formatDate(value: string) {
@@ -131,36 +172,65 @@ function getErrorMessage(error: unknown, fallback: string) {
 }
 
 const cardStyle: React.CSSProperties = {
-  background: "#fff",
-  border: "1px solid #e5e7eb",
-  borderRadius: "14px",
-  padding: "20px",
-  boxShadow: "0 4px 14px rgba(0,0,0,0.03)",
+  background: colors.cream,
+  border: `1px solid ${colors.border}`,
+  borderRadius: 18,
+  padding: 20,
+  boxShadow: "0 5px 16px rgba(52, 75, 58, 0.035)",
+  boxSizing: "border-box",
 };
 
 const inputStyle: React.CSSProperties = {
   width: "100%",
   minWidth: 0,
+  minHeight: 43,
   boxSizing: "border-box",
-  border: "1px solid #d1d5db",
-  borderRadius: "9px",
-  padding: "11px 12px",
-  background: "#fff",
-  color: "#111827",
-  fontSize: "14px",
+  border: `1px solid ${colors.border}`,
+  borderRadius: 11,
+  padding: "11px 13px",
+  background: colors.cream,
+  color: colors.ink,
+  fontSize: 13,
   fontFamily: "inherit",
+  outlineColor: colors.green,
 };
 
 const primaryButtonStyle: React.CSSProperties = {
-  border: 0,
-  borderRadius: "9px",
-  padding: "11px 16px",
-  background: "#2563eb",
-  color: "#fff",
-  fontSize: "14px",
+  border: `1px solid ${colors.green}`,
+  borderRadius: 11,
+  padding: "10px 14px",
+  minHeight: 40,
+  background: colors.green,
+  color: "#ffffff",
+  fontSize: 13,
   fontWeight: 700,
+  transition: "all 160ms ease",
   fontFamily: "inherit",
   cursor: "pointer",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 7,
+  boxSizing: "border-box",
+};
+
+const secondaryButtonStyle: React.CSSProperties = {
+  border: `1px solid ${colors.border}`,
+  borderRadius: 11,
+  padding: "10px 14px",
+  minHeight: 40,
+  background: colors.cream,
+  color: colors.greenDark,
+  fontSize: 13,
+  fontWeight: 700,
+  transition: "all 160ms ease",
+  fontFamily: "inherit",
+  cursor: "pointer",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 7,
+  boxSizing: "border-box",
 };
 
 function AdminOrders() {
@@ -183,15 +253,35 @@ function AdminOrders() {
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [newStatus, setNewStatus] = useState<OrderStatus>("pending");
 
+  const [sortKey, setSortKey] = useState<SortKey>("created_at");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("desc");
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      const normalizedSearch = searchInput.trim();
+
+      setSearch((currentSearch) =>
+        currentSearch === normalizedSearch ? currentSearch : normalizedSearch,
+      );
+
+      setPage(1);
+    }, 400);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [searchInput]);
+
   const loadOrders = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
 
-      const response = await api.get("/admin/orders", {
+      // دریافت فهرست سفارش‌ها با توکن مدیریت
+      const response = await adminApi.get("/admin/orders", {
         params: {
           page,
           per_page: 15,
+          sort_by: sortKey,
+          sort_direction: sortDirection,
           ...(search ? { search } : {}),
           ...(statusFilter ? { status: statusFilter } : {}),
           ...(paymentFilter ? { payment_status: paymentFilter } : {}),
@@ -213,11 +303,73 @@ function AdminOrders() {
     } finally {
       setLoading(false);
     }
-  }, [page, search, statusFilter, paymentFilter]);
+  }, [page, search, statusFilter, paymentFilter, sortKey, sortDirection]);
 
   useEffect(() => {
     void loadOrders();
   }, [loadOrders]);
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDirection((current) => (current === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDirection(
+        key === "total" || key === "created_at" ? "desc" : "asc",
+      );
+    }
+
+    setPage(1);
+  };
+
+  const renderSortHeader = (key: SortKey) => {
+    const active = sortKey === key;
+
+    return (
+      <button
+        type="button"
+        onClick={() => handleSort(key)}
+        aria-label={`مرتب‌سازی بر اساس ${sortLabels[key]}`}
+        aria-pressed={active}
+        title={
+          active
+            ? `مرتب‌سازی ${sortDirection === "asc" ? "صعودی" : "نزولی"}؛ برای تغییر جهت کلیک کن`
+            : `مرتب‌سازی بر اساس ${sortLabels[key]}`
+        }
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "flex-start",
+          gap: 7,
+          border: 0,
+          borderRadius: 7,
+          padding: "5px 3px",
+          margin: "-5px -3px",
+          background: active ? colors.greenSoft : "transparent",
+          color: active ? colors.greenDark : "#536452",
+          font: "inherit",
+          fontSize: 12,
+          fontWeight: 800,
+          cursor: "pointer",
+          whiteSpace: "nowrap",
+          transition: "background 160ms ease, color 160ms ease",
+        }}
+      >
+        {sortLabels[key]}
+        <span
+          aria-hidden="true"
+          style={{
+            minWidth: 14,
+            fontSize: 13,
+            lineHeight: 1,
+            color: active ? colors.green : "#9aa394",
+          }}
+        >
+          {active ? (sortDirection === "asc" ? "↑" : "↓") : "↕"}
+        </span>
+      </button>
+    );
+  };
 
   const clearSearchAndFilters = () => {
     setSearchInput("");
@@ -236,7 +388,8 @@ function AdminOrders() {
       setError("");
       setSelectedOrder(null);
 
-      const response = await api.get(
+      // دریافت جزئیات سفارش با توکن مدیریت
+      const response = await adminApi.get(
         `/admin/orders/${encodeURIComponent(orderNumber)}`,
       );
 
@@ -285,7 +438,8 @@ function AdminOrders() {
       setUpdatingStatus(true);
       setNotice("");
 
-      const response = await api.patch(
+      // تغییر وضعیت سفارش با توکن مدیریت
+      const response = await adminApi.patch(
         `/admin/orders/${encodeURIComponent(
           selectedOrder.order_number,
         )}/status`,
@@ -306,12 +460,6 @@ function AdminOrders() {
     }
   };
 
-  const applySearch = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setPage(1);
-    setSearch(searchInput.trim());
-  };
-
   const changeStatusFilter = (value: string) => {
     setPage(1);
     setStatusFilter(value);
@@ -322,163 +470,358 @@ function AdminOrders() {
     setPaymentFilter(value);
   };
 
+  const closeOrderDetails = () => {
+    setSelectedOrder(null);
+    setNotice("");
+  };
+
+  function renderStatusBadge(status: OrderStatus) {
+    const badgeColors = statusColors[status];
+
+    return (
+      <span
+        style={{
+          ...badgeColors,
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          borderRadius: 999,
+          padding: "6px 11px",
+          fontSize: 12,
+          fontWeight: 700,
+          whiteSpace: "nowrap",
+        }}
+      >
+        {statusLabels[status] || status}
+      </span>
+    );
+  }
+
+  function renderPaymentBadge(status: PaymentStatus) {
+    const badgeColors = paymentColors[status];
+
+    return (
+      <span
+        style={{
+          ...badgeColors,
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          borderRadius: 999,
+          padding: "6px 11px",
+          fontSize: 12,
+          fontWeight: 700,
+          whiteSpace: "nowrap",
+        }}
+      >
+        {paymentLabels[status] || status}
+      </span>
+    );
+  }
+
   return (
     <div
+      className="admin-orders-page"
       dir="rtl"
       style={{
-        color: "#111827",
+        color: colors.ink,
         width: "100%",
         minWidth: 0,
         boxSizing: "border-box",
       }}
     >
+      <style>{`
+        .admin-orders-page *,
+        .admin-orders-page *::before,
+        .admin-orders-page *::after {
+          box-sizing: border-box;
+        }
+
+        .admin-orders-page .orders-filter-row {
+          display: flex;
+          gap: 10px;
+          flex-wrap: wrap;
+          align-items: center;
+        }
+
+        .admin-orders-page .orders-filter-search {
+          flex: 1 1 260px;
+          width: 100%;
+          min-width: 0;
+        }
+
+        .admin-orders-page .orders-filter-select {
+          flex: 0 1 170px;
+          width: auto;
+          min-width: 150px;
+          max-width: 100%;
+        }
+
+        .admin-orders-page .orders-filter-clear:hover {
+          background: #edf4e9 !important;
+        }
+
+        .admin-orders-page .orders-filter-row input:focus-visible,
+        .admin-orders-page .orders-filter-row select:focus-visible,
+        .admin-orders-page .orders-filter-row button:focus-visible {
+          outline: 2px solid #587b5b;
+          outline-offset: 2px;
+        }
+
+        .admin-orders-page .admin-orders-mobile-cards {
+          display: none;
+        }
+
+        .admin-orders-page .admin-orders-desktop-table {
+          display: block;
+        }
+
+        @media (max-width: 700px) {
+          .admin-orders-page .orders-filter-panel {
+            padding: 14px !important;
+          }
+
+          .admin-orders-page .orders-filter-row input,
+          .admin-orders-page .orders-filter-row select,
+          .admin-orders-page .orders-filter-row button {
+            flex: 1 1 100% !important;
+            width: 100% !important;
+            min-width: 0 !important;
+          }
+
+          .admin-orders-page .admin-orders-mobile-cards {
+            display: grid !important;
+          }
+
+          .admin-orders-page .admin-orders-desktop-table {
+            display: none !important;
+          }
+        }
+      `}</style>
+
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
           flexWrap: "wrap",
-          gap: "16px",
-          marginBottom: "26px",
+          gap: 16,
+          marginBottom: 26,
         }}
       >
         <div>
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 7,
+              background: colors.greenSoft,
+              color: colors.green,
+              borderRadius: 999,
+              padding: "6px 11px",
+              fontSize: 12,
+              fontWeight: 700,
+              marginBottom: 12,
+            }}
+          >
+            <span
+              style={{
+                width: 7,
+                height: 7,
+                borderRadius: "50%",
+                background: colors.green,
+              }}
+            />
+            مدیریت فروشگاه
+          </div>
+
           <h1
             style={{
               margin: "0 0 8px",
-              fontSize: "28px",
+              fontSize: "clamp(23px, 3vw, 29px)",
               fontWeight: 800,
+              color: colors.ink,
+              letterSpacing: "-0.4px",
             }}
           >
             مدیریت سفارش‌ها
           </h1>
 
-          <p style={{ margin: 0, color: "#6b7280", fontSize: "14px" }}>
+          <p style={{ margin: 0, color: colors.muted, fontSize: 14 }}>
             مشاهده، جست‌وجو و مدیریت سفارش‌های مشتریان
           </p>
         </div>
 
-        <div
+        <button
+          type="button"
+          onClick={() => void loadOrders()}
+          disabled={loading}
           style={{
-            display: "flex",
-            alignItems: "center",
-            flexWrap: "wrap",
-            gap: "10px",
+            ...primaryButtonStyle,
+            opacity: loading ? 0.65 : 1,
+            cursor: loading ? "wait" : "pointer",
           }}
         >
-          <button
-            type="button"
-            onClick={clearSearchAndFilters}
-            style={{
-              ...primaryButtonStyle,
-              background: "#059669",
-            }}
-          >
-            پاک کردن جست‌وجو و نمایش همه سفارش‌ها
-          </button>
-
-          <button
-            type="button"
-            onClick={() => void loadOrders()}
-            disabled={loading}
-            style={{
-              ...primaryButtonStyle,
-              opacity: loading ? 0.65 : 1,
-            }}
-          >
-            {loading ? "در حال دریافت..." : "تازه‌سازی"}
-          </button>
-        </div>
+          {loading ? "در حال دریافت..." : "تازه‌سازی"}
+        </button>
       </div>
 
       <div
         style={{
           display: "grid",
           gridTemplateColumns:
-            "repeat(auto-fit, minmax(min(100%, 170px), 1fr))",
-          gap: "14px",
-          marginBottom: "22px",
+            "repeat(auto-fit, minmax(min(100%, 190px), 1fr))",
+          gap: 14,
+          marginBottom: 22,
         }}
       >
-        <div style={cardStyle}>
+        <div style={{ ...cardStyle, position: "relative", overflow: "hidden" }}>
           <div
             style={{
-              color: "#6b7280",
-              fontSize: "13px",
-              marginBottom: 8,
+              position: "absolute",
+              insetInlineStart: 0,
+              top: 0,
+              bottom: 0,
+              width: 4,
+              background: colors.green,
+            }}
+          />
+
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 12,
             }}
           >
-            سفارش‌های مطابق فیلتر
-          </div>
+            <div>
+              <div
+                style={{
+                  color: colors.muted,
+                  fontSize: 13,
+                  marginBottom: 8,
+                }}
+              >
+                سفارش‌های مطابق فیلتر
+              </div>
 
-          <strong style={{ fontSize: "25px" }}>
-            {new Intl.NumberFormat("fa-IR").format(total)}
-          </strong>
+              <strong style={{ fontSize: 27, color: colors.ink }}>
+                {formatNumber(total)}
+              </strong>
+            </div>
+
+            <div
+              style={{
+                width: 46,
+                height: 46,
+                borderRadius: 14,
+                display: "grid",
+                placeItems: "center",
+                background: colors.greenSoft,
+                color: colors.green,
+                fontSize: 22,
+              }}
+              aria-hidden="true"
+            >
+              ≡
+            </div>
+          </div>
         </div>
 
-        <div style={cardStyle}>
+        <div style={{ ...cardStyle, position: "relative", overflow: "hidden" }}>
           <div
             style={{
-              color: "#6b7280",
-              fontSize: "13px",
-              marginBottom: 8,
+              position: "absolute",
+              insetInlineStart: 0,
+              top: 0,
+              bottom: 0,
+              width: 4,
+              background: "#a08abb",
+            }}
+          />
+
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              gap: 12,
             }}
           >
-            تعداد این صفحه
-          </div>
+            <div>
+              <div
+                style={{
+                  color: colors.muted,
+                  fontSize: 13,
+                  marginBottom: 8,
+                }}
+              >
+                تعداد این صفحه
+              </div>
 
-          <strong style={{ fontSize: "25px" }}>
-            {new Intl.NumberFormat("fa-IR").format(orders.length)}
-          </strong>
+              <strong style={{ fontSize: 27, color: colors.ink }}>
+                {formatNumber(orders.length)}
+              </strong>
+            </div>
+
+            <div
+              style={{
+                width: 46,
+                height: 46,
+                borderRadius: 14,
+                display: "grid",
+                placeItems: "center",
+                background: colors.lilac,
+                color: colors.lilacText,
+                fontSize: 22,
+              }}
+              aria-hidden="true"
+            >
+              ▦
+            </div>
+          </div>
         </div>
       </div>
 
-      <form
-        onSubmit={applySearch}
+      <section
+        className="orders-filter-panel"
+        aria-label="جست‌وجو و فیلتر سفارش‌ها"
         style={{
           ...cardStyle,
-          display: "grid",
-          gridTemplateColumns:
-            "repeat(auto-fit, minmax(min(100%, 180px), 1fr))",
-          width: "100%",
-          maxWidth: "100%",
-          minWidth: 0,
-          boxSizing: "border-box",
-          gap: "12px",
-          alignItems: "end",
-          marginBottom: "20px",
+          marginBottom: 20,
+          padding: 20,
         }}
       >
-        <label
+        <div
           style={{
-            display: "block",
-            fontSize: "13px",
-            color: "#4b5563",
-            minWidth: 0,
+            marginBottom: 14,
+            color: colors.ink,
+            fontSize: 14,
+            fontWeight: 800,
           }}
         >
-          جست‌وجو
+          جست‌وجو و فیلتر
+        </div>
+
+        <div className="orders-filter-row">
           <input
+            className="orders-filter-search"
+            type="search"
             value={searchInput}
             onChange={(event) => setSearchInput(event.target.value)}
-            placeholder="شماره سفارش، نام گیرنده یا تلفن"
-            style={{ ...inputStyle, marginTop: 7 }}
+            placeholder="جست‌وجو بر اساس شماره سفارش، نام گیرنده یا تلفن..."
+            aria-label="جست‌وجوی سفارش‌ها"
+            autoComplete="off"
+            style={inputStyle}
           />
-        </label>
 
-        <label
-          style={{
-            display: "block",
-            fontSize: "13px",
-            color: "#4b5563",
-            minWidth: 0,
-          }}
-        >
-          وضعیت سفارش
           <select
+            className="orders-filter-select"
             value={statusFilter}
             onChange={(event) => changeStatusFilter(event.target.value)}
-            style={{ ...inputStyle, marginTop: 7 }}
+            aria-label="فیلتر وضعیت سفارش"
+            style={inputStyle}
           >
             <option value="">همه وضعیت‌ها</option>
             <option value="pending">در انتظار</option>
@@ -487,21 +830,13 @@ function AdminOrders() {
             <option value="delivered">تحویل‌شده</option>
             <option value="cancelled">لغوشده</option>
           </select>
-        </label>
 
-        <label
-          style={{
-            display: "block",
-            fontSize: "13px",
-            color: "#4b5563",
-            minWidth: 0,
-          }}
-        >
-          وضعیت پرداخت
           <select
+            className="orders-filter-select"
             value={paymentFilter}
             onChange={(event) => changePaymentFilter(event.target.value)}
-            style={{ ...inputStyle, marginTop: 7 }}
+            aria-label="فیلتر وضعیت پرداخت"
+            style={inputStyle}
           >
             <option value="">همه پرداخت‌ها</option>
             <option value="paid">پرداخت‌شده</option>
@@ -509,23 +844,43 @@ function AdminOrders() {
             <option value="failed">ناموفق</option>
             <option value="refunded">بازپرداخت‌شده</option>
           </select>
-        </label>
 
-        <button type="submit" style={primaryButtonStyle}>
-          جست‌وجو
-        </button>
-      </form>
+          <button
+            type="button"
+            onClick={clearSearchAndFilters}
+            className="orders-filter-clear"
+            style={{
+              ...secondaryButtonStyle,
+              background: "#f8f8f1",
+              whiteSpace: "nowrap",
+            }}
+          >
+            پاک کردن فیلترها
+          </button>
+        </div>
+
+        <div
+          style={{
+            marginTop: 10,
+            color: colors.muted,
+            fontSize: 11,
+            lineHeight: 1.8,
+          }}
+        >
+          نتایج پس از توقف تایپ به‌صورت خودکار به‌روزرسانی می‌شوند.
+        </div>
+      </section>
 
       {error && (
         <div
           role="alert"
           style={{
-            background: "#fef2f2",
-            border: "1px solid #fecaca",
-            color: "#b91c1c",
-            borderRadius: "10px",
+            background: colors.red,
+            border: "1px solid #e9c9c4",
+            color: colors.redText,
+            borderRadius: 12,
             padding: "14px 16px",
-            marginBottom: "18px",
+            marginBottom: 18,
             overflowWrap: "anywhere",
           }}
         >
@@ -533,21 +888,20 @@ function AdminOrders() {
         </div>
       )}
 
-      {notice && (
+      {notice && !selectedOrder && (
         <div
           role="status"
           style={{
-            background: "#eff6ff",
-            border: "1px solid #bfdbfe",
-            color: "#1d4ed8",
-            borderRadius: "10px",
+            background: colors.lilac,
+            border: "1px solid #dfd2ed",
+            color: colors.lilacText,
+            borderRadius: 12,
             padding: "14px 16px",
-            marginBottom: "18px",
+            marginBottom: 18,
             overflowWrap: "anywhere",
           }}
         >
           {notice}
-
           <button
             type="button"
             onClick={() => setNotice("")}
@@ -558,7 +912,7 @@ function AdminOrders() {
               background: "transparent",
               color: "inherit",
               cursor: "pointer",
-              fontSize: "18px",
+              fontSize: 18,
             }}
           >
             ×
@@ -574,78 +928,110 @@ function AdminOrders() {
           maxWidth: "100%",
           minWidth: 0,
           overflow: "hidden",
-          boxSizing: "border-box",
         }}
       >
         {loading ? (
-          <p style={{ padding: "28px", color: "#6b7280" }}>
+          <p style={{ padding: 28, color: colors.muted }}>
             در حال دریافت سفارش‌ها...
           </p>
         ) : orders.length === 0 ? (
-          <div style={{ padding: "36px 20px", textAlign: "center" }}>
+          <div style={{ padding: "40px 20px", textAlign: "center" }}>
             <div
               style={{
-                fontSize: "17px",
-                fontWeight: 700,
+                width: 64,
+                height: 64,
+                borderRadius: 20,
+                background: colors.greenSoft,
+                color: colors.green,
+                display: "grid",
+                placeItems: "center",
+                margin: "0 auto 16px",
+                fontSize: 28,
+              }}
+              aria-hidden="true"
+            >
+              ◌
+            </div>
+
+            <div
+              style={{
+                fontSize: 17,
+                fontWeight: 800,
                 marginBottom: 8,
+                color: colors.ink,
               }}
             >
               سفارشی پیدا نشد
             </div>
 
-            <div style={{ color: "#6b7280", fontSize: "14px" }}>
+            <div style={{ color: colors.muted, fontSize: 14 }}>
               فیلترها را تغییر بده یا دوباره جست‌وجو کن.
             </div>
 
             <button
               type="button"
               onClick={clearSearchAndFilters}
-              style={{
-                ...primaryButtonStyle,
-                background: "#059669",
-                marginTop: "16px",
-              }}
+              style={{ ...secondaryButtonStyle, marginTop: 16 }}
             >
               بازگشت به همه سفارش‌ها
             </button>
           </div>
         ) : (
           <>
-            <div className="admin-orders-desktop-table">
+            <div
+              className="admin-orders-desktop-table"
+              style={{ overflowX: "auto" }}
+            >
               <table
                 className="admin-orders-table"
                 style={{
                   width: "100%",
-                  minWidth: "900px",
+                  minWidth: 900,
                   borderCollapse: "collapse",
                   textAlign: "right",
                 }}
               >
-                <thead style={{ background: "#f9fafb" }}>
+                <thead style={{ background: "#f3f6ef" }}>
                   <tr>
-                    {[
-                      "شماره سفارش",
-                      "نام گیرنده",
-                      "مبلغ نهایی",
-                      "وضعیت سفارش",
-                      "وضعیت پرداخت",
-                      "تاریخ",
-                      "جزئیات",
-                    ].map((heading) => (
+                    {(
+                      [
+                        "order_number",
+                        "recipient_name",
+                        "total",
+                        "status",
+                        "payment_status",
+                        "created_at",
+                      ] as SortKey[]
+                    ).map((key) => (
                       <th
-                        key={heading}
+                        key={key}
+                        scope="col"
                         style={{
                           padding: "15px 16px",
-                          color: "#4b5563",
-                          fontSize: "13px",
-                          fontWeight: 700,
+                          fontSize: 12,
+                          fontWeight: 800,
                           whiteSpace: "nowrap",
-                          borderBottom: "1px solid #e5e7eb",
+                          borderBottom: `1px solid ${colors.border}`,
+                          textAlign: "right",
                         }}
                       >
-                        {heading}
+                        {renderSortHeader(key)}
                       </th>
                     ))}
+
+                    <th
+                      scope="col"
+                      style={{
+                        padding: "15px 16px",
+                        color: "#536452",
+                        fontSize: 12,
+                        fontWeight: 800,
+                        whiteSpace: "nowrap",
+                        borderBottom: `1px solid ${colors.border}`,
+                      }}
+                    >
+                      جزئیات
+                    </th>
                   </tr>
                 </thead>
 
@@ -653,7 +1039,9 @@ function AdminOrders() {
                   {orders.map((order) => (
                     <tr key={order.id}>
                       <td style={cellStyle}>
-                        <strong>{order.order_number}</strong>
+                        <strong style={{ color: colors.green }}>
+                          {order.order_number}
+                        </strong>
                       </td>
 
                       <td style={cellStyle}>{order.recipient_name || "—"}</td>
@@ -662,48 +1050,21 @@ function AdminOrders() {
                         style={{
                           ...cellStyle,
                           whiteSpace: "nowrap",
+                          fontWeight: 700,
                         }}
                       >
                         {formatPrice(order.total)}
                       </td>
 
                       <td style={cellStyle}>
-                        <span
-                          style={{
-                            ...statusColors[order.status],
-                            display: "inline-block",
-                            borderRadius: "20px",
-                            padding: "5px 10px",
-                            fontSize: "12px",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {statusLabels[order.status] || order.status}
-                        </span>
+                        {renderStatusBadge(order.status)}
                       </td>
 
                       <td style={cellStyle}>
-                        <span
-                          style={{
-                            ...paymentColors[order.payment_status],
-                            display: "inline-block",
-                            borderRadius: "20px",
-                            padding: "5px 10px",
-                            fontSize: "12px",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {paymentLabels[order.payment_status] ||
-                            order.payment_status}
-                        </span>
+                        {renderPaymentBadge(order.payment_status)}
                       </td>
 
-                      <td
-                        style={{
-                          ...cellStyle,
-                          whiteSpace: "nowrap",
-                        }}
-                      >
+                      <td style={{ ...cellStyle, whiteSpace: "nowrap" }}>
                         {formatDate(order.created_at)}
                       </td>
 
@@ -724,15 +1085,70 @@ function AdminOrders() {
               </table>
             </div>
 
-            <div className="admin-orders-mobile-cards">
+            <div
+              className="admin-orders-mobile-cards"
+              style={{ padding: 12, gap: 12 }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: 8,
+                  padding: "4px 4px 12px",
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 700,
+                    color: colors.muted,
+                  }}
+                >
+                  مرتب‌سازی:
+                </span>
+
+                <select
+                  aria-label="مرتب‌سازی سفارش‌های موبایل"
+                  value={sortKey}
+                  onChange={(event) =>
+                    handleSort(event.target.value as SortKey)
+                  }
+                  style={{
+                    ...inputStyle,
+                    width: "auto",
+                    flex: "1 1 150px",
+                  }}
+                >
+                  {(Object.keys(sortLabels) as SortKey[]).map((key) => (
+                    <option key={key} value={key}>
+                      {sortLabels[key]}
+                    </option>
+                  ))}
+                </select>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSortDirection((current) =>
+                      current === "asc" ? "desc" : "asc",
+                    )
+                  }
+                  style={secondaryButtonStyle}
+                  aria-label="تغییر جهت مرتب‌سازی"
+                >
+                  {sortDirection === "asc" ? "صعودی ↑" : "نزولی ↓"}
+                </button>
+              </div>
+
               {orders.map((order) => (
                 <article
                   key={order.id}
                   style={{
-                    border: "1px solid #e5e7eb",
-                    borderRadius: "12px",
-                    padding: "14px",
-                    background: "#fff",
+                    border: `1px solid ${colors.border}`,
+                    borderRadius: 14,
+                    padding: 16,
+                    background: colors.cream,
                     minWidth: 0,
                     boxSizing: "border-box",
                   }}
@@ -743,11 +1159,16 @@ function AdminOrders() {
                       justifyContent: "space-between",
                       alignItems: "center",
                       flexWrap: "wrap",
-                      gap: "8px",
-                      marginBottom: "14px",
+                      gap: 10,
+                      marginBottom: 16,
                     }}
                   >
-                    <strong style={{ overflowWrap: "anywhere" }}>
+                    <strong
+                      style={{
+                        overflowWrap: "anywhere",
+                        color: colors.green,
+                      }}
+                    >
                       سفارش {order.order_number}
                     </strong>
 
@@ -760,70 +1181,38 @@ function AdminOrders() {
                     </button>
                   </div>
 
-                  <div style={{ display: "grid", gap: "12px" }}>
+                  <div style={{ display: "grid", gap: 14 }}>
                     <div>
                       <div style={mobileLabelStyle}>نام گیرنده</div>
-                      <div
-                        style={{
-                          marginTop: "4px",
-                          overflowWrap: "anywhere",
-                        }}
-                      >
+                      <div style={{ marginTop: 5, overflowWrap: "anywhere" }}>
                         {order.recipient_name || "—"}
                       </div>
                     </div>
 
                     <div>
                       <div style={mobileLabelStyle}>مبلغ نهایی</div>
-                      <strong
-                        style={{
-                          display: "block",
-                          marginTop: "4px",
-                          overflowWrap: "anywhere",
-                        }}
-                      >
+                      <strong style={{ display: "block", marginTop: 5 }}>
                         {formatPrice(order.total)}
                       </strong>
                     </div>
 
                     <div>
                       <div style={mobileLabelStyle}>وضعیت سفارش</div>
-                      <div style={{ marginTop: "6px" }}>
-                        <span
-                          style={{
-                            ...statusColors[order.status],
-                            display: "inline-block",
-                            borderRadius: "20px",
-                            padding: "5px 10px",
-                            fontSize: "12px",
-                          }}
-                        >
-                          {statusLabels[order.status] || order.status}
-                        </span>
+                      <div style={{ marginTop: 7 }}>
+                        {renderStatusBadge(order.status)}
                       </div>
                     </div>
 
                     <div>
                       <div style={mobileLabelStyle}>وضعیت پرداخت</div>
-                      <div style={{ marginTop: "6px" }}>
-                        <span
-                          style={{
-                            ...paymentColors[order.payment_status],
-                            display: "inline-block",
-                            borderRadius: "20px",
-                            padding: "5px 10px",
-                            fontSize: "12px",
-                          }}
-                        >
-                          {paymentLabels[order.payment_status] ||
-                            order.payment_status}
-                        </span>
+                      <div style={{ marginTop: 7 }}>
+                        {renderPaymentBadge(order.payment_status)}
                       </div>
                     </div>
 
                     <div>
                       <div style={mobileLabelStyle}>تاریخ ثبت</div>
-                      <div style={{ marginTop: "4px" }}>
+                      <div style={{ marginTop: 5 }}>
                         {formatDate(order.created_at)}
                       </div>
                     </div>
@@ -841,16 +1230,15 @@ function AdminOrders() {
           justifyContent: "space-between",
           alignItems: "center",
           flexWrap: "wrap",
-          gap: "12px",
-          marginTop: "18px",
+          gap: 12,
+          marginTop: 18,
         }}
       >
-        <span style={{ color: "#6b7280", fontSize: "13px" }}>
-          صفحه {new Intl.NumberFormat("fa-IR").format(page)} از{" "}
-          {new Intl.NumberFormat("fa-IR").format(lastPage)}
+        <span style={{ color: colors.muted, fontSize: 13 }}>
+          صفحه {formatNumber(page)} از {formatNumber(lastPage)}
         </span>
 
-        <div style={{ display: "flex", gap: "8px" }}>
+        <div style={{ display: "flex", gap: 8 }}>
           <button
             type="button"
             disabled={page <= 1 || loading}
@@ -886,8 +1274,7 @@ function AdminOrders() {
           style={modalBackdropStyle}
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) {
-              setSelectedOrder(null);
-              setNotice("");
+              closeOrderDetails();
             }
           }}
         >
@@ -899,11 +1286,12 @@ function AdminOrders() {
               width: "min(820px, 100%)",
               maxHeight: "90vh",
               overflowY: "auto",
-              background: "#fff",
-              borderRadius: "16px",
-              padding: "24px",
+              background: "#faf9f4",
+              border: `1px solid ${colors.border}`,
+              borderRadius: 20,
+              padding: "clamp(16px, 3vw, 26px)",
               boxSizing: "border-box",
-              boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
+              boxShadow: "0 24px 70px rgba(35, 55, 37, 0.22)",
             }}
           >
             <div
@@ -911,39 +1299,50 @@ function AdminOrders() {
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "start",
-                gap: "16px",
-                marginBottom: "20px",
+                gap: 16,
+                marginBottom: 22,
               }}
             >
               <div>
+                <div
+                  style={{
+                    color: colors.lilacText,
+                    fontSize: 12,
+                    fontWeight: 800,
+                    marginBottom: 8,
+                  }}
+                >
+                  جزئیات و پیگیری
+                </div>
+
                 <h2
                   id="order-details-title"
                   style={{
                     margin: "0 0 8px",
-                    fontSize: "21px",
+                    fontSize: 22,
+                    color: colors.ink,
                   }}
                 >
                   جزئیات سفارش
                 </h2>
 
-                <div style={{ color: "#6b7280", fontSize: "13px" }}>
+                <div style={{ color: colors.muted, fontSize: 13 }}>
                   {selectedOrder.order_number}
                 </div>
               </div>
 
               <button
                 type="button"
-                onClick={() => {
-                  setSelectedOrder(null);
-                  setNotice("");
-                }}
+                onClick={closeOrderDetails}
                 aria-label="بستن جزئیات"
                 style={{
-                  border: 0,
-                  background: "#f3f4f6",
-                  borderRadius: "8px",
-                  padding: "6px 12px",
-                  fontSize: "22px",
+                  border: `1px solid ${colors.border}`,
+                  background: "#ffffff",
+                  color: "#536452",
+                  borderRadius: 10,
+                  width: 38,
+                  height: 38,
+                  fontSize: 22,
                   cursor: "pointer",
                 }}
               >
@@ -956,22 +1355,19 @@ function AdminOrders() {
                 display: "grid",
                 gridTemplateColumns:
                   "repeat(auto-fit, minmax(min(100%, 180px), 1fr))",
-                gap: "12px",
-                marginBottom: "22px",
+                gap: 12,
+                marginBottom: 14,
               }}
             >
               <InfoBox
                 label="نام گیرنده"
                 value={selectedOrder.recipient_name}
               />
-
               <InfoBox label="تلفن" value={selectedOrder.phone} />
-
               <InfoBox
                 label="تاریخ ثبت"
                 value={formatDate(selectedOrder.created_at)}
               />
-
               <InfoBox
                 label="وضعیت پرداخت"
                 value={paymentLabels[selectedOrder.payment_status]}
@@ -988,28 +1384,34 @@ function AdminOrders() {
             />
 
             {selectedOrder.notes && (
-              <div style={{ marginTop: "12px" }}>
+              <div style={{ marginTop: 12 }}>
                 <InfoBox label="یادداشت سفارش" value={selectedOrder.notes} />
               </div>
             )}
 
-            <h3 style={{ margin: "24px 0 12px", fontSize: "17px" }}>
-              اقلام سفارش
-            </h3>
+            <h3 style={sectionHeadingStyle}>اقلام سفارش</h3>
 
-            <div style={{ overflowX: "auto", maxWidth: "100%" }}>
+            <div
+              style={{
+                overflowX: "auto",
+                maxWidth: "100%",
+                border: `1px solid ${colors.border}`,
+                borderRadius: 12,
+                background: "#ffffff",
+              }}
+            >
               <table
                 style={{
                   width: "100%",
-                  minWidth: "450px",
+                  minWidth: 450,
                   borderCollapse: "collapse",
                   textAlign: "right",
                 }}
               >
-                <thead style={{ background: "#f9fafb" }}>
+                <thead style={{ background: "#f0f4eb" }}>
                   <tr>
                     {["محصول", "تعداد", "قیمت واحد", "جمع"].map((heading) => (
-                      <th key={heading} style={cellStyle}>
+                      <th key={heading} scope="col" style={cellStyle}>
                         {heading}
                       </th>
                     ))}
@@ -1021,12 +1423,11 @@ function AdminOrders() {
                     <tr key={item.id}>
                       <td style={cellStyle}>
                         {item.product_name || item.product?.name || "محصول"}
-
                         {item.sku ? (
                           <div
                             style={{
-                              color: "#6b7280",
-                              fontSize: "12px",
+                              color: colors.muted,
+                              fontSize: 12,
                               marginTop: 4,
                             }}
                           >
@@ -1035,23 +1436,13 @@ function AdminOrders() {
                         ) : null}
                       </td>
 
-                      <td style={cellStyle}>{item.quantity}</td>
+                      <td style={cellStyle}>{formatNumber(item.quantity)}</td>
 
-                      <td
-                        style={{
-                          ...cellStyle,
-                          whiteSpace: "nowrap",
-                        }}
-                      >
+                      <td style={{ ...cellStyle, whiteSpace: "nowrap" }}>
                         {formatPrice(item.unit_price)}
                       </td>
 
-                      <td
-                        style={{
-                          ...cellStyle,
-                          whiteSpace: "nowrap",
-                        }}
-                      >
+                      <td style={{ ...cellStyle, whiteSpace: "nowrap" }}>
                         {formatPrice(item.total_price)}
                       </td>
                     </tr>
@@ -1062,35 +1453,29 @@ function AdminOrders() {
 
             <div
               style={{
-                background: "#f9fafb",
-                borderRadius: "12px",
-                padding: "16px",
-                marginTop: "18px",
+                background: "#f0f4eb",
+                border: `1px solid ${colors.border}`,
+                borderRadius: 14,
+                padding: 16,
+                marginTop: 18,
                 display: "grid",
-                gap: "10px",
+                gap: 12,
               }}
             >
               <SummaryRow
                 label="جمع اولیه"
                 value={formatPrice(selectedOrder.subtotal)}
               />
-
               <SummaryRow
                 label="تخفیف"
                 value={formatPrice(selectedOrder.discount)}
               />
-
               <SummaryRow
                 label="هزینه ارسال"
                 value={formatPrice(selectedOrder.shipping_cost)}
               />
 
-              <div
-                style={{
-                  borderTop: "1px solid #e5e7eb",
-                  paddingTop: 12,
-                }}
-              >
+              <div style={{ borderTop: "1px solid #dce4d7", paddingTop: 12 }}>
                 <SummaryRow
                   label="مبلغ نهایی"
                   value={formatPrice(selectedOrder.total)}
@@ -1099,17 +1484,15 @@ function AdminOrders() {
               </div>
             </div>
 
-            <div style={{ marginTop: "24px" }}>
-              <h3 style={{ margin: "0 0 12px", fontSize: "17px" }}>
-                تغییر وضعیت سفارش
-              </h3>
+            <div style={{ marginTop: 24 }}>
+              <h3 style={sectionHeadingStyle}>تغییر وضعیت سفارش</h3>
 
               {selectedOrder.status === "cancelled" ? (
-                <p style={{ color: "#991b1b", fontSize: "14px" }}>
+                <p style={{ color: "#984b48", fontSize: 14 }}>
                   این سفارش لغو شده است و از این بخش قابل فعال‌سازی مجدد نیست.
                 </p>
               ) : selectedOrder.status === "delivered" ? (
-                <p style={{ color: "#166534", fontSize: "14px" }}>
+                <p style={{ color: "#385e3e", fontSize: 14 }}>
                   این سفارش تحویل شده است و وضعیت آن قابل بازگشت نیست.
                 </p>
               ) : (
@@ -1118,7 +1501,7 @@ function AdminOrders() {
                     display: "flex",
                     alignItems: "center",
                     flexWrap: "wrap",
-                    gap: "10px",
+                    gap: 10,
                   }}
                 >
                   <select
@@ -1129,12 +1512,11 @@ function AdminOrders() {
                     style={{
                       ...inputStyle,
                       width: "auto",
-                      minWidth: "190px",
+                      minWidth: 190,
                       maxWidth: "100%",
                     }}
                   >
                     <option value="pending">در انتظار</option>
-
                     {selectedOrder.payment_status === "paid" && (
                       <>
                         <option value="processing">در حال پردازش</option>
@@ -1168,12 +1550,13 @@ function AdminOrders() {
               <div
                 role="status"
                 style={{
-                  background: "#eff6ff",
-                  color: "#1d4ed8",
-                  borderRadius: "9px",
-                  padding: "12px",
-                  marginTop: "16px",
-                  fontSize: "14px",
+                  background: colors.lilac,
+                  border: "1px solid #dfd2ed",
+                  color: colors.lilacText,
+                  borderRadius: 10,
+                  padding: 12,
+                  marginTop: 16,
+                  fontSize: 14,
                 }}
               >
                 {notice}
@@ -1190,19 +1573,19 @@ function InfoBox({ label, value }: { label: string; value?: string | null }) {
   return (
     <div
       style={{
-        background: "#f9fafb",
-        border: "1px solid #e5e7eb",
-        borderRadius: "10px",
-        padding: "13px",
+        background: "#ffffff",
+        border: `1px solid ${colors.border}`,
+        borderRadius: 12,
+        padding: 13,
         minWidth: 0,
         overflowWrap: "anywhere",
       }}
     >
       <div
         style={{
-          color: "#6b7280",
-          fontSize: "12px",
-          marginBottom: "7px",
+          color: colors.muted,
+          fontSize: 12,
+          marginBottom: 7,
         }}
       >
         {label}
@@ -1210,8 +1593,8 @@ function InfoBox({ label, value }: { label: string; value?: string | null }) {
 
       <div
         style={{
-          color: "#111827",
-          fontSize: "14px",
+          color: colors.ink,
+          fontSize: 14,
           overflowWrap: "anywhere",
           whiteSpace: "pre-wrap",
         }}
@@ -1236,9 +1619,10 @@ function SummaryRow({
       style={{
         display: "flex",
         justifyContent: "space-between",
-        gap: "16px",
-        fontSize: strong ? "16px" : "14px",
+        gap: 16,
+        fontSize: strong ? 16 : 14,
         fontWeight: strong ? 800 : 500,
+        color: strong ? colors.ink : "#536452",
       }}
     >
       <span>{label}</span>
@@ -1247,48 +1631,61 @@ function SummaryRow({
   );
 }
 
+const sectionHeadingStyle: React.CSSProperties = {
+  margin: "24px 0 12px",
+  fontSize: 17,
+  fontWeight: 800,
+  color: colors.ink,
+};
+
 const cellStyle: React.CSSProperties = {
   padding: "14px 16px",
-  borderBottom: "1px solid #e5e7eb",
-  fontSize: "13px",
+  borderBottom: `1px solid ${colors.border}`,
+  fontSize: 13,
   verticalAlign: "middle",
+  color: colors.ink,
 };
 
 const detailButtonStyle: React.CSSProperties = {
-  border: "1px solid #bfdbfe",
-  background: "#eff6ff",
-  color: "#1d4ed8",
-  borderRadius: "8px",
+  border: `1px solid ${colors.border}`,
+  background: "#e8efe2",
+  color: "#385e3e",
+  borderRadius: 9,
   padding: "8px 12px",
   fontFamily: "inherit",
+  fontSize: 12,
+  fontWeight: 700,
   cursor: "pointer",
   whiteSpace: "nowrap",
+  transition: "all 160ms ease",
 };
 
 const mobileLabelStyle: React.CSSProperties = {
-  color: "#6b7280",
-  fontSize: "12px",
+  color: colors.muted,
+  fontSize: 12,
 };
 
 const modalBackdropStyle: React.CSSProperties = {
   position: "fixed",
   inset: 0,
   zIndex: 1000,
-  background: "rgba(17,24,39,0.55)",
+  background: "rgba(31, 47, 33, 0.48)",
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-  padding: "20px",
+  padding: 20,
   boxSizing: "border-box",
 };
 
 function paginationButtonStyle(disabled: boolean): React.CSSProperties {
   return {
-    border: "1px solid #d1d5db",
-    borderRadius: "8px",
-    background: disabled ? "#f3f4f6" : "#fff",
-    color: disabled ? "#9ca3af" : "#111827",
+    border: `1px solid ${colors.border}`,
+    borderRadius: 10,
+    background: disabled ? "#f0f2ec" : "#ffffff",
+    color: disabled ? "#a0a79b" : colors.green,
     padding: "9px 16px",
+    fontSize: 13,
+    fontWeight: 700,
     cursor: disabled ? "not-allowed" : "pointer",
     fontFamily: "inherit",
   };

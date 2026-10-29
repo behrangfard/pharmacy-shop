@@ -734,8 +734,8 @@ function ProductDetail() {
                           text-lg
                           transition-all
                           duration-150
-                          hover:bg-purple-50
-                          hover:text-purple-700
+                          hover:bg-[#f0f3e9]
+                          hover:text-[#385e3e]
                           active:scale-90
                         "
                       >
@@ -766,8 +766,8 @@ function ProductDetail() {
                           text-lg
                           transition-all
                           duration-150
-                          hover:bg-purple-50
-                          hover:text-purple-700
+                          hover:bg-[#f0f3e9]
+                          hover:text-[#385e3e]
                           active:scale-90
                         "
                       >

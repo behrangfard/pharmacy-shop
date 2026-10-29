@@ -1,8 +1,9 @@
-import { Navigate, Outlet } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
+import { useAdminAuth } from "../context/AdminAuthContext";
 
 function AdminRoute() {
-  const { user, loading } = useAuth();
+  const { user, loading } = useAdminAuth();
+  const location = useLocation();
 
   if (loading) {
     return (
@@ -22,7 +23,13 @@ function AdminRoute() {
   }
 
   if (!user) {
-    return <Navigate to="/login" replace />;
+    return (
+      <Navigate
+        to="/admin/login"
+        replace
+        state={{ from: `${location.pathname}${location.search}` }}
+      />
+    );
   }
 
   if (user.role !== "admin") {

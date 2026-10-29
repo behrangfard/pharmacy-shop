@@ -187,7 +187,7 @@ function ProductCard({ product }: { product: Product }) {
   return (
     <Link
       to={`/product/${product.slug}`}
-      className="group flex h-full flex-col overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-purple-200 hover:shadow-lg sm:rounded-3xl"
+      className="group flex h-full flex-col overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-[#cbdcc9] hover:shadow-lg sm:rounded-3xl"
     >
       <div className="flex h-full flex-1 flex-col p-2 sm:p-3">
         <div className="relative shrink-0">
@@ -202,8 +202,8 @@ function ProductCard({ product }: { product: Product }) {
             }}
             className={`absolute left-2 top-2 flex h-8 w-8 items-center justify-center rounded-xl border backdrop-blur-sm transition-all sm:left-3 sm:top-3 sm:h-9 sm:w-9 ${
               favorite
-                ? "border-purple-100 bg-purple-50 text-purple-600"
-                : "border-white bg-white/90 text-slate-400 hover:border-purple-100 hover:text-purple-600"
+                ? "border-[#d9e6d5] bg-[#e8efe2] text-[#537653]"
+                : "border-white bg-white/90 text-slate-400 hover:border-[#d9e6d5] hover:text-[#537653]"
             }`}
             aria-label="افزودن به علاقه‌مندی‌ها"
           >
@@ -214,13 +214,13 @@ function ProductCard({ product }: { product: Product }) {
         <div className="flex flex-1 flex-col px-1 pt-3">
           <div className="mb-1 h-4">
             {product.category?.name && (
-              <div className="line-clamp-1 text-[10px] font-bold text-purple-600 sm:text-xs">
+              <div className="line-clamp-1 text-[10px] font-bold text-[#537653] sm:text-xs">
                 {product.category.name}
               </div>
             )}
           </div>
 
-          <h3 className="line-clamp-2 h-10 overflow-hidden text-sm font-black leading-5 text-slate-900 transition-colors group-hover:text-purple-700 sm:h-12 sm:text-base sm:leading-6">
+          <h3 className="line-clamp-2 h-10 overflow-hidden text-sm font-black leading-5 text-slate-900 transition-colors group-hover:text-[#385e3e] sm:h-12 sm:text-base sm:leading-6">
             {product.name}
           </h3>
 
@@ -253,14 +253,14 @@ function ProductCard({ product }: { product: Product }) {
           </div>
 
           <div className="mt-auto pt-2">
-            <div className="group/button flex h-9 items-center justify-between gap-2 rounded-xl bg-purple-50 px-2 py-2 transition-colors hover:bg-purple-600 sm:h-10 sm:px-3">
-              <span className="text-xs font-bold text-purple-700 transition-colors group-hover/button:text-white sm:text-sm">
+            <div className="group/button flex h-9 items-center justify-between gap-2 rounded-xl bg-[#e8efe2] px-2 py-2 transition-colors hover:bg-[#4f7353] sm:h-10 sm:px-3">
+              <span className="text-xs font-bold text-[#385e3e] transition-colors group-hover/button:text-white sm:text-sm">
                 مشاهده محصول
               </span>
 
               <ArrowLeft
                 size={15}
-                className="shrink-0 text-purple-500 transition-all group-hover/button:-translate-x-1 group-hover/button:text-white sm:size-[16px]"
+                className="shrink-0 text-[#648767] transition-all group-hover/button:-translate-x-1 group-hover/button:text-white sm:size-[16px]"
               />
             </div>
           </div>
@@ -459,7 +459,7 @@ function Products() {
           <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10">
             <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
               <div>
-                <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-purple-50 px-4 py-2 text-xs font-black text-purple-600">
+                <div className="mb-4 inline-flex items-center gap-2 rounded-full bg-[#e8efe2] px-4 py-2 text-xs font-black text-[#537653]">
                   <Tag size={14} />
                   کالکشن زنانه و ورزشی
                 </div>
@@ -490,7 +490,7 @@ function Products() {
             <aside className="hidden w-64 flex-shrink-0 lg:block">
               <div className="sticky top-6 rounded-3xl border border-slate-100 bg-white p-5 shadow-sm">
                 <div className="flex items-center gap-3 border-b border-slate-100 pb-5">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-50 text-purple-600">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#e8efe2] text-[#537653]">
                     <SlidersHorizontal size={19} />
                   </div>
 
@@ -508,7 +508,7 @@ function Products() {
                       <button
                         type="button"
                         onClick={() => setSelectedCategory("")}
-                        className="text-xs font-bold text-purple-600 hover:text-purple-700"
+                        className="text-xs font-bold text-[#537653] hover:text-[#385e3e]"
                       >
                         حذف
                       </button>
@@ -519,7 +519,7 @@ function Products() {
                     <div className="flex items-center justify-center py-5">
                       <Loader2
                         size={20}
-                        className="animate-spin text-purple-600"
+                        className="animate-spin text-[#537653]"
                       />
                     </div>
                   ) : (
@@ -529,8 +529,8 @@ function Products() {
                         onClick={() => setSelectedCategory("")}
                         className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-right text-sm font-bold transition ${
                           !selectedCategory
-                            ? "bg-purple-50 text-purple-700"
-                            : "text-slate-600 hover:bg-purple-50 hover:text-purple-700"
+                            ? "bg-[#e8efe2] text-[#385e3e]"
+                            : "text-slate-600 hover:bg-[#e8efe2] hover:text-[#385e3e]"
                         }`}
                       >
                         <span>همه محصولات</span>
@@ -543,8 +543,8 @@ function Products() {
                           onClick={() => setSelectedCategory(category.slug)}
                           className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-right text-sm font-bold transition ${
                             selectedCategory === category.slug
-                              ? "bg-purple-50 text-purple-700"
-                              : "text-slate-600 hover:bg-purple-50 hover:text-purple-700"
+                              ? "bg-[#e8efe2] text-[#385e3e]"
+                              : "text-slate-600 hover:bg-[#e8efe2] hover:text-[#385e3e]"
                           }`}
                         >
                           <span>{category.name}</span>
@@ -576,8 +576,8 @@ function Products() {
                         onClick={() => setSort(value)}
                         className={`w-full rounded-xl px-3 py-2.5 text-right text-sm font-bold transition ${
                           sort === value
-                            ? "bg-purple-600 text-white"
-                            : "text-slate-600 hover:bg-purple-50 hover:text-purple-700"
+                            ? "bg-[#648767] text-white"
+                            : "text-slate-600 hover:bg-[#e8efe2] hover:text-[#385e3e]"
                         }`}
                       >
                         {label}
@@ -612,14 +612,14 @@ function Products() {
                       value={search}
                       onChange={(event) => setSearch(event.target.value)}
                       placeholder="جستجوی لباس، لباس زیر، پوشاک ورزشی..."
-                      className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3.5 pl-10 pr-11 text-sm outline-none transition focus:border-purple-400 focus:bg-white focus:ring-4 focus:ring-purple-50"
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3.5 pl-10 pr-11 text-sm outline-none transition focus:border-[#648767] focus:bg-white focus:ring-4 focus:ring-[#e8efe2]"
                     />
 
                     {search && (
                       <button
                         type="button"
                         onClick={() => setSearch("")}
-                        className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-purple-600"
+                        className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 transition hover:text-[#537653]"
                       >
                         <X size={17} />
                       </button>
@@ -629,7 +629,7 @@ function Products() {
                   <button
                     type="button"
                     onClick={() => setMobileFiltersOpen((value) => !value)}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-purple-600 px-5 py-3.5 text-sm font-bold text-white transition hover:bg-purple-700 lg:hidden"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#648767] px-5 py-3.5 text-sm font-bold text-white transition hover:bg-[#385e3e] lg:hidden"
                   >
                     <Filter size={18} />
                     فیلتر و مرتب‌سازی
@@ -639,7 +639,7 @@ function Products() {
                     <select
                       value={sort}
                       onChange={(event) => setSort(event.target.value)}
-                      className="w-full appearance-none rounded-xl border border-slate-200 bg-white px-4 py-3.5 pl-10 text-sm font-bold outline-none transition focus:border-purple-400"
+                      className="w-full appearance-none rounded-xl border border-slate-200 bg-white px-4 py-3.5 pl-10 text-sm font-bold outline-none transition focus:border-[#648767]"
                     >
                       <option value="newest">جدیدترین</option>
                       <option value="price-low">ارزان‌ترین</option>
@@ -665,8 +665,8 @@ function Products() {
                           onClick={() => setSelectedCategory("")}
                           className={`rounded-xl px-3 py-2 text-xs font-bold transition ${
                             !selectedCategory
-                              ? "bg-purple-600 text-white"
-                              : "bg-slate-50 text-slate-600 hover:bg-purple-50 hover:text-purple-700"
+                              ? "bg-[#648767] text-white"
+                              : "bg-slate-50 text-slate-600 hover:bg-[#e8efe2] hover:text-[#385e3e]"
                           }`}
                         >
                           همه
@@ -679,8 +679,8 @@ function Products() {
                             onClick={() => setSelectedCategory(category.slug)}
                             className={`rounded-xl px-3 py-2 text-xs font-bold transition ${
                               selectedCategory === category.slug
-                                ? "bg-purple-600 text-white"
-                                : "bg-slate-50 text-slate-600 hover:bg-purple-50 hover:text-purple-700"
+                                ? "bg-[#648767] text-white"
+                                : "bg-slate-50 text-slate-600 hover:bg-[#e8efe2] hover:text-[#385e3e]"
                             }`}
                           >
                             {category.name}
@@ -705,8 +705,8 @@ function Products() {
                             onClick={() => setSort(value)}
                             className={`rounded-xl px-3 py-2.5 text-xs font-bold transition ${
                               sort === value
-                                ? "bg-purple-600 text-white"
-                                : "bg-slate-50 text-slate-600 hover:bg-purple-50 hover:text-purple-700"
+                                ? "bg-[#648767] text-white"
+                                : "bg-slate-50 text-slate-600 hover:bg-[#e8efe2] hover:text-[#385e3e]"
                             }`}
                           >
                             {label}
@@ -725,7 +725,7 @@ function Products() {
                   <button
                     type="button"
                     onClick={() => setSelectedCategory("")}
-                    className="inline-flex items-center gap-2 rounded-full bg-purple-50 px-3 py-1.5 text-xs font-bold text-purple-700 transition hover:bg-purple-100"
+                    className="inline-flex items-center gap-2 rounded-full bg-[#e8efe2] px-3 py-1.5 text-xs font-bold text-[#385e3e] transition hover:bg-[#dce8d6]"
                   >
                     {selectedCategoryName}
                     <X size={13} />
@@ -737,7 +737,7 @@ function Products() {
                 <div className="rounded-3xl border border-slate-100 bg-white py-20 text-center shadow-sm">
                   <Loader2
                     size={38}
-                    className="mx-auto animate-spin text-purple-600"
+                    className="mx-auto animate-spin text-[#537653]"
                   />
 
                   <p className="mt-4 font-medium text-slate-500">
@@ -760,7 +760,7 @@ function Products() {
 
                   <Link
                     to="/products"
-                    className="mt-5 inline-flex items-center justify-center rounded-xl bg-purple-600 px-6 py-3 font-bold text-white transition hover:bg-purple-700"
+                    className="mt-5 inline-flex items-center justify-center rounded-xl bg-[#648767] px-6 py-3 font-bold text-white transition hover:bg-[#385e3e]"
                   >
                     تلاش مجدد
                   </Link>
@@ -769,7 +769,7 @@ function Products() {
 
               {!loading && !error && filteredProducts.length === 0 && (
                 <div className="rounded-3xl border border-slate-100 bg-white px-6 py-16 text-center shadow-sm">
-                  <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-purple-50 text-purple-300">
+                  <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#e8efe2] text-[#9aaf96]">
                     <Search size={30} />
                   </div>
 
@@ -782,7 +782,7 @@ function Products() {
                   <button
                     type="button"
                     onClick={clearFilters}
-                    className="mt-5 inline-flex items-center justify-center rounded-xl bg-purple-600 px-6 py-3 font-bold text-white transition hover:bg-purple-700"
+                    className="mt-5 inline-flex items-center justify-center rounded-xl bg-[#648767] px-6 py-3 font-bold text-white transition hover:bg-[#385e3e]"
                   >
                     پاک کردن فیلترها
                   </button>
@@ -809,7 +809,7 @@ function Products() {
 
                   <Link
                     to="/"
-                    className="inline-flex items-center gap-2 text-sm font-bold text-purple-600 transition hover:text-purple-800"
+                    className="inline-flex items-center gap-2 text-sm font-bold text-[#537653] transition hover:text-[#385e3e]"
                   >
                     بازگشت به فروشگاه
                     <ArrowLeft size={16} />

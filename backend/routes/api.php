@@ -11,7 +11,7 @@ use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\ProductController;
 use Illuminate\Support\Facades\Route;
-
+use App\Http\Controllers\Api\AdminCustomerController;
 Route::prefix('v1')->group(function () {
 
     /*
@@ -67,6 +67,24 @@ Route::prefix('v1')->group(function () {
 
         Route::middleware('admin')->prefix('admin')->group(function () {
 
+        // Customer Management
+        Route::post(
+    '/customers',
+    [AdminCustomerController::class, 'store']
+);
+Route::delete(
+    '/customers/{customerId}',
+    [AdminCustomerController::class, 'destroy']
+);
+Route::get(
+    '/customers',
+    [AdminCustomerController::class, 'index']
+);
+
+Route::get(
+    '/customers/{customerId}',
+    [AdminCustomerController::class, 'show']
+);
             // Dashboard
 
             Route::get(
@@ -108,10 +126,10 @@ Route::prefix('v1')->group(function () {
 
             // Product Management
 
-            Route::get(
-                '/products',
-                [AdminProductController::class, 'index']
-            );
+           Route::get(
+    '/products',
+    [AdminProductController::class, 'index']
+);
 
             Route::post(
                 '/products',

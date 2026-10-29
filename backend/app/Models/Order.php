@@ -12,6 +12,7 @@ class Order extends Model
     use HasFactory;
 
     protected $fillable = [
+        'idempotency_key',
         'recipient_name',
         'user_id',
         'order_number',
@@ -23,11 +24,11 @@ class Order extends Model
         'total',
         'status',
         'payment_status',
-        'recipient_name',
         'phone',
         'address',
         'postal_code',
         'notes',
+        'sales_channel',
     ];
 
     protected $casts = [

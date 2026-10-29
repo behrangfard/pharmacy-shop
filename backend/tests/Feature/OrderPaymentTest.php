@@ -18,6 +18,11 @@ class OrderPaymentTest extends TestCase
 
     public function test_repeated_payment_does_not_change_stock_or_pay_twice(): void
     {
+        config([
+            'payment.mode' => 'demo',
+            'payment.demo_enabled' => true,
+        ]);
+
         $user = User::factory()->create([
             'role' => 'user',
         ]);
@@ -108,6 +113,55 @@ class OrderPaymentTest extends TestCase
         );
     }
 
+    public function test_demo_payment_is_rejected_when_disabled(): void
+    {
+        config([
+            'payment.mode' => 'disabled',
+            'payment.demo_enabled' => false,
+        ]);
+
+        $user = User::factory()->create([
+            'role' => 'user',
+        ]);
+
+        $order = Order::query()->create([
+            'user_id' => $user->id,
+            'order_number' => 'ORD-PAYMENT-DISABLED-001',
+            'subtotal' => 100000,
+            'shipping_cost' => 0,
+            'discount' => 0,
+            'tax_percent' => 0,
+            'tax_amount' => 0,
+            'total' => 100000,
+            'status' => 'pending',
+            'payment_status' => 'unpaid',
+            'recipient_name' => 'Test User',
+            'phone' => '09120000000',
+            'address' => 'Test address',
+            'postal_code' => null,
+            'notes' => null,
+        ]);
+
+        Sanctum::actingAs($user);
+
+        $response = $this->postJson(
+            '/api/v1/orders/' . $order->order_number . '/pay'
+        );
+
+        $response->assertForbidden()
+            ->assertJsonPath('success', false)
+            ->assertJsonPath(
+                'message',
+                'پرداخت آزمایشی غیرفعال است.'
+            );
+
+        $this->assertDatabaseHas('orders', [
+            'id' => $order->id,
+            'payment_status' => 'unpaid',
+            'status' => 'pending',
+        ]);
+    }
+
     public function test_vat_is_calculated_only_for_taxable_products(): void
     {
         $user = User::factory()->create([
@@ -150,23 +204,28 @@ class OrderPaymentTest extends TestCase
 
         Sanctum::actingAs($user);
 
-        $response = $this->postJson('/api/v1/orders', [
-            'recipient_name' => 'Test User',
-            'phone' => '09120000000',
-            'address' => 'Test address',
-            'postal_code' => '1234567890',
-            'notes' => null,
-            'items' => [
-                [
-                    'product_id' => $taxableProduct->id,
-                    'quantity' => 1,
+        $response = $this
+            ->withHeader(
+                'Idempotency-Key',
+                '550e8400-e29b-41d4-a716-446655440000'
+            )
+            ->postJson('/api/v1/orders', [
+                'recipient_name' => 'Test User',
+                'phone' => '09120000000',
+                'address' => 'Test address',
+                'postal_code' => '1234567890',
+                'notes' => null,
+                'items' => [
+                    [
+                        'product_id' => $taxableProduct->id,
+                        'quantity' => 1,
+                    ],
+                    [
+                        'product_id' => $nonTaxableProduct->id,
+                        'quantity' => 1,
+                    ],
                 ],
-                [
-                    'product_id' => $nonTaxableProduct->id,
-                    'quantity' => 1,
-                ],
-            ],
-        ]);
+            ]);
 
         $response->assertSuccessful();
 

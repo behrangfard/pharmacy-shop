@@ -350,8 +350,8 @@ function Account() {
 
       case "shipped":
         return {
-          wrapper: "bg-indigo-50 text-indigo-700 border-indigo-200",
-          accent: "bg-indigo-500",
+          wrapper: "bg-[#e8efe2] text-[#385e3e] border-[#d9e6d5]",
+          accent: "bg-[#648767]",
           icon: Truck,
         };
 
@@ -387,7 +387,7 @@ function Account() {
         return "bg-red-50 text-red-700 border-red-200";
 
       case "refunded":
-        return "bg-purple-50 text-purple-700 border-purple-200";
+        return "bg-[#e8efe2] text-[#385e3e] border-[#d9e6d5]";
 
       default:
         return "bg-slate-50 text-slate-600 border-slate-200";
@@ -495,7 +495,7 @@ function Account() {
                     <h2 className="text-xl font-black">{user.name}</h2>
 
                     <p className="text-slate-500 text-sm mt-1">
-                      حساب کاربری آرسن شاپ
+                      حساب کاربری بهرنگ شاپ
                     </p>
                   </div>
                 </div>

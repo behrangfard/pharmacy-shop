@@ -40,7 +40,38 @@ class AdminOrderController extends Controller
             ],
             'search' => ['nullable', 'string', 'max:100'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+            'sort_by' => [
+                'nullable',
+                'string',
+                Rule::in([
+                    'order_number',
+                    'recipient_name',
+                    'total',
+                    'status',
+                    'payment_status',
+                    'created_at',
+                ]),
+            ],
+            'sort_direction' => [
+                'nullable',
+                'string',
+                Rule::in(['asc', 'desc']),
+            ],
         ]);
+
+        $sortColumns = [
+            'order_number' => 'order_number',
+            'recipient_name' => 'recipient_name',
+            'total' => 'total',
+            'status' => 'status',
+            'payment_status' => 'payment_status',
+            'created_at' => 'created_at',
+        ];
+
+        $sortBy = $validated['sort_by'] ?? 'created_at';
+        $sortDirection = $validated['sort_direction'] ?? 'desc';
+
+        $sortColumn = $sortColumns[$sortBy];
 
         $orders = Order::query()
             ->with(['items.product.images', 'user'])
@@ -74,8 +105,10 @@ class AdminOrderController extends Controller
                     });
                 }
             )
-            ->latest()
-            ->paginate($validated['per_page'] ?? 15);
+            ->orderBy($sortColumn, $sortDirection)
+            ->orderBy('id', 'desc')
+            ->paginate($validated['per_page'] ?? 15)
+            ->withQueryString();
 
         return response()->json([
             'success' => true,
@@ -197,15 +230,17 @@ class AdminOrderController extends Controller
                     'status' => 422,
                 ];
             }
-if (
-    $newStatus === 'cancelled'
-    && $order->payment_status !== 'paid'
-) {
-    return [
-        'error' => 'لغو سفارش پرداخت‌نشده از پنل مدیریت مجاز نیست.',
-        'status' => 422,
-    ];
-}
+
+            if (
+                $newStatus === 'cancelled'
+                && $order->payment_status !== 'paid'
+            ) {
+                return [
+                    'error' => 'لغو سفارش پرداخت‌نشده از پنل مدیریت مجاز نیست.',
+                    'status' => 422,
+                ];
+            }
+
             if ($newStatus === 'cancelled') {
                 if ($order->stock_restored_at !== null) {
                     return [

@@ -101,6 +101,38 @@ class AdminOrderStatusTest extends TestCase
         ]);
     }
 
+    public function test_admin_cannot_mark_order_as_paid_through_status_endpoint(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        $order = $this->createTestOrder(
+            $admin,
+            'ORD-TEST-FORGED-PAYMENT-001',
+            'pending',
+            'unpaid'
+        );
+
+        Sanctum::actingAs($admin);
+
+        $response = $this->patchJson(
+            '/api/v1/admin/orders/' . $order->order_number . '/status',
+            [
+                'status' => 'processing',
+                'payment_status' => 'paid',
+            ]
+        );
+
+        $response->assertStatus(422);
+
+        $this->assertDatabaseHas('orders', [
+            'id' => $order->id,
+            'status' => 'pending',
+            'payment_status' => 'unpaid',
+        ]);
+    }
+
     public function test_regular_user_cannot_access_admin_orders_list(): void
     {
         $user = User::factory()->create([

@@ -116,9 +116,11 @@ class AuthController extends Controller
             ]);
         }
 
-        $user->update([
-            'password' => Hash::make($validated['password']),
-        ]);
+       $user->update([
+    'password' => Hash::make($validated['password']),
+]);
+
+$user->tokens()->delete();
 
         return response()->json([
             'success' => true,

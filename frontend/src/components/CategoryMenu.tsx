@@ -60,7 +60,6 @@ function CategoryMenu() {
   );
 
   const [loading, setLoading] = useState(() => readCategoryCache() === null);
-
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [expandedCategory, setExpandedCategory] = useState<number | null>(null);
 
@@ -111,7 +110,7 @@ function CategoryMenu() {
     return (
       <nav
         aria-label="دسته‌بندی محصولات"
-        className="min-h-12 border-b border-gray-100 bg-white lg:min-h-14"
+        className="min-h-12 border-b border-[#e6ecdf] bg-[#faf9f4] lg:min-h-14"
         dir="rtl"
       >
         <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6">
@@ -119,7 +118,7 @@ function CategoryMenu() {
             {[1, 2, 3, 4].map((item) => (
               <div
                 key={item}
-                className="h-5 w-20 animate-pulse rounded-md bg-gray-100"
+                className="h-8 w-20 animate-pulse rounded-xl bg-[#e8eee3]"
               />
             ))}
           </div>
@@ -135,12 +134,13 @@ function CategoryMenu() {
   return (
     <nav
       aria-label="دسته‌بندی محصولات"
-      className="relative z-40 border-b border-gray-100 bg-white"
+      className="relative z-40 border-b border-[#e6ecdf] bg-[#faf9f4]"
       dir="rtl"
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <div className="flex min-h-12 items-center justify-between py-2 lg:min-h-14">
-          <div className="hidden w-full flex-wrap items-center gap-x-6 gap-y-2 lg:flex">
+          {/* Desktop navigation */}
+          <div className="hidden w-full flex-wrap items-center gap-x-3 gap-y-2 lg:flex">
             {activeCategories.map((category) => {
               const activeChildren = (category.children ?? []).filter(
                 (child) => child.is_active !== false,
@@ -150,26 +150,53 @@ function CategoryMenu() {
                 <div key={category.id} className="group relative">
                   <Link
                     to={`/products?category=${encodeURIComponent(category.slug)}`}
-                    className="inline-flex items-center gap-1 py-2 text-sm font-medium text-gray-700 transition-colors hover:text-blue-600"
+                    className="
+                      inline-flex items-center gap-1.5 rounded-xl
+                      px-3.5 py-2.5 text-sm font-medium
+                      text-[#526451] transition-colors
+                      hover:bg-[#e8efe2] hover:text-[#385e3e]
+                      focus-visible:outline-none
+                      focus-visible:ring-2 focus-visible:ring-[#91ad8d]
+                    "
                   >
                     {category.name}
 
                     {activeChildren.length > 0 && (
                       <ChevronDown
-                        size={14}
+                        size={15}
                         aria-hidden="true"
-                        className="transition-transform group-hover:rotate-180"
+                        className="transition-transform duration-200 group-hover:rotate-180 group-focus-within:rotate-180"
                       />
                     )}
                   </Link>
 
                   {activeChildren.length > 0 && (
-                    <div className="invisible absolute right-0 top-full min-w-48 translate-y-1 rounded-xl border border-gray-100 bg-white p-2 opacity-0 shadow-lg transition-all duration-150 group-hover:visible group-hover:translate-y-0 group-hover:opacity-100 group-focus-within:visible group-focus-within:translate-y-0 group-focus-within:opacity-100">
+                    <div
+                      className="
+                        invisible absolute right-0 top-full z-50
+                        min-w-52 translate-y-2 rounded-2xl
+                        border border-[#e5eadd] bg-white p-2
+                        opacity-0 shadow-lg
+                        transition-all duration-200
+                        group-hover:visible group-hover:translate-y-0
+                        group-hover:opacity-100
+                        group-focus-within:visible
+                        group-focus-within:translate-y-0
+                        group-focus-within:opacity-100
+                      "
+                    >
                       {activeChildren.map((child) => (
                         <Link
                           key={child.id}
                           to={`/products?category=${encodeURIComponent(child.slug)}`}
-                          className="block rounded-lg px-3 py-2 text-sm text-gray-700 transition-colors hover:bg-blue-50 hover:text-blue-600"
+                          className="
+                            block rounded-xl px-3.5 py-3
+                            text-sm text-[#687565]
+                            transition-colors
+                            hover:bg-[#f0f4eb] hover:text-[#4f7754]
+                            focus-visible:bg-[#f0f4eb]
+                            focus-visible:outline-none
+                          "
                         >
                           {child.name}
                         </Link>
@@ -181,20 +208,39 @@ function CategoryMenu() {
             })}
           </div>
 
+          {/* Mobile navigation button */}
           <button
             type="button"
             aria-label={mobileMenuOpen ? "بستن منو" : "باز کردن منو"}
             aria-expanded={mobileMenuOpen}
-            onClick={() => setMobileMenuOpen((open) => !open)}
-            className="inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 lg:hidden"
+            onClick={() => {
+              setMobileMenuOpen((open) => !open);
+              setExpandedCategory(null);
+            }}
+            className="
+              inline-flex items-center gap-2 rounded-xl
+              border border-[#e2e9dc] bg-white px-3.5 py-2.5
+              text-sm font-bold text-[#526b55]
+              transition-colors hover:bg-[#e8efe2]
+              focus-visible:outline-none
+              focus-visible:ring-2 focus-visible:ring-[#91ad8d]
+              lg:hidden
+            "
           >
             {mobileMenuOpen ? <X size={19} /> : <Menu size={19} />}
             دسته‌بندی محصولات
+            <ChevronDown
+              size={15}
+              className={`transition-transform ${
+                mobileMenuOpen ? "rotate-180" : ""
+              }`}
+            />
           </button>
         </div>
 
+        {/* Mobile navigation menu */}
         {mobileMenuOpen && (
-          <div className="border-t border-gray-100 py-2 lg:hidden">
+          <div className="border-t border-[#e6ecdf] py-2 lg:hidden">
             {activeCategories.map((category) => {
               const activeChildren = (category.children ?? []).filter(
                 (child) => child.is_active !== false,
@@ -205,13 +251,17 @@ function CategoryMenu() {
               return (
                 <div
                   key={category.id}
-                  className="border-b border-gray-50 last:border-b-0"
+                  className="border-b border-[#edf0e8] last:border-b-0"
                 >
                   <div className="flex items-center justify-between gap-2">
                     <Link
                       to={`/products?category=${encodeURIComponent(category.slug)}`}
                       onClick={closeMenu}
-                      className="flex-1 py-3 text-sm font-medium text-gray-700 hover:text-blue-600"
+                      className="
+                        flex-1 rounded-xl py-3 text-sm font-medium
+                        text-[#526451] transition-colors
+                        hover:text-[#4f7754]
+                      "
                     >
                       {category.name}
                     </Link>
@@ -224,11 +274,16 @@ function CategoryMenu() {
                         onClick={() =>
                           setExpandedCategory(expanded ? null : category.id)
                         }
-                        className="rounded-lg p-2 text-gray-500 hover:bg-gray-50"
+                        className="
+                          rounded-xl p-2.5 text-[#7b947a]
+                          transition-colors hover:bg-[#e8efe2]
+                          focus-visible:outline-none
+                          focus-visible:ring-2 focus-visible:ring-[#91ad8d]
+                        "
                       >
                         <ChevronDown
                           size={17}
-                          className={`transition-transform ${
+                          className={`transition-transform duration-200 ${
                             expanded ? "rotate-180" : ""
                           }`}
                         />
@@ -237,13 +292,18 @@ function CategoryMenu() {
                   </div>
 
                   {expanded && activeChildren.length > 0 && (
-                    <div className="mb-2 mr-3 border-r-2 border-blue-100 pr-3">
+                    <div className="mb-3 mr-2 space-y-1 border-r-2 border-[#c9b6df] pr-3">
                       {activeChildren.map((child) => (
                         <Link
                           key={child.id}
                           to={`/products?category=${encodeURIComponent(child.slug)}`}
                           onClick={closeMenu}
-                          className="block rounded-lg px-3 py-2.5 text-sm text-gray-600 hover:bg-blue-50 hover:text-blue-600"
+                          className="
+                            block rounded-xl px-3 py-2.5
+                            text-sm text-[#788174]
+                            transition-colors
+                            hover:bg-[#eee7f5] hover:text-[#725a91]
+                          "
                         >
                           {child.name}
                         </Link>

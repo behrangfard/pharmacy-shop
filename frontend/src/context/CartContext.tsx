@@ -19,6 +19,7 @@ export interface CartItem {
   thumbnail?: string | null;
   quantity: number;
   stock: number;
+  is_taxable: boolean;
 }
 
 interface CartContextType {
@@ -39,6 +40,7 @@ interface ApiProduct {
   discount_percent?: string | number | null;
   stock: string | number;
   thumbnail?: string | null;
+  is_taxable?: boolean | number | string | null;
 }
 
 interface ApiProductResponse {
@@ -59,6 +61,10 @@ function normalizeQuantity(quantity: number, stock: number): number {
   if (safeStock <= 0) return 0;
   if (!Number.isFinite(quantity)) return 1;
   return Math.max(1, Math.min(Math.floor(quantity), safeStock));
+}
+
+function normalizeTaxable(value: unknown): boolean {
+  return value === true || value === 1 || value === "1" || value === "true";
 }
 
 function CartProvider({ children }: { children: ReactNode }) {
@@ -84,12 +90,14 @@ function CartProvider({ children }: { children: ReactNode }) {
         )
         .map((item) => {
           const stock = normalizeStock(Number(item.stock));
+
           return {
             ...item,
             id: Number(item.id),
             price: Math.max(0, Number(item.price)),
             stock,
             quantity: normalizeQuantity(Number(item.quantity), stock),
+            is_taxable: normalizeTaxable(item.is_taxable),
           };
         })
         .filter((item) => item.quantity > 0);
@@ -166,8 +174,7 @@ function CartProvider({ children }: { children: ReactNode }) {
           const stock = normalizeStock(productStock);
           const quantity = normalizeQuantity(item.quantity, stock);
 
-          // Remove items that are no longer in stock instead of retaining
-          // an impossible quantity in the cart.
+          // Remove items that are no longer in stock.
           if (quantity === 0) return [];
 
           return [
@@ -181,6 +188,7 @@ function CartProvider({ children }: { children: ReactNode }) {
               thumbnail: product.thumbnail ?? item.thumbnail,
               stock,
               quantity,
+              is_taxable: normalizeTaxable(product.is_taxable),
             },
           ];
         }),
@@ -207,6 +215,7 @@ function CartProvider({ children }: { children: ReactNode }) {
       id: Number(product.id),
       price,
       stock,
+      is_taxable: normalizeTaxable(product.is_taxable),
     };
 
     setItems((currentItems) => {

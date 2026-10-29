@@ -1,5 +1,5 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
-import api from "../services/api";
+import { adminApi } from "../services/api";
 
 interface Category {
   id: number;
@@ -118,7 +118,7 @@ export default function AdminCategories() {
     setError("");
 
     try {
-      const response = await api.get("/admin/categories");
+      const response = await adminApi.get("/admin/categories");
       const result = response.data?.data;
 
       if (!Array.isArray(result)) {
@@ -244,10 +244,10 @@ export default function AdminCategories() {
 
     try {
       if (editingId !== null) {
-        await api.put(`/admin/categories/${editingId}`, payload);
+        await adminApi.put(`/admin/categories/${editingId}`, payload);
         setSuccess("دسته‌بندی با موفقیت ویرایش شد.");
       } else {
-        await api.post("/admin/categories", payload);
+        await adminApi.post("/admin/categories", payload);
         setSuccess("دسته‌بندی جدید با موفقیت ایجاد شد.");
       }
 
@@ -266,7 +266,7 @@ export default function AdminCategories() {
     setActionId(category.id);
 
     try {
-      await api.patch(`/admin/categories/${category.id}/status`, {
+      await adminApi.patch(`/admin/categories/${category.id}/status`, {
         is_active: !category.is_active,
       });
 
@@ -293,7 +293,7 @@ export default function AdminCategories() {
     setActionId(category.id);
 
     try {
-      await api.delete(`/admin/categories/${category.id}`);
+      await adminApi.delete(`/admin/categories/${category.id}`);
 
       if (editingId === category.id) {
         resetForm();
@@ -308,35 +308,6 @@ export default function AdminCategories() {
     }
   }
 
-  const inputStyle: React.CSSProperties = {
-    width: "100%",
-    padding: "10px 12px",
-    border: "1px solid #d1d5db",
-    borderRadius: 8,
-    fontSize: 14,
-    boxSizing: "border-box",
-    background: "#fff",
-    color: "#111827",
-  };
-
-  const labelStyle: React.CSSProperties = {
-    display: "block",
-    marginBottom: 6,
-    fontSize: 14,
-    fontWeight: 600,
-    color: "#374151",
-  };
-
-  const buttonStyle: React.CSSProperties = {
-    border: 0,
-    borderRadius: 8,
-    padding: "9px 14px",
-    cursor: "pointer",
-    fontSize: 13,
-    fontWeight: 600,
-    whiteSpace: "nowrap",
-  };
-
   function renderCategoryActions(category: Category) {
     const busy = actionId === category.id;
 
@@ -344,26 +315,18 @@ export default function AdminCategories() {
       <div className="admin-category-actions">
         <button
           type="button"
+          className="admin-category-button admin-category-button-edit"
           onClick={() => startEditing(category)}
           disabled={busy || saving}
-          style={{
-            ...buttonStyle,
-            background: "#dbeafe",
-            color: "#1d4ed8",
-          }}
         >
           ویرایش
         </button>
 
         <button
           type="button"
+          className="admin-category-button admin-category-button-status"
           onClick={() => void toggleStatus(category)}
           disabled={busy || saving}
-          style={{
-            ...buttonStyle,
-            background: category.is_active ? "#fef3c7" : "#d1fae5",
-            color: category.is_active ? "#92400e" : "#065f46",
-          }}
         >
           {busy
             ? "در حال انجام..."
@@ -374,13 +337,9 @@ export default function AdminCategories() {
 
         <button
           type="button"
+          className="admin-category-button admin-category-button-delete"
           onClick={() => void deleteCategory(category)}
           disabled={busy || saving}
-          style={{
-            ...buttonStyle,
-            background: "#fee2e2",
-            color: "#991b1b",
-          }}
         >
           حذف
         </button>
@@ -391,11 +350,11 @@ export default function AdminCategories() {
   function renderStatus(category: Category) {
     return (
       <span
-        className="admin-category-status"
-        style={{
-          background: category.is_active ? "#d1fae5" : "#fee2e2",
-          color: category.is_active ? "#065f46" : "#991b1b",
-        }}
+        className={`admin-category-status ${
+          category.is_active
+            ? "admin-category-status-active"
+            : "admin-category-status-inactive"
+        }`}
       >
         {category.is_active ? "فعال" : "غیرفعال"}
       </span>
@@ -403,40 +362,38 @@ export default function AdminCategories() {
   }
 
   return (
-    <div
-      dir="rtl"
-      className="admin-categories-page"
-      style={{ maxWidth: 1400, margin: "0 auto" }}
-    >
-      <div className="admin-categories-heading">
-        <div>
+    <div dir="rtl" className="admin-categories-page">
+      <header className="admin-categories-heading">
+        <div className="admin-categories-heading-copy">
+          <span className="admin-categories-eyebrow">مدیریت فروشگاه</span>
           <h1 className="admin-categories-title">مدیریت دسته‌بندی‌ها</h1>
           <p className="admin-categories-subtitle">
-            ایجاد و مدیریت دسته‌بندی‌های فروشگاه
+            دسته‌بندی‌های فروشگاه را ایجاد کنید و ساختار آن‌ها را مدیریت کنید.
           </p>
         </div>
 
         <button
           type="button"
+          className="admin-category-button admin-category-button-reload"
           onClick={() => void loadCategories()}
           disabled={loading}
-          style={{
-            ...buttonStyle,
-            background: "#f3f4f6",
-            color: "#374151",
-            opacity: loading ? 0.6 : 1,
-          }}
         >
+          <span className="admin-category-button-icon" aria-hidden="true">
+            ↻
+          </span>
           {loading ? "در حال دریافت..." : "بارگذاری مجدد"}
         </button>
-      </div>
+      </header>
 
       {error && (
         <div
           className="admin-categories-alert admin-categories-error"
           role="alert"
         >
-          {error}
+          <span className="admin-categories-alert-icon" aria-hidden="true">
+            !
+          </span>
+          <span>{error}</span>
         </div>
       )}
 
@@ -445,58 +402,67 @@ export default function AdminCategories() {
           className="admin-categories-alert admin-categories-success"
           role="status"
         >
-          {success}
+          <span className="admin-categories-alert-icon" aria-hidden="true">
+            ✓
+          </span>
+          <span>{success}</span>
         </div>
       )}
 
       <section className="admin-categories-panel admin-categories-form-panel">
-        <h2 className="admin-categories-section-title">
-          {editingId !== null ? "ویرایش دسته‌بندی" : "افزودن دسته‌بندی جدید"}
-        </h2>
+        <div className="admin-categories-panel-heading">
+          <div className="admin-categories-panel-icon" aria-hidden="true">
+            {editingId !== null ? "✎" : "+"}
+          </div>
+          <div>
+            <h2 className="admin-categories-section-title">
+              {editingId !== null
+                ? "ویرایش دسته‌بندی"
+                : "افزودن دسته‌بندی جدید"}
+            </h2>
+            <p className="admin-categories-section-description">
+              اطلاعات اصلی و تنظیمات نمایش دسته‌بندی را وارد کنید.
+            </p>
+          </div>
+        </div>
 
         <form onSubmit={handleSubmit}>
           <div className="admin-categories-form-grid">
-            <div>
-              <label htmlFor="category-name" style={labelStyle}>
-                نام دسته‌بندی *
-              </label>
+            <div className="admin-category-field">
+              <label htmlFor="category-name">نام دسته‌بندی *</label>
               <input
                 id="category-name"
+                className="admin-category-input"
                 value={form.name}
                 onChange={(event) => updateField("name", event.target.value)}
                 required
                 maxLength={255}
-                style={inputStyle}
-                placeholder="مثلاً تجهیزات پزشکی"
+                placeholder="مثلاً لباس زیر زنانه"
               />
             </div>
 
-            <div>
-              <label htmlFor="category-slug" style={labelStyle}>
-                اسلاگ (اختیاری)
-              </label>
+            <div className="admin-category-field">
+              <label htmlFor="category-slug">اسلاگ (اختیاری)</label>
               <input
                 id="category-slug"
+                className="admin-category-input"
                 value={form.slug}
                 onChange={(event) => updateField("slug", event.target.value)}
                 maxLength={255}
-                style={inputStyle}
                 placeholder="medical-equipment"
                 dir="ltr"
               />
             </div>
 
-            <div>
-              <label htmlFor="category-parent" style={labelStyle}>
-                دسته‌بندی والد
-              </label>
+            <div className="admin-category-field">
+              <label htmlFor="category-parent">دسته‌بندی والد</label>
               <select
                 id="category-parent"
+                className="admin-category-input"
                 value={form.parent_id}
                 onChange={(event) =>
                   updateField("parent_id", event.target.value)
                 }
-                style={inputStyle}
               >
                 <option value="">بدون والد (دسته‌بندی اصلی)</option>
                 {availableParents.map((category) => (
@@ -507,12 +473,11 @@ export default function AdminCategories() {
               </select>
             </div>
 
-            <div>
-              <label htmlFor="category-sort-order" style={labelStyle}>
-                ترتیب نمایش
-              </label>
+            <div className="admin-category-field">
+              <label htmlFor="category-sort-order">ترتیب نمایش</label>
               <input
                 id="category-sort-order"
+                className="admin-category-input"
                 type="number"
                 min="0"
                 step="1"
@@ -520,66 +485,60 @@ export default function AdminCategories() {
                 onChange={(event) =>
                   updateField("sort_order", event.target.value)
                 }
-                style={inputStyle}
               />
             </div>
 
-            <div>
-              <label htmlFor="category-image" style={labelStyle}>
-                آدرس تصویر (اختیاری)
-              </label>
+            <div className="admin-category-field">
+              <label htmlFor="category-image">آدرس تصویر (اختیاری)</label>
               <input
                 id="category-image"
+                className="admin-category-input"
                 value={form.image}
                 onChange={(event) => updateField("image", event.target.value)}
-                style={inputStyle}
                 placeholder="/storage/categories/example.jpg"
                 dir="ltr"
               />
             </div>
 
-            <div>
-              <label htmlFor="category-meta-title" style={labelStyle}>
-                عنوان سئو
-              </label>
+            <div className="admin-category-field">
+              <label htmlFor="category-meta-title">عنوان سئو</label>
               <input
                 id="category-meta-title"
+                className="admin-category-input"
                 value={form.meta_title}
                 onChange={(event) =>
                   updateField("meta_title", event.target.value)
                 }
                 maxLength={255}
-                style={inputStyle}
+                placeholder="عنوان مناسب برای موتورهای جست‌وجو"
               />
             </div>
 
-            <div className="admin-categories-full-width">
-              <label htmlFor="category-description" style={labelStyle}>
-                توضیحات
-              </label>
+            <div className="admin-category-field admin-categories-full-width">
+              <label htmlFor="category-description">توضیحات</label>
               <textarea
                 id="category-description"
+                className="admin-category-input admin-category-textarea"
                 value={form.description}
                 onChange={(event) =>
                   updateField("description", event.target.value)
                 }
                 rows={3}
-                style={{ ...inputStyle, resize: "vertical" }}
+                placeholder="توضیح کوتاهی درباره این دسته‌بندی..."
               />
             </div>
 
-            <div className="admin-categories-full-width">
-              <label htmlFor="category-meta-description" style={labelStyle}>
-                توضیحات سئو
-              </label>
+            <div className="admin-category-field admin-categories-full-width">
+              <label htmlFor="category-meta-description">توضیحات سئو</label>
               <textarea
                 id="category-meta-description"
+                className="admin-category-input admin-category-textarea"
                 value={form.meta_description}
                 onChange={(event) =>
                   updateField("meta_description", event.target.value)
                 }
                 rows={2}
-                style={{ ...inputStyle, resize: "vertical" }}
+                placeholder="توضیح کوتاه برای نمایش در نتایج جست‌وجو"
               />
             </div>
 
@@ -592,20 +551,21 @@ export default function AdminCategories() {
                   updateField("is_active", event.target.checked)
                 }
               />
-              دسته‌بندی فعال باشد
+              <span
+                className="admin-categories-checkbox-mark"
+                aria-hidden="true"
+              >
+                ✓
+              </span>
+              <span>دسته‌بندی فعال باشد</span>
             </label>
           </div>
 
           <div className="admin-categories-form-actions">
             <button
               type="submit"
+              className="admin-category-button admin-category-button-primary"
               disabled={saving}
-              style={{
-                ...buttonStyle,
-                background: "#2563eb",
-                color: "#fff",
-                opacity: saving ? 0.6 : 1,
-              }}
             >
               {saving
                 ? "در حال ذخیره..."
@@ -617,13 +577,9 @@ export default function AdminCategories() {
             {editingId !== null && (
               <button
                 type="button"
+                className="admin-category-button admin-category-button-cancel"
                 onClick={resetForm}
                 disabled={saving}
-                style={{
-                  ...buttonStyle,
-                  background: "#f3f4f6",
-                  color: "#374151",
-                }}
               >
                 لغو ویرایش
               </button>
@@ -632,17 +588,40 @@ export default function AdminCategories() {
         </form>
       </section>
 
-      <section className="admin-categories-panel">
+      <section className="admin-categories-panel admin-categories-list-panel">
         <div className="admin-categories-list-heading">
-          <h2 className="admin-categories-section-title">فهرست دسته‌بندی‌ها</h2>
+          <div className="admin-categories-panel-heading">
+            <div className="admin-categories-panel-icon admin-categories-panel-icon-lilac">
+              ≡
+            </div>
+            <div>
+              <h2 className="admin-categories-section-title">
+                فهرست دسته‌بندی‌ها
+              </h2>
+              <p className="admin-categories-section-description">
+                {formatNumber(categories.length)} دسته‌بندی ثبت شده است.
+              </p>
+            </div>
+          </div>
 
-          <input
-            aria-label="جست‌وجوی دسته‌بندی‌ها"
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            placeholder="جست‌وجوی نام، اسلاگ یا والد..."
-            style={{ ...inputStyle, maxWidth: 320 }}
-          />
+          <div className="admin-categories-search">
+            <span aria-hidden="true">⌕</span>
+            <input
+              aria-label="جست‌وجوی دسته‌بندی‌ها"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="جست‌وجوی نام، اسلاگ یا والد..."
+            />
+            {search && (
+              <button
+                type="button"
+                aria-label="پاک کردن جست‌وجو"
+                onClick={() => setSearch("")}
+              >
+                ×
+              </button>
+            )}
+          </div>
         </div>
 
         {loading ? (
@@ -650,12 +629,21 @@ export default function AdminCategories() {
             در حال دریافت دسته‌بندی‌ها...
           </p>
         ) : filteredCategories.length === 0 ? (
-          <p className="admin-categories-message">
-            دسته‌بندی‌ای برای نمایش پیدا نشد.
-          </p>
+          <div className="admin-categories-empty">
+            <span aria-hidden="true">⌕</span>
+            <p>دسته‌بندی‌ای برای نمایش پیدا نشد.</p>
+            {search && (
+              <button
+                type="button"
+                className="admin-category-button admin-category-button-cancel"
+                onClick={() => setSearch("")}
+              >
+                پاک کردن جست‌وجو
+              </button>
+            )}
+          </div>
         ) : (
           <>
-            {/* جدول دسکتاپ؛ ستون‌ها و اطلاعات جدول حفظ شده‌اند */}
             <div className="admin-categories-desktop">
               <div className="admin-categories-table-scroll">
                 <table className="admin-categories-table">
@@ -680,20 +668,25 @@ export default function AdminCategories() {
                   <tbody>
                     {filteredCategories.map((category) => (
                       <tr key={category.id}>
-                        <td className="admin-category-name">{category.name}</td>
-
+                        <td className="admin-category-name">
+                          <span className="admin-category-name-dot" />
+                          {category.name}
+                        </td>
                         <td className="admin-category-slug" dir="ltr">
                           {category.slug || "—"}
                         </td>
-
                         <td>{category.parent?.name ?? "—"}</td>
-
-                        <td>{formatNumber(category.products_count)}</td>
-
-                        <td>{formatNumber(category.children_count)}</td>
-
+                        <td>
+                          <span className="admin-category-count">
+                            {formatNumber(category.products_count)}
+                          </span>
+                        </td>
+                        <td>
+                          <span className="admin-category-count admin-category-count-lilac">
+                            {formatNumber(category.children_count)}
+                          </span>
+                        </td>
                         <td>{renderStatus(category)}</td>
-
                         <td>{renderCategoryActions(category)}</td>
                       </tr>
                     ))}
@@ -702,7 +695,6 @@ export default function AdminCategories() {
               </div>
             </div>
 
-            {/* کارت موبایل؛ فقط در صفحه‌های کوچک نمایش داده می‌شود */}
             <div className="admin-categories-mobile">
               {filteredCategories.map((category) => (
                 <article key={category.id} className="admin-category-card">
@@ -713,7 +705,6 @@ export default function AdminCategories() {
                       </span>
                       <h3>{category.name}</h3>
                     </div>
-
                     {renderStatus(category)}
                   </div>
 
@@ -722,17 +713,14 @@ export default function AdminCategories() {
                       <span>اسلاگ</span>
                       <strong dir="ltr">{category.slug || "—"}</strong>
                     </div>
-
                     <div className="admin-category-detail">
                       <span>دسته‌بندی والد</span>
                       <strong>{category.parent?.name ?? "دسته اصلی"}</strong>
                     </div>
-
                     <div className="admin-category-stat">
                       <span>محصولات</span>
                       <strong>{formatNumber(category.products_count)}</strong>
                     </div>
-
                     <div className="admin-category-stat">
                       <span>زیردسته‌ها</span>
                       <strong>{formatNumber(category.children_count)}</strong>
