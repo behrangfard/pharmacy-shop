@@ -4,6 +4,7 @@ import { LockKeyhole, Mail, ShieldCheck, ArrowRight } from "lucide-react";
 
 import { useAdminAuth } from "../context/AdminAuthContext";
 import { adminApi } from "../services/api";
+import { STORAGE_KEYS } from "../utils/storageKeys";
 
 function AdminLogin() {
   const navigate = useNavigate();
@@ -49,8 +50,8 @@ function AdminLogin() {
         return;
       }
 
-      localStorage.setItem("pharmacy-shop-admin-token", token);
-      localStorage.setItem("pharmacy-shop-admin-user", JSON.stringify(user));
+      localStorage.setItem(STORAGE_KEYS.adminToken, token);
+      localStorage.setItem(STORAGE_KEYS.adminUser, JSON.stringify(user));
 
       setUser(user);
       navigate(redirectPath, { replace: true });

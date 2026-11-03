@@ -7,11 +7,13 @@ import {
   RotateCcw,
   Sparkles,
   Heart,
-  Dumbbell,
+  Layers,
+  Moon,
   Shirt,
   ShoppingBag,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { getStorageUrl } from "../utils/images";
 import Layout from "../components/Layout";
 import { ButtonLink } from "../components/Button";
 import { api } from "../services/api";
@@ -42,13 +44,7 @@ function ProductImageBox({ product }: { product: Product }) {
   const primaryImage =
     product.images?.find((image) => image.is_primary) ?? product.images?.[0];
 
-  const imageUrl = primaryImage
-    ? `http://127.0.0.1:8000/storage/${primaryImage.path}`
-    : product.thumbnail
-      ? product.thumbnail.startsWith("http")
-        ? product.thumbnail
-        : `http://127.0.0.1:8000/storage/${product.thumbnail}`
-      : null;
+  const imageUrl = getStorageUrl(primaryImage?.path ?? product.thumbnail);
 
   const [imageFailed, setImageFailed] = useState(false);
 
@@ -423,7 +419,7 @@ function Home() {
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
             <ButtonLink
-              to="/products?category=women-underwear"
+              to="/products?category=bra"
               variant="ghost"
               size="lg"
               className="
@@ -438,15 +434,15 @@ function Home() {
                 <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-[#f5e7ed] text-[#a56883] transition group-hover:bg-[#eed8e2]">
                   <Heart size={21} />
                 </div>
-                <h3 className="font-black text-[#283b2d]">لباس زیر زنانه</h3>
+                <h3 className="font-black text-[#283b2d]">سوتین</h3>
                 <p className="mt-2 text-sm font-normal leading-6 text-[#7b847b]">
-                  انواع لباس زیر و راحتی
+                  سوتین‌های سیم‌دار، بدون سیم و ورزشی
                 </p>
               </div>
             </ButtonLink>
 
             <ButtonLink
-              to="/products?category=women-sportswear"
+              to="/products?category=panties"
               variant="ghost"
               size="lg"
               className="
@@ -459,17 +455,17 @@ function Home() {
             >
               <div className="w-full">
                 <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-[#e8efe2] text-[#537653] transition group-hover:bg-[#dce8d4]">
-                  <Dumbbell size={21} />
+                  <Layers size={21} />
                 </div>
-                <h3 className="font-black text-[#283b2d]">لباس ورزشی</h3>
+                <h3 className="font-black text-[#283b2d]">شورت</h3>
                 <p className="mt-2 text-sm font-normal leading-6 text-[#7b847b]">
-                  لباس مناسب ورزش و باشگاه
+                  شورت‌های نخی و بدون درز
                 </p>
               </div>
             </ButtonLink>
 
             <ButtonLink
-              to="/products?category=tops-tshirts"
+              to="/products?category=lingerie-sets"
               variant="ghost"
               size="lg"
               className="
@@ -484,15 +480,15 @@ function Home() {
                 <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-[#eee6f7] text-[#8066a2] transition group-hover:bg-[#e4d8f1]">
                   <Shirt size={21} />
                 </div>
-                <h3 className="font-black text-[#283b2d]">تاپ و تیشرت</h3>
+                <h3 className="font-black text-[#283b2d]">ست لباس زیر</h3>
                 <p className="mt-2 text-sm font-normal leading-6 text-[#7b847b]">
-                  تاپ، تیشرت و لباس‌های روزمره
+                  ست‌های هماهنگ سوتین و شورت
                 </p>
               </div>
             </ButtonLink>
 
             <ButtonLink
-              to="/products?category=leggings-pants"
+              to="/products?category=sleepwear"
               variant="ghost"
               size="lg"
               className="
@@ -505,17 +501,17 @@ function Home() {
             >
               <div className="w-full">
                 <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-[#e8efe2] text-[#537653] transition group-hover:bg-[#dce8d4]">
-                  <ShoppingBag size={21} />
+                  <Moon size={21} />
                 </div>
-                <h3 className="font-black text-[#283b2d]">شلوار و لگ</h3>
+                <h3 className="font-black text-[#283b2d]">لباس خواب</h3>
                 <p className="mt-2 text-sm font-normal leading-6 text-[#7b847b]">
-                  لگ، شلوار و پوشاک ورزشی
+                  پیراهن خواب و ست‌های خواب
                 </p>
               </div>
             </ButtonLink>
 
             <ButtonLink
-              to="/products?category=hoodies-jackets"
+              to="/products?category=shapewear"
               variant="ghost"
               size="lg"
               className="
@@ -528,11 +524,11 @@ function Home() {
             >
               <div className="w-full">
                 <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-[#eee6f7] text-[#8066a2] transition group-hover:bg-[#e4d8f1]">
-                  <Shirt size={21} />
+                  <Sparkles size={21} />
                 </div>
-                <h3 className="font-black text-[#283b2d]">هودی و سویشرت</h3>
+                <h3 className="font-black text-[#283b2d]">گن و فرم‌دهنده</h3>
                 <p className="mt-2 text-sm font-normal leading-6 text-[#7b847b]">
-                  پوشاک گرم و اسپرت زنانه
+                  گن، بادی و فرم‌دهنده
                 </p>
               </div>
             </ButtonLink>

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\ProductVariant;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -74,7 +75,11 @@ class AdminOrderController extends Controller
         $sortColumn = $sortColumns[$sortBy];
 
         $orders = Order::query()
-            ->with(['items.product.images', 'user'])
+            ->with([
+                'items.product.images',
+                'items.variant',
+                'user',
+            ])
             ->when(
                 $validated['status'] ?? null,
                 fn ($query, $status) => $query->where('status', $status)
@@ -122,11 +127,15 @@ class AdminOrderController extends Controller
     public function show(string $orderNumber)
     {
         $order = Order::query()
-            ->with(['items.product.images', 'user'])
+            ->with([
+                'items.product.images',
+                'items.variant',
+                'user',
+            ])
             ->where('order_number', $orderNumber)
             ->first();
 
-        if (!$order) {
+        if (! $order) {
             return response()->json([
                 'success' => false,
                 'message' => 'سفارش موردنظر پیدا نشد.',
@@ -164,7 +173,7 @@ class AdminOrderController extends Controller
                 ->lockForUpdate()
                 ->first();
 
-            if (!$order) {
+            if (! $order) {
                 return [
                     'error' => 'سفارش موردنظر پیدا نشد.',
                     'status' => 404,
@@ -178,6 +187,7 @@ class AdminOrderController extends Controller
                 return [
                     'order' => $order->fresh()->load([
                         'items.product.images',
+                        'items.variant',
                         'user',
                     ]),
                 ];
@@ -221,6 +231,10 @@ class AdminOrderController extends Controller
                 ];
             }
 
+            /*
+             * لغو سفارش پرداخت‌شده از این مسیر مجاز نیست؛
+             * زیرا ابتدا باید فرایند بازپرداخت انجام شود.
+             */
             if (
                 $newStatus === 'cancelled'
                 && $order->payment_status === 'paid'
@@ -231,16 +245,10 @@ class AdminOrderController extends Controller
                 ];
             }
 
-            if (
-                $newStatus === 'cancelled'
-                && $order->payment_status !== 'paid'
-            ) {
-                return [
-                    'error' => 'لغو سفارش پرداخت‌نشده از پنل مدیریت مجاز نیست.',
-                    'status' => 422,
-                ];
-            }
-
+            /*
+             * لغو سفارش پرداخت‌نشده توسط مدیر مجاز است.
+             * قبل از تغییر وضعیت، موجودی اقلام سفارش بررسی و بازگردانده می‌شود.
+             */
             if ($newStatus === 'cancelled') {
                 if ($order->stock_restored_at !== null) {
                     return [
@@ -251,9 +259,50 @@ class AdminOrderController extends Controller
 
                 $items = $order->items()->get();
 
+                $inventoryRecords = [];
+
+                /*
+                 * ابتدا تمام رکوردهای موجودی را قفل و بررسی می‌کنیم.
+                 * اگر تنوع سفارش حذف شده باشد، عملیات لغو متوقف می‌شود
+                 * تا موجودی محصول اشتباهاً افزایش پیدا نکند.
+                 */
                 foreach ($items as $item) {
                     if ($item->product_id === null) {
                         continue;
+                    }
+
+                    if ($item->variant_id !== null) {
+                        $variant = ProductVariant::query()
+                            ->whereKey($item->variant_id)
+                            ->where('product_id', $item->product_id)
+                            ->lockForUpdate()
+                            ->first();
+
+                        if (! $variant) {
+                            return [
+                                'error' => 'تنوع یکی از محصولات این سفارش پیدا نشد. ابتدا اطلاعات موجودی آن را بررسی کنید.',
+                                'status' => 409,
+                            ];
+                        }
+
+                        $inventoryRecords[] = [
+                            'model' => $variant,
+                            'quantity' => (int) $item->quantity,
+                        ];
+
+                        continue;
+                    }
+
+                    /*
+                     * اگر نام تنوع در سفارش ذخیره شده اما variant_id
+                     * خالی است، احتمالاً رکورد تنوع حذف شده است.
+                     * در این حالت نباید موجودی محصول اصلی را افزایش دهیم.
+                     */
+                    if (! empty($item->variant_name)) {
+                        return [
+                            'error' => 'تنوع ثبت‌شده برای یکی از اقلام سفارش در دسترس نیست. بازگرداندن موجودی به بررسی دستی نیاز دارد.',
+                            'status' => 409,
+                        ];
                     }
 
                     $product = Product::query()
@@ -261,10 +310,25 @@ class AdminOrderController extends Controller
                         ->lockForUpdate()
                         ->first();
 
-                    // ممکن است محصول پس از ثبت سفارش حذف شده باشد.
+                    /*
+                     * ممکن است محصول پس از ثبت سفارش حذف شده باشد.
+                     */
                     if ($product) {
-                        $product->increment('stock', $item->quantity);
+                        $inventoryRecords[] = [
+                            'model' => $product,
+                            'quantity' => (int) $item->quantity,
+                        ];
                     }
+                }
+
+                /*
+                 * پس از اعتبارسنجی همه اقلام، موجودی‌ها بازگردانده می‌شوند.
+                 */
+                foreach ($inventoryRecords as $record) {
+                    $record['model']->increment(
+                        'stock',
+                        $record['quantity']
+                    );
                 }
 
                 $order->stock_restored_at = now();
@@ -278,6 +342,7 @@ class AdminOrderController extends Controller
             return [
                 'order' => $order->fresh()->load([
                     'items.product.images',
+                    'items.variant',
                     'user',
                 ]),
             ];

@@ -449,7 +449,7 @@ export default function AdminCategories() {
                 value={form.slug}
                 onChange={(event) => updateField("slug", event.target.value)}
                 maxLength={255}
-                placeholder="medical-equipment"
+                placeholder="lingerie-sets"
                 dir="ltr"
               />
             </div>

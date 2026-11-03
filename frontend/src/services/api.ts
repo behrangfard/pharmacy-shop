@@ -1,5 +1,7 @@
 import axios from "axios";
 
+import { STORAGE_KEYS } from "../utils/storageKeys";
+
 const API_BASE_URL =
   (import.meta.env.VITE_API_URL as string | undefined)?.trim() ||
   "http://127.0.0.1:8000/api/v1";
@@ -22,7 +24,7 @@ const adminApi = axios.create({
 
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("pharmacy-shop-token");
+    const token = localStorage.getItem(STORAGE_KEYS.token);
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -37,7 +39,7 @@ api.interceptors.request.use(
 
 adminApi.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem("pharmacy-shop-admin-token");
+    const token = localStorage.getItem(STORAGE_KEYS.adminToken);
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;

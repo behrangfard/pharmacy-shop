@@ -5,6 +5,7 @@ import { ArrowRight, Lock, Mail, User } from "lucide-react";
 import Layout from "../components/Layout";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
+import { STORAGE_KEYS } from "../utils/storageKeys";
 
 function Register() {
   const navigate = useNavigate();
@@ -52,8 +53,8 @@ function Register() {
         throw new Error("پاسخ ثبت‌نام معتبر نیست.");
       }
 
-      localStorage.setItem("pharmacy-shop-token", token);
-      localStorage.setItem("pharmacy-shop-user", JSON.stringify(user));
+      localStorage.setItem(STORAGE_KEYS.token, token);
+      localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(user));
 
       setUser(user);
 

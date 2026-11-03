@@ -2,8 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Models\Product;
-use App\Models\ProductImage;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -14,12 +12,57 @@ class AdminAccessTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function adminEndpoints(
-        int $productId,
-        int $imageId = 999999
-    ): array {
+    private function createTestRecords(): array
+    {
+        $now = now();
+
+        $categoryId = DB::table('categories')->insertGetId([
+            'name' => 'Access Test Category',
+            'slug' => 'access-test-category',
+            'is_active' => true,
+            'sort_order' => 0,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+
+        $productId = DB::table('products')->insertGetId([
+            'category_id' => $categoryId,
+            'name' => 'Access Test Product',
+            'slug' => 'access-test-product',
+            'sku' => 'ACCESS-TEST-001',
+            'price' => 100000,
+            'stock' => 10,
+            'is_active' => true,
+            'is_featured' => false,
+            'is_new' => false,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+
+        $imageId = DB::table('product_images')->insertGetId([
+            'product_id' => $productId,
+            'path' => 'products/access-test.jpg',
+            'alt' => 'Access test image',
+            'sort_order' => 0,
+            'is_primary' => true,
+            'created_at' => $now,
+            'updated_at' => $now,
+        ]);
+
+        return [
+            'product_id' => $productId,
+            'image_id' => $imageId,
+        ];
+    }
+
+    private function adminEndpoints(array $records): array
+    {
+        $productId = $records['product_id'];
+        $imageId = $records['image_id'];
+
         return [
             ['GET', '/api/v1/admin/dashboard'],
+
             ['GET', '/api/v1/admin/orders'],
             ['GET', '/api/v1/admin/orders/ORD-ACCESS-TEST-001'],
             ['PATCH', '/api/v1/admin/orders/ORD-ACCESS-TEST-001/status'],
@@ -35,58 +78,31 @@ class AdminAccessTest extends TestCase
             ['PATCH', "/api/v1/admin/products/{$productId}/images/reorder"],
             ['DELETE', "/api/v1/admin/products/{$productId}/images/{$imageId}"],
             ['PATCH', "/api/v1/admin/products/{$productId}/images/{$imageId}/primary"],
+
+            ['GET', '/api/v1/admin/admins'],
+            ['POST', '/api/v1/admin/admins'],
+            ['PUT', '/api/v1/admin/admins/1'],
+            ['DELETE', '/api/v1/admin/admins/1'],
         ];
+    }
+
+    private function createCustomer(): User
+    {
+        return new User([
+            'name' => 'Access Test Customer',
+            'email' => 'access-test-customer@example.com',
+            'password' => 'password',
+            'role' => 'customer',
+        ]);
     }
 
     public function test_regular_user_cannot_access_any_admin_endpoint(): void
     {
-        $user = User::factory()->create([
-            'role' => 'customer',
-        ]);
+        $records = $this->createTestRecords();
 
-        $now = now();
+        Sanctum::actingAs($this->createCustomer());
 
-        $categoryId = DB::table('categories')->insertGetId([
-            'parent_id' => null,
-            'name' => 'Access Test Category',
-            'slug' => 'access-test-category',
-            'description' => null,
-            'image' => null,
-            'is_active' => true,
-            'sort_order' => 0,
-            'meta_title' => null,
-            'meta_description' => null,
-            'created_at' => $now,
-            'updated_at' => $now,
-        ]);
-
-        $product = Product::query()->create([
-            'category_id' => $categoryId,
-            'brand_id' => null,
-            'name' => 'Access Test Product',
-            'slug' => 'access-test-product',
-            'sku' => 'ACCESS-TEST-SKU',
-            'price' => 100000,
-            'compare_price' => null,
-            'discount_percent' => 0,
-            'stock' => 10,
-            'thumbnail' => null,
-            'is_active' => true,
-            'is_featured' => false,
-            'is_new' => false,
-        ]);
-
-        $image = ProductImage::query()->create([
-            'product_id' => $product->id,
-            'path' => 'product-images/' . $product->id . '/access-test.webp',
-            'alt' => 'Access test image',
-            'sort_order' => 0,
-            'is_primary' => true,
-        ]);
-
-        Sanctum::actingAs($user);
-
-        foreach ($this->adminEndpoints($product->id, $image->id) as [$method, $uri]) {
+        foreach ($this->adminEndpoints($records) as [$method, $uri]) {
             $response = $this->json($method, $uri);
 
             $this->assertSame(
@@ -99,7 +115,9 @@ class AdminAccessTest extends TestCase
 
     public function test_guest_cannot_access_any_admin_endpoint(): void
     {
-        foreach ($this->adminEndpoints(999999) as [$method, $uri]) {
+        $records = $this->createTestRecords();
+
+        foreach ($this->adminEndpoints($records) as [$method, $uri]) {
             $response = $this->json($method, $uri);
 
             $this->assertSame(

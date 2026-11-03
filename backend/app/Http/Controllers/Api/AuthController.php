@@ -24,7 +24,7 @@ class AuthController extends Controller
             'password' => Hash::make($validated['password']),
         ]);
 
-        $token = $user->createToken('pharmacy-shop')->plainTextToken;
+        $token = $user->createToken('behrang-shop')->plainTextToken;
 
         return response()->json([
             'message' => 'ثبت‌نام با موفقیت انجام شد.',
@@ -43,8 +43,8 @@ class AuthController extends Controller
         $user = User::where('email', $validated['email'])->first();
 
         if (
-            !$user ||
-            !Hash::check(
+            ! $user ||
+            ! Hash::check(
                 $validated['password'],
                 $user->password
             )
@@ -54,7 +54,7 @@ class AuthController extends Controller
             ]);
         }
 
-        $token = $user->createToken('pharmacy-shop')->plainTextToken;
+        $token = $user->createToken('behrang-shop')->plainTextToken;
 
         return response()->json([
             'message' => 'ورود با موفقیت انجام شد.',
@@ -80,7 +80,7 @@ class AuthController extends Controller
                 'required',
                 'email',
                 'max:255',
-                'unique:users,email,' . $user->id,
+                'unique:users,email,'.$user->id,
             ],
         ]);
 
@@ -105,22 +105,22 @@ class AuthController extends Controller
             'password' => ['required', 'string', 'min:8', 'confirmed'],
         ]);
 
-        if (!Hash::check(
+        if (! Hash::check(
             $validated['current_password'],
             $user->password
         )) {
             throw ValidationException::withMessages([
                 'current_password' => [
-                    'رمز عبور فعلی صحیح نیست.'
+                    'رمز عبور فعلی صحیح نیست.',
                 ],
             ]);
         }
 
-       $user->update([
-    'password' => Hash::make($validated['password']),
-]);
+        $user->update([
+            'password' => Hash::make($validated['password']),
+        ]);
 
-$user->tokens()->delete();
+        $user->tokens()->delete();
 
         return response()->json([
             'success' => true,

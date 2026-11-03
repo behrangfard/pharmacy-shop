@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { ChevronDown, Menu, X } from "lucide-react";
+import { ChevronDown, Menu, Ruler, X } from "lucide-react";
 import api from "../services/api";
 
 interface Category {
@@ -206,6 +206,21 @@ function CategoryMenu() {
                 </div>
               );
             })}
+
+            <Link
+              to="/size-guide"
+              className="
+                inline-flex items-center gap-1.5 rounded-xl border
+                border-[#e0d8ee] bg-[#f6f2fb] px-3.5 py-2.5
+                text-sm font-bold text-[#725a91] transition-colors
+                hover:bg-[#eee7f5] hover:text-[#5f4880]
+                focus-visible:outline-none
+                focus-visible:ring-2 focus-visible:ring-[#b39dcd]
+              "
+            >
+              <Ruler size={16} aria-hidden="true" />
+              راهنمای انتخاب سایز
+            </Link>
           </div>
 
           {/* Mobile navigation button */}
@@ -313,6 +328,20 @@ function CategoryMenu() {
                 </div>
               );
             })}
+
+            <Link
+              to="/size-guide"
+              onClick={closeMenu}
+              className="
+                mt-2 flex items-center gap-2 rounded-xl
+                bg-[#f6f2fb] px-3 py-3 text-sm font-bold
+                text-[#725a91] transition-colors
+                hover:bg-[#eee7f5] hover:text-[#5f4880]
+              "
+            >
+              <Ruler size={17} aria-hidden="true" />
+              راهنمای انتخاب سایز
+            </Link>
           </div>
         )}
       </div>

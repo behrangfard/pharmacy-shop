@@ -7,6 +7,7 @@ import {
 } from "react";
 
 import api from "../services/api";
+import { STORAGE_KEYS } from "../utils/storageKeys";
 
 export type UserRole = "admin" | "customer";
 
@@ -28,7 +29,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(() => {
-    const storedUser = localStorage.getItem("pharmacy-shop-user");
+    const storedUser = localStorage.getItem(STORAGE_KEYS.user);
 
     if (!storedUser) {
       return null;
@@ -37,7 +38,7 @@ function AuthProvider({ children }: { children: ReactNode }) {
     try {
       return JSON.parse(storedUser) as AuthUser;
     } catch {
-      localStorage.removeItem("pharmacy-shop-user");
+      localStorage.removeItem(STORAGE_KEYS.user);
       return null;
     }
   });
@@ -46,7 +47,7 @@ function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const loadUser = async () => {
-      const token = localStorage.getItem("pharmacy-shop-token");
+      const token = localStorage.getItem(STORAGE_KEYS.token);
 
       if (!token) {
         setUser(null);
@@ -60,12 +61,12 @@ function AuthProvider({ children }: { children: ReactNode }) {
         setUser(response.data.user);
 
         localStorage.setItem(
-          "pharmacy-shop-user",
+          STORAGE_KEYS.user,
           JSON.stringify(response.data.user),
         );
       } catch {
-        localStorage.removeItem("pharmacy-shop-token");
-        localStorage.removeItem("pharmacy-shop-user");
+        localStorage.removeItem(STORAGE_KEYS.token);
+        localStorage.removeItem(STORAGE_KEYS.user);
 
         setUser(null);
       } finally {
@@ -82,8 +83,8 @@ function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       // Ignore logout API errors and clear local authentication state.
     } finally {
-      localStorage.removeItem("pharmacy-shop-token");
-      localStorage.removeItem("pharmacy-shop-user");
+      localStorage.removeItem(STORAGE_KEYS.token);
+      localStorage.removeItem(STORAGE_KEYS.user);
 
       setUser(null);
     }

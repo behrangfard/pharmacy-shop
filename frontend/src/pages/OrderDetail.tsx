@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+
 import {
   ArrowRight,
   CalendarDays,
@@ -11,11 +12,16 @@ import {
   Truck,
   XCircle,
 } from "lucide-react";
+
 import api from "../services/api";
+
 type OrderItem = {
   id: number;
   product_id?: number;
+  variant_id?: number | null;
   product_name?: string;
+  variant_name?: string | null;
+  sku?: string | null;
   name?: string;
   quantity: number;
   unit_price?: string | number;
@@ -27,7 +33,12 @@ type OrderItem = {
     title?: string;
     image?: string;
     images?: { path?: string; url?: string }[];
-  };
+  } | null;
+  variant?: {
+    name?: string;
+    sku?: string | null;
+    image?: string | null;
+  } | null;
 };
 
 type Order = {
@@ -87,11 +98,12 @@ const paymentStatusLabels: Record<string, string> = {
   refunded: "مستردشده",
 };
 
-const getImageUrl = (path?: string) => {
+const getImageUrl = (path?: string | null) => {
   if (!path) return "";
   if (/^https?:\/\//i.test(path)) return path;
 
   const cleanPath = path.replace(/^\/+/, "");
+
   return cleanPath.startsWith("storage/")
     ? `/${cleanPath}`
     : `/storage/${cleanPath}`;
@@ -106,7 +118,8 @@ const getItemName = (item: OrderItem) =>
 
 const getItemImage = (item: OrderItem) =>
   getImageUrl(
-    item.product?.image ||
+    item.variant?.image ||
+      item.product?.image ||
       item.product?.images?.[0]?.url ||
       item.product?.images?.[0]?.path,
   );
@@ -132,7 +145,10 @@ export default function OrderDetail() {
         setLoading(true);
         setError("");
 
-        const response = await api.get(`/orders/${orderNumber}`);
+        const response = await api.get(
+          `/orders/${encodeURIComponent(orderNumber)}`,
+        );
+
         const payload = response.data?.data ?? response.data;
         const orderData = payload?.order ?? payload;
 
@@ -140,7 +156,9 @@ export default function OrderDetail() {
           throw new Error("اطلاعات سفارش دریافت نشد.");
         }
 
-        if (active) setOrder(orderData as Order);
+        if (active) {
+          setOrder(orderData as Order);
+        }
       } catch (err: any) {
         if (active) {
           setError(
@@ -150,7 +168,9 @@ export default function OrderDetail() {
           );
         }
       } finally {
-        if (active) setLoading(false);
+        if (active) {
+          setLoading(false);
+        }
       }
     };
 
@@ -175,10 +195,13 @@ export default function OrderDetail() {
       <div className="mx-auto max-w-5xl px-4 py-16 text-center" dir="rtl">
         <div className="rounded-2xl border border-red-100 bg-red-50 p-6">
           <XCircle className="mx-auto mb-3 h-10 w-10 text-red-500" />
+
           <h1 className="mb-2 text-xl font-bold text-slate-900">
             دریافت سفارش ناموفق بود
           </h1>
+
           <p className="mb-5 text-sm text-red-700">{error}</p>
+
           <Link
             to="/account"
             className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-sm font-bold text-white hover:bg-slate-700"
@@ -200,6 +223,7 @@ export default function OrderDetail() {
 
   const orderStatus =
     orderStatusLabels[order.status] || order.status || "نامشخص";
+
   const paymentStatus =
     paymentStatusLabels[order.payment_status] ||
     order.payment_status ||
@@ -207,6 +231,7 @@ export default function OrderDetail() {
 
   const isCancelled =
     order.status === "cancelled" || order.status === "canceled";
+
   const isPaid = order.payment_status === "paid";
 
   return (
@@ -226,9 +251,11 @@ export default function OrderDetail() {
               <Receipt size={18} />
               جزئیات سفارش
             </div>
+
             <h1 className="text-2xl font-black text-slate-950 sm:text-3xl">
               سفارش {order.order_number}
             </h1>
+
             <p className="mt-2 flex items-center gap-2 text-sm text-slate-500">
               <CalendarDays size={16} />
               {formatDate(order.created_at)}
@@ -291,6 +318,10 @@ export default function OrderDetail() {
                           ? Number(item.total)
                           : unitPrice * quantity;
 
+                    const variantName = item.variant_name || item.variant?.name;
+
+                    const itemSku = item.sku || item.variant?.sku;
+
                     return (
                       <div
                         key={item.id ?? `${name}-${index}`}
@@ -315,9 +346,26 @@ export default function OrderDetail() {
                           <h3 className="line-clamp-2 font-bold text-slate-900">
                             {name}
                           </h3>
+
+                          {variantName && (
+                            <p className="mt-2 text-sm font-semibold text-emerald-700">
+                              تنوع: {variantName}
+                            </p>
+                          )}
+
+                          {itemSku && (
+                            <p
+                              className="mt-1 text-xs text-slate-400"
+                              dir="ltr"
+                            >
+                              SKU: {itemSku}
+                            </p>
+                          )}
+
                           <p className="mt-2 text-sm text-slate-500">
                             تعداد: {formatPrice(quantity)}
                           </p>
+
                           <p className="mt-1 text-sm text-slate-500">
                             قیمت واحد: {formatPrice(unitPrice)} تومان
                           </p>
@@ -341,6 +389,7 @@ export default function OrderDetail() {
                 <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100">
                   <MapPin size={21} className="text-slate-700" />
                 </div>
+
                 <div>
                   <h2 className="font-bold text-slate-900">
                     اطلاعات گیرنده و ارسال
@@ -406,6 +455,7 @@ export default function OrderDetail() {
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100">
                 <Receipt size={21} className="text-slate-700" />
               </div>
+
               <div>
                 <h2 className="font-bold text-slate-900">خلاصه پرداخت</h2>
                 <p className="mt-1 text-xs text-slate-500">
@@ -456,12 +506,14 @@ export default function OrderDetail() {
               <div className="border-t border-dashed border-slate-200 pt-4">
                 <div className="rounded-xl bg-slate-900 p-4 text-white">
                   <p className="text-sm text-slate-300">مبلغ نهایی سفارش</p>
+
                   <p className="mt-2 text-2xl font-black">
                     {formatPrice(total)}
                     <span className="mr-2 text-sm font-medium text-slate-300">
                       تومان
                     </span>
                   </p>
+
                   <p className="mt-2 text-xs leading-6 text-slate-300">
                     مبلغ نهایی مطابق اطلاعات ثبت‌شده برای این سفارش است.
                   </p>
@@ -479,6 +531,7 @@ export default function OrderDetail() {
                 ) : (
                   <Clock size={20} className="mt-0.5 shrink-0 text-amber-600" />
                 )}
+
                 <div>
                   <p className="font-bold text-slate-900">وضعیت پرداخت</p>
                   <p className="mt-1 text-sm leading-6 text-slate-600">

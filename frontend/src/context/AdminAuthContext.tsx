@@ -8,9 +8,10 @@ import {
 
 import { adminApi } from "../services/api";
 import type { AuthUser } from "./AuthContext";
+import { STORAGE_KEYS } from "../utils/storageKeys";
 
-const ADMIN_TOKEN_KEY = "pharmacy-shop-admin-token";
-const ADMIN_USER_KEY = "pharmacy-shop-admin-user";
+const ADMIN_TOKEN_KEY = STORAGE_KEYS.adminToken;
+const ADMIN_USER_KEY = STORAGE_KEYS.adminUser;
 
 interface AdminAuthContextType {
   user: AuthUser | null;

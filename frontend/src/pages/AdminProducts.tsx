@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { adminApi } from "../services/api";
 import { calculateProductPrice } from "../utils/price";
+import { getStorageUrl } from "../utils/images";
 
 interface Product {
   id: number;
@@ -31,20 +32,8 @@ interface Pagination {
   total: number;
 }
 
-const API_ORIGIN = "http://127.0.0.1:8000";
-
 function imageUrl(path: string | null | undefined): string {
-  if (!path) return "";
-
-  const value = path.trim();
-  if (!value) return "";
-
-  if (/^https?:\/\//i.test(value)) return value;
-  if (value.startsWith("/storage/")) return `${API_ORIGIN}${value}`;
-  if (value.startsWith("storage/")) return `${API_ORIGIN}/${value}`;
-  if (value.startsWith("/")) return `${API_ORIGIN}${value}`;
-
-  return `${API_ORIGIN}/storage/${value.replace(/^\/+/, "")}`;
+  return getStorageUrl(path) ?? "";
 }
 
 function getProductImage(product: Product): string {

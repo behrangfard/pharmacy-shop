@@ -5,6 +5,7 @@ import { ArrowRight, Lock, Mail, LogIn } from "lucide-react";
 import Layout from "../components/Layout";
 import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
+import { STORAGE_KEYS } from "../utils/storageKeys";
 
 function Login() {
   const navigate = useNavigate();
@@ -44,8 +45,8 @@ function Login() {
         throw new Error("پاسخ ورود معتبر نیست.");
       }
 
-      localStorage.setItem("pharmacy-shop-token", token);
-      localStorage.setItem("pharmacy-shop-user", JSON.stringify(user));
+      localStorage.setItem(STORAGE_KEYS.token, token);
+      localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(user));
 
       setUser(user);
 

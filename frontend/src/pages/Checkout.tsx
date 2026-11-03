@@ -24,6 +24,7 @@ const CHECKOUT_FINGERPRINT_STORAGE = "checkout_fingerprint";
 
 type CheckoutItem = {
   product_id: number;
+  variant_id?: number;
   quantity: number;
 };
 
@@ -60,8 +61,7 @@ function Checkout() {
   const [vatEnabled, setVatEnabled] = useState(false);
   const [vatPercent, setVatPercent] = useState(0);
 
-  // نام کاربر پس از بارگذاری اطلاعات حساب مقداردهی اولیه می‌شود.
-  // اگر کاربر نام را خودش ویرایش کرده باشد، آن را بازنویسی نمی‌کنیم.
+  // مقداردهی اولیه نام کاربر بدون بازنویسی اطلاعاتی که خودش ویرایش کرده است.
   useEffect(() => {
     if (authLoading || !user || nameInitialized.current) {
       return;
@@ -78,6 +78,7 @@ function Checkout() {
     nameInitialized.current = true;
   }, [authLoading, user]);
 
+  // دریافت تنظیمات مالیات فروشگاه.
   useEffect(() => {
     let active = true;
 
@@ -119,6 +120,7 @@ function Checkout() {
   const cartOriginalTotal = useMemo(() => {
     return items.reduce((total, item) => {
       const originalPrice = item.originalPrice ?? item.price;
+
       return total + Number(originalPrice) * item.quantity;
     }, 0);
   }, [items]);
@@ -127,9 +129,12 @@ function Checkout() {
     return Math.max(0, cartOriginalTotal - Number(cartTotal ?? 0));
   }, [cartOriginalTotal, cartTotal]);
 
+  // مالیات فقط برای محصولاتی محاسبه می‌شود که مشمول مالیات هستند.
   const taxableAmount = useMemo(() => {
     const taxableProductsTotal = items.reduce((total, item) => {
-      if (item.is_taxable !== true) return total;
+      if (item.is_taxable !== true) {
+        return total;
+      }
 
       return total + Number(item.price) * Number(item.quantity);
     }, 0);
@@ -145,10 +150,16 @@ function Checkout() {
     return Math.max(0, Number(cartTotal ?? 0) + shippingCost + taxAmount);
   }, [cartTotal, shippingCost, taxAmount]);
 
+  // مرتب‌سازی قطعی اقلام برای اینکه ترتیب سبد خرید
+  // باعث تولید کلید Idempotency متفاوت نشود.
   const getCheckoutFingerprint = (payload: CheckoutPayload) => {
-    const normalizedItems = [...payload.items].sort(
-      (a, b) => a.product_id - b.product_id,
-    );
+    const normalizedItems = [...payload.items].sort((a, b) => {
+      if (a.product_id !== b.product_id) {
+        return a.product_id - b.product_id;
+      }
+
+      return (a.variant_id ?? 0) - (b.variant_id ?? 0);
+    });
 
     return JSON.stringify({
       userId: user?.id ?? null,
@@ -161,10 +172,12 @@ function Checkout() {
     });
   };
 
+  // استفاده مجدد از کلید قبلی فقط برای اطلاعات دقیقاً یکسان.
   const getIdempotencyKey = (fingerprint: string) => {
     const savedFingerprint = sessionStorage.getItem(
       CHECKOUT_FINGERPRINT_STORAGE,
     );
+
     const savedKey = sessionStorage.getItem(CHECKOUT_KEY_STORAGE);
 
     if (savedFingerprint === fingerprint && savedKey) {
@@ -180,6 +193,7 @@ function Checkout() {
 
     sessionStorage.setItem(CHECKOUT_FINGERPRINT_STORAGE, fingerprint);
     sessionStorage.setItem(CHECKOUT_KEY_STORAGE, newKey);
+
     idempotencyKeyRef.current = newKey;
 
     return newKey;
@@ -228,10 +242,23 @@ function Checkout() {
       return;
     }
 
-    const orderItems: CheckoutItem[] = items.map((item) => ({
-      product_id: Number(item.product_id ?? item.product?.id ?? item.id),
-      quantity: Number(item.quantity),
-    }));
+    // هر قلم سبد خرید با شناسه تنوع خودش به سفارش تبدیل می‌شود.
+    const orderItems: CheckoutItem[] = items.map((item) => {
+      const productId = Number(item.product_id ?? item.product?.id ?? item.id);
+
+      const variantId =
+        item.variant_id !== undefined &&
+        item.variant_id !== null &&
+        item.variant_id !== ""
+          ? Number(item.variant_id)
+          : undefined;
+
+      return {
+        product_id: productId,
+        ...(variantId !== undefined ? { variant_id: variantId } : {}),
+        quantity: Number(item.quantity),
+      };
+    });
 
     if (
       orderItems.some(
@@ -239,10 +266,25 @@ function Checkout() {
           !Number.isInteger(item.product_id) ||
           item.product_id < 1 ||
           !Number.isInteger(item.quantity) ||
-          item.quantity < 1,
+          item.quantity < 1 ||
+          (item.variant_id !== undefined &&
+            (!Number.isInteger(item.variant_id) || item.variant_id < 1)),
       )
     ) {
-      setError("اطلاعات محصولات سبد خرید معتبر نیست.");
+      setError("اطلاعات محصولات یا تنوع‌های سبد خرید معتبر نیست.");
+      return;
+    }
+
+    // جلوگیری از تکرار یک محصول با یک تنوع یکسان در payload.
+    const itemKeys = orderItems.map(
+      (item) => `${item.product_id}:${item.variant_id ?? "default"}`,
+    );
+
+    if (new Set(itemKeys).size !== itemKeys.length) {
+      setError(
+        "یک محصول با تنوع یکسان چند بار در سبد خرید ثبت شده است. " +
+          "لطفاً سبد خرید را بررسی کنید.",
+      );
       return;
     }
 
@@ -285,11 +327,13 @@ function Checkout() {
 
       if (!orderNumber) {
         setSubmissionUncertain(true);
+
         setError(
           "پاسخ سرور دریافت شد، اما شماره سفارش مشخص نیست. " +
             "برای جلوگیری از ثبت تکراری، کلید درخواست حفظ شده است. " +
             "ابتدا سفارش‌های خود را بررسی کنید.",
         );
+
         return;
       }
 
@@ -297,6 +341,7 @@ function Checkout() {
 
       sessionStorage.removeItem(CHECKOUT_KEY_STORAGE);
       sessionStorage.removeItem(CHECKOUT_FINGERPRINT_STORAGE);
+
       idempotencyKeyRef.current = null;
 
       navigate(`/payment/${encodeURIComponent(orderNumber)}`);
@@ -504,11 +549,13 @@ function Checkout() {
                   >
                     نام
                   </label>
+
                   <div className="relative">
                     <User
                       size={18}
                       className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
                     />
+
                     <input
                       id="checkout-first-name"
                       type="text"
@@ -528,11 +575,13 @@ function Checkout() {
                   >
                     نام خانوادگی
                   </label>
+
                   <div className="relative">
                     <User
                       size={18}
                       className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
                     />
+
                     <input
                       id="checkout-last-name"
                       type="text"
@@ -552,11 +601,13 @@ function Checkout() {
                   >
                     شماره موبایل
                   </label>
+
                   <div className="relative">
                     <Phone
                       size={18}
                       className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
                     />
+
                     <input
                       id="checkout-phone"
                       type="tel"
@@ -578,6 +629,7 @@ function Checkout() {
                   >
                     استان
                   </label>
+
                   <input
                     id="checkout-province"
                     type="text"
@@ -596,6 +648,7 @@ function Checkout() {
                   >
                     شهر
                   </label>
+
                   <input
                     id="checkout-city"
                     type="text"
@@ -614,6 +667,7 @@ function Checkout() {
                   >
                     آدرس کامل
                   </label>
+
                   <textarea
                     id="checkout-address"
                     value={address}
@@ -633,6 +687,7 @@ function Checkout() {
                   >
                     کد پستی
                   </label>
+
                   <input
                     id="checkout-postal-code"
                     type="text"
@@ -658,6 +713,7 @@ function Checkout() {
                   <h2 className="text-xl font-black text-slate-900">
                     روش ارسال
                   </h2>
+
                   <p className="mt-1 text-sm text-slate-500">
                     ارسال سفارش برای شما
                   </p>
@@ -668,6 +724,7 @@ function Checkout() {
                 <div className="flex items-center justify-between gap-4">
                   <div>
                     <p className="font-black text-[#2f4b32]">ارسال معمولی</p>
+
                     <p className="mt-1 text-sm text-[#385e3e]">
                       ارسال سفارش به آدرس ثبت‌شده
                     </p>
@@ -690,6 +747,7 @@ function Checkout() {
 
                 <div>
                   <h2 className="text-lg font-black">خلاصه سفارش</h2>
+
                   <p className="mt-1 text-xs text-slate-500">
                     {items.length.toLocaleString("fa-IR")} محصول
                   </p>
@@ -699,6 +757,7 @@ function Checkout() {
               <div className="mt-5 space-y-4">
                 <div className="flex items-center justify-between gap-4 text-sm">
                   <span className="text-slate-500">مبلغ کالاها</span>
+
                   <span className="font-bold text-slate-800">
                     {formatPrice(cartOriginalTotal)} تومان
                   </span>
@@ -707,6 +766,7 @@ function Checkout() {
                 {cartDiscount > 0 && (
                   <div className="flex items-center justify-between gap-4 text-sm">
                     <span className="text-slate-500">تخفیف</span>
+
                     <span className="font-bold text-green-600">
                       - {formatPrice(cartDiscount)} تومان
                     </span>
@@ -715,6 +775,7 @@ function Checkout() {
 
                 <div className="flex items-center justify-between gap-4 text-sm">
                   <span className="text-slate-500">هزینه ارسال</span>
+
                   <span className="font-bold text-green-600">رایگان</span>
                 </div>
 
@@ -723,6 +784,7 @@ function Checkout() {
                     <span className="text-slate-500">
                       ارزش افزوده ({formatPrice(vatPercent)}٪)
                     </span>
+
                     <span className="font-bold text-slate-800">
                       {formatPrice(taxAmount)} تومان
                     </span>
@@ -734,10 +796,12 @@ function Checkout() {
                 <div className="flex items-end justify-between gap-4">
                   <div>
                     <p className="text-xs text-slate-400">مبلغ نهایی</p>
+
                     <p className="mt-1 text-2xl font-black text-[#385e3e]">
                       {formatPrice(finalTotal)}
                     </p>
                   </div>
+
                   <span className="mb-1 text-sm text-slate-500">تومان</span>
                 </div>
               </div>
@@ -809,6 +873,7 @@ function Checkout() {
                 <span className="text-sm font-bold text-slate-600">
                   بازگشت و ویرایش سبد خرید
                 </span>
+
                 <ChevronLeft
                   size={18}
                   className="text-slate-400 transition-colors hover:text-[#385e3e]"

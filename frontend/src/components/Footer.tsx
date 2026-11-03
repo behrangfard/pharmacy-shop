@@ -58,10 +58,10 @@ function Footer() {
               </Link>
 
               <Link
-                to="/products?category=women-underwear"
+                to="/products?category=lingerie-sets"
                 className="group flex items-center justify-between gap-2 transition-colors hover:text-[#4f7754]"
               >
-                <span>لباس زیر زنانه</span>
+                <span>ست لباس زیر</span>
                 <ArrowLeft
                   size={15}
                   className="opacity-0 transition-all group-hover:translate-x-[-3px] group-hover:opacity-100"
@@ -69,10 +69,10 @@ function Footer() {
               </Link>
 
               <Link
-                to="/products?category=women-sportswear"
+                to="/products?category=sleepwear"
                 className="group flex items-center justify-between gap-2 transition-colors hover:text-[#4f7754]"
               >
-                <span>پوشاک ورزشی زنانه</span>
+                <span>لباس خواب</span>
                 <ArrowLeft
                   size={15}
                   className="opacity-0 transition-all group-hover:translate-x-[-3px] group-hover:opacity-100"
@@ -84,6 +84,17 @@ function Footer() {
                 className="group flex items-center justify-between gap-2 transition-colors hover:text-[#4f7754]"
               >
                 <span>مشاهده محصولات</span>
+                <ArrowLeft
+                  size={15}
+                  className="opacity-0 transition-all group-hover:translate-x-[-3px] group-hover:opacity-100"
+                />
+              </Link>
+
+              <Link
+                to="/size-guide"
+                className="group flex items-center justify-between gap-2 transition-colors hover:text-[#4f7754]"
+              >
+                <span>راهنمای انتخاب سایز</span>
                 <ArrowLeft
                   size={15}
                   className="opacity-0 transition-all group-hover:translate-x-[-3px] group-hover:opacity-100"

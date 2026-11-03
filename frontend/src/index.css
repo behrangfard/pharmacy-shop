@@ -1513,6 +1513,29 @@ table.admin-products-desktop-table {
   color: #9ca3af;
   font-size: 10px;
 }
+
+.admin-user-edit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 30px;
+  width: 30px;
+  height: 30px;
+  margin-right: auto;
+  color: #cdd9cd;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 9px;
+  text-decoration: none;
+  transition:
+    background-color 160ms ease,
+    color 160ms ease;
+}
+
+.admin-user-edit:hover {
+  color: #eef4ee;
+  background: rgba(255, 255, 255, 0.14);
+}
 .admin-category-button {
   display: inline-flex;
   align-items: center;
@@ -2641,7 +2664,6 @@ body {
   }
 }
 
-
 /* Mehr admin refinements — appended safely without replacing existing styles */
 .admin-layout {
   background: #f6f7fb;
@@ -2654,7 +2676,9 @@ body {
 
 .admin-nav-link {
   border-radius: 12px;
-  transition: background-color .18s ease, color .18s ease;
+  transition:
+    background-color 0.18s ease,
+    color 0.18s ease;
 }
 
 .admin-main {
@@ -2682,7 +2706,6 @@ body {
     transition: none;
   }
 }
-
 
 /* FIX: readable dark admin sidebar */
 .admin-sidebar {
@@ -2734,7 +2757,6 @@ body {
 .admin-sidebar input::placeholder {
   color: #aaa5c4 !important;
 }
-
 
 /* Dashboard chart polish */
 .dashboard-page .dashboard-charts-grid {

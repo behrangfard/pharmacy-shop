@@ -21,6 +21,9 @@ import {
   CalendarDays,
   Command,
   Users,
+  MessageSquare,
+  Megaphone,
+  Pencil,
 } from "lucide-react";
 import { useAdminAuth } from "../context/AdminAuthContext";
 
@@ -62,10 +65,29 @@ function AdminLayout() {
       keywords: "خرید پرداخت ارسال سفارش",
     },
     {
+      to: "/admin/reviews",
+      label: "نظرات محصولات",
+      icon: MessageSquare,
+      keywords: "نظر دیدگاه امتیاز ستاره بررسی تأیید رد پاسخ مشتری",
+    },
+    {
       to: "/admin/customers",
       label: "مشتریان",
       icon: Users,
       keywords: "مشتری کاربران اعضا سابقه خرید اطلاعات مشتری",
+    },
+    {
+      to: "/admin/messaging",
+      label: "پیام‌رسانی",
+      icon: Megaphone,
+      keywords:
+        "پیامک sms تلگرام واتساپ واتس آپ بله ارسال پیام اطلاع رسانی پیام رسان مشتریان",
+    },
+    {
+      to: "/admin/admins",
+      label: "مدیران",
+      icon: ShieldCheck,
+      keywords: "مدیر ادمین حساب کاربری رمز عبور افزودن مدیر ویرایش حساب",
     },
   ];
 
@@ -395,55 +417,54 @@ function AdminLayout() {
           .admin-topbar-actions {
             gap: 8px;
           }
-            /* جلوگیری از بیرون‌زدن محتوای پنل در موبایل */
-.admin-layout {
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
-}
 
-.admin-main {
-  min-width: 0;
-  max-width: 100%;
-}
+          /* جلوگیری از بیرون‌زدن محتوای پنل در موبایل */
+          .admin-layout {
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+          }
 
-.admin-page-content {
-  min-width: 0;
-  max-width: 100%;
-  width: 100%;
-}
+          .admin-main {
+            min-width: 0;
+            max-width: 100%;
+          }
 
-.admin-topbar {
-  min-width: 0;
-  max-width: 100%;
-}
+          .admin-page-content {
+            min-width: 0;
+            max-width: 100%;
+            width: 100%;
+          }
 
-.admin-topbar-breadcrumb {
-  flex: 1 1 auto;
-  overflow: hidden;
-}
+          .admin-topbar {
+            min-width: 0;
+            max-width: 100%;
+          }
 
-.admin-topbar-actions {
-  min-width: 0;
-}
+          .admin-topbar-breadcrumb {
+            flex: 1 1 auto;
+            overflow: hidden;
+          }
 
-@media (max-width: 560px) {
-  .admin-page-content {
-    padding-right: 12px;
-    padding-left: 12px;
-  }
+          .admin-topbar-actions {
+            min-width: 0;
+          }
 
-  .admin-topbar {
-    width: 100%;
-    padding-right: 12px;
-    padding-left: 12px;
-  }
+          .admin-page-content {
+            padding-right: 12px;
+            padding-left: 12px;
+          }
 
-  .admin-topbar-date {
-    max-width: 100%;
-    white-space: normal;
-  }
-}
+          .admin-topbar {
+            width: 100%;
+            padding-right: 12px;
+            padding-left: 12px;
+          }
+
+          .admin-topbar-date {
+            max-width: 100%;
+            white-space: normal;
+          }
         }
       `}</style>
 
@@ -515,6 +536,15 @@ function AdminLayout() {
                 {user?.name || "مدیر فروشگاه"}
               </strong>
             </div>
+
+            <Link
+              to="/admin/admins"
+              className="admin-user-edit"
+              aria-label="ویرایش حساب مدیر"
+              title="ویرایش حساب مدیر"
+            >
+              <Pencil size={15} strokeWidth={1.9} />
+            </Link>
           </div>
 
           <Link to="/" className="admin-store-link">

@@ -28,7 +28,7 @@ class AdminOrderStatusTest extends TestCase
         Sanctum::actingAs($admin);
 
         $response = $this->patchJson(
-            '/api/v1/admin/orders/' . $order->order_number . '/status',
+            '/api/v1/admin/orders/'.$order->order_number.'/status',
             ['status' => 'processing']
         );
 
@@ -41,7 +41,10 @@ class AdminOrderStatusTest extends TestCase
         ]);
     }
 
-    public function test_unpaid_order_cannot_be_cancelled_from_admin_panel(): void
+    /**
+     * لغو سفارش پرداخت‌نشده توسط مدیر مجاز است و موجودی بازگردانده می‌شود.
+     */
+    public function test_admin_can_cancel_unpaid_order(): void
     {
         $admin = User::factory()->create([
             'role' => 'admin',
@@ -57,17 +60,21 @@ class AdminOrderStatusTest extends TestCase
         Sanctum::actingAs($admin);
 
         $response = $this->patchJson(
-            '/api/v1/admin/orders/' . $order->order_number . '/status',
+            '/api/v1/admin/orders/'.$order->order_number.'/status',
             ['status' => 'cancelled']
         );
 
-        $response->assertStatus(422);
+        $response->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.status', 'cancelled');
 
         $this->assertDatabaseHas('orders', [
             'id' => $order->id,
-            'status' => 'pending',
+            'status' => 'cancelled',
             'payment_status' => 'unpaid',
         ]);
+
+        $this->assertNotNull($order->fresh()->stock_restored_at);
     }
 
     public function test_paid_order_can_be_moved_to_processing(): void
@@ -86,7 +93,7 @@ class AdminOrderStatusTest extends TestCase
         Sanctum::actingAs($admin);
 
         $response = $this->patchJson(
-            '/api/v1/admin/orders/' . $order->order_number . '/status',
+            '/api/v1/admin/orders/'.$order->order_number.'/status',
             ['status' => 'processing']
         );
 
@@ -117,7 +124,7 @@ class AdminOrderStatusTest extends TestCase
         Sanctum::actingAs($admin);
 
         $response = $this->patchJson(
-            '/api/v1/admin/orders/' . $order->order_number . '/status',
+            '/api/v1/admin/orders/'.$order->order_number.'/status',
             [
                 'status' => 'processing',
                 'payment_status' => 'paid',
@@ -163,7 +170,7 @@ class AdminOrderStatusTest extends TestCase
         Sanctum::actingAs($user);
 
         $response = $this->patchJson(
-            '/api/v1/admin/orders/' . $order->order_number . '/status',
+            '/api/v1/admin/orders/'.$order->order_number.'/status',
             ['status' => 'processing']
         );
 
@@ -198,7 +205,7 @@ class AdminOrderStatusTest extends TestCase
         );
 
         $response = $this->patchJson(
-            '/api/v1/admin/orders/' . $order->order_number . '/status',
+            '/api/v1/admin/orders/'.$order->order_number.'/status',
             ['status' => 'processing']
         );
 

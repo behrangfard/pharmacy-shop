@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { CheckCircle2, ShoppingCart, ImageOff } from "lucide-react";
 import { useCart } from "../context/CartContext";
 import { calculateProductPrice } from "../utils/price";
+import { getStorageUrl } from "../utils/images";
 import Button from "./Button";
 
 interface ProductImage {
@@ -38,9 +39,7 @@ function ProductCard({ product }: Props) {
   const primaryImage =
     product.images?.find((image) => image.is_primary) ?? product.images?.[0];
 
-  const imageUrl = primaryImage
-    ? `http://127.0.0.1:8000/storage/${primaryImage.path}`
-    : product.thumbnail || null;
+  const imageUrl = getStorageUrl(primaryImage?.path ?? product.thumbnail);
 
   const {
     originalPrice: price,

@@ -13,8 +13,8 @@ import {
 } from "lucide-react";
 
 import Layout from "../components/Layout";
-import { ButtonLink } from "../components/Button";
 import { api } from "../services/api";
+import { getStorageUrl } from "../utils/images";
 import { calculateProductPrice } from "../utils/price";
 
 interface ProductImage {
@@ -54,20 +54,57 @@ interface Category {
   name: string;
   slug: string;
   products_count?: number;
+  children?: Category[];
 }
 
-function getStorageUrl(path?: string | null) {
-  if (!path) {
-    return null;
+function normalizeSearch(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[يى]/g, "ی")
+    .replace(/ك/g, "ک")
+    .replace(/[\u200c\u200d\u200e\u200f\uFEFF]/g, "")
+    .replace(/ـ/g, "")
+    .replace(/\s+/g, "")
+    .trim();
+}
+
+/**
+ * همهٔ اسلاگ‌های یک دسته را برمی‌گرداند؛ برای دستهٔ والد زیرمجموعه‌ها هم
+ * اضافه می‌شوند تا با کلیک روی دستهٔ والد، محصولات زیرمجموعه‌ها هم دیده شوند.
+ */
+function collectCategorySlugs(categories: Category[], value: string): string[] {
+  if (!value) {
+    return [];
   }
 
-  if (path.startsWith("http://") || path.startsWith("https://")) {
-    return path;
+  const matches = (category: Category) =>
+    category.slug === value || String(category.id) === value;
+
+  const slugs = new Set<string>();
+
+  const addWithChildren = (category: Category) => {
+    slugs.add(category.slug);
+    (category.children ?? []).forEach(addWithChildren);
+  };
+
+  categories.forEach((category) => {
+    if (matches(category)) {
+      addWithChildren(category);
+      return;
+    }
+
+    (category.children ?? []).forEach((child) => {
+      if (matches(child)) {
+        addWithChildren(child);
+      }
+    });
+  });
+
+  if (slugs.size === 0) {
+    slugs.add(value);
   }
 
-  const cleanPath = path.replace(/^\/+/, "");
-
-  return `http://127.0.0.1:8000/storage/${cleanPath}`;
+  return Array.from(slugs);
 }
 
 function getProductImage(product: Product) {
@@ -242,7 +279,6 @@ function ProductCard({ product }: { product: Product }) {
                 <span className="font-bold text-emerald-600">
                   موجود در انبار
                 </span>
-
                 <span className="text-slate-400">
                   {product.stock.toLocaleString("fa-IR")} عدد
                 </span>
@@ -257,7 +293,6 @@ function ProductCard({ product }: { product: Product }) {
               <span className="text-xs font-bold text-[#385e3e] transition-colors group-hover/button:text-white sm:text-sm">
                 مشاهده محصول
               </span>
-
               <ArrowLeft
                 size={15}
                 className="shrink-0 text-[#648767] transition-all group-hover/button:-translate-x-1 group-hover/button:text-white sm:size-[16px]"
@@ -278,20 +313,35 @@ function Products() {
 
   const [loading, setLoading] = useState(true);
   const [categoriesLoading, setCategoriesLoading] = useState(true);
-
   const [error, setError] = useState("");
 
   const [search, setSearch] = useState(searchParams.get("search") ?? "");
-
   const [sort, setSort] = useState(searchParams.get("sort") ?? "newest");
-
   const [selectedCategory, setSelectedCategory] = useState(
     searchParams.get("category") ?? "",
   );
 
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
 
+  const urlCategory = searchParams.get("category") ?? "";
+  const urlSearch = searchParams.get("search") ?? "";
+
+  // لینک‌های منو/دسته‌بندی وقتی همین صفحه باز است فقط query string را عوض
+  // می‌کنند و کامپوننت دوباره mount نمی‌شود؛ پس باید state را با آدرس همگام
+  // کرد تا با کلیک روی دستهٔ دیگر، محتوا هم عوض شود.
   useEffect(() => {
+    setSelectedCategory((current) =>
+      current === urlCategory ? current : urlCategory,
+    );
+  }, [urlCategory]);
+
+  useEffect(() => {
+    setSearch((current) => (current.trim() === urlSearch ? current : urlSearch));
+  }, [urlSearch]);
+
+  useEffect(() => {
+    let cancelled = false;
+
     const loadCategories = async () => {
       setCategoriesLoading(true);
 
@@ -299,30 +349,59 @@ function Products() {
         const response = await api.get("/categories");
 
         const result =
+          response.data?.data?.data ??
           response.data?.data ??
           response.data?.categories ??
           response.data ??
           [];
 
-        setCategories(Array.isArray(result) ? result : []);
+        if (!cancelled) {
+          setCategories(Array.isArray(result) ? result : []);
+        }
       } catch (error) {
         console.error("Categories error:", error);
-        setCategories([]);
+
+        if (!cancelled) {
+          setCategories([]);
+        }
       } finally {
-        setCategoriesLoading(false);
+        if (!cancelled) {
+          setCategoriesLoading(false);
+        }
       }
     };
 
     loadCategories();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+
     const loadProducts = async () => {
       setLoading(true);
       setError("");
 
       try {
-        const response = await api.get("/products");
+        const params: Record<string, string> = {};
+
+        if (search.trim()) {
+          params.search = search.trim();
+        }
+
+        if (selectedCategory) {
+          params.category = selectedCategory;
+        }
+
+        // مرتب‌سازی در این صفحه سمت مرورگر انجام می‌شود.
+        // بنابراین مقدار sort را به API ارسال نمی‌کنیم.
+
+        const response = await api.get("/products", {
+          params,
+        });
 
         const result =
           response.data?.data?.data ??
@@ -332,27 +411,37 @@ function Products() {
           [];
 
         if (!Array.isArray(result)) {
-          setProducts([]);
-          setError("اطلاعات محصولات در قالب صحیح دریافت نشد.");
-          return;
+          throw new Error("ساختار پاسخ محصولات معتبر نیست.");
         }
 
-        setProducts(result);
+        if (!cancelled) {
+          setProducts(result);
+        }
       } catch (error: any) {
         console.error("Products error:", error);
 
-        setProducts([]);
-
-        setError(
-          error?.response?.data?.message ?? "دریافت محصولات با خطا مواجه شد.",
-        );
+        if (!cancelled) {
+          setProducts([]);
+          setError(
+            error?.response?.data?.message ??
+              error?.message ??
+              "دریافت محصولات با خطا مواجه شد.",
+          );
+        }
       } finally {
-        setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+        }
       }
     };
 
-    loadProducts();
-  }, []);
+    const timer = window.setTimeout(loadProducts, 350);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [search, selectedCategory]);
 
   useEffect(() => {
     const params = new URLSearchParams();
@@ -372,29 +461,38 @@ function Products() {
     setSearchParams(params, { replace: true });
   }, [search, selectedCategory, sort, setSearchParams]);
 
+  const categorySlugs = useMemo(
+    () => collectCategorySlugs(categories, selectedCategory),
+    [categories, selectedCategory],
+  );
+
   const filteredProducts = useMemo(() => {
     let result = [...products];
 
-    if (search.trim()) {
-      const query = search.trim().toLowerCase();
+    const query = normalizeSearch(search);
 
+    if (query) {
       result = result.filter((product) => {
-        return (
-          product.name.toLowerCase().includes(query) ||
-          product.short_description?.toLowerCase().includes(query) ||
-          product.category?.name?.toLowerCase().includes(query) ||
-          product.brand?.name?.toLowerCase().includes(query)
+        const searchableText = normalizeSearch(
+          [
+            product.name,
+            product.short_description ?? "",
+            product.description ?? "",
+            product.category?.name ?? "",
+            product.brand?.name ?? "",
+          ].join(" "),
         );
+
+        return searchableText.includes(query);
       });
     }
 
     if (selectedCategory) {
-      result = result.filter((product) => {
-        return (
-          product.category?.slug === selectedCategory ||
-          product.category?.id?.toString() === selectedCategory
-        );
-      });
+      const allowedSlugs = new Set(categorySlugs);
+
+      result = result.filter((product) =>
+        product.category ? allowedSlugs.has(product.category.slug) : false,
+      );
     }
 
     switch (sort) {
@@ -427,20 +525,30 @@ function Products() {
     }
 
     return result;
-  }, [products, search, selectedCategory, sort]);
+  }, [products, search, selectedCategory, categorySlugs, sort]);
 
   const selectedCategoryName = useMemo(() => {
     if (!selectedCategory) {
       return null;
     }
 
-    return (
-      categories.find(
-        (category) =>
-          category.slug === selectedCategory ||
-          category.id.toString() === selectedCategory,
-      )?.name ?? null
-    );
+    const matches = (category: Category) =>
+      category.slug === selectedCategory ||
+      category.id.toString() === selectedCategory;
+
+    for (const category of categories) {
+      if (matches(category)) {
+        return category.name;
+      }
+
+      const child = (category.children ?? []).find(matches);
+
+      if (child) {
+        return child.name;
+      }
+    }
+
+    return null;
   }, [categories, selectedCategory]);
 
   const clearFilters = () => {
@@ -478,7 +586,6 @@ function Products() {
                 <span className="text-slate-400">
                   {filteredProducts.length.toLocaleString("fa-IR")}
                 </span>
-
                 <span className="font-bold text-slate-700">محصول</span>
               </div>
             </div>
@@ -611,7 +718,7 @@ function Products() {
                       type="text"
                       value={search}
                       onChange={(event) => setSearch(event.target.value)}
-                      placeholder="جستجوی لباس، لباس زیر، پوشاک ورزشی..."
+                      placeholder="جستجوی محصول..."
                       className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3.5 pl-10 pr-11 text-sm outline-none transition focus:border-[#648767] focus:bg-white focus:ring-4 focus:ring-[#e8efe2]"
                     />
 
@@ -739,7 +846,6 @@ function Products() {
                     size={38}
                     className="mx-auto animate-spin text-[#537653]"
                   />
-
                   <p className="mt-4 font-medium text-slate-500">
                     در حال دریافت محصولات...
                   </p>
@@ -758,12 +864,15 @@ function Products() {
 
                   <p className="mt-2 text-sm text-slate-500">{error}</p>
 
-                  <Link
-                    to="/products"
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearch((value) => `${value} `);
+                    }}
                     className="mt-5 inline-flex items-center justify-center rounded-xl bg-[#648767] px-6 py-3 font-bold text-white transition hover:bg-[#385e3e]"
                   >
                     تلاش مجدد
-                  </Link>
+                  </button>
                 </div>
               )}
 

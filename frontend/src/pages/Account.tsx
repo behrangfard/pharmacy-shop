@@ -26,6 +26,8 @@ import Layout from "../components/Layout";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 import api from "../services/api";
+import { STORAGE_KEYS } from "../utils/storageKeys";
+import { getStorageUrl } from "../utils/images";
 
 type ProductImage = {
   id: number;
@@ -200,7 +202,7 @@ function Account() {
       if (updatedUser) {
         setUser(updatedUser);
 
-        localStorage.setItem("pharmacy-shop-user", JSON.stringify(updatedUser));
+        localStorage.setItem(STORAGE_KEYS.user, JSON.stringify(updatedUser));
       }
 
       setProfileMessage("اطلاعات حساب با موفقیت به‌روزرسانی شد.");
@@ -392,20 +394,6 @@ function Account() {
       default:
         return "bg-slate-50 text-slate-600 border-slate-200";
     }
-  };
-
-  const getStorageUrl = (path?: string | null) => {
-    if (!path) {
-      return null;
-    }
-
-    if (path.startsWith("http://") || path.startsWith("https://")) {
-      return path;
-    }
-
-    const cleanPath = path.replace(/^\/+/, "");
-
-    return `http://127.0.0.1:8000/storage/${cleanPath}`;
   };
 
   const getOrderImage = (order: Order) => {

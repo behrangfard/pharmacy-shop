@@ -13,6 +13,7 @@
 /frontend/dist/
 /frontend/.env
 /frontend/.env.*
+!/frontend/.env.example
 
 /.idea/
 /.vscode/
@@ -20,3 +21,14 @@
 *.log
 .DS_Store
 Thumbs.db
+
+# فایل‌های پشتیبان موقت ویرایشگر
+*.bak
+*.backup
+*.backup-*
+*.before-*.bak
+*.pre-*.bak
+
+# پشتیبان‌های محلی تصاویر (نباید در مخزن باشند)
+/storage-backup-products/
+/backend/public/storage-old/

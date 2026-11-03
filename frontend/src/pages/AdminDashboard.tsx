@@ -327,7 +327,7 @@ const dashboardStyles = `
 .dashboard-channel-label {color:#43515f;font-size:11px;font-weight:800;}
 .dashboard-channel-meta {margin-top:3px;color:#929ba5;font-size:9px;}
 .dashboard-channel-percent {color:#263442;font-size:12px;font-weight:900;white-space:nowrap;}
-.dashboard-channel-track {grid-column:1 / -1;height:6px;overflow:hidden;border-radius:999px;background:#f0f2f4;}
+.dashboard-channel-track {grid-column:1 / -1;height:6px;overflow:hidden;border-radius:ظpx;background:#f0f2f4;}
 .dashboard-channel-progress {height:100%;border-radius:inherit;}
 .dashboard-channel-total {display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:20px;padding-top:15px;border-top:1px solid #edf0f2;color:#7d8994;font-size:10px;}
 .dashboard-empty-note {padding:14px;border-radius:10px;background:#f7f9fa;color:#929ba5;font-size:10px;line-height:2;}

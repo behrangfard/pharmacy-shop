@@ -1,265 +1,331 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from "react";
+
 import api from "../services/api";
 import { calculateProductPrice } from "../utils/price";
+import { STORAGE_KEYS } from "../utils/storageKeys";
+
+const CART_STORAGE_KEY = STORAGE_KEYS.cart;
 
 export interface CartItem {
+  // شناسه اصلی محصول؛ برای ثبت سفارش استفاده می‌شود.
   id: number;
   name: string;
   slug: string;
+
+  // شناسه تنوع انتخاب‌شده؛ برای محصولات بدون تنوع null است.
+  variant_id?: number | null;
+  variant_name?: string | null;
+  sku?: string | null;
+
   price: number;
   originalPrice?: number;
   discountPercent?: number;
-  thumbnail?: string | null;
+  thumbnail?: string;
   quantity: number;
   stock: number;
   is_taxable: boolean;
+
+  // شناسه یکتای ردیف سبد خرید
+  cartKey: string;
 }
+
+type AddToCartItem = Omit<CartItem, "quantity" | "cartKey">;
+
+type CartIdentity = number | string;
 
 interface CartContextType {
   items: CartItem[];
   cartCount: number;
   cartTotal: number;
-  addToCart: (product: Omit<CartItem, "quantity">) => void;
-  removeFromCart: (id: number) => void;
-  updateQuantity: (id: number, quantity: number) => void;
+  addToCart: (product: AddToCartItem) => void;
+  removeFromCart: (identity: CartIdentity) => void;
+  updateQuantity: (identity: CartIdentity, quantity: number) => void;
   clearCart: () => void;
 }
 
-interface ApiProduct {
-  id: number;
-  name: string;
-  slug: string;
-  price: string | number;
-  discount_percent?: string | number | null;
-  stock: string | number;
-  thumbnail?: string | null;
-  is_taxable?: boolean | number | string | null;
-}
-
-interface ApiProductResponse {
-  success: boolean;
-  data: ApiProduct;
-}
-
-const CART_STORAGE_KEY = "pharmacy-shop-cart";
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-function normalizeStock(stock: number): number {
-  if (!Number.isFinite(stock)) return 0;
-  return Math.max(0, Math.floor(stock));
+interface CartProviderProps {
+  children: ReactNode;
 }
 
-function normalizeQuantity(quantity: number, stock: number): number {
-  const safeStock = normalizeStock(stock);
-  if (safeStock <= 0) return 0;
-  if (!Number.isFinite(quantity)) return 1;
-  return Math.max(1, Math.min(Math.floor(quantity), safeStock));
+function getCartKey(productId: number, variantId?: number | null) {
+  return `${productId}:${variantId ?? "null"}`;
 }
 
-function normalizeTaxable(value: unknown): boolean {
-  return value === true || value === 1 || value === "1" || value === "true";
-}
+function readStoredCart(): CartItem[] {
+  try {
+    const stored = localStorage.getItem(CART_STORAGE_KEY);
 
-function CartProvider({ children }: { children: ReactNode }) {
-  const [items, setItems] = useState<CartItem[]>(() => {
-    try {
-      const saved = localStorage.getItem(CART_STORAGE_KEY);
-      if (!saved) return [];
-
-      const parsed: unknown = JSON.parse(saved);
-      if (!Array.isArray(parsed)) return [];
-
-      return parsed
-        .filter(
-          (item): item is CartItem =>
-            item !== null &&
-            typeof item === "object" &&
-            Number.isFinite(Number(item.id)) &&
-            typeof item.name === "string" &&
-            typeof item.slug === "string" &&
-            Number.isFinite(Number(item.price)) &&
-            Number.isFinite(Number(item.quantity)) &&
-            Number.isFinite(Number(item.stock)),
-        )
-        .map((item) => {
-          const stock = normalizeStock(Number(item.stock));
-
-          return {
-            ...item,
-            id: Number(item.id),
-            price: Math.max(0, Number(item.price)),
-            stock,
-            quantity: normalizeQuantity(Number(item.quantity), stock),
-            is_taxable: normalizeTaxable(item.is_taxable),
-          };
-        })
-        .filter((item) => item.quantity > 0);
-    } catch {
+    if (!stored) {
       return [];
     }
-  });
 
-  const cartProductKeys = items
-    .map((item) => `${item.id}:${item.slug}`)
-    .sort()
-    .join("|");
+    const parsed = JSON.parse(stored);
 
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return parsed
+      .filter(
+        (item): item is CartItem =>
+          item &&
+          typeof item.id === "number" &&
+          typeof item.name === "string" &&
+          typeof item.slug === "string" &&
+          typeof item.price === "number" &&
+          typeof item.quantity === "number",
+      )
+      .map((item) => ({
+        ...item,
+        variant_id: item.variant_id ?? null,
+        variant_name: item.variant_name ?? null,
+        sku: item.sku ?? null,
+        stock: Number(item.stock ?? 0),
+        is_taxable: item.is_taxable ?? true,
+        cartKey: item.cartKey || getCartKey(item.id, item.variant_id ?? null),
+      }));
+  } catch {
+    return [];
+  }
+}
+
+function CartProvider({ children }: CartProviderProps) {
+  const [items, setItems] = useState<CartItem[]>(readStoredCart);
+
+  // ذخیره خودکار سبد خرید
   useEffect(() => {
     try {
       localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
-    } catch {
-      // Keep the cart usable if browser storage is unavailable or full.
+    } catch (error) {
+      console.error("Cart storage error:", error);
     }
   }, [items]);
 
-  useEffect(() => {
-    if (!cartProductKeys) return;
-
-    let cancelled = false;
-    const currentItems = items;
-
-    const refreshCartProducts = async () => {
-      const results = await Promise.allSettled(
-        currentItems.map(async (item) => {
-          const response = await api.get<ApiProductResponse>(
-            `/products/${encodeURIComponent(item.slug)}`,
-          );
-
-          return {
-            cartItemId: item.id,
-            product: response.data.data,
-          };
-        }),
-      );
-
-      if (cancelled) return;
-
-      setItems((latestItems) =>
-        latestItems.flatMap((item) => {
-          const resultIndex = currentItems.findIndex(
-            (currentItem) =>
-              currentItem.id === item.id && currentItem.slug === item.slug,
-          );
-
-          if (resultIndex === -1) return [item];
-
-          const result = results[resultIndex];
-          if (result.status === "rejected") return [item];
-
-          const product = result.value.product;
-          const productPrice = Number(product?.price);
-          const productStock = Number(product?.stock);
-
-          if (
-            !product ||
-            Number(product.id) !== item.id ||
-            !Number.isFinite(productPrice) ||
-            productPrice < 0 ||
-            !Number.isFinite(productStock)
-          ) {
-            return [item];
-          }
-
-          const pricing = calculateProductPrice(
-            productPrice,
-            product.discount_percent ?? 0,
-          );
-          const stock = normalizeStock(productStock);
-          const quantity = normalizeQuantity(item.quantity, stock);
-
-          // Remove items that are no longer in stock.
-          if (quantity === 0) return [];
-
-          return [
-            {
-              ...item,
-              name: product.name,
-              slug: product.slug,
-              price: pricing.finalPrice,
-              originalPrice: pricing.originalPrice,
-              discountPercent: pricing.discountPercent,
-              thumbnail: product.thumbnail ?? item.thumbnail,
-              stock,
-              quantity,
-              is_taxable: normalizeTaxable(product.is_taxable),
-            },
-          ];
-        }),
-      );
-    };
-
-    void refreshCartProducts();
-
-    return () => {
-      cancelled = true;
-    };
-    // Refresh only when the set of products in the cart changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cartProductKeys]);
-
-  const addToCart = (product: Omit<CartItem, "quantity">) => {
-    const stock = normalizeStock(Number(product.stock));
-    const price = Number(product.price);
-
-    if (stock <= 0 || !Number.isFinite(price) || price < 0) return;
-
-    const safeProduct: Omit<CartItem, "quantity"> = {
-      ...product,
-      id: Number(product.id),
-      price,
-      stock,
-      is_taxable: normalizeTaxable(product.is_taxable),
-    };
+  // افزودن یک واحد از محصول یا تنوع انتخاب‌شده
+  const addToCart = useCallback((product: AddToCartItem) => {
+    const variantId = product.variant_id ?? null;
+    const cartKey = getCartKey(product.id, variantId);
 
     setItems((currentItems) => {
-      const existing = currentItems.find((item) => item.id === safeProduct.id);
+      const existingItem = currentItems.find(
+        (item) => item.cartKey === cartKey,
+      );
 
-      if (existing) {
-        const quantity = normalizeQuantity(existing.quantity + 1, stock);
-        if (quantity === 0) return currentItems;
+      if (existingItem) {
+        if (existingItem.quantity >= existingItem.stock) {
+          return currentItems;
+        }
 
         return currentItems.map((item) =>
-          item.id === safeProduct.id
-            ? { ...item, ...safeProduct, quantity }
+          item.cartKey === cartKey
+            ? {
+                ...item,
+                quantity: Math.min(item.quantity + 1, item.stock),
+              }
             : item,
         );
+      }
+
+      if (product.stock <= 0) {
+        return currentItems;
       }
 
       return [
         ...currentItems,
         {
-          ...safeProduct,
+          ...product,
+          variant_id: variantId,
+          variant_name: product.variant_name ?? null,
+          sku: product.sku ?? null,
           quantity: 1,
+          cartKey,
+          is_taxable: product.is_taxable ?? true,
         },
       ];
     });
-  };
+  }, []);
 
-  const removeFromCart = (id: number) => {
-    setItems((currentItems) => currentItems.filter((item) => item.id !== id));
-  };
-
-  const updateQuantity = (id: number, quantity: number) => {
+  // حذف ردیف بر اساس cartKey؛ عدد برای سازگاری با کدهای قبلی است.
+  const removeFromCart = useCallback((identity: CartIdentity) => {
     setItems((currentItems) =>
-      currentItems.flatMap((item) => {
-        if (item.id !== id) return [item];
+      currentItems.filter((item) => {
+        if (typeof identity === "string") {
+          return item.cartKey !== identity;
+        }
 
-        const safeQuantity = normalizeQuantity(quantity, item.stock);
-        return safeQuantity > 0 ? [{ ...item, quantity: safeQuantity }] : [];
+        return item.id !== identity;
       }),
     );
-  };
+  }, []);
 
-  const clearCart = () => {
+  // تغییر تعداد یک ردیف مشخص
+  const updateQuantity = useCallback(
+    (identity: CartIdentity, quantity: number) => {
+      if (quantity <= 0) {
+        removeFromCart(identity);
+        return;
+      }
+
+      setItems((currentItems) =>
+        currentItems.map((item) => {
+          const matches =
+            typeof identity === "string"
+              ? item.cartKey === identity
+              : item.id === identity && !item.variant_id;
+
+          if (!matches) {
+            return item;
+          }
+
+          return {
+            ...item,
+            quantity: Math.min(Math.floor(quantity), item.stock),
+          };
+        }),
+      );
+    },
+    [removeFromCart],
+  );
+
+  const clearCart = useCallback(() => {
     setItems([]);
-  };
+  }, []);
+
+  // تازه‌سازی قیمت و موجودی از سرور
+  useEffect(() => {
+    if (items.length === 0) {
+      return;
+    }
+
+    let cancelled = false;
+
+    const refreshCart = async () => {
+      const uniqueSlugs = Array.from(new Set(items.map((item) => item.slug)));
+
+      const productResults = await Promise.allSettled(
+        uniqueSlugs.map(async (slug) => {
+          const response = await api.get(`/products/${slug}`);
+          return response.data?.data;
+        }),
+      );
+
+      if (cancelled) {
+        return;
+      }
+
+      const productsBySlug = new Map<string, Record<string, any>>();
+
+      productResults.forEach((result, index) => {
+        if (result.status === "fulfilled" && result.value) {
+          productsBySlug.set(uniqueSlugs[index], result.value);
+        }
+      });
+
+      if (productsBySlug.size === 0) {
+        return;
+      }
+
+      setItems((currentItems) => {
+        let changed = false;
+
+        const refreshedItems = currentItems
+          .map((item) => {
+            const product = productsBySlug.get(item.slug);
+
+            if (!product) {
+              return item;
+            }
+
+            const variant =
+              item.variant_id != null
+                ? (product.variants || []).find(
+                    (entry: any) =>
+                      Number(entry.id) === Number(item.variant_id),
+                  )
+                : null;
+
+            // اگر تنوع حذف یا غیرفعال شده باشد، آن ردیف حذف می‌شود.
+            if (item.variant_id != null && (!variant || !variant.is_active)) {
+              changed = true;
+              return null;
+            }
+
+            const stock = Number(variant ? variant.stock : product.stock);
+
+            // موجودی صفر؛ ردیف دیگر قابل خرید نیست.
+            if (stock <= 0) {
+              changed = true;
+              return null;
+            }
+
+            const basePrice =
+              variant?.price != null
+                ? Number(variant.price)
+                : Number(product.price);
+
+            const pricing = calculateProductPrice(
+              basePrice,
+              product.discount_percent,
+            );
+
+            const thumbnail =
+              variant?.image || product.thumbnail || item.thumbnail;
+
+            const updatedItem: CartItem = {
+              ...item,
+              name: product.name || item.name,
+              price: Number(pricing.finalPrice),
+              originalPrice: Number(pricing.originalPrice),
+              discountPercent: Number(pricing.discountPercent),
+              thumbnail,
+              stock,
+              quantity: Math.min(item.quantity, stock),
+              is_taxable:
+                typeof product.is_taxable === "boolean"
+                  ? product.is_taxable
+                  : item.is_taxable,
+              variant_name: variant?.name ?? item.variant_name ?? null,
+              sku: variant?.sku ?? product.sku ?? item.sku ?? null,
+            };
+
+            if (
+              updatedItem.price !== item.price ||
+              updatedItem.stock !== item.stock ||
+              updatedItem.quantity !== item.quantity ||
+              updatedItem.thumbnail !== item.thumbnail ||
+              updatedItem.variant_name !== item.variant_name ||
+              updatedItem.sku !== item.sku ||
+              updatedItem.is_taxable !== item.is_taxable
+            ) {
+              changed = true;
+            }
+
+            return updatedItem;
+          })
+          .filter((item): item is CartItem => item !== null);
+
+        return changed ? refreshedItems : currentItems;
+      });
+    };
+
+    refreshCart().catch((error) => {
+      console.error("Cart refresh error:", error);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [items.length]);
 
   const cartCount = useMemo(
     () => items.reduce((total, item) => total + item.quantity, 0),
@@ -271,20 +337,29 @@ function CartProvider({ children }: { children: ReactNode }) {
     [items],
   );
 
+  const contextValue = useMemo(
+    () => ({
+      items,
+      cartCount,
+      cartTotal,
+      addToCart,
+      removeFromCart,
+      updateQuantity,
+      clearCart,
+    }),
+    [
+      items,
+      cartCount,
+      cartTotal,
+      addToCart,
+      removeFromCart,
+      updateQuantity,
+      clearCart,
+    ],
+  );
+
   return (
-    <CartContext.Provider
-      value={{
-        items,
-        cartCount,
-        cartTotal,
-        addToCart,
-        removeFromCart,
-        updateQuantity,
-        clearCart,
-      }}
-    >
-      {children}
-    </CartContext.Provider>
+    <CartContext.Provider value={contextValue}>{children}</CartContext.Provider>
   );
 }
 
@@ -292,7 +367,7 @@ export function useCart() {
   const context = useContext(CartContext);
 
   if (!context) {
-    throw new Error("useCart must be used inside CartProvider");
+    throw new Error("useCart must be used within CartProvider");
   }
 
   return context;
