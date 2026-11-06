@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { adminApi } from "../services/api";
+import { useStoreSettings } from "../hooks/useStoreSettings";
 
 type OrderStatus =
   | "pending"
@@ -82,11 +83,27 @@ interface Order {
 
   discount: string | number;
 
+  coupon_code?: string | null;
+
+  coupon_discount?: string | number;
+
+  tax_percent?: string | number;
+
+  tax_amount?: string | number;
+
   total: string | number;
 
   status: OrderStatus;
 
   payment_status: PaymentStatus;
+
+  shipping_method?: string | null;
+
+  tracking_code?: string | null;
+
+  shipped_at?: string | null;
+
+  delivered_at?: string | null;
 
   created_at: string;
 
@@ -377,6 +394,13 @@ function AdminOrders() {
 
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
+  const storeSettings = useStoreSettings();
+
+  const [trackingCode, setTrackingCode] = useState("");
+  const [shippingMethod, setShippingMethod] = useState("");
+  const [savingShipping, setSavingShipping] = useState(false);
+  const [shippingNotice, setShippingNotice] = useState("");
+
   const [detailLoading, setDetailLoading] = useState(false);
 
   const [updatingStatus, setUpdatingStatus] = useState(false);
@@ -570,6 +594,12 @@ function AdminOrders() {
       setSelectedOrder(order);
 
       setNewStatus(order.status);
+
+      setTrackingCode(order.tracking_code ?? "");
+
+      setShippingMethod(order.shipping_method ?? "");
+
+      setShippingNotice("");
     } catch (requestError) {
       setError(
         getErrorMessage(requestError, "دریافت جزئیات سفارش ناموفق بود."),
@@ -652,6 +682,37 @@ function AdminOrders() {
     setPage(1);
 
     setPaymentFilter(value);
+  };
+
+  const saveShippingInfo = async () => {
+    if (!selectedOrder || savingShipping) return;
+
+    setSavingShipping(true);
+    setShippingNotice("");
+
+    try {
+      const response = await adminApi.patch(
+        `/admin/orders/${encodeURIComponent(
+          selectedOrder.order_number,
+        )}/shipping`,
+        {
+          shipping_method: shippingMethod.trim() || null,
+          tracking_code: trackingCode.trim() || null,
+        },
+      );
+
+      const updatedOrder: Order = response.data.data;
+
+      setSelectedOrder(updatedOrder);
+      setTrackingCode(updatedOrder.tracking_code ?? "");
+      setShippingMethod(updatedOrder.shipping_method ?? "");
+      setShippingNotice("اطلاعات ارسال با موفقیت ذخیره شد.");
+    } catch (error) {
+      console.error("SAVE SHIPPING ERROR:", error);
+      setShippingNotice("ذخیرهٔ اطلاعات ارسال ناموفق بود.");
+    } finally {
+      setSavingShipping(false);
+    }
   };
 
   const closeOrderDetails = () => {
@@ -2048,6 +2109,202 @@ function AdminOrders() {
                   </button>
                 </div>
               )}
+            </div>
+
+            <div style={{ marginTop: 24 }}>
+              <h3 style={sectionHeadingStyle}>اطلاعات ارسال و رهگیری</h3>
+
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 10,
+                  alignItems: "center",
+                }}
+              >
+                <input
+                  value={shippingMethod}
+                  onChange={(event) => setShippingMethod(event.target.value)}
+                  placeholder="روش ارسال (مثال: پست پیشتاز)"
+                  maxLength={60}
+                  style={{ ...inputStyle, flex: "1 1 190px", maxWidth: "100%" }}
+                />
+
+                <input
+                  value={trackingCode}
+                  onChange={(event) => setTrackingCode(event.target.value)}
+                  placeholder="کد رهگیری مرسوله"
+                  maxLength={60}
+                  dir="ltr"
+                  style={{ ...inputStyle, flex: "1 1 190px", maxWidth: "100%" }}
+                />
+
+                <button
+                  type="button"
+                  onClick={() => void saveShippingInfo()}
+                  disabled={savingShipping}
+                  style={{
+                    ...primaryButtonStyle,
+                    opacity: savingShipping ? 0.55 : 1,
+                  }}
+                >
+                  {savingShipping ? "در حال ذخیره..." : "ذخیره اطلاعات ارسال"}
+                </button>
+              </div>
+
+              {selectedOrder.shipped_at && (
+                <p style={{ color: colors.muted, fontSize: 13, marginTop: 10 }}>
+                  تاریخ ارسال: {formatDate(selectedOrder.shipped_at)}
+                </p>
+              )}
+
+              {selectedOrder.delivered_at && (
+                <p style={{ color: colors.muted, fontSize: 13, marginTop: 6 }}>
+                  تاریخ تحویل: {formatDate(selectedOrder.delivered_at)}
+                </p>
+              )}
+
+              {shippingNotice && (
+                <p
+                  role="status"
+                  style={{
+                    color: shippingNotice.includes("موفق")
+                      ? colors.greenDark
+                      : "#984b48",
+                    fontSize: 13,
+                    marginTop: 10,
+                  }}
+                >
+                  {shippingNotice}
+                </p>
+              )}
+            </div>
+
+            <div style={{ marginTop: 28 }}>
+              <div
+                className="admin-print-hide"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  flexWrap: "wrap",
+                  gap: 10,
+                }}
+              >
+                <h3 style={sectionHeadingStyle}>فاکتور سفارش</h3>
+
+                <button
+                  type="button"
+                  onClick={() => window.print()}
+                  style={primaryButtonStyle}
+                >
+                  چاپ فاکتور
+                </button>
+              </div>
+
+              <div
+                id="invoice-print-area"
+                className="invoice-print"
+                style={{ marginTop: 12 }}
+              >
+                <h2>{storeSettings.store_name}</h2>
+
+                <p style={{ margin: 0, color: "#6b7280", fontSize: 12 }}>
+                  {storeSettings.store_slogan}
+                </p>
+
+                <div className="invoice-print-meta">
+                  <span>شماره فاکتور: {selectedOrder.order_number}</span>
+                  <span>تاریخ: {formatDate(selectedOrder.created_at)}</span>
+                  <span>
+                    وضعیت پرداخت:{" "}
+                    {selectedOrder.payment_status === "paid"
+                      ? "پرداخت‌شده"
+                      : "پرداخت‌نشده"}
+                  </span>
+                </div>
+
+                <div className="invoice-print-meta">
+                  <span>گیرنده: {selectedOrder.recipient_name}</span>
+                  <span dir="ltr">{selectedOrder.phone}</span>
+                  <span>نشانی: {selectedOrder.address}</span>
+                </div>
+
+                <table>
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>کالا</th>
+                      <th>تعداد</th>
+                      <th>قیمت واحد</th>
+                      <th>جمع</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {selectedOrder.items?.map((item, index) => (
+                      <tr key={item.id}>
+                        <td>{index + 1}</td>
+                        <td>
+                          {item.product_name}
+                          {item.variant_name ? ` — ${item.variant_name}` : ""}
+                        </td>
+                        <td>{item.quantity}</td>
+                        <td>{formatPrice(item.unit_price)}</td>
+                        <td>{formatPrice(item.total_price)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                <div className="invoice-print-totals">
+                  <span>
+                    جمع کالاها: {formatPrice(selectedOrder.subtotal)} تومان
+                  </span>
+
+                  {Number(selectedOrder.discount) > 0 && (
+                    <span>
+                      تخفیف
+                      {selectedOrder.coupon_code
+                        ? ` (${selectedOrder.coupon_code})`
+                        : ""}
+                      : − {formatPrice(selectedOrder.discount)} تومان
+                    </span>
+                  )}
+
+                  <span>
+                    هزینه ارسال: {formatPrice(selectedOrder.shipping_cost)}{" "}
+                    تومان
+                  </span>
+
+                  {Number(selectedOrder.tax_amount ?? 0) > 0 && (
+                    <span>
+                      مالیات ({formatPrice(selectedOrder.tax_percent ?? 0)}٪):{" "}
+                      {formatPrice(selectedOrder.tax_amount)} تومان
+                    </span>
+                  )}
+
+                  <strong>
+                    مبلغ نهایی: {formatPrice(selectedOrder.total)} تومان
+                  </strong>
+                </div>
+
+                <div className="invoice-print-footer">
+                  {storeSettings.store_phone && (
+                    <span>تلفن: {storeSettings.store_phone} </span>
+                  )}
+                  {storeSettings.store_address && (
+                    <span>| {storeSettings.store_address} </span>
+                  )}
+                  {storeSettings.store_email && (
+                    <span>| ایمیل: {storeSettings.store_email}</span>
+                  )}
+                  <div>
+                    از خرید شما سپاسگزاریم. این فاکتور به‌صورت خودکار توسط پنل
+                    مدیریت صادر شده است.
+                  </div>
+                </div>
+              </div>
             </div>
 
             {notice && (

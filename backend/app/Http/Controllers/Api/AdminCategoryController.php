@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -39,6 +40,8 @@ class AdminCategoryController extends Controller
         );
 
         $category = Category::create($validated);
+
+        $this->forgetStorefrontCache();
 
         return response()->json([
             'success' => true,
@@ -90,6 +93,8 @@ class AdminCategoryController extends Controller
 
         $category->update($validated);
 
+        $this->forgetStorefrontCache();
+
         return response()->json([
             'success' => true,
             'message' => 'دسته‌بندی با موفقیت ویرایش شد.',
@@ -110,6 +115,8 @@ class AdminCategoryController extends Controller
         $category->update([
             'is_active' => $validated['is_active'],
         ]);
+
+        $this->forgetStorefrontCache();
 
         return response()->json([
             'success' => true,
@@ -132,10 +139,21 @@ class AdminCategoryController extends Controller
 
         $category->delete();
 
+        $this->forgetStorefrontCache();
+
         return response()->json([
             'success' => true,
             'message' => 'دسته‌بندی حذف شد.',
         ]);
+    }
+
+    /**
+     * کش فهرست دسته‌بندی‌های فروشگاه را پاک می‌کند تا تغییرات پنل مدیران
+     * بلافاصله در منو و فیلترهای سایت دیده شود.
+     */
+    private function forgetStorefrontCache(): void
+    {
+        Cache::forget(CategoryController::STOREFRONT_CACHE_KEY);
     }
 
     private function validateCategory(

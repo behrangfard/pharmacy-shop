@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 
 import Layout from "../components/Layout";
+import { usePrivatePageMeta } from "../hooks/usePageMeta";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 import api from "../services/api";
@@ -75,6 +76,8 @@ type Order = {
 };
 
 function Account() {
+  usePrivatePageMeta("حساب کاربری", "/account");
+
   const navigate = useNavigate();
 
   const { user, setUser, logout } = useAuth();
@@ -338,43 +341,43 @@ function Account() {
     switch (status) {
       case "pending":
         return {
-          wrapper: "bg-amber-50 text-amber-700 border-amber-200",
-          accent: "bg-amber-400",
+          wrapper: "bg-gold-50 text-gold border-gold-100",
+          accent: "bg-gold",
           icon: Clock3,
         };
 
       case "processing":
         return {
-          wrapper: "bg-blue-50 text-blue-700 border-blue-200",
-          accent: "bg-blue-500",
+          wrapper: "bg-brand-50 text-brand-700 border-brand-200",
+          accent: "bg-brand-500",
           icon: Package,
         };
 
       case "shipped":
         return {
-          wrapper: "bg-[#e8efe2] text-[#385e3e] border-[#d9e6d5]",
-          accent: "bg-[#648767]",
+          wrapper: "bg-brand-100 text-brand-700 border-brand-250",
+          accent: "bg-brand-500",
           icon: Truck,
         };
 
       case "delivered":
         return {
-          wrapper: "bg-green-50 text-green-700 border-green-200",
-          accent: "bg-green-500",
+          wrapper: "bg-brand-50 text-stock-700 border-brand-200",
+          accent: "bg-stock",
           icon: CheckCircle2,
         };
 
       case "cancelled":
         return {
-          wrapper: "bg-red-50 text-red-700 border-red-200",
-          accent: "bg-red-500",
+          wrapper: "bg-blush-50 text-discount border-blush-200",
+          accent: "bg-discount",
           icon: XCircle,
         };
 
       default:
         return {
-          wrapper: "bg-slate-50 text-slate-600 border-slate-200",
-          accent: "bg-slate-400",
+          wrapper: "bg-cream text-muted border-line",
+          accent: "bg-muted-soft",
           icon: Package,
         };
     }
@@ -383,16 +386,16 @@ function Account() {
   const getPaymentStyle = (status: string) => {
     switch (status) {
       case "paid":
-        return "bg-green-50 text-green-700 border-green-200";
+        return "bg-brand-50 text-stock-700 border-brand-200";
 
       case "failed":
-        return "bg-red-50 text-red-700 border-red-200";
+        return "bg-blush-50 text-discount border-blush-200";
 
       case "refunded":
-        return "bg-[#e8efe2] text-[#385e3e] border-[#d9e6d5]";
+        return "bg-brand-100 text-brand-700 border-brand-250";
 
       default:
-        return "bg-slate-50 text-slate-600 border-slate-200";
+        return "bg-cream text-muted border-line";
     }
   };
 
@@ -426,20 +429,20 @@ function Account() {
     return (
       <Layout>
         <main className="max-w-4xl mx-auto px-6 py-16">
-          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-10 text-center">
-            <div className="w-16 h-16 mx-auto rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
+          <div className="bg-white rounded-3xl border border-line shadow-sm p-10 text-center">
+            <div className="w-16 h-16 mx-auto rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center">
               <User size={30} />
             </div>
 
             <h1 className="text-2xl font-black mt-5">ورود به حساب کاربری</h1>
 
-            <p className="text-slate-500 mt-2">
+            <p className="text-muted mt-2">
               برای مشاهده اطلاعات حساب، ابتدا وارد شوید.
             </p>
 
             <Link
               to="/login"
-              className="inline-flex mt-6 bg-blue-600 text-white px-6 py-3 rounded-xl font-bold"
+              className="inline-flex mt-6 bg-brand-600 text-white px-6 py-3 rounded-xl font-bold"
             >
               ورود به حساب
             </Link>
@@ -455,34 +458,34 @@ function Account() {
         <div className="mb-8">
           <Link
             to="/"
-            className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-blue-600 transition-colors"
+            className="inline-flex items-center gap-2 text-sm text-muted hover:text-brand-600 transition-colors"
           >
             <ArrowRight size={17} />
             بازگشت به فروشگاه
           </Link>
 
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 mt-5">
+          <h1 className="text-2xl sm:text-3xl font-black text-ink mt-5">
             حساب کاربری من
           </h1>
 
-          <p className="text-slate-500 mt-2">
+          <p className="text-muted mt-2">
             مدیریت اطلاعات حساب و مشاهده سفارش‌های شما
           </p>
         </div>
 
         <div className="grid md:grid-cols-3 gap-6">
           <div className="md:col-span-2 space-y-6">
-            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 sm:p-7">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-slate-100">
+            <div className="bg-white rounded-3xl border border-line shadow-sm p-5 sm:p-7">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-line">
                 <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                  <div className="w-16 h-16 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center">
                     <User size={30} />
                   </div>
 
                   <div>
                     <h2 className="text-xl font-black">{user.name}</h2>
 
-                    <p className="text-slate-500 text-sm mt-1">
+                    <p className="text-muted text-sm mt-1">
                       حساب کاربری بهرنگ شاپ
                     </p>
                   </div>
@@ -496,7 +499,7 @@ function Account() {
                       setProfileError("");
                       setEditingProfile(true);
                     }}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-50 text-blue-600 px-4 py-2 font-bold text-sm"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-50 text-brand-600 px-4 py-2 font-bold text-sm"
                   >
                     <Pencil size={17} />
                     ویرایش
@@ -505,13 +508,13 @@ function Account() {
               </div>
 
               {profileMessage && (
-                <div className="mt-5 bg-green-50 text-green-700 rounded-xl p-4 text-sm font-bold">
+                <div className="mt-5 bg-brand-50 text-stock-700 rounded-xl p-4 text-sm font-bold">
                   {profileMessage}
                 </div>
               )}
 
               {profileError && (
-                <div className="mt-5 bg-red-50 text-red-600 rounded-xl p-4 text-sm font-bold">
+                <div className="mt-5 bg-blush-50 text-discount rounded-xl p-4 text-sm font-bold">
                   {profileError}
                 </div>
               )}
@@ -519,12 +522,12 @@ function Account() {
               {!editingProfile ? (
                 <div className="mt-7 space-y-5">
                   <div className="flex items-center gap-4">
-                    <div className="w-11 h-11 rounded-xl bg-slate-50 flex items-center justify-center">
+                    <div className="w-11 h-11 rounded-xl bg-cream flex items-center justify-center">
                       <User size={20} />
                     </div>
 
                     <div>
-                      <p className="text-xs text-slate-400">
+                      <p className="text-xs text-muted-soft">
                         نام و نام خانوادگی
                       </p>
 
@@ -533,12 +536,12 @@ function Account() {
                   </div>
 
                   <div className="flex items-center gap-4">
-                    <div className="w-11 h-11 rounded-xl bg-slate-50 flex items-center justify-center">
+                    <div className="w-11 h-11 rounded-xl bg-cream flex items-center justify-center">
                       <Mail size={20} />
                     </div>
 
                     <div>
-                      <p className="text-xs text-slate-400">ایمیل</p>
+                      <p className="text-xs text-muted-soft">ایمیل</p>
 
                       <p className="font-bold mt-1">{user.email}</p>
                     </div>
@@ -556,7 +559,7 @@ function Account() {
                       value={profileName}
                       onChange={(event) => setProfileName(event.target.value)}
                       required
-                      className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                      className="w-full rounded-xl border border-line px-4 py-3 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
                     />
                   </div>
 
@@ -571,7 +574,7 @@ function Account() {
                       onChange={(event) => setProfileEmail(event.target.value)}
                       required
                       dir="ltr"
-                      className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                      className="w-full rounded-xl border border-line px-4 py-3 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
                     />
                   </div>
 
@@ -579,7 +582,7 @@ function Account() {
                     <button
                       type="submit"
                       disabled={profileLoading}
-                      className="inline-flex items-center justify-center gap-2 flex-1 rounded-xl bg-blue-600 text-white py-3 font-bold disabled:opacity-60"
+                      className="inline-flex items-center justify-center gap-2 flex-1 rounded-xl bg-brand-600 text-white py-3 font-bold disabled:opacity-60"
                     >
                       {profileLoading ? (
                         <>
@@ -603,7 +606,7 @@ function Account() {
                         setProfileMessage("");
                         setEditingProfile(false);
                       }}
-                      className="rounded-xl bg-slate-100 text-slate-700 px-5 py-3 font-bold"
+                      className="rounded-xl bg-line text-ink-soft px-5 py-3 font-bold"
                     >
                       انصراف
                     </button>
@@ -615,36 +618,36 @@ function Account() {
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="mt-8 w-full rounded-xl bg-red-50 text-red-600 py-3 font-bold"
+                  className="mt-8 w-full rounded-xl bg-blush-50 text-discount py-3 font-bold"
                 >
                   خروج از حساب کاربری
                 </button>
               )}
             </div>
 
-            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 sm:p-7">
+            <div className="bg-white rounded-3xl border border-line shadow-sm p-5 sm:p-7">
               <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                <div className="w-12 h-12 rounded-xl bg-gold-50 text-gold flex items-center justify-center">
                   <Lock size={24} />
                 </div>
 
                 <div>
                   <h2 className="text-xl font-black">تغییر رمز عبور</h2>
 
-                  <p className="text-sm text-slate-500">
+                  <p className="text-sm text-muted">
                     برای امنیت بیشتر، رمز حساب خود را مدیریت کنید
                   </p>
                 </div>
               </div>
 
               {passwordMessage && (
-                <div className="mb-5 bg-green-50 text-green-700 rounded-xl p-4 text-sm font-bold">
+                <div className="mb-5 bg-brand-50 text-stock-700 rounded-xl p-4 text-sm font-bold">
                   {passwordMessage}
                 </div>
               )}
 
               {passwordError && (
-                <div className="mb-5 bg-red-50 text-red-600 rounded-xl p-4 text-sm font-bold">
+                <div className="mb-5 bg-blush-50 text-discount rounded-xl p-4 text-sm font-bold">
                   {passwordError}
                 </div>
               )}
@@ -661,7 +664,7 @@ function Account() {
                     onChange={(event) => setCurrentPassword(event.target.value)}
                     required
                     autoComplete="current-password"
-                    className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    className="w-full rounded-xl border border-line px-4 py-3 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
                   />
                 </div>
 
@@ -678,7 +681,7 @@ function Account() {
                     minLength={8}
                     autoComplete="new-password"
                     placeholder="حداقل ۸ کاراکتر"
-                    className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    className="w-full rounded-xl border border-line px-4 py-3 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
                   />
                 </div>
 
@@ -697,14 +700,14 @@ function Account() {
                     minLength={8}
                     autoComplete="new-password"
                     placeholder="تکرار رمز عبور جدید"
-                    className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                    className="w-full rounded-xl border border-line px-4 py-3 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
                   />
                 </div>
 
                 <button
                   type="submit"
                   disabled={passwordLoading}
-                  className="inline-flex items-center justify-center gap-2 w-full rounded-xl bg-slate-900 text-white py-3.5 font-bold disabled:opacity-60"
+                  className="inline-flex items-center justify-center gap-2 w-full rounded-xl bg-ink text-white py-3.5 font-bold disabled:opacity-60"
                 >
                   {passwordLoading ? (
                     <>
@@ -721,22 +724,22 @@ function Account() {
               </form>
             </div>
 
-            <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 sm:p-7">
+            <div className="bg-white rounded-3xl border border-line shadow-sm p-5 sm:p-7">
               <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                <div className="w-12 h-12 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center">
                   <Package size={24} />
                 </div>
 
                 <div>
                   <h2 className="text-xl font-black">سفارش‌های من</h2>
 
-                  <p className="text-sm text-slate-500">
+                  <p className="text-sm text-muted">
                     تاریخچه سفارش‌های ثبت شده
                   </p>
                 </div>
 
                 {orders.length > 0 && (
-                  <span className="mr-auto min-w-8 h-8 px-2 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center text-sm font-black">
+                  <span className="mr-auto min-w-8 h-8 px-2 rounded-full bg-brand-50 text-brand-600 flex items-center justify-center text-sm font-black">
                     {orders.length.toLocaleString("fa-IR")}
                   </span>
                 )}
@@ -747,30 +750,30 @@ function Account() {
                 <div className="py-10 text-center">
                   <Loader2
                     size={32}
-                    className="mx-auto animate-spin text-blue-600"
+                    className="mx-auto animate-spin text-brand-600"
                   />
 
-                  <p className="mt-4 text-slate-500">
+                  <p className="mt-4 text-muted">
                     در حال دریافت سفارش‌ها...
                   </p>
                 </div>
               )}
 
               {!ordersLoading && ordersError && (
-                <div className="bg-red-50 text-red-600 rounded-xl p-5">
+                <div className="bg-blush-50 text-discount rounded-xl p-5">
                   {ordersError}
                 </div>
               )}
 
               {!ordersLoading && !ordersError && orders.length === 0 && (
                 <div className="text-center py-10">
-                  <Package size={48} className="mx-auto text-slate-300" />
+                  <Package size={48} className="mx-auto text-line-strong" />
 
                   <h3 className="font-black mt-4">هنوز سفارشی ثبت نکرده‌اید</h3>
 
                   <Link
                     to="/products"
-                    className="inline-flex mt-5 bg-blue-600 text-white px-6 py-3 rounded-xl font-bold"
+                    className="inline-flex mt-5 bg-brand-600 text-white px-6 py-3 rounded-xl font-bold"
                   >
                     مشاهده محصولات
                   </Link>
@@ -805,7 +808,7 @@ function Account() {
                     return (
                       <div
                         key={order.id}
-                        className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+                        className="relative overflow-hidden rounded-2xl border border-line bg-white shadow-sm"
                       >
                         <div
                           className={`absolute right-0 top-0 bottom-0 w-1.5 ${statusStyle.accent}`}
@@ -818,7 +821,7 @@ function Account() {
                           <div className="p-4 sm:p-5 pr-5 sm:pr-6">
                             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                               <div className="flex items-start gap-4 min-w-0">
-                                <div className="w-16 h-16 rounded-2xl bg-slate-50 border border-slate-200 overflow-hidden flex-shrink-0">
+                                <div className="w-16 h-16 rounded-2xl bg-cream border border-line overflow-hidden flex-shrink-0">
                                   {orderImage ? (
                                     <img
                                       src={orderImage}
@@ -834,26 +837,26 @@ function Account() {
                                       }}
                                     />
                                   ) : (
-                                    <div className="w-full h-full flex items-center justify-center text-slate-300">
+                                    <div className="w-full h-full flex items-center justify-center text-line-strong">
                                       <Package size={27} />
                                     </div>
                                   )}
                                 </div>
 
                                 <div className="min-w-0">
-                                  <p className="text-xs text-slate-400">
+                                  <p className="text-xs text-muted-soft">
                                     شماره سفارش
                                   </p>
 
                                   <p
-                                    className="font-black text-blue-600 mt-1"
+                                    className="font-black text-brand-600 mt-1"
                                     dir="ltr"
                                   >
                                     {order.order_number}
                                   </p>
 
                                   {firstItem && (
-                                    <p className="text-sm text-slate-500 mt-1 max-w-[260px] truncate">
+                                    <p className="text-sm text-muted mt-1 max-w-[260px] truncate">
                                       {firstItem.product?.name ??
                                         firstItem.product_name}
 
@@ -888,51 +891,51 @@ function Account() {
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-5">
                               <div
-                                className="rounded-xl bg-slate-50 border border-slate-200 p-4"
+                                className="rounded-xl bg-cream border border-line p-4"
                                 style={{
                                   direction: "ltr",
                                   textAlign: "left",
                                 }}
                               >
-                                <div className="text-xs text-slate-400 mb-1">
+                                <div className="text-xs text-muted-soft mb-1">
                                   مبلغ اصلی کالاها
                                 </div>
 
-                                <div className="text-base font-bold text-slate-700 whitespace-nowrap">
+                                <div className="text-base font-bold text-ink-soft whitespace-nowrap">
                                   {formatPrice(originalAmount)} تومان
                                 </div>
                               </div>
 
                               {discountAmount > 0 ? (
                                 <div
-                                  className="rounded-xl bg-red-50 border border-red-100 p-4"
+                                  className="rounded-xl bg-blush-50 border border-blush-100 p-4"
                                   style={{
                                     direction: "ltr",
                                     textAlign: "left",
                                   }}
                                 >
-                                  <div className="flex items-center gap-1.5 text-xs text-red-500 mb-1">
+                                  <div className="flex items-center gap-1.5 text-xs text-discount mb-1">
                                     <Tag size={13} />
                                     تخفیف
                                   </div>
 
-                                  <div className="text-base font-black text-red-600 whitespace-nowrap">
+                                  <div className="text-base font-black text-discount whitespace-nowrap">
                                     - {formatPrice(discountAmount)} تومان
                                   </div>
                                 </div>
                               ) : (
                                 <div
-                                  className="rounded-xl bg-slate-50 border border-slate-200 p-4"
+                                  className="rounded-xl bg-cream border border-line p-4"
                                   style={{
                                     direction: "ltr",
                                     textAlign: "left",
                                   }}
                                 >
-                                  <div className="text-xs text-slate-400 mb-1">
+                                  <div className="text-xs text-muted-soft mb-1">
                                     تخفیف
                                   </div>
 
-                                  <div className="text-base font-bold text-slate-500">
+                                  <div className="text-base font-bold text-muted">
                                     بدون تخفیف
                                   </div>
                                 </div>
@@ -940,7 +943,7 @@ function Account() {
                             </div>
 
                             <div
-                              className="mt-3 rounded-xl bg-blue-50 border border-blue-100 p-4"
+                              className="mt-3 rounded-xl bg-brand-50 border border-brand-100 p-4"
                               style={{
                                 direction: "ltr",
                                 textAlign: "left",
@@ -948,16 +951,16 @@ function Account() {
                             >
                               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                                 <div>
-                                  <div className="text-xs text-blue-500 mb-1">
+                                  <div className="text-xs text-brand-500 mb-1">
                                     مبلغ نهایی سفارش
                                   </div>
 
-                                  <div className="text-xl font-black text-blue-700 whitespace-nowrap">
+                                  <div className="text-xl font-black text-brand-700 whitespace-nowrap">
                                     {formatPrice(finalAmount)} تومان
                                   </div>
                                 </div>
 
-                                <div className="text-xs text-slate-500">
+                                <div className="text-xs text-muted">
                                   {shippingCost === 0
                                     ? "ارسال رایگان"
                                     : `هزینه ارسال: ${formatPrice(
@@ -967,61 +970,61 @@ function Account() {
                               </div>
                             </div>
 
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-5 pt-5 border-t border-slate-100">
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-5 pt-5 border-t border-line">
                               <div>
-                                <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                                <div className="flex items-center gap-1.5 text-xs text-muted-soft">
                                   <CalendarDays size={14} />
                                   تاریخ
                                 </div>
 
-                                <p className="font-bold text-slate-800 mt-1">
+                                <p className="font-bold text-ink mt-1">
                                   {formatDate(order.created_at)}
                                 </p>
                               </div>
 
                               <div>
-                                <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                                <div className="flex items-center gap-1.5 text-xs text-muted-soft">
                                   <Package size={14} />
                                   تعداد کالا
                                 </div>
 
-                                <p className="font-bold text-slate-800 mt-1">
+                                <p className="font-bold text-ink mt-1">
                                   {itemCount.toLocaleString("fa-IR")} کالا
                                 </p>
                               </div>
 
                               <div className="col-span-2 md:col-span-1">
-                                <div className="flex items-center gap-1.5 text-xs text-slate-400">
+                                <div className="flex items-center gap-1.5 text-xs text-muted-soft">
                                   <CreditCard size={14} />
                                   وضعیت پرداخت
                                 </div>
 
-                                <p className="font-bold text-slate-800 mt-1">
+                                <p className="font-bold text-ink mt-1">
                                   {getPaymentStatus(order.payment_status)}
                                 </p>
                               </div>
                             </div>
                           </div>
 
-                          <div className="px-5 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between gap-3 group-hover:bg-blue-50 transition">
-                            <span className="text-sm font-bold text-slate-500 group-hover:text-blue-600">
+                          <div className="px-5 py-3 bg-cream border-t border-line flex items-center justify-between gap-3 group-hover:bg-brand-50 transition">
+                            <span className="text-sm font-bold text-muted group-hover:text-brand-600">
                               مشاهده جزئیات سفارش
                             </span>
 
                             <ChevronLeft
                               size={18}
-                              className="text-slate-400 group-hover:text-blue-600 group-hover:-translate-x-1 transition"
+                              className="text-muted-soft group-hover:text-brand-600 group-hover:-translate-x-1 transition"
                             />
                           </div>
                         </Link>
                         {order.payment_status !== "paid" &&
                           !["shipped", "delivered", "cancelled", "canceled"].includes(order.status) && (
-                            <div className="flex justify-end border-t border-slate-200 bg-white px-5 py-3">
+                            <div className="flex justify-end border-t border-line bg-white px-5 py-3">
                               <button
                                 type="button"
                                 onClick={() => handleCancelOrder(order.order_number)}
                                 disabled={cancellingOrderNumber === order.order_number}
-                                className="inline-flex items-center gap-2 rounded-xl border border-red-200 px-4 py-2 text-sm font-bold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-60"
+                                className="inline-flex items-center gap-2 rounded-xl border border-blush-200 px-4 py-2 text-sm font-bold text-discount transition hover:bg-blush-50 disabled:cursor-not-allowed disabled:opacity-60"
                               >
                                 {cancellingOrderNumber === order.order_number ? (
                                   <Loader2 size={16} className="animate-spin" />
@@ -1047,33 +1050,33 @@ function Account() {
           <div className="space-y-6">
             <Link
               to="/cart"
-              className="block bg-white rounded-3xl border border-slate-100 shadow-sm p-6 hover:border-blue-200 hover:shadow-md transition"
+              className="block bg-white rounded-3xl border border-line shadow-sm p-6 hover:border-brand-200 hover:shadow-md transition"
             >
-              <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+              <div className="w-12 h-12 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center">
                 <ShoppingCart size={24} />
               </div>
 
               <h3 className="font-black mt-5">سبد خرید</h3>
 
-              <p className="text-sm text-slate-500 mt-2">
+              <p className="text-sm text-muted mt-2">
                 {cartCount > 0
                   ? `${cartCount.toLocaleString("fa-IR")} کالا در سبد خرید`
                   : "سبد خرید شما خالی است"}
               </p>
 
-              <div className="mt-5 flex items-center justify-between text-sm font-bold text-blue-600">
+              <div className="mt-5 flex items-center justify-between text-sm font-bold text-brand-600">
                 <span>مشاهده سبد خرید</span>
 
                 <ChevronLeft size={17} />
               </div>
             </Link>
 
-            <div className="bg-slate-900 text-white rounded-3xl p-6">
-              <p className="text-sm text-slate-300">خوش آمدید</p>
+            <div className="bg-ink text-white rounded-3xl p-6">
+              <p className="text-sm text-line-strong">خوش آمدید</p>
 
               <h3 className="font-black text-lg mt-2">{user.name}</h3>
 
-              <p className="text-sm text-slate-400 mt-3 leading-6">
+              <p className="text-sm text-muted-soft mt-3 leading-6">
                 از حساب کاربری خود برای مدیریت خریدها و سفارش‌های آینده استفاده
                 کنید.
               </p>

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\AdminRole;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -43,6 +44,9 @@ class AdminUserController extends Controller
             ->paginate($validated['per_page'] ?? 10)
             ->withQueryString();
 
+        // هر ردیف همراه با نقش و مجوزهایش برگردانده می‌شود.
+        $admins->through(fn (User $admin) => $this->present($admin));
+
         return response()->json([
             'success' => true,
             'data' => $admins,
@@ -51,8 +55,25 @@ class AdminUserController extends Controller
                     ->where('role', 'admin')
                     ->count(),
 
+                'total_super_admins' => User::query()
+                    ->where('role', 'admin')
+                    ->where(function ($query) {
+                        $query
+                            ->where('admin_role', AdminRole::SUPER_ADMIN)
+                            ->orWhereNull('admin_role');
+                    })
+                    ->count(),
+
                 'current_admin_id' => $request->user()->id,
             ],
+            // گزینه‌های قابل انتخاب برای نقش مدیر (منبع واحد در بک‌اند).
+            'roles' => collect(AdminRole::labels())
+                ->map(fn (string $label, string $value) => [
+                    'value' => $value,
+                    'label' => $label,
+                    'description' => AdminRole::descriptions()[$value] ?? null,
+                ])
+                ->values(),
         ]);
     }
 
@@ -65,6 +86,7 @@ class AdminUserController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8', 'max:128', 'confirmed'],
+            'admin_role' => ['nullable', Rule::in(AdminRole::roles())],
         ], $this->messages());
 
         $admin = User::create([
@@ -72,6 +94,8 @@ class AdminUserController extends Controller
             'email' => strtolower(trim($validated['email'])),
             'password' => $validated['password'],
             'role' => 'admin',
+            // در نبود مقدار، کم‌ترین سطح دسترسی (پشتیبانی) انتخاب می‌شود.
+            'admin_role' => $validated['admin_role'] ?? AdminRole::SUPPORT,
         ]);
 
         return response()->json([
@@ -112,10 +136,29 @@ class AdminUserController extends Controller
                 Rule::unique('users', 'email')->ignore($admin->id),
             ],
             'password' => ['nullable', 'string', 'min:8', 'max:128', 'confirmed'],
+            'admin_role' => ['nullable', Rule::in(AdminRole::roles())],
         ], $this->messages());
+
+        $nextRole = $validated['admin_role'] ?? $admin->adminRole();
+
+        /*
+         * آخرین «مدیر ارشد» فروشگاه نباید نقشش پایین بیاید؛ در غیر این صورت
+         * دسترسی به بخش مدیران و تنظیمات برای همیشه قفل می‌شود.
+         */
+        if (
+            $admin->isSuperAdmin()
+            && $nextRole !== AdminRole::SUPER_ADMIN
+            && ! $this->otherSuperAdminsExist($admin->id)
+        ) {
+            return response()->json([
+                'success' => false,
+                'message' => 'این حساب آخرین «مدیر ارشد» فروشگاه است؛ ابتدا مدیر ارشد دیگری بسازید.',
+            ], 409);
+        }
 
         $admin->name = trim($validated['name']);
         $admin->email = strtolower(trim($validated['email']));
+        $admin->admin_role = $nextRole;
 
         $passwordChanged = ! blank($validated['password'] ?? null);
 
@@ -185,6 +228,17 @@ class AdminUserController extends Controller
                     ];
                 }
 
+                // حذف آخرین «مدیر ارشد» دسترسی بخش مدیران را قفل می‌کند.
+                if (
+                    $admin->isSuperAdmin()
+                    && ! $this->otherSuperAdminsExist($admin->id)
+                ) {
+                    return [
+                        'status' => 409,
+                        'message' => 'آخرین «مدیر ارشد» فروشگاه قابل حذف نیست.',
+                    ];
+                }
+
                 // توکن‌های فعال مدیر حذف‌شده هم باطل می‌شوند.
                 $admin->tokens()->delete();
                 $admin->delete();
@@ -219,9 +273,29 @@ class AdminUserController extends Controller
             'name' => $admin->name,
             'email' => $admin->email,
             'role' => $admin->role,
+            'admin_role' => $admin->adminRole(),
+            'admin_role_label' => $admin->adminRoleLabel(),
+            'permissions' => $admin->adminPermissions(),
             'created_at' => $admin->created_at,
             'updated_at' => $admin->updated_at,
         ];
+    }
+
+    /**
+     * آیا مدیر ارشد دیگری (غیر از این حساب) وجود دارد؟
+     * مدیر بدون نقش ثبت‌شده هم «مدیر ارشد» شمرده می‌شود.
+     */
+    private function otherSuperAdminsExist(int $exceptId): bool
+    {
+        return User::query()
+            ->where('role', 'admin')
+            ->whereKeyNot($exceptId)
+            ->where(function ($query) {
+                $query
+                    ->where('admin_role', AdminRole::SUPER_ADMIN)
+                    ->orWhereNull('admin_role');
+            })
+            ->exists();
     }
 
     /**
@@ -239,6 +313,7 @@ class AdminUserController extends Controller
             'password.min' => 'رمز عبور باید حداقل ۸ کاراکتر باشد.',
             'password.max' => 'رمز عبور نباید بیشتر از ۱۲۸ کاراکتر باشد.',
             'password.confirmed' => 'تکرار رمز عبور با رمز عبور یکسان نیست.',
+            'admin_role.in' => 'نقش انتخاب‌شده برای مدیر معتبر نیست.',
         ];
     }
 }

@@ -11,11 +11,22 @@ import { STORAGE_KEYS } from "../utils/storageKeys";
 
 export type UserRole = "admin" | "customer";
 
+export type AdminRole =
+  | "super_admin"
+  | "product_manager"
+  | "order_manager"
+  | "support";
+
 export interface AuthUser {
   id: number;
   name: string;
   email: string;
   role: UserRole;
+  /** نقش مدیریتی؛ فقط برای کاربرانی که role === "admin" است. */
+  admin_role?: AdminRole | null;
+  admin_role_label?: string | null;
+  /** فهرست مجوزهای پنل که سرور بر اساس نقش برمی‌گرداند. */
+  permissions?: string[];
 }
 
 interface AuthContextType {

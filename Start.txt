@@ -1,33 +1,954 @@
+راه‌اندازی پروژه «بهرنگ شاپ» (فروشگاه لباس زیر)
+=============================================
 
-cd C:\Users\Cool\Desktop\pharmacy-shop\backend
+پیش‌نیازها: PHP 8.3+ ، Composer ، Node.js 20+ ، MySQL
 
-php artisan serve
+ترمینال ۱ — بک‌اند:
+  cd C:\Users\Behrang\Desktop\pharmacy-shop\backend
+  composer install            (فقط بار اول)
+  copy .env.example .env      (فقط بار اول)
+  php artisan key:generate    (فقط بار اول)
+  php artisan migrate --seed
+  php artisan storage:link
+  php artisan serve
 
-ترمینال ۲:
-cd C:\Users\Cool\Desktop\pharmacy-shop\frontend
+ترمینال ۲ — فرانت‌اند:
+  cd C:\Users\Behrang\Desktop\pharmacy-shop\frontend
+  npm install                 (فقط بار اول)
+  npm run dev
 
-npm run dev
+آدرس‌ها:
+  فروشگاه:     http://localhost:5173
+  محصولات:     http://localhost:5173/products
+  پنل مدیریت:  http://localhost:5173/admin/login
+  مدیران:      http://localhost:5173/admin/admins
+  پیام‌رسانی:  http://localhost:5173/admin/messaging
+  پشتیبانی:   http://localhost:5173/admin/support
+  API:         http://127.0.0.1:8000/api/v1
 
-بعد برو به:
+راهنمای انتخاب سایز (لباس‌ها):
+  صفحه مستقل:  http://localhost:5173/size-guide
+  - سه تب: «سوتین» (شمارهٔ بند + حرف کاپ)، «شورت و بادی» و «ست، لباس خواب
+    و گن»؛ همراه جدول‌های دور سینه، دور زیرسینه، دور کمر و دور باسن،
+    مراحل اندازه‌گیری و نکته‌های انتخاب سایز.
+  - در صفحهٔ هر محصول، کنار «انتخاب تنوع محصول» دکمهٔ «راهنمای انتخاب سایز»
+    همین راهنما را به‌صورت مودال باز می‌کند و تب پیش‌فرض را از دستهٔ همان
+    محصول (سوتین/شورت/ست) تشخیص می‌دهد.
+  - لینک مستقیم در منوی دسته‌بندی (دسکتاپ و موبایل) و در فوتر.
+  - متن و جدول‌ها در frontend/src/data/sizeGuide.ts نگهداری می‌شود؛ برای
+    تغییر اعداد فقط همان فایل را ویرایش کنید.
 
-http://localhost:5173/products
+مدیریت مدیران (پنل ادمین → بخش «مدیران»):
+  - افزودن مدیر جدید: نام، ایمیل و رمز عبور (حداقل ۸ کاراکتر) → دسترسی کامل به پنل.
+  - ویرایش حساب هر مدیر، از جمله حساب خودِ مدیر جاری (نام، ایمیل و در صورت
+    نیاز تغییر رمز). آیکن مداد کنار کارت حساب در نوار کناری هم به همین صفحه
+    می‌رود.
+  - حذف مدیر دیگران امکان‌پذیر است، اما حذف حساب خود و آخرین مدیر فروشگاه
+    مسدود شده است.
+  - مسیرهای API: GET/POST /api/v1/admin/admins و PUT/DELETE
+    /api/v1/admin/admins/{id} (فقط برای توکن مدیر).
+
+اجرای تست‌ها:
+  cd backend
+  php artisan test
+
+کاتالوگ و داده‌ها:
+  php artisan db:seed --class=StoreSeeder
+      محصولات، دسته‌ها و برندهای لباس زیر را می‌سازد (idempotent).
+
+  php artisan db:seed --class=AdminUserSeeder --force
+      حساب مدیر را از متغیرهای ADMIN_NAME / ADMIN_EMAIL / ADMIN_PASSWORD
+      در فایل .env می‌سازد (پیش‌فرض توسعه: admin@behrang-shop.local / password).
+
+  php artisan catalog:hide-legacy
+      محصولات/دسته‌ها/برندهای خارج از کاتالوگ لباس زیر (بازمانده داروخانه) را
+      با is_active=false از دید مشتری مخفی می‌کند؛ هیچ داده‌ای حذف نمی‌شود.
+
+  php artisan catalog:hide-legacy --restore
+      همه رکوردها را دوباره فعال می‌کند.
+
+
+نکته امنیتی:
+  در نسخه قبلی این فایل، رمز روت MySQL به‌صورت متن ساده نوشته شده بود و
+  اکنون حذف شده است. رمزها را فقط در فایل .env (که در git نیست) نگه دارید
+  و آن رمز افشاشده را در MySQL تغییر دهید.
+
+
+پنل پیام‌رسانی (پنل ادمین → بخش «پیام‌رسانی»):
+  مسیر صفحه:   http://localhost:5173/admin/messaging
+  مسیرهای API: GET  /api/v1/admin/messaging            (تاریخچه + فیلترها)
+               GET  /api/v1/admin/messaging/settings   (وضعیت کانال‌ها و آمار)
+               POST /api/v1/admin/messaging/send       (ارسال پیام)
+               DELETE /api/v1/admin/messaging/{id}     (حذف یک رکورد تاریخچه)
+  هر چهار مسیر فقط با توکن مدیر (adminApi در فرانت‌اند) کار می‌کنند.
+
+  چهار کانال پشتیبانی‌شده:
+    1) پیامک — SMS_DRIVER یکی از kavenegar | smsir | custom
+       Kavenegar:  SMS_API_KEY = کلید وب‌سرویس، SMS_SENDER = شماره خط
+       SMS.ir:     SMS_DRIVER=smsir و همان کلید/خط
+       سرویس دلخواه: SMS_DRIVER=custom و SMS_BASE_URL = آدرس وب‌سرویس
+    2) تلگرام — TELEGRAM_BOT_TOKEN (از @BotFather) و TELEGRAM_CHAT_ID
+    3) واتساپ — WHATSAPP_TOKEN و WHATSAPP_PHONE_NUMBER_ID از WhatsApp Cloud API
+       (Meta). برای ارسال خارج از پنجره ۲۴ ساعته، WHATSAPP_TEMPLATE_NAME را
+       روی یک قالب تأییدشده بگذارید و در پنل گزینه Template را تیک بزنید.
+    4) بله — BALE_BOT_TOKEN و BALE_CHAT_ID (API بله سازگار با Bot API تلگرام
+       است و روی https://tapi.bale.ai ارسال می‌شود)
+
+  راه‌اندازی سریع:
+    - در فایل backend/.env مقدار ..._ENABLED کانال را true کنید و کلیدها را
+      وارد کنید، سپس در صورت نیاز php artisan config:clear را اجرا کنید.
+    - در صفحه، کارت کانال باید «آماده ارسال» شود؛ در غیر این صورت پیام راهنما
+      همان متغیرهایی را که کم است نشان می‌دهد.
+    - گیرندگان: «گیرندگان دلخواه» (هر خط/ویرگول یک گیرنده)، «شماره‌های
+      سفارش‌ها» (شماره‌های یکتای ثبت‌شده در سفارش‌ها) یا «مقصد پیش‌فرض کانال»
+      (SMS_DEFAULT_RECIPIENT / WHATSAPP_DEFAULT_RECIPIENT / *_CHAT_ID).
+    - عدد فارسی گیرنده‌ها خودکار به لاتین تبدیل می‌شود (۰۹۱۲... → 0912...).
+    - هر ارسال در جدول outbound_messages ثبت می‌شود (کانال، گیرنده، متن،
+      وضعیت، شناسه پیام سرویس‌دهنده، متن خطا، مدیر ارسال‌کننده) و در
+      تاریخچهٔ پایین صفحه با فیلتر کانال/وضعیت و جست‌وجو دیده می‌شود.
+    - حداکثر گیرنده در هر ارسال با MESSAGING_AUDIENCE_LIMIT (پیش‌فرض ۳۰۰)
+      و مهلت درخواست‌ها با MESSAGING_TIMEOUT (پیش‌فرض ۱۵ ثانیه) کنترل می‌شود.
+
+  ساختار کد:
+    backend/config/messaging.php
+    backend/app/Services/Messaging/{MessagingManager, MessageResult}
+    backend/app/Services/Messaging/Drivers/{SmsDriver, TelegramDriver,
+      WhatsAppDriver, BaleDriver, AbstractBotApiDriver}
+    backend/app/Http/Controllers/Api/AdminMessagingController.php
+    frontend/src/pages/AdminMessaging.tsx
+
+  تست‌ها:
+    cd backend
+    php artisan test --filter=AdminMessaging
+
+منوی دسته‌بندی و سرعت بارگذاری:
+  - فهرست دسته‌بندی‌ها سمت مرورگر کش می‌شود
+    (localStorage با کلید behrang-shop-storefront-categories) و منو در همان
+    اولین رندر نمایش داده می‌شود؛ دادهٔ تازه حداکثر هر ۵ دقیقه یک‌بار در
+    پس‌زمینه و بدون نمایش لودینگ گرفته می‌شود. فقط در اولین بازدید (بدون کش)
+    اسکلت لودینگ دیده می‌شود.
+  - همین کش بین منوی سایت و فیلترهای صفحهٔ محصولات مشترک است، بنابراین
+    ورود به /products درخواست تکراری برای دسته‌بندی‌ها نمی‌زند.
+  - کش سرور در CategoryController با عمر ۵ دقیقه فعال است و با هر تغییر
+    دسته‌بندی در پنل مدیران خودکار پاک می‌شود (نیازی به cache:clear نیست).
+  - برای پاک کردن دستی کش سمت سرور: php artisan cache:clear
+  - ساختار کد: frontend/src/services/categories.ts
+  - سرصفحهٔ سایت (frontend/src/components/Header.tsx) و نوار اطلاع‌رسانی
+    بالای آن داخل یک wrapper مشترک در components/Layout.tsx چسبان (sticky،
+    top-0 و z-50) هستند؛ به همین دلیل با اسکرول ناپدید نمی‌شوند و نوار همیشه
+    بالای هدر می‌ماند. منوی دسته‌بندی (components/CategoryMenu.tsx) لایهٔ
+    relative z-40 دارد؛ چون قبلاً هدر هم z-40 بود، هنگام اسکرول منو روی هدر
+    کشیده می‌شد. حالا هدر بالاتر از منو و محتوا می‌ماند. خود Header دیگر
+    کلاس sticky ندارد (در Layout اعمال می‌شود) تا با نوار بالای آن تداخل نکند.
+
+
+بخش‌های جدید پنل مدیریت (تنظیمات، برندها، ارسال، کوپن، مرجوعی، بنر، گزارش):
+  1) تنظیمات فروشگاه — /admin/settings
+     - مدل StoreSetting اکنون مقادیر پیش‌فرض و کش دارد:
+       StoreSetting::DEFAULTS, allSettings(), publicSettings(),
+       forgetCache() و CACHE_KEY = storefront:store-settings
+     - API مدیر: GET/PUT /api/v1/admin/settings (کلیدهای مجاز محدود به
+       DEFAULTS هستند).
+     - API عمومی: GET /api/v1/store-settings (تایپ‌شده: بولین/عدد) و
+       GET /api/v1/store-settings/tax.
+     - مقادیر: نام/شعار/تلفن/موبایل/ایمیل/آدرس/ساعات کاری، اینستاگرام،
+       تلگرام، واتس‌اپ، vat_enabled، vat_percent، shipping_cost،
+       free_shipping_enabled، free_shipping_threshold، shipping_note،
+       return_policy_days، support_note.
+     - هزینه ارسال و ارسال رایگان در OrderController::store با متد
+       resolveShippingCost اعمال می‌شود؛ مالیات همچنان فقط برای محصولات
+       is_taxable محاسبه می‌شود.
+     - فوتر سایت و صفحهٔ تسویه از frontend/src/services/storeSettings.ts
+       (کش حافظه + localStorage با کلید behrang-shop-storefront-settings و
+       stale-while-revalidate) و هوک useStoreSettings استفاده می‌کنند.
+
+  2) برندها — /admin/brands
+     - AdminBrandController: فهرست با تعداد محصول، ایجاد، ویرایش،
+       فعال/غیرفعال‌سازی و حذف (اگر برند محصول داشته باشد حذف 422 می‌شود).
+     - اسلاگ خالی خودکار ساخته و در صورت تکرار با پسوند -2 یکتا می‌شود.
+     - فهرست عمومی /api/v1/brands با کش ۵ دقیقه‌ای
+       (BrandController::STOREFRONT_CACHE_KEY) و پاک‌سازی خودکار پس از
+       تغییرات پنل.
+
+  3) ارسال و کد رهگیری
+     - ستون‌های جدید orders: shipping_method، tracking_code، shipped_at،
+       delivered_at (مهاجرت 2026_11_04_000000).
+     - PATCH /api/v1/admin/orders/{orderNumber}/shipping با بدنهٔ
+       {shipping_method, tracking_code, mark_shipped}.
+     - تغییر وضعیت به shipped/delivered در AdminOrderController زمان ارسال
+       و تحویل را ثبت می‌کند.
+     - کد رهگیری و تاریخ‌ها در صفحهٔ سفارش مشتری نمایش داده می‌شود و
+       در مودال جزئیات سفارش پنل قابل ویرایش است.
+
+  4) کدهای تخفیف — /admin/coupons
+     - جدول coupons (نوع percent/fixed، value، min_order_total،
+       max_discount، usage_limit، used_count، starts_at، expires_at،
+       is_active) و ستون‌های orders: coupon_code، coupon_discount.
+     - اعتبارسنجی عمومی: POST /api/v1/coupons/check
+       ({code, subtotal} → {discount}) — برای نمایش زنده در صفحهٔ تسویه.
+     - ثبت سفارش با coupon_code در همان تراکنش اعتبارسنجی می‌شود،
+       used_count یک واحد افزایش می‌یابد و کد منقضی/غیرفعال/تمام‌شده با
+       422 رد می‌شود. تخفیف کوپن از مبلغ مشمول مالیات کم می‌شود.
+     - کوپنی که در سفارش‌ها استفاده شده باشد حذف نمی‌شود و فقط غیرفعال
+       می‌گردد تا سابقهٔ سفارش‌ها حفظ شود.
+     - CRUD مدیریت: GET/POST /admin/coupons، PUT/DELETE
+       /admin/coupons/{coupon} و PATCH /admin/coupons/{coupon}/status.
+     - شروع/پایان اعتبار با انتخابگر تاریخ و ساعت شمسی ثبت می‌شود (پایان
+       به‌صورت پیش‌فرض ۲۳:۵۹).
+
+  5) مرجوعی — /admin/returns
+     - جدول return_requests (order_id یکتا، user_id، status، reason،
+       description، admin_note، refund_amount).
+     - مشتری: GET /api/v1/returns و
+       POST /api/v1/orders/{orderNumber}/returns (فقط سفارش تحویل‌شده و
+       پرداخت‌شده، یک درخواست برای هر سفارش و در مهلت return_policy_days).
+     - مدیر: GET /admin/returns (فیلتر status و جست‌وجو) و
+       PATCH /admin/returns/{returnRequest}/status؛ با status=refunded
+       مبلغ بازپرداخت (پیش‌فرض مبلغ کل سفارش) ثبت و payment_status سفارش
+       به refunded تغییر می‌کند.
+     - فرم ثبت درخواست و وضعیت آن در صفحهٔ جزئیات سفارش مشتری آمده است.
+
+  6) بنرها — /admin/banners
+     - جدول banners (title، subtitle، image، mobile_image، link، button_label،
+       position، sort_order، is_active، starts_at، ends_at).
+     - position یکی از home_hero، home_strip، products_top است.
+     - دکمهٔ «افزودن بنر» در سرصفحه و روی کارت «فهرست بنرها» فرم ایجاد بنر
+       را باز می‌کند؛ دکمهٔ «ویرایش» هر ردیف همان فرم را با داده‌های بنر باز
+       می‌کند و «بستن فرم»/«انصراف» آن را می‌بندد.
+     - بارگذاری تصویر بنر: POST /api/v1/admin/banners/image (multipart با
+       فیلد image؛ JPG/PNG/WebP تا ۵ مگابایت). فایل در
+       storage/app/public/banners ذخیره و {path, url} برگردانده می‌شود و
+       مسیر بازگشتی خودکار در فیلد image فرم قرار می‌گیرد.
+     - پیش‌نمایش تصویر در فرم و تصویر بندانگشتی فهرست با getStorageUrl
+       (frontend/src/utils/images.ts) ساخته می‌شود؛ بنابراین مسیرهای مثل
+       banners/x.jpg از دامنهٔ بک‌اند (/storage/…) خوانده می‌شوند و در فهرست
+       بنرها نمایش داده می‌شوند.
+     - بازهٔ نمایش (starts_at/ends_at) با انتخابگر تاریخ شمسی
+       (components/JalaliDatePicker) در قالب YYYY-MM-DDTHH:mm ثبت می‌شود.
+     - سرو تصاویر: پوشهٔ backend/public/storage باید به
+       backend/storage/app/public وصل باشد (در ویندوز junction با دستور
+       New-Item -ItemType Junction). اگر این اتصال نباشد، مسیر
+       GET /storage/{path} در routes/web.php فایل را از دیسک public
+       برمی‌گرداند؛ به همین دلیل گزینهٔ serve دیسک local در
+       config/filesystems.php خاموش شده تا این مسیر آزاد بماند.
+     - اگر تصویر در فرم/فهرست لود نشود، پیام «تصویر یافت نشد» همراه با
+       مسیر ذخیره‌شده نمایش داده می‌شود تا مشکل مسیر سریع پیدا شود.
+     - API عمومی GET /api/v1/banners (فقط فعال و در بازهٔ زمانی، با کش ۵
+       دقیقه‌ای و پاک‌سازی خودکار بعد از تغییرات پنل).
+     - ⚠️ در کش باید آرایه ذخیره شود نه Collection مدل: کش کردن
+       Collection/Model در درایور database/file مقدار بازیابی‌شده را به
+       __PHP_Incomplete_Class تبدیل می‌کند و پاسخ JSON به‌جای آرایه یک شیء
+       می‌شود؛ نتیجه این بود که بنرها فقط بار اول نمایش داده می‌شدند و بعد
+       از رفرش ناپدید می‌شدند. اکنون BannerController/BrandController با
+       ->toArray() کش می‌کنند (کلید storefront.banners.index.v2 و
+       storefront.brands.index.v2) و بازهٔ starts_at/ends_at در هر درخواست
+       روی دادهٔ کش‌شده اعمال می‌شود.
+     - بنر اصلی صفحهٔ اول: بنرهای home_hero در frontend/src/pages/Home.tsx با
+       کامپوننت HeroBannerCarousel نمایش داده می‌شوند: اسلاید خودکار هر ۵
+       ثانیه، دکمه‌های قبلی/بعدی، نقطه‌های انتخاب اسلاید، توقف در
+       هاور/فوکوس و احترام به prefers-reduced-motion. اسلایدهای غیرفعال از
+       دسترس کیبورد خارج‌اند.
+     - ⚠️ دو اسلایدر «کاملاً مستقل» رندر می‌شود: یکی برای دسکتاپ با
+       banners={filterBannersForViewport(heroBanners, "desktop")} و
+       view="desktop" (کلاس hidden md:block) و یکی برای موبایل با همان فیلتر
+       برای "mobile" و view="mobile" (کلاس md:hidden). فهرست اسلایدها، ایندکس
+       فعال و اسلاید خودکار هر نما مستقل است و بنری که تصویر آن نما را ندارد
+       اصلاً وارد اسلاید نمی‌شود.
+     - هیچ بنر/تصویر پیش‌فرضی وجود ندارد: StaticHero در Home.tsx و
+       BannerSeeder در بک‌اند حذف شدند. اگر هیچ بنر فعال home_hero نباشد،
+       بالای صفحهٔ اول هیچ هیرویی (بدون فضا و بدون تصویر استاتیک) رندر
+       نمی‌شود.
+     - بنرهای home_strip در نوار مستقل زیر هیرو نمایش داده می‌شوند (قبلاً فقط
+       وقتی بنر هیرو وجود داشت رندر می‌شدند).
+     - ⚠️ نوار تبلیغاتی قبلاً فیلد image بنر را رندر نمی‌کرد و فقط عنوان را
+       می‌نوشت؛ اگر مدیر تصویر می‌گذاشت چیزی دیده نمی‌شد. اکنون اگر بنر تصویر
+       داشته باشد همان تصویر (با نسبت خودش و بدون برش) در کارت نمایش داده
+       می‌شود و متن روی تصویر فقط وقتی نوشته می‌شود که بنر عنوان/زیرعنوان
+       داشته باشد؛ بنر بدون تصویر همان قرص متنی قبلی است.
+     - نوار تبلیغاتی هم از همین قاعده پیروی می‌کند: دسکتاپ فقط image و موبایل
+       فقط mobile_image. بنری که تصویر یک نما را ندارد با
+       viewportVisibilityClass/bannerViewportClass در همان نما پنهان می‌شود و
+       اگر هیچ بنر نواری تصویر آن نما را نداشته باشد، کل بخش نوار در آن نما
+       رندر نمی‌شود.
+     - بنرهای products_top بالای صفحهٔ محصولات (frontend/src/pages/Products.tsx
+       با کامپوننت TopBannerCard) نمایش داده می‌شوند؛ درخواست با
+       ?position=products_top انجام می‌شود. این کارت از BannerImage با
+       view پیش‌فرض (auto) استفاده می‌کند: موبایل تصویر موبایل (ارتفاع ۱۶۰
+       پیکسل، object-cover) و دسکتاپ تصویر اصلی (ارتفاع ۱۴۴/۱۷۶ پیکسل،
+       object-cover). کارتی که تصویر یک نما را ندارد در همان نما پنهان
+       می‌شود و اگر هیچ بنر products_top تصویر آن نما را نداشته باشد، کل ردیف
+       بنرها در آن نما رندر نمی‌شود.
+     - نکتهٔ ظاهری: کارت‌های دسته‌بندی صفحهٔ اول (سوتین/شورت/ست لباس زیر/لباس
+       خواب/گن) با کامپوننت CategoryCard و تگ Link ساخته شده‌اند، نه ButtonLink؛
+       چون ButtonLink کلاس‌های whitespace-nowrap دارد و محتوای چندخطی داخلش از
+       کادر بیرون می‌زند. برای کارت‌های چندخطی از Link استفاده شود.
+     - تصاویر آمادهٔ خودِ سایت: مسیرهایی مثل /images/women-sport-hero.png به
+       پوشهٔ frontend/public/images اشاره می‌کنند (نه storage بک‌اند). در
+       getStorageUrl این مسیرها بدون پیشوند API_ORIGIN برگردانده می‌شوند، پس
+       می‌توان همین تصاویر را بدون بارگذاری دوباره در بنر استفاده کرد.
+     - در پنل بنرها فقط ردیف‌های «تصاویر آمادهٔ سایت» (تصویر اصلی/موبایل) برای
+       انتخاب سریع مسیر تصویر باقی مانده‌اند؛ دکمهٔ «بنر اصلی از تصویر
+       پیش‌فرض» (openHeroPresetForm) حذف شد تا هیچ بنری خودکار از پیش ساخته
+       نشود.
+     - BannerSeeder (و ثبت آن در DatabaseSeeder) و تست idempotent آن حذف
+       شدند؛ سایت هیچ بنر پیش‌فرضی نمی‌سازد و نمایش بنر کاملاً به دادهٔ پنل
+       وابسته است.
+     - در اسلایدر، همهٔ بنرهای هیرو در «تمام عرض صفحه» (full-bleed، بدون
+       حاشیهٔ max-w-7xl) و با «نسبت تصویر خودشان» با h-auto نمایش داده
+       می‌شوند؛ بنابراین ارتفاع و عرض قابل استفاده با تصویر تغییر می‌کند و
+       چیزی بریده نمی‌شود. ابعاد پیشنهادی در فرم پنل نشان داده می‌شود:
+       دسکتاپ عریض ۱۹۲۰×۶۵۰، دسکتاپ بلندتر ۱۹۲۰×۷۵۰، لپ‌تاپ ۱۴۴۰×۶۰۰،
+       موبایل ۷۵۰×۱۰۰۰.
+     - ستون mobile_image (تصویر نسخهٔ موبایل) کاملاً مستقل از image است:
+       زیر ۷۶۸ پیکسل فقط همین تصویر نمایش داده می‌شود و از ۷۶۸ پیکسل به بالا
+       فقط image. اگر mobile_image خالی باشد هیچ جایگزینی انجام نمی‌شود و
+       بنر در موبایل دیده نمی‌شود (تصویر دسکتاپ روی موبایل نمی‌آید).
+     - منطق مشترک بنرها در frontend/src/utils/banners.ts است: تیپ
+       StorefrontBanner، hasDesktopImage/hasMobileImage، bannerTarget،
+       isExternalBannerLink، filterBannersForViewport،
+       viewportVisibilityClass و bannerViewportClass.
+     - رندر تصویر بنر با frontend/src/components/BannerImage.tsx انجام
+       می‌شود (view="desktop" فقط image، view="mobile" فقط mobile_image و
+       view="auto" هر دو با md:hidden / hidden md:block). اگر فایل یک تصویر
+       خراب باشد همان نما خالی می‌ماند و هرگز تصویر نمای دیگر جای آن نمی‌آید
+       (برخلاف پیاده‌سازی قبلی که onError تصویر دسکتاپ را روی موبایل
+       می‌گذاشت).
+     - در فرم پنل، زیر فیلد «تصویر موبایل» اگر خالی باشد یک هشدار زرد نمایش
+       داده می‌شود که صریح می‌گوید بنر روی گوشی نمایش داده نمی‌شود (بدون
+       جایگزین و بدون نسخهٔ پیش‌فرض)؛ در جدول فهرست هم وضعیت آن با برچسب
+       «موبایل ✓» یا «موبایل: —» مشخص است.
+     - لایهٔ گرادیان/متن اسلایدر فقط وقتی رندر می‌شود که بنر
+       عنوان/زیرعنوان/متن دکمه داشته باشد؛ قرص دکمه هم فقط با پر بودن
+       button_label نمایش داده می‌شود.
+     - متن لایه‌ای روی بنر (متن HTML واقعی به‌جای متن پخته‌شده در تصویر):
+       مدیر تصویر بدون متن بارگذاری می‌کند و متن‌ها را در بخش «متن روی بنر»
+       فرم اضافه می‌کند. متن‌ها با تگ واقعی (h1/h2/h3/h4/p/span/div) روی
+       تصویر رندر می‌شوند؛ بنابراین برای سئو و screen reader خوانا هستند.
+       • ستون‌های جدید جدول banners: image_alt (متن جایگزین تصویر)،
+         text_scrim (none|light|medium|dark برای خوانایی روی تصویر شلوغ) و
+         text_layers (JSON آرایهٔ لایه‌ها، حداکثر ۱۲ لایه).
+       • هر لایه: id، text (تا ۳۰۰ نویسه)، tag، align، x/y درصدی دسکتاپ و
+         x_mobile/y_mobile، width/width_mobile، font_family، font_size و
+         font_size_mobile، font_weight، line_height، letter_spacing، color،
+         italic، uppercase، shadow، background + background_opacity،
+         padding_x/padding_y و radius.
+       • نرمال‌سازی امن در App\Support\BannerText: موقعیت‌ها ۰ تا ۱۰۰،
+         رنگ‌ها فقط هگز (۳/۶/۸ رقم) تا تزریق CSS ممکن نباشد، تگ/تراز/سایه/
+         پرده فقط از فهرست مجاز، شناسهٔ لایه یکتا و لایهٔ بدون متن حذف
+         می‌شود (اعتبارسنجی در AdminBannerController).
+       • واحد اندازه‌ها در فروشگاه cqw است (درصدی از عرض ظرف بنر) تا متن
+         همراه تصویر مقیاس بگیرد؛ اندازه‌های دسکتاپ بر مبنای عرض ۱۴۴۰ و
+         اندازه‌های موبایل (اگر جدا ثبت شده باشند) بر مبنای عرض ۳۹۰.
+       • ویرایشگر پنل (components/AdminBannerTextEditor.tsx) پیش‌نمایش
+         دسکتاپ/موبایل، جابه‌جایی با کشیدن ماوس (پوزیشن درصدی)، فونت،
+         اندازه، رنگ، سایه، کادر پس‌زمینه و متن alt را مدیریت می‌کند؛ در
+         نمای موبایل پوزیشن موبایل ثبت می‌شود.
+       • اگر بنر لایهٔ متن داشته باشد، متن سادهٔ title/subtitle/button_label
+         دیگر نمایش داده نمی‌شود (لایه‌ها مقدم‌اند)؛ بنرهای قدیمی همان
+         رفتار قبلی را دارند. رندر در components/BannerTextLayers.tsx و
+         منطق مشترک در utils/bannerText.ts است.
+     - کتابخانهٔ فونت بنرها (جدول banner_fonts، پایین فرم در /admin/banners):
+       • POST /api/v1/admin/banner-fonts با multipart: source=upload و فایل
+         woff2/woff/ttf/otf تا ۵ مگابایت (در storage/app/public/banner-fonts)
+         یا source=url با external_url (فایل مستقیم یا CSS مثل گوگل فونت).
+       • PATCH /api/v1/admin/banner-fonts/{id}/status و
+         DELETE /api/v1/admin/banner-fonts/{id} (فایل هم حذف می‌شود).
+       • فهرست عمومی GET /api/v1/banner-fonts (کش ۳۰ دقیقه) و سرو فایل
+         GET /api/v1/banner-fonts/{id}/file با هدر CORS؛ بدون CORS مرورگر
+         بارگذاری فونت از دامنهٔ دیگر را مسدود می‌کند.
+       • فونت‌ها در فروشگاه با @font-face (components/BannerFontStyles.tsx)
+         در head تزریق می‌شوند؛ نام family فقط [A-Za-z0-9 _-] پذیرفته
+         می‌شود. همهٔ مسیرهای پنل زیر مجوز banners.manage هستند.
+
+  7) گزارش فروش — /admin/reports
+     - GET /api/v1/admin/reports/sales?days=30 یا ?from=&to=
+     - خروجی: summary (درآمد بدون سفارش لغوشده، تعداد سفارش، میانگین،
+       اقلام فروخته‌شده، تخفیف، مالیات)، statuses، daily (روند روزانه)،
+       top_products (۸ محصول پرفروش) و low_stock_products /
+       low_stock_variants (موجودی ≤ ۵).
+
+  8) فاکتور چاپی
+     - در مودال جزئیات سفارش پنل، کارت «فاکتور سفارش» با دکمهٔ «چاپ فاکتور»
+       نمایش داده می‌شود؛ CSS چاپ در index.css فقط #invoice-print-area را
+       چاپ می‌کند (کلاس admin-print-hide برای دکمه‌ها).
+     - نام و اطلاعات تماس فروشگاه در فاکتور از تنظیمات خوانده می‌شود.
+
+  9) تقویم شمسی در پنل مدیریت
+     - همهٔ فیلدهای تاریخ/ساعت پنل با انتخابگر شمسی
+       (frontend/src/components/JalaliDatePicker.tsx) گرفته می‌شوند:
+       بازهٔ نمایش بنر، بازهٔ اعتبار کد تخفیف و تاریخ انتشار مقاله.
+     - انتخاب روز از تقویم جلالی (هفته از شنبه)، انتخاب ماه/سال، ساعت و
+       دقیقه، دکمهٔ «امروز»، «پاک کردن» و بستن با Esc/کلیک بیرون.
+     - تبدیل‌ها در frontend/src/utils/jalali.ts و بدون وابستگی بیرونی‌اند:
+       gregorianToJalali، jalaliToGregorian، jalaliMonthLength،
+       parseDateTimeInput، toDateTimeInputValue، formatJalaliDisplay و
+       toPersianDigits.
+     - مقدار نهایی فرم همچنان قالب استاندارد YYYY-MM-DDTHH:mm است؛ بنابراین
+       اعتبارسنجی date در لاراول و ذخیره‌سازی دیتابیس تغییری نکرده است.
+     - نمایش تاریخ‌ها در فهرست‌ها و فاکتورها از Intl با تقویم fa-IR (شمسی)
+       استفاده می‌کند.
+
+  10) نوار اطلاع‌رسانی بالای هدر — /admin/announcement-bar
+     - جدول announcement_bar_items (type، text، image، link، open_in_new_tab،
+       sort_order، is_active، starts_at، ends_at) + مدل
+       App\Models\AnnouncementBarItem (scopeVisible مثل بنرها).
+     - تنظیمات ظاهری نوار در جدول store_settings (کلیدهای جدید در
+       StoreSetting::DEFAULTS): announcement_bar_enabled/height/
+       mobile_height/bg_color/text_color/font_size/interval/animation.
+       مقدار پیش‌فرض enabled = 0 است؛ تا مدیر نوار را فعال نکند و آیتم فعال
+       نداشته باشد، هیچ نواری بالای هدر رندر نمی‌شود (بدون نوار پیش‌فرض).
+     - انواع آیتم: text (متن)، image (تصویر ثابت، GIF یا WebP متحرک) و
+       video (MP4/WebM کوتاه که بی‌صدا در حلقه پخش می‌شود).
+     - API مدیر (مجوز banners.manage):
+       GET  /api/v1/admin/announcement-bar            → {settings, items}
+       PUT  /api/v1/admin/announcement-bar/settings   → ذخیرهٔ تنظیمات ظاهری
+       POST /api/v1/admin/announcement-bar/media      → بارگذاری فایل
+            (multipart با فیلد file؛ JPG/PNG/WebP/GIF/MP4/WebM تا ۱۰ مگابایت،
+            فایل در storage/app/public/announcement-bar و نوع آیتم بر اساس
+            پسوند برگردانده می‌شود)
+       POST /api/v1/admin/announcement-bar/items
+       PUT  /api/v1/admin/announcement-bar/items/{item}
+       PATCH /api/v1/admin/announcement-bar/items/{item}/status
+       DELETE /api/v1/admin/announcement-bar/items/{item}
+     - API عمومی: GET /api/v1/announcement-bar → {enabled, height,
+       mobile_height, background_color, text_color, font_size, interval,
+       animation, items[]} با کش ۵ دقیقه‌ای
+       (AnnouncementBarController::STOREFRONT_CACHE_KEY)؛ با هر تغییر در پنل
+       پاک می‌شود و بازهٔ نمایش هر آیتم در هر درخواست روی دادهٔ کش‌شده اعمال
+       می‌شود. بازه‌های مجاز: ارتفاع ۲۴..۱۲۰، اندازهٔ متن ۹..۲۴، فاصلهٔ تعویض
+       ۲..۶۰ ثانیه، رنگ‌ها کد شش‌رقمی #rrggbb.
+     - فرانت‌اند: components/AnnouncementBar.tsx (رندر نوار) +
+       services/announcementBar.ts (تیپ‌ها، نرمال‌سازی و کش
+       حافظه/localStorage با stale-while-revalidate) + استایل‌های
+       .announcement-bar در index.css. ارتفاع دسکتاپ/موبایل با متغیرهای CSS
+       (--ab-height و --ab-height-mobile) اعمال می‌شود و در زیر ۷۶۸ پیکسل
+       ارتفاع موبایل استفاده می‌شود.
+     - اگر چند آیتم فعال باشد، به ترتیب sort_order هر «فاصلهٔ تعویض» ثانیه
+       جابه‌جا می‌شوند (انیمیشن fade یا slide، با احترام به
+       prefers-reduced-motion)؛ با نگه‌داشتن ماوس روی نوار تعویض متوقف
+       می‌شود و نقطه‌های کنار نوار هم امکان انتخاب دستی را می‌دهند.
+     - آیتم‌های تصویری/ویدیویی با object-fit: contain و در تمام عرض نوار
+       نمایش داده می‌شوند؛ بهتر است تصویر با ارتفاع کم و عرض زیاد (مثلاً
+       ۱۹۲۰×۶۰) بارگذاری شود.
+     - آیتم بدون محتوا (متن خالی برای نوع text یا نبود فایل برای نوع
+       image/video) در بک‌اند رد می‌شود و در فرانت‌اند هم فیلتر می‌شود؛ اگر
+       فایل بارگذاری نشود، متن جایگزین (در صورت وجود) نمایش داده می‌شود.
+     - مسیر منو: بخش «فروشگاه» سایدبار (utils/adminSidebarLayout.ts) بعد از
+       «بنرها» و مسیر روت در App.tsx با همان مجوز banners.manage.
+     - تست‌ها: backend/tests/Feature/AdminAnnouncementBarTest.php (۱۰ تست).
+
+   11) راهنمای سایز اختصاصی محصول — /admin/products/create و /admin/products/{id}/edit
+     - جدول product_size_guides (one-to-one؛ product_id یکتا با cascade) + مدل
+       ProductSizeGuide. راهنمای سایز عمومی سایت (صفحهٔ /size-guide و
+       frontend/src/data/sizeGuide.ts) دست‌نخورده می‌ماند و فقط نقش fallback
+       دارد؛ این راهنما مخصوص هر محصول است.
+     - فیلدها: is_enabled، title، intro، unit (cm | inch | none)، measure_image،
+       measure_steps[{title, description}]، columns[]، rows[][]،
+       specs[{label, value}]، fit_note، note، tips[].
+     - همهٔ بخش‌ها اختیاری‌اند: عنوان/توضیح، تصویر نحوهٔ اندازه‌گیری (JPG/PNG/WebP
+       تا ۵ مگابایت)، مراحل اندازه‌گیری، جدول اندازه‌ها با ستون/سطر دلخواه
+       (حداکثر ۸ ستون و ۶۰ سطر؛ سطرها خودکار هم‌طول ستون‌ها می‌شوند)،
+       ابعاد/مشخصات دوخت، توصیهٔ انتخاب سایز، نکته‌ها و یادداشت پایانی.
+     - فرم محصول: بخش «راهنمای سایز اختصاصی محصول» با ویرایشگر
+       frontend/src/components/AdminProductSizeGuideEditor.tsx — جدول ویرایش‌پذیر،
+       دکمهٔ «ساخت سطر از تنوع‌های محصول» (نام تنوع‌های فعال)، پیش‌نمایش زنده با
+       frontend/src/components/ProductSizeGuide.tsx و کلید خاموش/روشن نمایش.
+     - API مدیر (مجوز products.manage): راهنما به‌صورت کلید size_guide داخل همان
+       POST/PUT /api/v1/admin/products(/{product}) ذخیره می‌شود (کلید ارسال‌نشده =
+       بدون تغییر، خالی یا null = حذف راهنما) و
+       POST /api/v1/admin/products/size-guide-image تصویر را در
+       storage/app/public/product-size-guides ذخیره می‌کند.
+     - API عمومی: GET /api/v1/products/{slug} کلید data.size_guide را فقط وقتی
+       برمی‌گرداند که راهنما فعال باشد و محتوا داشته باشد.
+     - صفحهٔ محصول: دکمهٔ «راهنمای سایز این محصول» مودال را با محتوای اختصاصی
+       همان محصول باز می‌کند (در نبود راهنما، همان مودال عمومی قبلی)، سطر سایز
+       انتخاب‌شده در جدول برجسته می‌شود و خلاصهٔ اندازه‌های همان سایز زیر
+       تنوع‌ها نمایش داده می‌شود.
+     - تست‌ها: backend/tests/Feature/ProductSizeGuideTest.php (۱۰ تست).
+
+  اجرا و اعتبارسنجی:
+    cd backend
+    php artisan migrate      # مهاجرت‌های ارسال، کوپن، مرجوعی، بنر،
+                             # announcement_bar_items، product_size_guides و …
+    php artisan test         # 195 تست / 934 assertion
+    cd ../frontend
+    npm run build
+
+  تست‌های افزوده‌شده:
+    backend/tests/Feature/AdminStoreSettingTest.php
+    backend/tests/Feature/AdminBrandTest.php
+    backend/tests/Feature/AdminCouponTest.php
+    backend/tests/Feature/AdminOrderShippingTest.php
+    backend/tests/Feature/ReturnRequestTest.php
+    backend/tests/Feature/AdminBannerTest.php
+    backend/tests/Feature/AdminAnnouncementBarTest.php
+    backend/tests/Feature/ProductSizeGuideTest.php
+    backend/tests/Feature/AdminReportTest.php
+
+
+سیستم پشتیبانی (ویجت چت + صندوق پیام‌رسان‌ها):
+  ویجت فروشگاه — همهٔ صفحات فروشگاه، دکمهٔ شناور پایین‌چپ:
+    - چت درون‌سایتی مهمان بدون ثبت‌نام؛ توکن UUID گفتگو در localStorage
+      ذخیره می‌شود و با رفرش، گفتگو ادامه پیدا می‌کند. اگر مشتری وارد
+      حسابش شده باشد، گفتگو به او وصل می‌شود.
+    - صفحهٔ اول ویجت لینک تلگرام/واتساپ/بله دارد. لینک هر کانال به‌ترتیب
+      از لینک کامل env، سپس نام کاربری ربات و در نهایت تنظیمات فروشگاه
+      (store_telegram / store_whatsapp) ساخته می‌شود؛ شمارهٔ واتساپ حتی با
+      ارقام فارسی نرمال می‌شود (۰۹… → 98…).
+    - polling هر ۵ ثانیه فقط وقتی پنل چت باز است؛ نشانگر پیام جدید مدیر،
+      بستن با Esc، در موبایل تمام‌عرض.
+
+  صندوق پشتیبانی مدیر (پنل ادمین → بخش «پشتیبانی»):
+    مسیر صفحه:   http://localhost:5173/admin/support
+    دسترسی:      مجوز messaging.manage (نقش «پشتیبانی»)
+    - آمار باز/در انتظار/بسته/خوانده‌نشده، فیلتر وضعیت و کانال، جست‌وجو،
+      پاسخ‌دهی، تغییر وضعیت گفتگو و به‌روزرسانی خودکار هر ۱۲ ثانیه.
+
+  مسیرهای API:
+    عمومی:  GET   /api/v1/support/config
+            POST  /api/v1/support/conversations
+            GET   /api/v1/support/conversations/{token}
+            POST  /api/v1/support/conversations/{token}/messages
+            POST  /api/v1/support/conversations/{token}/close
+    مدیر:   GET   /api/v1/admin/support/stats
+            GET   /api/v1/admin/support/conversations
+            GET   /api/v1/admin/support/conversations/{id}
+            POST  /api/v1/admin/support/conversations/{id}/messages
+            PATCH /api/v1/admin/support/conversations/{id}/status
+    وبهوک:  GET/POST /api/v1/support/webhooks/{SUPPORT_WEBHOOK_SECRET}/{telegram|bale|whatsapp}
+
+  متغیرهای .env (بخش «Support chat» در .env.example):
+    SUPPORT_CHAT_ENABLED=true        SUPPORT_POLL_SECONDS=5
+    SUPPORT_WEBHOOK_SECRET=…         (رمز مشترک آدرس وبهوک‌ها)
+    TELEGRAM_BOT_USERNAME=           TELEGRAM_SUPPORT_LINK=
+    BALE_BOT_USERNAME=               BALE_SUPPORT_LINK=
+    WHATSAPP_SUPPORT_NUMBER=         WHATSAPP_SUPPORT_LINK=
+
+  راه‌اندازی وبهوک پیام‌رسان‌ها (پاسخ مدیر به چت پیام‌رسان relay می‌شود):
+    - تلگرام: curl "https://api.telegram.org/bot<TOKEN>/setWebhook?url=<آدرس وبهوک>"
+    - بله:    همان دستور با https://tapi.bale.ai/bot<TOKEN>/setWebhook
+    - واتساپ: در پنل Meta آدرس وبهوک بالا با verify token =
+      SUPPORT_WEBHOOK_SECRET ثبت شود (پاسخ متنی فقط در پنجرهٔ ۲۴ ساعتهٔ
+      آخرین پیام کاربر ممکن است؛ خارج از آن باید قالب تأییدشده فرستاد).
+    - اعلان درخواست جدید به مدیر: TELEGRAM_CHAT_ID / BALE_CHAT_ID /
+      WHATSAPP_DEFAULT_RECIPIENT به‌همراه *_ENABLED=true.
+
+  نکته‌ها:
+    - ارسال به پیام‌رسان‌ها best-effort است و هرگز ذخیرهٔ پیام را مسدود نمی‌کند.
+    - جدول‌ها: support_conversations و support_messages
+      (مهاجرت‌های 2026_11_06_000000 و 2026_11_06_000100).
+    - تست: backend/tests/Feature/SupportChatTest.php
+      (php artisan test → 159 تست / 733 assertion).
+
+
+بخش مقالات فروشگاه (وبلاگ):
+  فروشگاه — مقاله‌ها از پنل مدیریت منتشر می‌شوند و روزانه قابل به‌روزرسانی‌اند:
+    مسیر صفحه:   http://localhost:5173/articles
+    مسیر مقاله:  http://localhost:5173/articles/{slug}
+    - صفحهٔ فهرست با جست‌وجو، فیلتر دسته (از خود مقاله‌ها ساخته می‌شود)،
+      صفحه‌بندی و حالت خالی/لودینگ.
+    - صفحهٔ مقاله: کاور، تاریخ شمسی، زمان مطالعه، نویسنده، دکمهٔ اشتراک‌گذاری
+      و سه مقالهٔ مرتبط (هم‌دسته).
+    - بخش «تازه‌ترین مقالات» در صفحهٔ اول فروشگاه (components/LatestArticles)
+      و لینک «مقالات و راهنما» در منوی دسته‌بندی و فوتر.
+
+  پنل مدیریت — بخش «مقالات»:
+    مسیر صفحه:   http://localhost:5173/admin/articles
+    دسترسی:      مجوز articles.manage (مدیر ارشد و مدیر محصولات)
+    - آمار کل/منتشرشده/پیش‌نویس/امروز، فیلتر وضعیت (همه، منتشرشده، پیش‌نویس،
+      زمان‌بندی‌شده) و جست‌وجو در عنوان/اسلاگ.
+    - فرم نوشتن مقاله: عنوان، دسته، نویسنده، اسلاگ (اختیاری)، تاریخ انتشار
+      (تقویم شمسی)، بارگذاری تصویر کاور، خلاصه و متن با نشانه‌گذاری سبک:
+      «## سرتیتر»، «### زیرتیتر»، «- لیست»، «> نقل‌قول» و «**پررنگ**».
+    - انتشار/لغو انتشار با یک کلیک، حذف مقاله (و حذف فایل کاور بارگذاری‌شده).
+
+  قواعد محتوا (Model Article):
+    - slug فارسی خودکار و یکتا از عنوان ساخته می‌شود؛ اگر مدیر اسلاگ بدهد،
+      همان نرمال و در صورت تکرار با پسوند ‎-2‎ یکتا می‌شود.
+    - خلاصهٔ خالی از ابتدای متن ساخته می‌شود؛ زمان مطالعه = هر ۲۰۰ کلمه یک دقیقه.
+    - انتشار دو شرط دارد: is_published=true و رسیدن published_at
+      (تاریخ آینده = انتشار زمان‌بندی‌شده؛ خالی = بلافاصله).
+
+  مسیرهای API:
+    عمومی:  GET  /api/v1/articles?q=&category=&page=&per_page=
+            GET  /api/v1/articles/{slug}   (همراه با related)
+    مدیر:   GET    /api/v1/admin/articles?status=&q=&page=
+            POST   /api/v1/admin/articles
+            POST   /api/v1/admin/articles/cover   (multipart: image)
+            GET    /api/v1/admin/articles/{id}
+            PUT    /api/v1/admin/articles/{id}
+            PATCH  /api/v1/admin/articles/{id}/status
+            DELETE /api/v1/admin/articles/{id}
+
+  اجرا و اعتبارسنجی:
+    cd backend
+    php artisan migrate      # مهاجرت 2026_11_07_000000_create_articles_table
+    php artisan test         # 168 تست / 794 assertion
+    cd ../frontend
+    npm run build
+
+  فایل‌های اصلی:
+    backend: app/Models/Article.php
+             app/Http/Controllers/Api/ArticleController.php
+             app/Http/Controllers/Api/AdminArticleController.php
+             database/migrations/2026_11_07_000000_create_articles_table.php
+             tests/Feature/ArticleTest.php
+    frontend: services/articles.ts
+              pages/Articles.tsx · pages/ArticleDetail.tsx
+              pages/AdminArticles.tsx
+              components/ArticleCard.tsx · components/LatestArticles.tsx
 
 
 
-cd C:\Users\behrang\Desktop\pharmacy-shop\backend
+علاقه‌مندی‌ها (لیست دلخواه) + صفحه‌بندی سمت سرور فهرست محصولات:
+  فروشگاه:
+    مسیر صفحه:  http://localhost:5173/wishlist
+    - دکمهٔ قلب روی کارت محصول (هر دو نمای grid و home) و آیکن قلب در هدر
+      (موبایل و دسکتاپ) با شمارندهٔ تعداد.
+    - مهمان: فهرست در localStorage با کلید behrang-shop-wishlist ذخیره می‌شود؛
+      کاربر واردشده: روی سرور (جدول wishlist_items).
+    - در اولین ورود، آیتم‌های مهمان با سرور ادغام و سپس حافظهٔ مهمان پاک
+      می‌شود (syncGuestWishlist در services/wishlist.ts)، پس از آن شمارنده و
+      قلب‌ها از سرور می‌آیند.
+    - تغییر وضعیت خوش‌بینانه (optimistic) است تا کلیک فوری حس شود؛ در خطا
+      فهرست به حالت قبل برمی‌گردد و خطا در کنسول ثبت می‌شود.
+    - صفحهٔ علاقه‌مندی‌ها: همان ProductCard (با افزودن به سبد)، دکمهٔ
+      «حذف از علاقه‌مندی‌ها»، حالت خالی و لودینگ، و برای مهمان یادآوری
+      «با ورود، فهرست به حساب شما منتقل می‌شود».
 
-php artisan serve
+  مسیرهای API (نیازمند ورود با sanctum):
+    GET    /api/v1/wishlist
+    POST   /api/v1/wishlist                 { product_id }
+    DELETE /api/v1/wishlist/{product}
 
-ترمینال ۲:
-cd C:\Users\behrang\Desktop\pharmacy-shop\frontend
+  قواعد: هر کاربر برای هر محصول فقط یک ردیف (unique user_id + product_id)؛
+  فقط محصول فعال برمی‌گردد؛ پاسخ شامل تصویر اصلی/بندانگشتی، قیمت و موجودی
+  برای کارت است. پنل مدیریت بخش اختصاصی ندارد.
 
-npm run dev
+  فایل‌های مرتبط:
+    backend:  app/Models/WishlistItem.php
+              app/Http/Controllers/Api/WishlistController.php
+              database/migrations/2026_11_11_000000_create_wishlist_items_table.php
+              tests/Feature/WishlistTest.php   (۷ تست / ۳۱ assertion)
+    frontend: services/wishlist.ts (حافظهٔ مهمان + فراخوانی API + ادغام)
+              context/WishlistContext.tsx
+              pages/Wishlist.tsx
+              components/ProductCard.tsx (دکمهٔ قلب و نماهای grid/home)
+              components/Header.tsx · utils/storageKeys.ts · main.tsx · App.tsx
+
+  صفحه‌بندی سمت سرور فهرست محصولات:
+    - API: GET /api/v1/products?page=&per_page=&category=&search=&sort=
+      (ProductController؛ پیش‌فرض per_page=12، سقف ۴۸)
+    - فهرست فروشگاه هر درخواست فقط ۲۴ محصول می‌گیرد (PRODUCTS_PER_PAGE در
+      pages/Products.tsx) و current/last/total را از خود پاسخ paginator
+      می‌خواند.
+    - مرتب‌سازی (جدیدترین/ارزان‌ترین/گران‌ترین/پرفروش/بیشترین تخفیف) سمت سرور
+      است تا روی همهٔ صفحه‌ها درست باشد.
+    - تغییر جست‌وجو، دسته یا مرتب‌سازی صفحه را به ۱ برمی‌گرداند؛ دکمه‌های
+      قبلی/بعدی بازه را محدود می‌کنند و شمارندهٔ «صفحهٔ X از Y» دارد.
+    - صفحهٔ اول اسکلت کارت‌ها، صفحه‌های بعدی محوشدن (aria-busy) تا ارتفاع
+      صفحه نپرد؛ خطا هم پیام و دکمهٔ تلاش دوباره دارد.
 
 
-بعد برو به:
+فیلترهای فهرست محصولات (سرور + رابط کاربری):
+  مسیر صفحه: http://localhost:5173/products
 
-http://localhost:5173/products
+  پارامترهای API (GET /api/v1/products):
+    category, search, sort, page, per_page            (مثل قبل)
+    brand=slug-a,slug-b     چند برند هم‌زمان (حالت تک‌مقداری قبلی هم کار می‌کند)
+    size=75B,M              چند سایز هم‌زمان؛ مقدارها نرمال می‌شوند (ارقام
+                            فارسی/عربی → لاتین، حذف «سایز/Size»، حروف بزرگ)
+    min_price / max_price   روی «قیمت نهایی پس از تخفیف» اعمال می‌شوند:
+                            price - ROUND(price * discount_percent / 100, 0)
+    in_stock=1              فقط کالاهای موجود (stock > 0)
+    discount_only=1         فقط کالاهای دارای تخفیف (discount_percent > 0)
+    new=1 / is_new=1        فقط کالاهای جدید (is_new)
+    featured=1              فقط پیشنهادهای ویژه (is_featured)
+
+  مرتب‌سازی قیمت (price_asc/price_desc) هم روی همان «قیمت نهایی پس از تخفیف»
+  انجام می‌شود تا ترتیب با عددی که روی کارت محصول دیده می‌شود یکی باشد.
+
+  گزینه‌های فیلتر (GET /api/v1/products/filters):
+    همان query string فهرست را می‌گیرد و برای هر گروه گزینه + تعداد نتیجه
+    برمی‌گرداند: total، price{min,max}، brands[]، categories[]، sizes[].
+    - شمار هر گروه بدون اعمال همان گروه حساب می‌شود (مثل facet های فیلتر)،
+      پس با انتخاب یک برند، شمار بقیهٔ برندها صفر نمی‌شود.
+    - دستهٔ والد شمار زیردسته‌ها را هم شامل می‌شود.
+    - بازهٔ قیمت از خود نتایج محاسبه می‌شود تا میان‌بُرهای قیمت روی کاتالوگ
+      واقعی بیفتند.
+    - پاسخ ۶۰ ثانیه کش می‌شود (کلید = query string) تا هر تایپ جست‌وجو
+      چند کوئری سنگین نسازد.
+
+  ستون سایز (product_variants.size):
+    - migration: 2026_11_12_000000_add_size_to_product_variants_table.php
+    - سایز از نام تنوع استخراج می‌شود («سایز 80B» → 80B) و ردیف‌های قبلی
+      در همان migration پر می‌شوند؛ در پنل هم فیلد size اختیاری اضافه شده است.
+    - فیلتر سایز فقط تنوع‌های فعال (is_active) را در نظر می‌گیرد.
+    - پنل محصول (pages/AdminProductForm.tsx): هر تنوع یک ورودی «سایز» دارد
+      (اختیاری، حداکثر ۵۰ نویسه)؛ خالی گذاشتن آن یعنی استخراج خودکار از نام
+      تنوع. مقدار ارسالی قبل از ذخیره trim و در نبود مقدار null می‌شود.
+    - اصلاح فرم ویرایش: تنوع‌های ذخیره‌شده هنگام باز کردن محصول به فرم
+      برمی‌گردند. پیش از این لیست تنوع‌ها خالی می‌ماند و ذخیرهٔ محصول همهٔ
+      تنوع‌ها را غیرفعال می‌کرد (بک‌اند تنوع ارسال‌نشده را غیرفعال می‌داند).
+      تست ضامن: AdminProductValidationTest::test_product_detail_returns_variants_with_size_for_the_admin_form
+
+  نکتهٔ فنی: در SQLite اگر یک پارامتر متنی مستقیم با عبارت REAL مقایسه شود،
+  مقایسه رشته‌ای انجام می‌شود و فیلتر خالی برمی‌گردد؛ به همین دلیل در
+  ProductController@index از CAST(? AS DECIMAL(15,2)) استفاده شده است
+  (هم در MySQL و هم SQLite درست کار می‌کند).
+
+  رابط کاربری (pages/Products.tsx):
+    - ستون کنار (دسکتاپ): دسته‌بندی، برند (چک‌باکس چندتایی همراه تعداد
+      محصولِ زندهٔ facet)، سایز (چیپ چندتایی همراه تعداد)، محدودهٔ قیمت
+      (از/تا + دکمهٔ «اعمال قیمت» + میان‌بُرهای ساخته‌شده از بازهٔ واقعی
+      نتایج)، «سایر فیلترها» (فقط موجود، فقط تخفیف‌دار، فقط جدید، پیشنهاد
+      ویژه) و مرتب‌سازی (جدیدترین/پرفروش‌ترین/ارزان‌ترین/گران‌ترین/
+      بیشترین تخفیف).
+    - موبایل: دکمهٔ «فیلتر و مرتب‌سازی» با شمارندهٔ فیلترهای فعال و پنل بازشو
+      با همان بخش‌ها به شکل چیپ و ورودی.
+    - چیپ فیلترهای فعال بالای شبکهٔ محصولات؛ هر چیپ با کلیک حذف می‌شود.
+    - ورودی قیمت ارقام فارسی/عربی را هم می‌پذیرد؛ اگر «از» بزرگ‌تر از «تا»
+      وارد شود مقدارها جابه‌جا و پیام کوتاه نمایش داده می‌شود. اعمال با
+      Enter/خروج از فیلد/دکمه انجام می‌شود تا هر کلید یک درخواست نسازد.
+    - همهٔ فیلترها در query string می‌مانند (brand / size / min_price /
+      max_price / in_stock / discount_only / new / featured)؛ لینک قابل
+      اشتراک است و دکمهٔ بازگشت مرورگر همان نتیجه را نشان می‌دهد. هر تغییر
+      فیلتر صفحه را به ۱ برمی‌گرداند.
+    - فهرست برندها از services/brands.ts با همان الگوی کش دسته‌بندی‌ها
+      (حافظه + localStorage + stale-while-revalidate) می‌آید؛ تا رسیدن
+      facet ها فقط برندهای دارای محصول فعال نشان داده می‌شوند و بعد از آن
+      شمار هر برند از پاسخ filters می‌آید.
+    - گزینه‌های filter از services/productFilters.ts می‌آید (کش حافظه‌ای
+      کوتاه + ادغام درخواست‌های هم‌زمان + debounce ۲۵۰ms در صفحه). خطای این
+      درخواست فهرست محصولات را از کار نمی‌اندازد.
+    - فیلتر دوبارهٔ سمت کلاینت حذف شد؛ شبکه همان پاسخ API است تا محصولات
+      صفحه (مثلاً وقتی جست‌وجو با SKU مطابقت دارد) به‌اشتباه پنهان نشوند.
+
+  فایل‌های مرتبط:
+    backend:  app/Http/Controllers/Api/ProductController.php
+              app/Models/ProductVariant.php          (نرمال‌سازی/استخراج سایز)
+              app/Http/Controllers/Api/AdminProductController.php (فیلد size)
+              database/migrations/2026_11_12_000000_add_size_to_product_variants_table.php
+              routes/api.php                        (products/filters)
+              tests/Feature/ProductFilterTest.php   (۱۲ تست)
+              tests/Feature/ProductFilterFacetsTest.php (۳ تست facet ها)
+              tests/Feature/AdminProductValidationTest.php (بازخوانی تنوع + سایز)
+    frontend: services/brands.ts
+              services/productFilters.ts
+              utils/storageKeys.ts   (storefrontBrands)
+              pages/Products.tsx
+              pages/AdminProductForm.tsx  (ورودی سایز تنوع + بازخوانی تنوع‌ها)
 
 
+منوی سایدبار پنل مدیریت (گروه‌بندی روشن + چیدمان دلخواه + پین):
+  گروه‌های والد با عنوان، آیکن و شمارندهٔ تعداد آیتم‌ها نمایش داده می‌شوند:
+    عمومی · فروشگاه · سفارشات · گزارشات
+    (در ارتفاع‌های کم صفحه هم پنهان نمی‌شوند، فقط فشرده‌تر می‌شوند.)
 
-temporary password is generated for root@localhost: B&lzd.0Qpcwo
+  شخصی‌سازی منو:
+    دکمهٔ «چیدمان» در بالای سایدبار → حالت ویرایش:
+      - کشیدن و رها کردن هر آیتم برای تغییر ترتیب یا انتقال بین گروه‌ها.
+      - دکمه‌های ↑ ↓ برای جابه‌جایی سریع (مناسب موبایل و لمس).
+      - دکمهٔ پین برای بردن آیتم به بخش «دسترسی سریع» در بالای منو.
+      - دکمهٔ «پیش‌فرض» برای بازگشت به چیدمان اولیه.
+    - آیتم‌های پین‌شده فقط در «دسترسی سریع» دیده می‌شوند و با دکمهٔ
+      PinOff به گروه پیش‌فرض خود برمی‌گردند.
+    - در حالت عادی (بدون ویرایش) آیتم‌های پین‌شده با آیکن کوچک پین مشخص‌اند.
+
+  بستن و باز کردن گروه‌ها (سایدبار خلوت‌تر):
+    - کلیک روی عنوان هر گروه (عمومی/فروشگاه/سفارشات/گزارشات و «دسترسی
+      سریع») آن گروه را مثل dropdown می‌بندد یا باز می‌کند و وضعیتش ذخیره
+      می‌شود. شمارندهٔ تعداد آیتم‌ها روی عنوان باقی می‌ماند.
+    - دکمهٔ فلش کنار «چیدمان» همهٔ گروه‌ها را یک‌جا می‌بندد/باز می‌کند.
+    - اگر صفحهٔ فعلی داخل گروه بسته باشد، کنار عنوانش نقطهٔ روشن نمایش داده
+      می‌شود تا بدانید کجایید.
+    - رها کردن یک آیتم روی عنوان گروه بسته (در حالت چیدمان) آن گروه را باز
+      می‌کند تا آیتم منتقل‌شده دیده شود.
+
+  عرض سایدبار و اندازهٔ آیتم‌های منو:
+    - کشیدن دستهٔ باریک لبهٔ داخلی سایدبار، عرض را کم/زیاد می‌کند
+      (محدودهٔ ۲۰۰ تا ۴۲۰ پیکسل، پیش‌فرض ۲۶۴). دوبار کلیک روی همان دسته =
+      بازگشت به عرض پیش‌فرض. با فوکوس روی دسته، کلید ← / → هم عرض را
+      ۱۶ پیکسل تغییر می‌دهد.
+    - دکمهٔ «Aa» کنار «چیدمان» اندازهٔ آیتم‌های منو را بین سه حالت
+      فشرده / عادی / بزرگ می‌چرخاند (ارتفاع ردیف، اندازهٔ آیکن و متن).
+    - عرض و اندازه هم برای هر مدیر ذخیره می‌شوند و دکمهٔ «پیش‌فرض» هر دو را
+      به حالت اولیه برمی‌گرداند.
+    - شمارندهٔ تعداد آیتم‌ها روی عنوان گروه‌ها حذف شده است.
+
+  ذخیره‌سازی و رفتار:
+    - چیدمان (ترتیب، پین‌ها و گروه‌های بسته) در localStorage با کلید
+      behrang-shop-admin-sidebar:<adminId> ذخیره می‌شود؛ تنظیمات هر مدیر
+      جداست و پس از رفرش می‌ماند.
+    - آیتم‌های جدید که در آینده به منو اضافه شوند خودکار در گروه پیش‌فرض
+      خود ظاهر می‌شوند و آیتم‌های بدون مجوز فقط پنهان می‌شوند (پاک نمی‌شوند).
+
+  فایل‌های مرتبط:
+    frontend/src/utils/adminSidebarLayout.ts
+    frontend/src/components/AdminLayout.tsx
+    frontend/src/index.css   (بخش «منوی سایدبار قابل شخصی‌سازی»)
+
+
+سئوی صفحات (متا + دادهٔ ساختاریافته):
+  هر صفحهٔ عمومی متای خودش را در زمان اجرا می‌نویسد؛ دیگر عنوان و توضیحات
+  همهٔ صفحه‌ها یکی نیست:
+    - hook: frontend/src/hooks/usePageMeta.ts
+    - منطق تگ‌ها: frontend/src/utils/seo.ts
+      (عنوان، description، canonical، robots، og:title/description/type/url/
+       image/site_name/locale، twitter:card/title/description/image و یک
+       اسکریپت JSON-LD که با تغییر مسیر پاک/جایگزین می‌شود.)
+    - دادهٔ ساختاریافته: frontend/src/utils/structuredData.ts
+      Organization + WebSite (صفحهٔ اصلی)، Product + BreadcrumbList (صفحهٔ
+      محصول)، Article + BreadcrumbList (مقاله)، BreadcrumbList فهرست‌ها.
+
+  رفتار صفحه‌ها:
+    - اصلی: عنوان ثابت فروشگاه + معرفی Organization/WebSite.
+    - محصول: عنوان = نام محصول، توضیحات از short_description، تصویر اصلی،
+      قیمت نهایی (پس از تخفیف) و موجودی در JSON-LD. امتیاز فقط وقتی نظر
+      تأییدشده وجود دارد اضافه می‌شود.
+    - فهرست محصولات: عنوان بر اساس دسته، canonical شامل پارامتر دسته؛ نتیجهٔ
+      جست‌وجو noindex می‌شود (محتوای تکراری/بی‌پایان).
+    - مقالات: صفحهٔ اول و دسته ایندکس، صفحه‌های بعدی و جست‌وجو noindex.
+    - مقالهٔ حذف‌شده: صفحهٔ خطا noindex می‌شود.
+    - پنل مدیریت: همهٔ مسیرهای /admin با noindex, follow.
+
+  نکتهٔ قیمت: مبالغ فروشگاه به تومان است؛ در JSON-LD با واحد استاندارد IRR
+  (ریال) و ضریب ۱۰ اعلام می‌شوند (TOMAN_TO_RIAL در structuredData.ts).
+
+sitemap.xml و robots.txt (ساخت خودکار در build):
+  - اسکریپت: frontend/scripts/generate-sitemap.mjs
+  - اجرا: npm run build  (بعد از vite build) یا مستقیم npm run sitemap
+  - ورودی: VITE_SITE_URL (نشانی نهایی سایت) و VITE_API_URL برای گرفتن
+    محصولات، دسته‌ها و مقاله‌ها. اگر VITE_SITE_URL خالی باشد چیزی نوشته
+    نمی‌شود تا آدرس‌های نمونه به گوگل نرود.
+  - خروجی: dist/sitemap.xml و dist/robots.txt (کنار index.html سرو می‌شوند).
+  - محتوا: صفحه‌های ثابت + همهٔ دسته‌ها (/products?category=slug) + همهٔ
+    محصولات (/product/slug) + همهٔ مقاله‌ها (/articles/slug).
+  - robots.txt مسیرهای /admin، /cart، /checkout، /payment، /account، /login،
+    /register و /order/ را می‌بندد و نشانی sitemap را اعلام می‌کند.
+  - نمونهٔ متغیرها: frontend/.env.example
+
+سرعت و Core Web Vitals (بنرها):
+  - تصویر اول اسلایدر با loading="eager" و fetchPriority="high" و بقیه lazy
+    بارگذاری می‌شوند (LCP صفحهٔ اصلی زودتر کامل می‌شود).
+  - فونت‌های بارگذاری‌شده در پنل با link rel="preload" (only woff2، با
+    crossorigin) پیش‌بارگذاری می‌شوند؛ فونت‌ها همچنان font-display: swap
+    دارند تا متن در اولین رنگ‌آمیزی خوانا باشد.
+
+کارهای سئو پس از تکمیل ظاهر و امکانات فروشگاه (فریز شده):
+  زیرساخت فاز اول ساخته شده و دست نمی‌خورد (seo.ts · structuredData.ts ·
+  usePageMeta · sitemap/robots در build). موارد زیر عمداً به بعد موکول شده‌اند،
+  چون به ساختار و محتوای نهایی وابسته‌اند:
+
+  ۱) عنوان و توضیحات نهایی برای هر دسته/محصول (الگوی عنوان + برند).
+  ۲) متن alt تصاویر از پنل (الان از نام محصول/عنوان بنر پر می‌شود).
+  ۳) صفحه‌های اعتماد و سئو: درباره ما · تماس · قوانین و شرایط · حریم خصوصی ·
+     شرایط مرجوعی (+ ContactPoint در Organization و لینک در فوتر).
+  ۴) حذف تکرار در صفحهٔ اصلی: یک کاروسل هیرو برای هر نما با matchMedia و یک
+     نسخهٔ متن برای نوار، تا متن/تیتر تکراری در DOM نماند.
+  ۵) شمارندهٔ H1 در پنل بنرها + هشدار «فقط یک H1 در هر صفحه».
+  ۶) پیش‌رندر یا SSR برای مسیرهای عمومی (اصلی، محصول، دسته، مقاله) تا متن
+     بنر/محصول برای خزنده‌های بدون JS و شبکه‌های اجتماعی دیده شود.
+  ۷) تصویر هیرو و کارت محصول: width/height یا aspect-ratio (کاهش CLS) و
+     نسخهٔ WebP/AVIF.
+  ۸) پیش از انتشار: VITE_SITE_URL تنظیم شود · npm run build (ساخت sitemap) ·
+     ثبت دامنه و sitemap در Google Search Console · آنالیتیکس (GA4/Clarity) و
+     ردیابی رویداد افزودن به سبد و خرید.
+
+  قاعده‌های حین کار (نباید از دست برود):
+    - slug محصول/دسته تغییر نکند؛ اگر تغییر کرد ریدایرکت 301 لازم است.
+    - صفحهٔ جدید = مسیر در App.tsx + یک usePageMeta.
+    - صفحهٔ نیمه‌کاره noindex یا بدون لینک بماند.
+    - یک h1 در هر صفحه (متن لایه‌ای بنر h1 دوم نسازد).
+
+توکن‌های رنگ فروشگاه (فاز ۱ ظاهر — انجام شد):
+  - رنگ‌ها یک‌جا در frontend/src/index.css داخل @theme تعریف شده‌اند
+    (Tailwind v4). کلاس‌ها از توکن استفاده می‌کنند، نه هگز دستی:
+      سبز برند:   bg-brand-600 · text-brand-700 · border-brand-300
+      سطح و خط:   bg-cream · bg-cream-deep · border-line · border-line-soft
+      متن:        text-ink · text-ink-soft · text-muted · text-muted-soft
+      معناها:     text-discount · text-stock · text-save · bg-blush-* · bg-plum-*
+      شعاع:       rounded-card (۱.۵rem)
+    نام‌ها عمداً با رنگ‌های پیش‌فرض Tailwind (rose/emerald/slate) تداخل
+    ندارند تا مقادیر پیش‌فرض آن‌ها عوض نشود.
+  - فایل‌های مهاجرت‌شده: Header · ProductCard · Button · CategoryMenu
+    (دکمهٔ زیرمجموعهٔ دسته) و Home (متن‌های خاکستری). بقیهٔ صفحه‌ها
+    به‌تدریج و در همان الگو مهاجرت می‌کنند.
+  - اصلاح کنتراست (این رنگ‌ها زیر حد AA بودند):
+      #7b847b → text-muted (#5b655c، ۵.۹:۱)
+      #9ca39a / #9aa397 / #9aaa96 → text-muted-soft (#6b7268، ۵.۰:۱)
+      «صرفه‌جویی» #648b65 → text-save (#4b7048، ۵.۷:۱)
+      «موجود در انبار» emerald-600 → text-stock (#2f7d4f، ۵.۰:۱)
+      بج تخفیف روی تصویر rose-500 → bg-discount (#b5475a، ۵.۲:۱)
+  - قاعده: رنگ جدید بدون توکن اضافه نشود؛ اول توکن در @theme، بعد کلاس.
+
+  ادامهٔ مهاجرت رنگ (پایان فاز ۱ — انجام شد):
+   - همهٔ هگزهای دستی کلاس‌ها (۶۲۹ مورد در ۱۸ فایل) به توکن تبدیل شد:
+     CategoryMenu · Footer · SizeGuide · ProductSizeGuide · ArticleCard ·
+     LatestArticles · Articles · ArticleDetail · Home · Products ·
+     ProductDetail · Cart · Checkout · Payment · OrderDetail · Account ·
+     Wishlist · BannerTextLayers.
+   - رنگ‌های پیش‌فرض Tailwind هم نگاشت شد (۷۶۹ مورد در ۱۲ فایل):
+       slate/gray → cream · line · line-strong · muted-soft · muted · ink-soft · ink
+       blue/sky/indigo/teal → brand-50..800 (دکمه‌های آبی ورود/سبد/پرداخت حالا سبز برند)
+       green/emerald → stock / stock-700 (موفقیت)
+       red/rose → discount / blush-* (خطا و حذف)
+       amber/orange → gold / gold-50 / gold-100 (هشدار و ستاره‌های امتیاز)
+     نتیجه: هیچ کلاس رنگ پیش‌فرض یا هگز دستی در صفحات فروشگاه نمانده است
+     (پنل ادمین عمداً دست‌نخورده است).
+   - توکن‌های تازه: brand-75/250/550/800 · plum-50/300/600 · line-strong ·
+     stock-700 · discount-700 · info · info-100 · info-200 · gold · gold-50 · gold-100
+   - قاعدهٔ کار: فایل‌های فارسی فقط با ابزار editor یا Node با UTF-8 صریح
+     ویرایش شوند؛ Set-Content پاورشل متن را خراب می‌کند.
+
+فاز ۲ ظاهر — کارت محصول (انجام شد):
+  - تصویر کارت با نسبت ثابت aspect-[4/5] به‌جای h-36/h-52/h-56؛ ارتفاع کارت
+    هنگام لود تصویر نمی‌پرد (CLS). تصویرها absolute داخل جعبهٔ نسبت‌ثابت.
+  - تصویر دوم در هاور: productCardHoverImageUrl از images[].sort_order،
+    با محوشدگی (group-hover/image) و احترام به motion-reduce. اگر تصویر
+    اصلی خطا بدهد، تصویر دوم جای آن می‌نشیند.
+  - چیپ سایز روی کارت: productCardSizeChips از variants فعال (سایز + موجودی)،
+    مرتب‌سازی عددی/حرفی، حداکثر ۵ چیپ و «+n»؛ سایز ناموجود خط‌خورده.
+    ردیف چیپ ارتفاع رزرو دارد تا کارت‌ها هم‌تراز بمانند.
+  - سلسله‌مراتب قیمت بازچیده شد: قیمت نهایی بزرگ‌ترین لایه، بعد بج درصد
+    تخفیف و قیمت قبلی خط‌خورده، آخر «صرفه‌جویی» کوچک و کم‌رنگ.
+  - نوع WishlistProduct حالا variants را هم دارد (سرور از قبل آن را
+    برمی‌گرداند: ProductController@index و WishlistController@index).
+
+نمادها و مجوزها (اینماد) در فوتر — انجام شد:
+  نوار اعتماد پایین‌چپ فوتر که کامل از پنل مدیریت می‌شود.
+  - دیتابیس: جدول trust_badges
+    (migration 2026_11_13_000000_create_trust_badges_table)
+    ستون‌ها: title · image · link · sort_order · is_active · open_in_new_tab
+  - مدل: backend/app/Models/TrustBadge.php + scope visible (فعال‌ها به ترتیب
+    sort_order سپس id).
+  - API عمومی: GET /api/v1/trust-badges
+    (TrustBadgeController) — فقط نشان‌های فعال و دارای تصویر؛ رکوردهای ناقص
+    حذف می‌شوند؛ خروجی ۱۰ دقیقه کش می‌شود (STOREFRONT_CACHE_KEY) و در کش
+    آرایهٔ ساده ذخیره می‌شود، نه کالکشن Eloquent (همان درس بنرها تا با درایور
+    file/database خطای __PHP_Incomplete_Class ندهد).
+  - API مدیریت (گروه settings.manage در routes/api.php):
+    GET/POST /admin/trust-badges · PUT /admin/trust-badges/{id} ·
+    PATCH /admin/trust-badges/{id}/status · DELETE /admin/trust-badges/{id} ·
+    POST /admin/trust-badges/image (بارگذاری تصویر، دیسک public)
+    هر نوشتن، کش عمومی را پاک می‌کند.
+  - فرانت فروشگاه:
+      services/trustBadges.ts  (حافظه → localStorage → شبکه، normalize و
+                                getCachedTrustBadges/fetchTrustBadges/
+                                invalidateTrustBadgesCache)
+      hooks/useTrustBadges.ts
+      کلید کش: STORAGE_KEYS.storefrontTrustBadges در utils/storageKeys.ts
+      محل نمایش: components/Footer.tsx — بخش «نمادها و مجوزها» سمت چپ،
+                 بالای نوار پایانی؛ اگر نشانی فعال نباشد چیزی رندر نمی‌شود.
+  - پنل مدیریت: frontend/src/pages/AdminTrustBadges.tsx
+    مسیر: /admin/trust-badges (App.tsx، با AdminPermissionGuard روی
+    ADMIN_PERMISSIONS.settings) · آیتم سایدبار در AdminLayout.tsx (گروه
+    گزارش‌ها، آیکن BadgeCheck) · ثبت در utils/adminSidebarLayout.ts
+    امکانات: آمار (کل/فعال/غیرفعال/دارای لینک)، فرم افزودن و ویرایش
+    (عنوان، لینک صفحهٔ مجوز، ترتیب، بارگذاری یا مسیر تصویر با پیش‌نمایش،
+    نمایش در فوتر، باز شدن در تب جدید)، جدول فهرست با ویرایش/فعال‌سازی/حذف.
+  - تست: backend/tests/Feature/TrustBadgeTest.php (۵ تست، ۲۳ اظهار)
+    ساخت + تازه‌سازی کش عمومی · حذف غیرفعال و بدون تصویر از خروجی عمومی ·
+    تغییر وضعیت و حذف · بارگذاری تصویر · دسترسی مهمان (۴۰۱).
+
+

@@ -1,96 +1,46 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { ChevronDown, Menu, Ruler, X } from "lucide-react";
-import api from "../services/api";
+import { BookOpen, ChevronDown, Menu, Ruler, X } from "lucide-react";
 
-interface Category {
-  id: number;
-  name: string;
-  slug: string;
-  is_active?: boolean;
-  children?: Category[];
-}
-
-interface CategoryCache {
-  data: Category[];
-  expiresAt: number;
-}
-
-const CATEGORY_CACHE_KEY = "storefront_categories_cache";
-const CATEGORY_CACHE_TTL = 5 * 60 * 1000;
-
-function readCategoryCache(): Category[] | null {
-  try {
-    const raw = sessionStorage.getItem(CATEGORY_CACHE_KEY);
-    if (!raw) return null;
-
-    const cached = JSON.parse(raw) as CategoryCache;
-
-    if (
-      !Array.isArray(cached.data) ||
-      typeof cached.expiresAt !== "number" ||
-      cached.expiresAt <= Date.now()
-    ) {
-      sessionStorage.removeItem(CATEGORY_CACHE_KEY);
-      return null;
-    }
-
-    return cached.data;
-  } catch {
-    return null;
-  }
-}
-
-function writeCategoryCache(data: Category[]): void {
-  try {
-    const cache: CategoryCache = {
-      data,
-      expiresAt: Date.now() + CATEGORY_CACHE_TTL,
-    };
-
-    sessionStorage.setItem(CATEGORY_CACHE_KEY, JSON.stringify(cache));
-  } catch {
-    // در صورت در دسترس نبودن Storage، دریافت API همچنان کار می‌کند.
-  }
-}
+import {
+  fetchCategories,
+  getCachedCategories,
+  type StorefrontCategory,
+} from "../services/categories";
 
 function CategoryMenu() {
-  const [categories, setCategories] = useState<Category[]>(
-    () => readCategoryCache() ?? [],
+  // مقدار اولیه از کش (حافظه/localStorage) خوانده می‌شود تا منو در همان
+  // اولین رندر نمایش داده شود و اسکلت لودینگ فقط در اولین بازدید دیده شود.
+  const [categories, setCategories] = useState<StorefrontCategory[]>(
+    () => getCachedCategories() ?? [],
   );
 
-  const [loading, setLoading] = useState(() => readCategoryCache() === null);
+  const [loading, setLoading] = useState(() => getCachedCategories() === null);
+
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [expandedCategory, setExpandedCategory] = useState<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
 
-    async function loadCategories() {
-      try {
-        const response = await api.get("/categories");
-        const data = response.data?.data;
-
-        if (!Array.isArray(data)) {
-          throw new Error("Invalid categories response");
+    // اگر کش موجود باشد، منو بدون معطلی نمایش داده می‌شود و این درخواست
+    // صرفاً در پس‌زمینه داده‌ها را تازه می‌کند.
+    fetchCategories()
+      .then((data) => {
+        if (!cancelled) {
+          setCategories(data);
         }
-
-        if (cancelled) return;
-
-        setCategories(data);
-        writeCategoryCache(data);
-      } catch (error) {
+      })
+      .catch((error) => {
         if (!cancelled) {
           console.error("دریافت دسته‌بندی‌های فروشگاه ناموفق بود:", error);
         }
-      } finally {
+      })
+      .finally(() => {
         if (!cancelled) {
           setLoading(false);
         }
-      }
-    }
-
-    void loadCategories();
+      });
 
     return () => {
       cancelled = true;
@@ -106,41 +56,29 @@ function CategoryMenu() {
     setExpandedCategory(null);
   };
 
-  if (loading && activeCategories.length === 0) {
-    return (
-      <nav
-        aria-label="دسته‌بندی محصولات"
-        className="min-h-12 border-b border-[#e6ecdf] bg-[#faf9f4] lg:min-h-14"
-        dir="rtl"
-      >
-        <div className="mx-auto max-w-7xl px-4 py-3 sm:px-6">
-          <div className="flex flex-wrap gap-3" aria-hidden="true">
-            {[1, 2, 3, 4].map((item) => (
-              <div
-                key={item}
-                className="h-8 w-20 animate-pulse rounded-xl bg-[#e8eee3]"
-              />
-            ))}
-          </div>
-        </div>
-      </nav>
-    );
-  }
-
-  if (activeCategories.length === 0) {
-    return null;
-  }
-
   return (
     <nav
       aria-label="دسته‌بندی محصولات"
-      className="relative z-40 border-b border-[#e6ecdf] bg-[#faf9f4]"
+      aria-busy={loading}
+      className="relative z-40 border-b border-brand-100 bg-cream"
       dir="rtl"
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <div className="flex min-h-12 items-center justify-between py-2 lg:min-h-14">
           {/* Desktop navigation */}
           <div className="hidden w-full flex-wrap items-center gap-x-3 gap-y-2 lg:flex">
+            {/* تا وقتی دسته‌بندی‌ها نرسیده‌اند، جای لینک‌ها با اسکلت پر می‌شود
+                تا ارتفاع نوار منو ثابت بماند و صفحه جابه‌جا نشود. */}
+            {loading && activeCategories.length === 0 && (
+              <div className="flex flex-wrap gap-3" aria-hidden="true">
+                {[1, 2, 3, 4].map((item) => (
+                  <div
+                    key={item}
+                    className="h-8 w-20 animate-pulse rounded-xl bg-line"
+                  />
+                ))}
+              </div>
+            )}
             {activeCategories.map((category) => {
               const activeChildren = (category.children ?? []).filter(
                 (child) => child.is_active !== false,
@@ -153,10 +91,10 @@ function CategoryMenu() {
                     className="
                       inline-flex items-center gap-1.5 rounded-xl
                       px-3.5 py-2.5 text-sm font-medium
-                      text-[#526451] transition-colors
-                      hover:bg-[#e8efe2] hover:text-[#385e3e]
+                      text-ink-soft transition-colors
+                      hover:bg-brand-100 hover:text-brand-700
                       focus-visible:outline-none
-                      focus-visible:ring-2 focus-visible:ring-[#91ad8d]
+                      focus-visible:ring-2 focus-visible:ring-brand-400
                     "
                   >
                     {category.name}
@@ -175,7 +113,7 @@ function CategoryMenu() {
                       className="
                         invisible absolute right-0 top-full z-50
                         min-w-52 translate-y-2 rounded-2xl
-                        border border-[#e5eadd] bg-white p-2
+                        border border-line bg-white p-2
                         opacity-0 shadow-lg
                         transition-all duration-200
                         group-hover:visible group-hover:translate-y-0
@@ -191,10 +129,10 @@ function CategoryMenu() {
                           to={`/products?category=${encodeURIComponent(child.slug)}`}
                           className="
                             block rounded-xl px-3.5 py-3
-                            text-sm text-[#687565]
+                            text-sm text-muted
                             transition-colors
-                            hover:bg-[#f0f4eb] hover:text-[#4f7754]
-                            focus-visible:bg-[#f0f4eb]
+                            hover:bg-brand-75 hover:text-brand-600
+                            focus-visible:bg-brand-75
                             focus-visible:outline-none
                           "
                         >
@@ -211,15 +149,30 @@ function CategoryMenu() {
               to="/size-guide"
               className="
                 inline-flex items-center gap-1.5 rounded-xl border
-                border-[#e0d8ee] bg-[#f6f2fb] px-3.5 py-2.5
-                text-sm font-bold text-[#725a91] transition-colors
-                hover:bg-[#eee7f5] hover:text-[#5f4880]
+                border-plum-200 bg-plum-50 px-3.5 py-2.5
+                text-sm font-bold text-plum-600 transition-colors
+                hover:bg-plum-100 hover:text-plum-700
                 focus-visible:outline-none
-                focus-visible:ring-2 focus-visible:ring-[#b39dcd]
+                focus-visible:ring-2 focus-visible:ring-plum-300
               "
             >
               <Ruler size={16} aria-hidden="true" />
               راهنمای انتخاب سایز
+            </Link>
+
+            <Link
+              to="/articles"
+              className="
+                inline-flex items-center gap-1.5 rounded-xl border
+                border-brand-250 bg-brand-50 px-3.5 py-2.5
+                text-sm font-bold text-brand-600 transition-colors
+                hover:bg-brand-100 hover:text-brand-700
+                focus-visible:outline-none
+                focus-visible:ring-2 focus-visible:ring-brand-400
+              "
+            >
+              <BookOpen size={16} aria-hidden="true" />
+              مقالات و راهنما
             </Link>
           </div>
 
@@ -234,11 +187,11 @@ function CategoryMenu() {
             }}
             className="
               inline-flex items-center gap-2 rounded-xl
-              border border-[#e2e9dc] bg-white px-3.5 py-2.5
-              text-sm font-bold text-[#526b55]
-              transition-colors hover:bg-[#e8efe2]
+              border border-brand-250 bg-white px-3.5 py-2.5
+              text-sm font-bold text-ink-soft
+              transition-colors hover:bg-brand-100
               focus-visible:outline-none
-              focus-visible:ring-2 focus-visible:ring-[#91ad8d]
+              focus-visible:ring-2 focus-visible:ring-brand-400
               lg:hidden
             "
           >
@@ -255,7 +208,13 @@ function CategoryMenu() {
 
         {/* Mobile navigation menu */}
         {mobileMenuOpen && (
-          <div className="border-t border-[#e6ecdf] py-2 lg:hidden">
+          <div className="border-t border-brand-100 py-2 lg:hidden">
+            {loading && activeCategories.length === 0 && (
+              <p className="px-3 py-3 text-sm text-muted-soft">
+                در حال بارگذاری دسته‌بندی‌ها…
+              </p>
+            )}
+
             {activeCategories.map((category) => {
               const activeChildren = (category.children ?? []).filter(
                 (child) => child.is_active !== false,
@@ -266,7 +225,7 @@ function CategoryMenu() {
               return (
                 <div
                   key={category.id}
-                  className="border-b border-[#edf0e8] last:border-b-0"
+                  className="border-b border-brand-75 last:border-b-0"
                 >
                   <div className="flex items-center justify-between gap-2">
                     <Link
@@ -274,8 +233,8 @@ function CategoryMenu() {
                       onClick={closeMenu}
                       className="
                         flex-1 rounded-xl py-3 text-sm font-medium
-                        text-[#526451] transition-colors
-                        hover:text-[#4f7754]
+                        text-ink-soft transition-colors
+                        hover:text-brand-600
                       "
                     >
                       {category.name}
@@ -290,10 +249,10 @@ function CategoryMenu() {
                           setExpandedCategory(expanded ? null : category.id)
                         }
                         className="
-                          rounded-xl p-2.5 text-[#7b947a]
-                          transition-colors hover:bg-[#e8efe2]
+                          rounded-xl p-2.5 text-brand-500
+                          transition-colors hover:bg-brand-100
                           focus-visible:outline-none
-                          focus-visible:ring-2 focus-visible:ring-[#91ad8d]
+                          focus-visible:ring-2 focus-visible:ring-brand-400
                         "
                       >
                         <ChevronDown
@@ -307,7 +266,7 @@ function CategoryMenu() {
                   </div>
 
                   {expanded && activeChildren.length > 0 && (
-                    <div className="mb-3 mr-2 space-y-1 border-r-2 border-[#c9b6df] pr-3">
+                    <div className="mb-3 mr-2 space-y-1 border-r-2 border-plum-300 pr-3">
                       {activeChildren.map((child) => (
                         <Link
                           key={child.id}
@@ -315,9 +274,9 @@ function CategoryMenu() {
                           onClick={closeMenu}
                           className="
                             block rounded-xl px-3 py-2.5
-                            text-sm text-[#788174]
+                            text-sm text-muted-soft
                             transition-colors
-                            hover:bg-[#eee7f5] hover:text-[#725a91]
+                            hover:bg-plum-100 hover:text-plum-600
                           "
                         >
                           {child.name}
@@ -334,13 +293,27 @@ function CategoryMenu() {
               onClick={closeMenu}
               className="
                 mt-2 flex items-center gap-2 rounded-xl
-                bg-[#f6f2fb] px-3 py-3 text-sm font-bold
-                text-[#725a91] transition-colors
-                hover:bg-[#eee7f5] hover:text-[#5f4880]
+                bg-plum-50 px-3 py-3 text-sm font-bold
+                text-plum-600 transition-colors
+                hover:bg-plum-100 hover:text-plum-700
               "
             >
               <Ruler size={17} aria-hidden="true" />
               راهنمای انتخاب سایز
+            </Link>
+
+            <Link
+              to="/articles"
+              onClick={closeMenu}
+              className="
+                mt-2 flex items-center gap-2 rounded-xl
+                bg-brand-50 px-3 py-3 text-sm font-bold
+                text-brand-600 transition-colors
+                hover:bg-brand-100 hover:text-brand-700
+              "
+            >
+              <BookOpen size={17} aria-hidden="true" />
+              مقالات و راهنما
             </Link>
           </div>
         )}

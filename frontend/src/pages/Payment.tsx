@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 
 import Layout from "../components/Layout";
+import { usePrivatePageMeta } from "../hooks/usePageMeta";
 import { useCart } from "../context/CartContext";
 import api from "../services/api";
 
@@ -31,6 +32,8 @@ type OrderData = {
 };
 
 function Payment() {
+  usePrivatePageMeta("پرداخت سفارش", "/payment");
+
   const { orderNumber } = useParams();
   const navigate = useNavigate();
   const { clearCart } = useCart();
@@ -138,16 +141,16 @@ function Payment() {
     return (
       <Layout>
         <main className="max-w-4xl mx-auto px-4 sm:px-6 py-16">
-          <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-10 text-center">
-            <div className="w-14 h-14 mx-auto rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
+          <div className="bg-white rounded-3xl border border-line shadow-sm p-10 text-center">
+            <div className="w-14 h-14 mx-auto rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center">
               <Loader2 size={28} className="animate-spin" />
             </div>
 
-            <h1 className="text-xl font-black text-slate-900 mt-5">
+            <h1 className="text-xl font-black text-ink mt-5">
               در حال دریافت اطلاعات سفارش
             </h1>
 
-            <p className="text-slate-500 mt-2">لطفاً چند لحظه صبر کنید...</p>
+            <p className="text-muted mt-2">لطفاً چند لحظه صبر کنید...</p>
           </div>
         </main>
       </Layout>
@@ -160,26 +163,26 @@ function Payment() {
         <main className="max-w-4xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
           <Link
             to="/account"
-            className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-blue-600 transition-colors"
+            className="inline-flex items-center gap-2 text-sm text-muted hover:text-brand-600 transition-colors"
           >
             <ArrowRight size={17} />
             بازگشت به حساب کاربری
           </Link>
 
-          <div className="mt-6 bg-white rounded-3xl border border-red-100 shadow-sm p-8 sm:p-10 text-center">
-            <div className="w-16 h-16 mx-auto rounded-2xl bg-red-50 text-red-600 flex items-center justify-center">
+          <div className="mt-6 bg-white rounded-3xl border border-blush-100 shadow-sm p-8 sm:p-10 text-center">
+            <div className="w-16 h-16 mx-auto rounded-2xl bg-blush-50 text-discount flex items-center justify-center">
               <AlertCircle size={30} />
             </div>
 
-            <h1 className="text-2xl font-black text-slate-900 mt-5">
+            <h1 className="text-2xl font-black text-ink mt-5">
               خطا در دریافت سفارش
             </h1>
 
-            <p className="text-red-600 mt-3 font-bold">{error}</p>
+            <p className="text-discount mt-3 font-bold">{error}</p>
 
             <Link
               to="/account"
-              className="inline-flex items-center justify-center gap-2 mt-6 rounded-xl bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 font-bold transition"
+              className="inline-flex items-center justify-center gap-2 mt-6 rounded-xl bg-brand-600 hover:bg-brand-700 text-white px-6 py-3 font-bold transition"
             >
               مشاهده سفارش‌ها
               <ChevronLeft size={18} />
@@ -209,32 +212,32 @@ function Payment() {
         <div className="mb-8">
           <Link
             to="/account"
-            className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-blue-600 transition-colors"
+            className="inline-flex items-center gap-2 text-sm text-muted hover:text-brand-600 transition-colors"
           >
             <ArrowRight size={17} />
             بازگشت به حساب کاربری
           </Link>
 
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 mt-5">
+          <h1 className="text-2xl sm:text-3xl font-black text-ink mt-5">
             پرداخت سفارش
           </h1>
 
-          <p className="text-slate-500 mt-2">تکمیل پرداخت و ثبت نهایی سفارش</p>
+          <p className="text-muted mt-2">تکمیل پرداخت و ثبت نهایی سفارش</p>
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
-            <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 sm:p-7">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5 pb-6 border-b border-slate-100">
+            <section className="bg-white rounded-3xl border border-line shadow-sm p-5 sm:p-7">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5 pb-6 border-b border-line">
                 <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                  <div className="w-14 h-14 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center">
                     <ReceiptText size={27} />
                   </div>
 
                   <div>
-                    <p className="text-xs text-slate-400">شماره سفارش</p>
+                    <p className="text-xs text-muted-soft">شماره سفارش</p>
 
-                    <p className="font-black text-blue-600 mt-1" dir="ltr">
+                    <p className="font-black text-brand-600 mt-1" dir="ltr">
                       {order.order_number}
                     </p>
                   </div>
@@ -243,8 +246,8 @@ function Payment() {
                 <div
                   className={`inline-flex items-center gap-2 px-3 py-2 rounded-full border text-xs font-bold ${
                     alreadyPaid
-                      ? "bg-green-50 text-green-700 border-green-100"
-                      : "bg-amber-50 text-amber-700 border-amber-100"
+                      ? "bg-brand-50 text-stock-700 border-brand-100"
+                      : "bg-gold-50 text-gold border-gold-100"
                   }`}
                 >
                   {alreadyPaid ? (
@@ -258,23 +261,23 @@ function Payment() {
               </div>
 
               {error && (
-                <div className="mt-5 flex items-start gap-3 rounded-xl bg-red-50 border border-red-100 text-red-600 p-4 text-sm font-bold">
+                <div className="mt-5 flex items-start gap-3 rounded-xl bg-blush-50 border border-blush-100 text-discount p-4 text-sm font-bold">
                   <AlertCircle size={19} className="flex-shrink-0 mt-0.5" />
                   <span>{error}</span>
                 </div>
               )}
 
               {alreadyPaid ? (
-                <div className="mt-7 rounded-2xl bg-green-50 border border-green-100 p-6 text-center">
-                  <div className="w-14 h-14 mx-auto rounded-2xl bg-green-100 text-green-600 flex items-center justify-center">
+                <div className="mt-7 rounded-2xl bg-brand-50 border border-brand-100 p-6 text-center">
+                  <div className="w-14 h-14 mx-auto rounded-2xl bg-brand-100 text-stock flex items-center justify-center">
                     <CheckCircle2 size={30} />
                   </div>
 
-                  <h2 className="text-xl font-black text-green-800 mt-4">
+                  <h2 className="text-xl font-black text-stock-700 mt-4">
                     این سفارش قبلاً پرداخت شده است
                   </h2>
 
-                  <p className="text-sm text-green-700 mt-2">
+                  <p className="text-sm text-stock-700 mt-2">
                     پرداخت این سفارش با موفقیت انجام شده است.
                   </p>
 
@@ -283,7 +286,7 @@ function Payment() {
                     onClick={() =>
                       navigate(`/account/orders/${order.order_number}`)
                     }
-                    className="mt-5 inline-flex items-center justify-center gap-2 rounded-xl bg-green-600 hover:bg-green-700 text-white px-6 py-3 font-bold transition"
+                    className="mt-5 inline-flex items-center justify-center gap-2 rounded-xl bg-stock hover:bg-stock-700 text-white px-6 py-3 font-bold transition"
                   >
                     مشاهده جزئیات سفارش
                     <ChevronLeft size={18} />
@@ -291,18 +294,18 @@ function Payment() {
                 </div>
               ) : (
                 <div className="mt-7">
-                  <div className="rounded-2xl bg-blue-50 border border-blue-100 p-5">
+                  <div className="rounded-2xl bg-brand-50 border border-brand-100 p-5">
                     <div className="flex items-start gap-4">
-                      <div className="w-11 h-11 rounded-xl bg-white text-blue-600 flex items-center justify-center flex-shrink-0">
+                      <div className="w-11 h-11 rounded-xl bg-white text-brand-600 flex items-center justify-center flex-shrink-0">
                         <CreditCard size={22} />
                       </div>
 
                       <div>
-                        <h2 className="font-black text-blue-900">
+                        <h2 className="font-black text-brand-800">
                           پرداخت آنلاین
                         </h2>
 
-                        <p className="text-sm text-blue-700 mt-1 leading-6">
+                        <p className="text-sm text-brand-700 mt-1 leading-6">
                           برای تکمیل سفارش، مبلغ نهایی را پرداخت کنید.
                         </p>
                       </div>
@@ -310,33 +313,33 @@ function Payment() {
                   </div>
 
                   <div className="mt-6 grid sm:grid-cols-3 gap-3">
-                    <div className="rounded-xl bg-slate-50 border border-slate-100 p-4">
-                      <p className="text-xs text-slate-400">مبلغ کالاها</p>
-                      <p className="font-bold text-slate-800 mt-1">
+                    <div className="rounded-xl bg-cream border border-line p-4">
+                      <p className="text-xs text-muted-soft">مبلغ کالاها</p>
+                      <p className="font-bold text-ink mt-1">
                         {formatPrice(subtotal)}
                       </p>
-                      <p className="text-xs text-slate-400 mt-1">تومان</p>
+                      <p className="text-xs text-muted-soft mt-1">تومان</p>
                     </div>
 
-                    <div className="rounded-xl bg-red-50 border border-red-100 p-4">
-                      <p className="text-xs text-red-500">تخفیف</p>
-                      <p className="font-bold text-red-600 mt-1">
+                    <div className="rounded-xl bg-blush-50 border border-blush-100 p-4">
+                      <p className="text-xs text-discount">تخفیف</p>
+                      <p className="font-bold text-discount mt-1">
                         {discount > 0
                           ? `- ${formatPrice(discount)}`
                           : "بدون تخفیف"}
                       </p>
-                      <p className="text-xs text-red-400 mt-1">تومان</p>
+                      <p className="text-xs text-blush-400 mt-1">تومان</p>
                     </div>
 
-                    <div className="rounded-xl bg-green-50 border border-green-100 p-4">
-                      <p className="text-xs text-green-600">هزینه ارسال</p>
-                      <p className="font-bold text-green-700 mt-1">
+                    <div className="rounded-xl bg-brand-50 border border-brand-100 p-4">
+                      <p className="text-xs text-stock">هزینه ارسال</p>
+                      <p className="font-bold text-stock-700 mt-1">
                         {shippingCost === 0
                           ? "رایگان"
                           : formatPrice(shippingCost)}
                       </p>
                       {shippingCost > 0 && (
-                        <p className="text-xs text-green-500 mt-1">تومان</p>
+                        <p className="text-xs text-stock mt-1">تومان</p>
                       )}
                     </div>
                   </div>
@@ -344,21 +347,21 @@ function Payment() {
               )}
             </section>
 
-            <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 sm:p-7">
+            <section className="bg-white rounded-3xl border border-line shadow-sm p-5 sm:p-7">
               <div className="flex items-center gap-3 mb-5">
-                <div className="w-11 h-11 rounded-xl bg-slate-50 text-slate-600 flex items-center justify-center">
+                <div className="w-11 h-11 rounded-xl bg-cream text-muted flex items-center justify-center">
                   <ShoppingBag size={22} />
                 </div>
 
                 <div>
                   <h2 className="text-lg font-black">اطلاعات پرداخت</h2>
-                  <p className="text-sm text-slate-500 mt-1">
+                  <p className="text-sm text-muted mt-1">
                     پرداخت امن سفارش از طریق درگاه
                   </p>
                 </div>
               </div>
 
-              <div className="space-y-3 text-sm text-slate-600 leading-7">
+              <div className="space-y-3 text-sm text-muted leading-7">
                 <p>
                   پس از انتخاب گزینه پرداخت، سفارش شما به‌عنوان پرداخت‌شده ثبت
                   خواهد شد.
@@ -366,7 +369,7 @@ function Payment() {
                 <p>اطلاعات سفارش شما در حساب کاربری قابل مشاهده خواهد بود.</p>
               </div>
 
-              <div className="mt-5 flex items-center gap-2 text-xs text-slate-400">
+              <div className="mt-5 flex items-center gap-2 text-xs text-muted-soft">
                 <ShieldCheck size={16} />
                 پرداخت امن و ثبت اطلاعات سفارش
               </div>
@@ -374,15 +377,15 @@ function Payment() {
           </div>
 
           <div>
-            <section className="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 sm:p-6 lg:sticky lg:top-6">
-              <div className="flex items-center gap-3 pb-5 border-b border-slate-100">
-                <div className="w-11 h-11 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+            <section className="bg-white rounded-3xl border border-line shadow-sm p-5 sm:p-6 lg:sticky lg:top-6">
+              <div className="flex items-center gap-3 pb-5 border-b border-line">
+                <div className="w-11 h-11 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center">
                   <CreditCard size={22} />
                 </div>
 
                 <div>
                   <h2 className="font-black text-lg">خلاصه پرداخت</h2>
-                  <p className="text-xs text-slate-500 mt-1">
+                  <p className="text-xs text-muted mt-1">
                     مبلغ قابل پرداخت
                   </p>
                 </div>
@@ -390,24 +393,24 @@ function Payment() {
 
               <div className="mt-5 space-y-4">
                 <div className="flex items-center justify-between gap-4 text-sm">
-                  <span className="text-slate-500">مبلغ کالاها</span>
-                  <span className="font-bold text-slate-800">
+                  <span className="text-muted">مبلغ کالاها</span>
+                  <span className="font-bold text-ink">
                     {formatPrice(subtotal)}
                   </span>
                 </div>
 
                 {discount > 0 && (
                   <div className="flex items-center justify-between gap-4 text-sm">
-                    <span className="text-red-500">تخفیف</span>
-                    <span className="font-bold text-red-600">
+                    <span className="text-discount">تخفیف</span>
+                    <span className="font-bold text-discount">
                       - {formatPrice(discount)}
                     </span>
                   </div>
                 )}
 
                 <div className="flex items-center justify-between gap-4 text-sm">
-                  <span className="text-slate-500">ارسال</span>
-                  <span className="font-bold text-green-600">
+                  <span className="text-muted">ارسال</span>
+                  <span className="font-bold text-stock">
                     {shippingCost === 0
                       ? "رایگان"
                       : `${formatPrice(shippingCost)} تومان`}
@@ -416,29 +419,29 @@ function Payment() {
 
                 {taxPercent > 0 && (
                   <div className="flex items-center justify-between gap-4 text-sm">
-                    <span className="text-slate-500">
+                    <span className="text-muted">
                       ارزش افزوده ({formatPrice(taxPercent)}٪)
                     </span>
-                    <span className="font-bold text-slate-800">
+                    <span className="font-bold text-ink">
                       {formatPrice(taxAmount)} تومان
                     </span>
                   </div>
                 )}
               </div>
 
-              <div className="mt-5 pt-5 border-t border-slate-100">
+              <div className="mt-5 pt-5 border-t border-line">
                 <div
-                  className="rounded-xl bg-blue-50 border border-blue-100 p-4"
+                  className="rounded-xl bg-brand-50 border border-brand-100 p-4"
                   style={{
                     direction: "ltr",
                     textAlign: "left",
                   }}
                 >
-                  <p className="text-xs text-blue-500">مبلغ نهایی</p>
-                  <p className="text-2xl font-black text-blue-700 mt-1 whitespace-nowrap">
+                  <p className="text-xs text-brand-500">مبلغ نهایی</p>
+                  <p className="text-2xl font-black text-brand-700 mt-1 whitespace-nowrap">
                     {formatPrice(total)}
                   </p>
-                  <p className="text-xs text-blue-500 mt-1">تومان</p>
+                  <p className="text-xs text-brand-500 mt-1">تومان</p>
                 </div>
               </div>
 
@@ -447,7 +450,7 @@ function Payment() {
                   type="button"
                   onClick={handlePayment}
                   disabled={paying}
-                  className="mt-5 w-full inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white py-3.5 font-black transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="mt-5 w-full inline-flex items-center justify-center gap-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white py-3.5 font-black transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {paying ? (
                     <>
@@ -465,7 +468,7 @@ function Payment() {
 
               <Link
                 to="/account"
-                className="mt-3 w-full inline-flex items-center justify-center gap-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 py-3 font-bold transition"
+                className="mt-3 w-full inline-flex items-center justify-center gap-2 rounded-xl bg-line hover:bg-line-strong text-ink-soft py-3 font-bold transition"
               >
                 بازگشت به حساب کاربری
                 <ArrowRight size={17} />

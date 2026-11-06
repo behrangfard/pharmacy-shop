@@ -17,10 +17,19 @@ import {
 import { adminApi } from "../services/api";
 import { useAdminAuth } from "../context/AdminAuthContext";
 
+type AdminRoleKey =
+  | "super_admin"
+  | "product_manager"
+  | "order_manager"
+  | "support";
+
 type ShopAdmin = {
   id: number;
   name: string;
   email: string;
+  admin_role: AdminRoleKey | null;
+  admin_role_label: string | null;
+  permissions: string[];
   created_at: string | null;
 };
 
@@ -35,6 +44,7 @@ type AdminsResponse = {
   };
   summary: {
     total_admins: number;
+    total_super_admins: number;
     current_admin_id: number;
   };
 };
@@ -55,12 +65,50 @@ type ModalState =
   | { type: "edit"; admin: ShopAdmin }
   | null;
 
+/* فهرست نقش‌ها هم‌راستا با App\Support\AdminRole در بک‌اند. */
+const ADMIN_ROLE_OPTIONS: {
+  value: AdminRoleKey;
+  label: string;
+  description: string;
+}[] = [
+  {
+    value: "super_admin",
+    label: "مدیر ارشد",
+    description:
+      "دسترسی کامل به همه بخش‌های پنل، از جمله مدیران و تنظیمات فروشگاه",
+  },
+  {
+    value: "product_manager",
+    label: "مدیر محصولات",
+    description: "محصولات، دسته‌بندی‌ها، برندها، بنرها و نظرات",
+  },
+  {
+    value: "order_manager",
+    label: "مدیر سفارش‌ها",
+    description: "سفارش‌ها، مرجوعی‌ها، کدهای تخفیف، مشتریان و گزارش فروش",
+  },
+  {
+    value: "support",
+    label: "پشتیبانی",
+    description: "سفارش‌ها، مرجوعی‌ها، مشتریان و پیام‌رسانی",
+  },
+];
+
 const emptyForm = {
   name: "",
   email: "",
+  adminRole: "support" as AdminRoleKey,
   password: "",
   passwordConfirmation: "",
 };
+
+function adminRoleText(admin: ShopAdmin) {
+  return (
+    admin.admin_role_label ||
+    ADMIN_ROLE_OPTIONS.find((role) => role.value === admin.admin_role)?.label ||
+    "مدیر ارشد"
+  );
+}
 
 const numberFormatter = new Intl.NumberFormat("fa-IR");
 
@@ -97,10 +145,11 @@ function getApiErrorMessage(error: unknown, fallback: string) {
 }
 
 function AdminAdmins() {
-  const { user, setUser } = useAdminAuth();
+  const { user, setUser, roleLabel } = useAdminAuth();
 
   const [admins, setAdmins] = useState<ShopAdmin[]>([]);
   const [totalAdmins, setTotalAdmins] = useState(0);
+  const [totalSuperAdmins, setTotalSuperAdmins] = useState(0);
   const [currentAdminId, setCurrentAdminId] = useState<number | null>(null);
 
   const [loading, setLoading] = useState(true);
@@ -158,6 +207,7 @@ function AdminAdmins() {
 
         setAdmins(response.data?.data?.data ?? []);
         setTotalAdmins(response.data?.summary?.total_admins ?? 0);
+        setTotalSuperAdmins(response.data?.summary?.total_super_admins ?? 0);
         setCurrentAdminId(response.data?.summary?.current_admin_id ?? null);
       } catch (loadError) {
         if (!mountedRef.current || requestId !== requestIdRef.current) {
@@ -201,6 +251,7 @@ function AdminAdmins() {
     setForm({
       name: admin.name,
       email: admin.email,
+      adminRole: admin.admin_role ?? "super_admin",
       password: "",
       passwordConfirmation: "",
     });
@@ -278,7 +329,11 @@ function AdminAdmins() {
       return;
     }
 
-    const payload: Record<string, string> = { name, email };
+    const payload: Record<string, string> = {
+      name,
+      email,
+      admin_role: form.adminRole,
+    };
 
     if (passwordTouched) {
       payload.password = form.password;
@@ -337,7 +392,11 @@ function AdminAdmins() {
         if (!firstMessage) return;
 
         const mappedField =
-          field === "password_confirmation" ? "passwordConfirmation" : field;
+          field === "password_confirmation"
+            ? "passwordConfirmation"
+            : field === "admin_role"
+              ? "adminRole"
+              : field;
 
         fieldErrors[mappedField] = firstMessage;
       });
@@ -997,6 +1056,17 @@ function AdminAdmins() {
           color: #4f6a52;
         }
 
+        .admins-form-select {
+          cursor: pointer;
+        }
+
+        .admins-form-hint {
+          margin: 6px 0 0;
+          color: var(--admin-muted);
+          font-size: 11px;
+          line-height: 1.8;
+        }
+
         .admins-modal-footer {
           display: flex;
           justify-content: flex-end;
@@ -1143,10 +1213,24 @@ function AdminAdmins() {
             <Crown size={18} aria-hidden="true" />
           </span>
           <div>
+            <span className="admins-stat-label">مدیر ارشد</span>
+            <strong className="admins-stat-value">
+              {formatNumber(totalSuperAdmins)}
+            </strong>
+            <span className="admins-stat-hint">دسترسی کامل به همه بخش‌ها</span>
+          </div>
+        </article>
+
+        <article className="admins-stat">
+          <span className="admins-stat-icon">
+            <Mail size={18} aria-hidden="true" />
+          </span>
+          <div>
             <span className="admins-stat-label">حساب جاری</span>
             <strong className="admins-stat-value is-small">
               {user?.name || "مدیر فروشگاه"}
             </strong>
+            <span className="admins-stat-hint">{roleLabel}</span>
             <span className="admins-stat-hint">{user?.email || "—"}</span>
           </div>
         </article>
@@ -1197,7 +1281,7 @@ function AdminAdmins() {
 
                     <span className="admins-role">
                       <ShieldCheck size={13} aria-hidden="true" />
-                      دسترسی کامل مدیر
+                      {adminRoleText(admin)}
                     </span>
                   </div>
                 </div>
@@ -1286,8 +1370,8 @@ function AdminAdmins() {
                     className="admins-modal-subtitle"
                   >
                     {isEditing
-                      ? "اطلاعات حساب را به‌روزرسانی کن. برای تغییر رمز، هر دو فیلد رمز را پر کن."
-                      : "این حساب دسترسی کامل به پنل مدیریت خواهد داشت."}
+                      ? "اطلاعات حساب و نقش دسترسی را به‌روزرسانی کن. برای تغییر رمز، هر دو فیلد رمز را پر کن."
+                      : "نقش حساب را انتخاب کن؛ سطح دسترسی این مدیر به پنل بر همان اساس تعیین می‌شود."}
                   </p>
                 </div>
               </div>
@@ -1384,6 +1468,43 @@ function AdminAdmins() {
                   <p id="admin-email-error" className="admins-form-error">
                     {formErrors.email}
                   </p>
+                )}
+              </div>
+
+              <div className="admins-form-field">
+                <label className="admins-form-label" htmlFor="admin-role">
+                  نقش و سطح دسترسی
+                </label>
+
+                <select
+                  id="admin-role"
+                  className="admins-form-input admins-form-select"
+                  value={form.adminRole}
+                  onChange={(event) => {
+                    setForm((current) => ({
+                      ...current,
+                      adminRole: event.target.value as AdminRoleKey,
+                    }));
+                    setFormErrors((current) => ({ ...current, adminRole: "" }));
+                  }}
+                  aria-describedby="admin-role-hint"
+                  disabled={saving}
+                >
+                  {ADMIN_ROLE_OPTIONS.map((role) => (
+                    <option key={role.value} value={role.value}>
+                      {role.label}
+                    </option>
+                  ))}
+                </select>
+
+                <p id="admin-role-hint" className="admins-form-hint">
+                  {ADMIN_ROLE_OPTIONS.find(
+                    (role) => role.value === form.adminRole,
+                  )?.description || ""}
+                </p>
+
+                {formErrors.adminRole && (
+                  <p className="admins-form-error">{formErrors.adminRole}</p>
                 )}
               </div>
 

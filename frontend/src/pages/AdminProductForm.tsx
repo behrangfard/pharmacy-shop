@@ -2,8 +2,15 @@ import { FormEvent, useEffect, useState } from "react";
 
 import { Link, useNavigate, useParams } from "react-router-dom";
 
+import AdminProductSizeGuideEditor from "../components/AdminProductSizeGuideEditor";
 import { adminApi } from "../services/api";
 import { API_ORIGIN } from "../utils/images";
+import {
+  emptyProductSizeGuide,
+  hasProductSizeGuideContent,
+  parseProductSizeGuide,
+  type ProductSizeGuide,
+} from "../utils/productSizeGuide";
 
 
 
@@ -51,6 +58,8 @@ interface ProductVariant {
   id: number;
   product_id: number;
   name: string;
+  /** سایز نرمال‌شدهٔ تنوع؛ اگر در پنل خالی بماند از نام تنوع استخراج می‌شود. */
+  size: string | null;
   sku: string;
   price: string | number | null;
   compare_price: string | number | null;
@@ -62,6 +71,7 @@ interface ProductVariant {
 interface ProductVariantForm {
   id?: number;
   name: string;
+  size: string;
   sku: string;
   price: string;
   compare_price: string;
@@ -113,6 +123,12 @@ interface Product {
   meta_description: string | null;
 
   images?: ProductImage[];
+
+  /** تنوع‌های محصول؛ فقط در دریافت تک‌محصول از پنل برگردانده می‌شود. */
+  variants?: ProductVariant[];
+
+  /** راهنمای سایز اختصاصی همین محصول */
+  size_guide?: unknown;
 
 }
 
@@ -387,6 +403,13 @@ function AdminProductForm() {
   const [images, setImages] = useState<ProductImage[]>([]);
   const [variants, setVariants] = useState<ProductVariantForm[]>([]);
 
+  /** راهنمای سایز اختصاصی همین محصول (جدا از راهنمای سایز عمومی سایت) */
+  const [sizeGuide, setSizeGuide] = useState<ProductSizeGuide>(emptyProductSizeGuide);
+
+  const [sizeGuideUploading, setSizeGuideUploading] = useState(false);
+
+  const [sizeGuideUploadError, setSizeGuideUploadError] = useState("");
+
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
 
   const [loading, setLoading] = useState(true);
@@ -449,6 +472,27 @@ function AdminProductForm() {
 
           setForm(readProduct(productData));
 
+          // تنوع‌های ذخیره‌شده باید به فرم برگردند؛ بک‌اند تنوع‌های ارسال‌نشده را
+          // غیرفعال می‌کند، پس خالی‌ماندن این لیست یعنی غیرفعال‌شدن همهٔ تنوع‌ها.
+          setVariants(
+            (productData.variants ?? []).map((variant) => ({
+              id: variant.id,
+              name: variant.name,
+              size: variant.size ?? "",
+              sku: variant.sku,
+              price: String(variant.price ?? ""),
+              compare_price: String(variant.compare_price ?? ""),
+              stock: String(variant.stock ?? 0),
+              image: variant.image ?? "",
+              is_active: variant.is_active,
+            })),
+          );
+
+          setSizeGuide(
+            parseProductSizeGuide(productData.size_guide) ??
+              emptyProductSizeGuide(),
+          );
+
           setImages(
 
             [...(productData.images ?? [])].sort(
@@ -481,7 +525,11 @@ function AdminProductForm() {
 
           setForm({ ...emptyForm });
 
+          setVariants([]);
+
           setImages([]);
+
+          setSizeGuide(emptyProductSizeGuide());
 
         }
 
@@ -566,6 +614,7 @@ function AdminProductForm() {
       ...current,
       {
         name: "",
+        size: "",
         sku: "",
         price: "",
         compare_price: "",
@@ -629,6 +678,70 @@ function AdminProductForm() {
   }
 
 
+
+  /**
+   * بارگذاری تصویر «نحوهٔ اندازه‌گیری» راهنمای سایز همین محصول.
+   *
+   * مستقل از شناسهٔ محصول است تا هنگام ساخت محصول جدید هم کار کند و مسیر
+   * ذخیره‌شده در فرم قرار می‌گیرد.
+   */
+  async function handleSizeGuideImageUpload(
+    file: File,
+  ): Promise<string | null> {
+
+    setSizeGuideUploadError("");
+
+    if (!/\.(jpe?g|png|webp)$/i.test(file.name)) {
+
+      setSizeGuideUploadError(
+        "فرمت تصویر مجاز نیست؛ JPG، PNG یا WebP انتخاب کنید.",
+      );
+
+      return null;
+
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+
+      setSizeGuideUploadError("حجم تصویر بیشتر از ۵ مگابایت است.");
+
+      return null;
+
+    }
+
+    const body = new FormData();
+
+    body.append("file", file);
+
+    try {
+
+      setSizeGuideUploading(true);
+
+      const response = await adminApi.post(
+        "/admin/products/size-guide-image",
+        body,
+      );
+
+      const path = response.data?.data?.path;
+
+      return typeof path === "string" && path !== "" ? path : null;
+
+    } catch (err: any) {
+
+      setSizeGuideUploadError(
+        err?.response?.data?.message ||
+          "بارگذاری تصویر ناموفق بود. اتصال سرور و دسترسی مدیر را بررسی کنید.",
+      );
+
+      return null;
+
+    } finally {
+
+      setSizeGuideUploading(false);
+
+    }
+
+  }
 
   async function handleImageUpload() {
 
@@ -948,6 +1061,7 @@ function AdminProductForm() {
       .map((variant) => ({
       ...(variant.id ? { id: variant.id } : {}),
       name: variant.name.trim(),
+      size: variant.size.trim() || null,
       sku: variant.sku.trim(),
       price: variant.price.trim() === "" ? null : Number(variant.price),
       compare_price: variant.compare_price.trim() === "" ? null : Number(variant.compare_price),
@@ -996,6 +1110,14 @@ function AdminProductForm() {
       meta_title: form.meta_title.trim() || null,
 
       meta_description: form.meta_description.trim() || null,
+
+      /*
+       * راهنمای سایز اختصاصی محصول فقط وقتی ارسال می‌شود که محتوا داشته
+       * باشد یا محصول در حال ویرایش باشد (تا حذف کامل راهنما هم ممکن باشد).
+       */
+      ...(isEdit || hasProductSizeGuideContent(sizeGuide)
+        ? { size_guide: sizeGuide }
+        : {}),
 
       ...(form.slug.trim() ? { slug: form.slug.trim() } : {}),
 
@@ -1112,6 +1234,12 @@ function AdminProductForm() {
     })),
 
   ]);
+
+  /** نام تنوع‌های فعال؛ برای ساخت سریع سطرهای جدول راهنمای سایز */
+  const sizeGuideVariantNames = variants
+    .filter((variant) => variant.is_active)
+    .map((variant) => variant.name.trim())
+    .filter((name) => name !== "");
 
 
 
@@ -2163,6 +2291,10 @@ function AdminProductForm() {
                       <input value={variant.name} onChange={(event) => updateVariant(index, "name", event.target.value)} placeholder="مثلاً سایز متوسط" style={fieldStyle} disabled={!variant.is_active} />
                     </div>
                     <div>
+                      <label style={labelStyle}>سایز (برای فیلتر فروشگاه)</label>
+                      <input value={variant.size} maxLength={50} onChange={(event) => updateVariant(index, "size", event.target.value)} placeholder="مثلاً 75B؛ خالی = از نام تنوع" style={{ ...fieldStyle, direction: "ltr", textAlign: "right" }} disabled={!variant.is_active} />
+                    </div>
+                    <div>
                       <label style={labelStyle}>کد SKU تنوع *</label>
                       <input value={variant.sku} onChange={(event) => updateVariant(index, "sku", event.target.value)} placeholder="مثلاً ITEM-M" style={{ ...fieldStyle, direction: "ltr", textAlign: "right" }} disabled={!variant.is_active} />
                     </div>
@@ -2310,6 +2442,28 @@ function AdminProductForm() {
             {checkboxField("is_taxable", "مشمول ارزش افزوده")}
 
           </div>
+
+        </section>
+
+
+
+        <section style={sectionStyle}>
+
+          <AdminProductSizeGuideEditor
+
+            value={sizeGuide}
+
+            onChange={setSizeGuide}
+
+            variantNames={sizeGuideVariantNames}
+
+            onUploadImage={handleSizeGuideImageUpload}
+
+            uploadingImage={sizeGuideUploading}
+
+            uploadError={sizeGuideUploadError}
+
+          />
 
         </section>
 

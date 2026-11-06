@@ -29,7 +29,7 @@ class AdminProductValidationTest extends TestCase
         ]);
 
         $response = $this->putJson(
-            '/api/v1/admin/products/' . $product->id,
+            '/api/v1/admin/products/'.$product->id,
             [
                 'views_count' => 999999,
                 'sales_count' => 999999,
@@ -56,7 +56,7 @@ class AdminProductValidationTest extends TestCase
         $product = $this->createProduct();
 
         $response = $this->putJson(
-            '/api/v1/admin/products/' . $product->id,
+            '/api/v1/admin/products/'.$product->id,
             [
                 'name' => 'Updated Validation Product',
                 'price' => 150000,
@@ -87,7 +87,7 @@ class AdminProductValidationTest extends TestCase
         $product = $this->createProduct();
 
         $response = $this->putJson(
-            '/api/v1/admin/products/' . $product->id,
+            '/api/v1/admin/products/'.$product->id,
             [
                 'is_taxable' => true,
             ]
@@ -116,7 +116,7 @@ class AdminProductValidationTest extends TestCase
         ]);
 
         $response = $this->putJson(
-            '/api/v1/admin/products/' . $product->id,
+            '/api/v1/admin/products/'.$product->id,
             [
                 'is_taxable' => false,
             ]
@@ -128,7 +128,7 @@ class AdminProductValidationTest extends TestCase
             'id' => $product->id,
             'is_taxable' => false,
         ]);
-       }
+    }
 
     public function test_product_creation_saves_taxable_status_when_enabled(): void
     {
@@ -181,6 +181,60 @@ class AdminProductValidationTest extends TestCase
         ]);
     }
 
+    public function test_product_detail_returns_variants_with_size_for_the_admin_form(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $product = $this->createProduct();
+
+        $variant = $product->variants()->create([
+            'name' => 'سایز 80B',
+            'sku' => 'VALIDATION-VARIANT-80B',
+            'price' => 120000,
+            'compare_price' => null,
+            'stock' => 4,
+            'image' => null,
+            'is_active' => true,
+        ]);
+
+        $response = $this->getJson('/api/v1/admin/products/'.$product->id);
+
+        $response->assertOk()
+            ->assertJsonPath('data.variants.0.id', $variant->id)
+            ->assertJsonPath('data.variants.0.size', '80B');
+
+        // فرم پنل همین فهرست را هنگام ذخیره دوباره می‌فرستد؛ نباید تنوع‌ها
+        // غیرفعال شوند و سایز هم باید دست‌نخورده بماند.
+        $variants = array_map(
+            fn (array $item): array => [
+                'id' => $item['id'],
+                'name' => $item['name'],
+                'size' => $item['size'],
+                'sku' => $item['sku'],
+                'price' => $item['price'],
+                'compare_price' => $item['compare_price'],
+                'stock' => $item['stock'],
+                'image' => $item['image'],
+                'is_active' => $item['is_active'],
+            ],
+            $response->json('data.variants')
+        );
+
+        $this->putJson('/api/v1/admin/products/'.$product->id, [
+            'variants' => $variants,
+        ])->assertOk();
+
+        $this->assertDatabaseHas('product_variants', [
+            'id' => $variant->id,
+            'size' => '80B',
+            'is_active' => true,
+        ]);
+    }
+
     public function test_product_list_rejects_invalid_per_page_values(): void
     {
         $admin = User::factory()->create([
@@ -191,7 +245,7 @@ class AdminProductValidationTest extends TestCase
 
         foreach (['abc', '0', '-1'] as $perPage) {
             $response = $this->getJson(
-                '/api/v1/admin/products?per_page=' . $perPage
+                '/api/v1/admin/products?per_page='.$perPage
             );
 
             $response->assertUnprocessable()

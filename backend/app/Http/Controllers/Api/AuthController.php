@@ -28,7 +28,7 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'ثبت‌نام با موفقیت انجام شد.',
-            'user' => $user,
+            'user' => $this->presentUser($user),
             'token' => $token,
         ], 201);
     }
@@ -58,7 +58,7 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'ورود با موفقیت انجام شد.',
-            'user' => $user,
+            'user' => $this->presentUser($user),
             'token' => $token,
         ]);
     }
@@ -66,7 +66,7 @@ class AuthController extends Controller
     public function me(Request $request)
     {
         return response()->json([
-            'user' => $request->user(),
+            'user' => $this->presentUser($request->user()),
         ]);
     }
 
@@ -92,7 +92,7 @@ class AuthController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'اطلاعات حساب با موفقیت به‌روزرسانی شد.',
-            'user' => $user->fresh(),
+            'user' => $this->presentUser($user->fresh()),
         ]);
     }
 
@@ -134,6 +134,22 @@ class AuthController extends Controller
 
         return response()->json([
             'message' => 'با موفقیت خارج شدید.',
+        ]);
+    }
+
+    /**
+     * اطلاعات کاربر برای فرانت‌اند: نقش مدیریتی و فهرست مجوزها.
+     *
+     * پنل ادمین منو و مسیرها را بر اساس همین «permissions» محدود می‌کند.
+     *
+     * @return array<string, mixed>
+     */
+    private function presentUser(User $user): array
+    {
+        return array_merge($user->toArray(), [
+            'admin_role' => $user->adminRole(),
+            'admin_role_label' => $user->adminRoleLabel(),
+            'permissions' => $user->adminPermissions(),
         ]);
     }
 }

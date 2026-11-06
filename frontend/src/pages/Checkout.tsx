@@ -15,9 +15,11 @@ import {
 } from "lucide-react";
 
 import Layout from "../components/Layout";
+import { usePrivatePageMeta } from "../hooks/usePageMeta";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 import api from "../services/api";
+import { useStoreSettings } from "../hooks/useStoreSettings";
 
 const CHECKOUT_KEY_STORAGE = "checkout_idempotency_key";
 const CHECKOUT_FINGERPRINT_STORAGE = "checkout_fingerprint";
@@ -34,10 +36,25 @@ type CheckoutPayload = {
   address: string;
   postal_code: string;
   notes: null;
+  coupon_code?: string | null;
   items: CheckoutItem[];
 };
 
+/**
+ * ساختار قدیمی اقلام سبد خرید که ممکن است هنوز در localStorage کاربران
+ * باقی مانده باشد؛ برای تبدیل ایمن به payload سفارش استفاده می‌شود.
+ */
+type LegacyCartItem = {
+  id: number;
+  quantity: number;
+  product_id?: number | string | null;
+  product?: { id?: number | string | null } | null;
+  variant_id?: number | string | null;
+};
+
 function Checkout() {
+  usePrivatePageMeta("تسویه حساب", "/checkout");
+
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const { items, cartTotal, clearCart } = useCart();
@@ -61,6 +78,17 @@ function Checkout() {
   const [vatEnabled, setVatEnabled] = useState(false);
   const [vatPercent, setVatPercent] = useState(0);
 
+  const storeSettings = useStoreSettings();
+
+  const [couponInput, setCouponInput] = useState("");
+  const [coupon, setCoupon] = useState<{
+    code: string;
+    discount: number;
+    title: string | null;
+  } | null>(null);
+  const [couponLoading, setCouponLoading] = useState(false);
+  const [couponError, setCouponError] = useState("");
+
   // مقداردهی اولیه نام کاربر بدون بازنویسی اطلاعاتی که خودش ویرایش کرده است.
   useEffect(() => {
     if (authLoading || !user || nameInitialized.current) {
@@ -78,32 +106,58 @@ function Checkout() {
     nameInitialized.current = true;
   }, [authLoading, user]);
 
-  // دریافت تنظیمات مالیات فروشگاه.
+  // همگام‌سازی مالیات با تنظیمات فروشگاه (قابل ویرایش از پنل مدیران).
   useEffect(() => {
-    let active = true;
+    setVatEnabled(storeSettings.vat_enabled);
+    setVatPercent(
+      Math.min(Math.max(Number(storeSettings.vat_percent) || 0, 0), 100),
+    );
+  }, [storeSettings.vat_enabled, storeSettings.vat_percent]);
 
-    const loadTaxSettings = async () => {
-      try {
-        const response = await api.get("/store-settings/tax");
-        const settings = response.data?.data;
+  async function applyCoupon() {
+    const code = couponInput.trim();
 
-        if (active && settings) {
-          setVatEnabled(settings.vat_enabled === true);
-          setVatPercent(
-            Math.min(Math.max(Number(settings.vat_percent) || 0, 0), 100),
-          );
-        }
-      } catch (error) {
-        console.error("Failed to load tax settings:", error);
+    if (!code || couponLoading) return;
+
+    setCouponLoading(true);
+    setCouponError("");
+
+    try {
+      const response = await api.post("/coupons/check", {
+        code,
+        subtotal: Math.max(0, Number(cartTotal ?? 0)),
+      });
+
+      const data = response.data?.data;
+      const discount = Number(data?.discount) || 0;
+
+      if (discount <= 0) {
+        throw new Error("این کد تخفیف برای سبد خرید فعلی معتبر نیست.");
       }
-    };
 
-    void loadTaxSettings();
+      setCoupon({
+        code: data?.code ?? code.toUpperCase(),
+        discount,
+        title: data?.title ?? null,
+      });
+      setCouponInput(data?.code ?? code.toUpperCase());
+    } catch (error: any) {
+      setCoupon(null);
+      setCouponError(
+        error?.response?.data?.message ??
+          error?.message ??
+          "کد تخفیف معتبر نیست.",
+      );
+    } finally {
+      setCouponLoading(false);
+    }
+  }
 
-    return () => {
-      active = false;
-    };
-  }, []);
+  function removeCoupon() {
+    setCoupon(null);
+    setCouponInput("");
+    setCouponError("");
+  }
 
   const formatPrice = (value: string | number) => {
     const numericValue = Number(value);
@@ -115,7 +169,30 @@ function Checkout() {
     return numericValue.toLocaleString("fa-IR");
   };
 
-  const shippingCost = 0;
+  const itemsSubtotal = Math.max(0, Number(cartTotal ?? 0));
+  const couponDiscount = Math.min(coupon?.discount ?? 0, itemsSubtotal);
+  const netSubtotal = Math.max(0, itemsSubtotal - couponDiscount);
+
+  const shippingCost = useMemo(() => {
+    if (items.length === 0 || netSubtotal <= 0) {
+      return 0;
+    }
+
+    const threshold = Number(storeSettings.free_shipping_threshold) || 0;
+
+    if (
+      storeSettings.free_shipping_enabled &&
+      threshold > 0 &&
+      netSubtotal >= threshold
+    ) {
+      return 0;
+    }
+
+    return Math.max(0, Number(storeSettings.shipping_cost) || 0);
+  }, [items.length, netSubtotal, storeSettings]);
+
+  const isFreeShipping =
+    shippingCost === 0 && (Number(storeSettings.shipping_cost) || 0) > 0;
 
   const cartOriginalTotal = useMemo(() => {
     return items.reduce((total, item) => {
@@ -139,16 +216,16 @@ function Checkout() {
       return total + Number(item.price) * Number(item.quantity);
     }, 0);
 
-    return Math.max(0, taxableProductsTotal + shippingCost);
-  }, [items, shippingCost]);
+    return Math.max(0, taxableProductsTotal - couponDiscount) + shippingCost;
+  }, [items, couponDiscount, shippingCost]);
 
   const taxAmount = useMemo(() => {
     return vatEnabled ? Math.round((taxableAmount * vatPercent) / 100) : 0;
   }, [taxableAmount, vatEnabled, vatPercent]);
 
   const finalTotal = useMemo(() => {
-    return Math.max(0, Number(cartTotal ?? 0) + shippingCost + taxAmount);
-  }, [cartTotal, shippingCost, taxAmount]);
+    return Math.max(0, netSubtotal + shippingCost + taxAmount);
+  }, [netSubtotal, shippingCost, taxAmount]);
 
   // مرتب‌سازی قطعی اقلام برای اینکه ترتیب سبد خرید
   // باعث تولید کلید Idempotency متفاوت نشود.
@@ -168,6 +245,7 @@ function Checkout() {
       address: payload.address,
       postal_code: payload.postal_code,
       notes: payload.notes,
+      coupon_code: payload.coupon_code ?? null,
       items: normalizedItems,
     });
   };
@@ -243,15 +321,16 @@ function Checkout() {
     }
 
     // هر قلم سبد خرید با شناسه تنوع خودش به سفارش تبدیل می‌شود.
-    const orderItems: CheckoutItem[] = items.map((item) => {
+    const orderItems: CheckoutItem[] = items.map((cartItem) => {
+      const item = cartItem as LegacyCartItem;
       const productId = Number(item.product_id ?? item.product?.id ?? item.id);
 
       const variantId =
-        item.variant_id !== undefined &&
-        item.variant_id !== null &&
-        item.variant_id !== ""
-          ? Number(item.variant_id)
-          : undefined;
+        item.variant_id === undefined ||
+        item.variant_id === null ||
+        item.variant_id === ""
+          ? undefined
+          : Number(item.variant_id);
 
       return {
         product_id: productId,
@@ -306,6 +385,7 @@ function Checkout() {
         address: fullAddress,
         postal_code: postalCode.trim(),
         notes: null,
+        coupon_code: coupon?.code ?? null,
         items: orderItems,
       };
 
@@ -401,28 +481,28 @@ function Checkout() {
         <main className="mx-auto max-w-4xl px-4 py-10 sm:px-6 sm:py-14">
           <Link
             to="/cart"
-            className="inline-flex items-center gap-2 text-sm text-slate-500 transition-colors hover:text-[#385e3e]"
+            className="inline-flex items-center gap-2 text-sm text-muted transition-colors hover:text-brand-700"
           >
             <ArrowRight size={17} />
             بازگشت به سبد خرید
           </Link>
 
-          <div className="mt-6 rounded-3xl border border-slate-100 bg-white p-8 text-center shadow-sm sm:p-12">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#e8efe2] text-[#537653]">
+          <div className="mt-6 rounded-3xl border border-line bg-white p-8 text-center shadow-sm sm:p-12">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-100 text-brand-550">
               <ShoppingBag size={30} />
             </div>
 
-            <h1 className="mt-5 text-2xl font-black text-slate-900">
+            <h1 className="mt-5 text-2xl font-black text-ink">
               سبد خرید شما خالی است
             </h1>
 
-            <p className="mt-2 text-slate-500">
+            <p className="mt-2 text-muted">
               برای ادامه خرید، ابتدا محصولی به سبد خرید اضافه کنید.
             </p>
 
             <Link
               to="/products"
-              className="mt-6 inline-flex items-center justify-center gap-2 rounded-xl bg-[#648767] px-6 py-3 font-bold text-white transition-colors hover:bg-[#385e3e]"
+              className="mt-6 inline-flex items-center justify-center gap-2 rounded-xl bg-brand-500 px-6 py-3 font-bold text-white transition-colors hover:bg-brand-700"
             >
               مشاهده محصولات
               <ChevronLeft size={18} />
@@ -439,17 +519,17 @@ function Checkout() {
         <div className="mb-8">
           <Link
             to="/cart"
-            className="inline-flex items-center gap-2 text-sm text-slate-500 transition-colors hover:text-[#385e3e]"
+            className="inline-flex items-center gap-2 text-sm text-muted transition-colors hover:text-brand-700"
           >
             <ArrowRight size={17} />
             بازگشت به سبد خرید
           </Link>
 
-          <h1 className="mt-5 text-2xl font-black text-slate-900 sm:text-3xl">
+          <h1 className="mt-5 text-2xl font-black text-ink sm:text-3xl">
             تکمیل سفارش
           </h1>
 
-          <p className="mt-2 text-slate-500">
+          <p className="mt-2 text-muted">
             اطلاعات ارسال سفارش خود را وارد کنید.
           </p>
         </div>
@@ -457,19 +537,19 @@ function Checkout() {
         {!authLoading && !user && (
           <section
             role="status"
-            className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-5 sm:p-6"
+            className="mb-6 rounded-2xl border border-gold-100 bg-gold-50 p-5 sm:p-6"
           >
             <div className="flex items-start gap-3">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gold-100 text-gold">
                 <User size={22} />
               </div>
 
               <div className="min-w-0 flex-1">
-                <h2 className="text-base font-black text-slate-900">
+                <h2 className="text-base font-black text-ink">
                   برای ادامه خرید وارد حساب شوید
                 </h2>
 
-                <p className="mt-2 text-sm leading-7 text-slate-600">
+                <p className="mt-2 text-sm leading-7 text-muted">
                   برای ثبت و پیگیری سفارش، وارد حساب کاربری خود شوید یا یک حساب
                   جدید ایجاد کنید. پس از ورود می‌توانید به همین صفحه برگردید.
                 </p>
@@ -478,7 +558,7 @@ function Checkout() {
                   <Link
                     to="/login"
                     state={{ from: "/checkout" }}
-                    className="inline-flex items-center justify-center rounded-xl bg-[#648767] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[#385e3e]"
+                    className="inline-flex items-center justify-center rounded-xl bg-brand-500 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-brand-700"
                   >
                     ورود به حساب
                   </Link>
@@ -486,7 +566,7 @@ function Checkout() {
                   <Link
                     to="/register"
                     state={{ from: "/checkout" }}
-                    className="inline-flex items-center justify-center rounded-xl border border-[#d9e6d5] bg-white px-5 py-2.5 text-sm font-bold text-[#385e3e] transition hover:bg-[#f0f3e9]"
+                    className="inline-flex items-center justify-center rounded-xl border border-brand-250 bg-white px-5 py-2.5 text-sm font-bold text-brand-700 transition hover:bg-brand-75"
                   >
                     ایجاد حساب کاربری
                   </Link>
@@ -497,7 +577,7 @@ function Checkout() {
         )}
 
         {authLoading && (
-          <div className="mb-6 flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
+          <div className="mb-6 flex items-center gap-3 rounded-2xl border border-line bg-cream p-4 text-sm text-muted">
             <Loader2 size={18} className="animate-spin" />
             در حال بررسی وضعیت حساب کاربری...
           </div>
@@ -505,17 +585,17 @@ function Checkout() {
 
         <form onSubmit={handleSubmit} className="grid gap-6 lg:grid-cols-3">
           <div className="space-y-6 lg:col-span-2">
-            <section className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm sm:p-7">
+            <section className="rounded-3xl border border-line bg-white p-5 shadow-sm sm:p-7">
               <div className="mb-7 flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#e8efe2] text-[#537653]">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-100 text-brand-550">
                   <MapPin size={24} />
                 </div>
 
                 <div>
-                  <h2 className="text-xl font-black text-slate-900">
+                  <h2 className="text-xl font-black text-ink">
                     اطلاعات گیرنده
                   </h2>
-                  <p className="mt-1 text-sm text-slate-500">
+                  <p className="mt-1 text-sm text-muted">
                     اطلاعات لازم برای ارسال سفارش
                   </p>
                 </div>
@@ -524,7 +604,7 @@ function Checkout() {
               {error && (
                 <div
                   role="alert"
-                  className="mb-6 flex items-start gap-3 rounded-xl border border-red-100 bg-red-50 p-4 text-sm font-bold text-red-600"
+                  className="mb-6 flex items-start gap-3 rounded-xl border border-blush-100 bg-blush-50 p-4 text-sm font-bold text-discount"
                 >
                   <AlertCircle size={19} className="mt-0.5 flex-shrink-0" />
                   <span className="flex-1">{error}</span>
@@ -545,7 +625,7 @@ function Checkout() {
                 <div>
                   <label
                     htmlFor="checkout-first-name"
-                    className="mb-2 block text-sm font-bold text-slate-700"
+                    className="mb-2 block text-sm font-bold text-ink-soft"
                   >
                     نام
                   </label>
@@ -553,7 +633,7 @@ function Checkout() {
                   <div className="relative">
                     <User
                       size={18}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-soft"
                     />
 
                     <input
@@ -563,7 +643,7 @@ function Checkout() {
                       onChange={(event) => setFirstName(event.target.value)}
                       autoComplete="given-name"
                       required
-                      className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-4 pr-11 outline-none transition focus:border-[#648767] focus:ring-2 focus:ring-[#e8efe2]"
+                      className="w-full rounded-xl border border-line bg-white py-3 pl-4 pr-11 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
                     />
                   </div>
                 </div>
@@ -571,7 +651,7 @@ function Checkout() {
                 <div>
                   <label
                     htmlFor="checkout-last-name"
-                    className="mb-2 block text-sm font-bold text-slate-700"
+                    className="mb-2 block text-sm font-bold text-ink-soft"
                   >
                     نام خانوادگی
                   </label>
@@ -579,7 +659,7 @@ function Checkout() {
                   <div className="relative">
                     <User
                       size={18}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-soft"
                     />
 
                     <input
@@ -589,7 +669,7 @@ function Checkout() {
                       onChange={(event) => setLastName(event.target.value)}
                       autoComplete="family-name"
                       required
-                      className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-4 pr-11 outline-none transition focus:border-[#648767] focus:ring-2 focus:ring-[#e8efe2]"
+                      className="w-full rounded-xl border border-line bg-white py-3 pl-4 pr-11 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
                     />
                   </div>
                 </div>
@@ -597,7 +677,7 @@ function Checkout() {
                 <div className="sm:col-span-2">
                   <label
                     htmlFor="checkout-phone"
-                    className="mb-2 block text-sm font-bold text-slate-700"
+                    className="mb-2 block text-sm font-bold text-ink-soft"
                   >
                     شماره موبایل
                   </label>
@@ -605,7 +685,7 @@ function Checkout() {
                   <div className="relative">
                     <Phone
                       size={18}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400"
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-soft"
                     />
 
                     <input
@@ -617,7 +697,7 @@ function Checkout() {
                       required
                       dir="ltr"
                       placeholder="09123456789"
-                      className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-4 pr-11 outline-none transition focus:border-[#648767] focus:ring-2 focus:ring-[#e8efe2]"
+                      className="w-full rounded-xl border border-line bg-white py-3 pl-4 pr-11 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
                     />
                   </div>
                 </div>
@@ -625,7 +705,7 @@ function Checkout() {
                 <div>
                   <label
                     htmlFor="checkout-province"
-                    className="mb-2 block text-sm font-bold text-slate-700"
+                    className="mb-2 block text-sm font-bold text-ink-soft"
                   >
                     استان
                   </label>
@@ -637,14 +717,14 @@ function Checkout() {
                     onChange={(event) => setProvince(event.target.value)}
                     autoComplete="address-level1"
                     required
-                    className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none transition focus:border-[#648767] focus:ring-2 focus:ring-[#e8efe2]"
+                    className="w-full rounded-xl border border-line px-4 py-3 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
                   />
                 </div>
 
                 <div>
                   <label
                     htmlFor="checkout-city"
-                    className="mb-2 block text-sm font-bold text-slate-700"
+                    className="mb-2 block text-sm font-bold text-ink-soft"
                   >
                     شهر
                   </label>
@@ -656,14 +736,14 @@ function Checkout() {
                     onChange={(event) => setCity(event.target.value)}
                     autoComplete="address-level2"
                     required
-                    className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none transition focus:border-[#648767] focus:ring-2 focus:ring-[#e8efe2]"
+                    className="w-full rounded-xl border border-line px-4 py-3 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
                   />
                 </div>
 
                 <div className="sm:col-span-2">
                   <label
                     htmlFor="checkout-address"
-                    className="mb-2 block text-sm font-bold text-slate-700"
+                    className="mb-2 block text-sm font-bold text-ink-soft"
                   >
                     آدرس کامل
                   </label>
@@ -675,7 +755,7 @@ function Checkout() {
                     autoComplete="street-address"
                     required
                     rows={4}
-                    className="w-full resize-none rounded-xl border border-slate-200 px-4 py-3 outline-none transition focus:border-[#648767] focus:ring-2 focus:ring-[#e8efe2]"
+                    className="w-full resize-none rounded-xl border border-line px-4 py-3 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
                     placeholder="آدرس دقیق محل تحویل سفارش"
                   />
                 </div>
@@ -683,7 +763,7 @@ function Checkout() {
                 <div>
                   <label
                     htmlFor="checkout-postal-code"
-                    className="mb-2 block text-sm font-bold text-slate-700"
+                    className="mb-2 block text-sm font-bold text-ink-soft"
                   >
                     کد پستی
                   </label>
@@ -697,112 +777,206 @@ function Checkout() {
                     required
                     maxLength={10}
                     dir="ltr"
-                    className="w-full rounded-xl border border-slate-200 px-4 py-3 outline-none transition focus:border-[#648767] focus:ring-2 focus:ring-[#e8efe2]"
+                    className="w-full rounded-xl border border-line px-4 py-3 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
                   />
                 </div>
               </div>
             </section>
 
-            <section className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm sm:p-7">
+            <section className="rounded-3xl border border-line bg-white p-5 shadow-sm sm:p-7">
               <div className="flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-green-50 text-green-600">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-50 text-stock">
                   <Truck size={24} />
                 </div>
 
                 <div>
-                  <h2 className="text-xl font-black text-slate-900">
+                  <h2 className="text-xl font-black text-ink">
                     روش ارسال
                   </h2>
 
-                  <p className="mt-1 text-sm text-slate-500">
+                  <p className="mt-1 text-sm text-muted">
                     ارسال سفارش برای شما
                   </p>
                 </div>
               </div>
 
-              <div className="mt-6 rounded-2xl border border-[#d9e6d5] bg-[#e8efe2] p-5">
+              <div className="mt-6 rounded-2xl border border-brand-250 bg-brand-100 p-5">
                 <div className="flex items-center justify-between gap-4">
                   <div>
-                    <p className="font-black text-[#2f4b32]">ارسال معمولی</p>
+                    <p className="font-black text-brand-800">ارسال معمولی</p>
 
-                    <p className="mt-1 text-sm text-[#385e3e]">
+                    <p className="mt-1 text-sm text-brand-700">
                       ارسال سفارش به آدرس ثبت‌شده
                     </p>
                   </div>
 
-                  <div className="text-sm font-black text-green-600">
-                    رایگان
+                  <div className="text-sm font-black text-stock">
+                    {shippingCost === 0
+                      ? "رایگان"
+                      : `${formatPrice(shippingCost)} تومان`}
                   </div>
                 </div>
+
+                {isFreeShipping && (
+                  <p className="mt-3 text-xs text-brand-700">
+                    ارسال این سفارش رایگان است.
+                  </p>
+                )}
+
+                {!isFreeShipping &&
+                  storeSettings.free_shipping_enabled &&
+                  Number(storeSettings.free_shipping_threshold) > 0 && (
+                    <p className="mt-3 text-xs text-muted">
+                      با خرید بالای{" "}
+                      {formatPrice(storeSettings.free_shipping_threshold)}{" "}
+                      تومان، ارسال رایگان می‌شود.
+                    </p>
+                  )}
+
+                {storeSettings.shipping_note && (
+                  <p className="mt-2 text-xs leading-6 text-muted-soft">
+                    {storeSettings.shipping_note}
+                  </p>
+                )}
               </div>
             </section>
           </div>
 
           <div className="space-y-6">
-            <section className="rounded-3xl border border-slate-100 bg-white p-5 shadow-sm sm:p-6 lg:sticky lg:top-6">
-              <div className="flex items-center gap-3 border-b border-slate-100 pb-5">
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#e8efe2] text-[#537653]">
+            <section className="rounded-3xl border border-line bg-white p-5 shadow-sm sm:p-6 lg:sticky lg:top-6">
+              <div className="flex items-center gap-3 border-b border-line pb-5">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-100 text-brand-550">
                   <ShoppingBag size={22} />
                 </div>
 
                 <div>
                   <h2 className="text-lg font-black">خلاصه سفارش</h2>
 
-                  <p className="mt-1 text-xs text-slate-500">
+                  <p className="mt-1 text-xs text-muted">
                     {items.length.toLocaleString("fa-IR")} محصول
                   </p>
                 </div>
               </div>
 
+              <div className="mt-5 rounded-2xl border border-dashed border-brand-300 bg-brand-50 p-4">
+                <label
+                  htmlFor="checkout-coupon"
+                  className="text-xs font-bold text-brand-700"
+                >
+                  کد تخفیف دارید؟
+                </label>
+
+                <div className="mt-2 flex gap-2">
+                  <input
+                    id="checkout-coupon"
+                    value={couponInput}
+                    onChange={(event) => setCouponInput(event.target.value)}
+                    dir="ltr"
+                    placeholder="WELCOME10"
+                    className="min-w-0 flex-1 rounded-xl border border-brand-250 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => void applyCoupon()}
+                    disabled={couponLoading || !couponInput.trim()}
+                    className="shrink-0 rounded-xl bg-brand-500 px-4 py-2.5 text-xs font-bold text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {couponLoading ? "..." : "اعمال"}
+                  </button>
+                </div>
+
+                {couponError && (
+                  <p className="mt-2 text-xs text-discount">{couponError}</p>
+                )}
+
+                {coupon && (
+                  <div className="mt-3 flex items-center justify-between gap-3 rounded-xl bg-brand-100 px-3 py-2 text-xs text-brand-800">
+                    <span className="font-bold" dir="ltr">
+                      {coupon.code}
+                    </span>
+
+                    <span className="flex items-center gap-2">
+                      {formatPrice(coupon.discount)} تومان تخفیف
+                      <button
+                        type="button"
+                        onClick={removeCoupon}
+                        className="rounded-lg border border-brand-300 bg-white px-2 py-1 text-[10px] font-bold text-brand-700"
+                      >
+                        حذف
+                      </button>
+                    </span>
+                  </div>
+                )}
+              </div>
+
               <div className="mt-5 space-y-4">
                 <div className="flex items-center justify-between gap-4 text-sm">
-                  <span className="text-slate-500">مبلغ کالاها</span>
+                  <span className="text-muted">مبلغ کالاها</span>
 
-                  <span className="font-bold text-slate-800">
+                  <span className="font-bold text-ink">
                     {formatPrice(cartOriginalTotal)} تومان
                   </span>
                 </div>
 
                 {cartDiscount > 0 && (
                   <div className="flex items-center justify-between gap-4 text-sm">
-                    <span className="text-slate-500">تخفیف</span>
+                    <span className="text-muted">تخفیف</span>
 
-                    <span className="font-bold text-green-600">
+                    <span className="font-bold text-stock">
                       - {formatPrice(cartDiscount)} تومان
                     </span>
                   </div>
                 )}
 
-                <div className="flex items-center justify-between gap-4 text-sm">
-                  <span className="text-slate-500">هزینه ارسال</span>
+                {couponDiscount > 0 && (
+                  <div className="flex items-center justify-between gap-4 text-sm">
+                    <span className="text-muted">تخفیف کد تخفیف</span>
 
-                  <span className="font-bold text-green-600">رایگان</span>
+                    <span className="font-bold text-stock">
+                      - {formatPrice(couponDiscount)} تومان
+                    </span>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between gap-4 text-sm">
+                  <span className="text-muted">هزینه ارسال</span>
+
+                  <span
+                    className={`font-bold ${
+                      shippingCost === 0 ? "text-stock" : "text-ink"
+                    }`}
+                  >
+                    {shippingCost === 0
+                      ? "رایگان"
+                      : `${formatPrice(shippingCost)} تومان`}
+                  </span>
                 </div>
 
                 {vatEnabled && (
                   <div className="flex items-center justify-between gap-4 text-sm">
-                    <span className="text-slate-500">
+                    <span className="text-muted">
                       ارزش افزوده ({formatPrice(vatPercent)}٪)
                     </span>
 
-                    <span className="font-bold text-slate-800">
+                    <span className="font-bold text-ink">
                       {formatPrice(taxAmount)} تومان
                     </span>
                   </div>
                 )}
               </div>
 
-              <div className="mt-5 border-t border-slate-100 pt-5">
+              <div className="mt-5 border-t border-line pt-5">
                 <div className="flex items-end justify-between gap-4">
                   <div>
-                    <p className="text-xs text-slate-400">مبلغ نهایی</p>
+                    <p className="text-xs text-muted-soft">مبلغ نهایی</p>
 
-                    <p className="mt-1 text-2xl font-black text-[#385e3e]">
+                    <p className="mt-1 text-2xl font-black text-brand-700">
                       {formatPrice(finalTotal)}
                     </p>
                   </div>
 
-                  <span className="mb-1 text-sm text-slate-500">تومان</span>
+                  <span className="mb-1 text-sm text-muted">تومان</span>
                 </div>
               </div>
 
@@ -810,7 +984,7 @@ function Checkout() {
                 <button
                   type="button"
                   disabled
-                  className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-300 py-3.5 font-black text-white"
+                  className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-line-strong py-3.5 font-black text-white"
                 >
                   <Loader2 size={19} className="animate-spin" />
                   در حال بررسی حساب...
@@ -820,7 +994,7 @@ function Checkout() {
                   <Link
                     to="/login"
                     state={{ from: "/checkout" }}
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#648767] py-3.5 font-black text-white transition-colors hover:bg-[#385e3e]"
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand-500 py-3.5 font-black text-white transition-colors hover:bg-brand-700"
                   >
                     <User size={19} />
                     ورود و ادامه خرید
@@ -829,7 +1003,7 @@ function Checkout() {
                   <Link
                     to="/register"
                     state={{ from: "/checkout" }}
-                    className="inline-flex w-full items-center justify-center rounded-xl border border-[#d9e6d5] bg-white py-3 font-bold text-[#385e3e] transition-colors hover:bg-[#f0f3e9]"
+                    className="inline-flex w-full items-center justify-center rounded-xl border border-brand-250 bg-white py-3 font-bold text-brand-700 transition-colors hover:bg-brand-75"
                   >
                     ایجاد حساب کاربری
                   </Link>
@@ -838,7 +1012,7 @@ function Checkout() {
                 <button
                   type="submit"
                   disabled={loading || submissionUncertain}
-                  className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#648767] py-3.5 font-black text-white transition-colors hover:bg-[#385e3e] disabled:cursor-not-allowed disabled:opacity-60"
+                  className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand-500 py-3.5 font-black text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {loading ? (
                     <>
@@ -859,7 +1033,7 @@ function Checkout() {
                 </button>
               )}
 
-              <div className="mt-4 flex items-center justify-center gap-2 text-xs text-slate-400">
+              <div className="mt-4 flex items-center justify-center gap-2 text-xs text-muted-soft">
                 <ShieldCheck size={15} />
                 اطلاعات شما با امنیت کامل ثبت می‌شود.
               </div>
@@ -867,16 +1041,16 @@ function Checkout() {
 
             <Link
               to="/cart"
-              className="block rounded-2xl border border-slate-100 bg-slate-50 p-4 transition hover:border-[#cbdcc9] hover:bg-[#f0f3e9]"
+              className="block rounded-2xl border border-line bg-cream p-4 transition hover:border-brand-300 hover:bg-brand-75"
             >
               <div className="flex items-center justify-between gap-3">
-                <span className="text-sm font-bold text-slate-600">
+                <span className="text-sm font-bold text-muted">
                   بازگشت و ویرایش سبد خرید
                 </span>
 
                 <ChevronLeft
                   size={18}
-                  className="text-slate-400 transition-colors hover:text-[#385e3e]"
+                  className="text-muted-soft transition-colors hover:text-brand-700"
                 />
               </div>
             </Link>

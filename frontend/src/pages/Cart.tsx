@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 
 import Layout from "../components/Layout";
+import { usePrivatePageMeta } from "../hooks/usePageMeta";
 import { getStorageUrl } from "../utils/images";
 import { useCart } from "../context/CartContext";
 
@@ -33,6 +34,8 @@ interface CartItemView {
 }
 
 function Cart() {
+  usePrivatePageMeta("سبد خرید", "/cart");
+
   const { items, cartTotal, removeFromCart, updateQuantity, clearCart } =
     useCart();
 
@@ -99,22 +102,22 @@ function Cart() {
     return (
       <Layout>
         <section className="mx-auto max-w-5xl px-6 py-16">
-          <div className="rounded-3xl border border-slate-100 bg-white p-8 text-center sm:p-12">
+          <div className="rounded-3xl border border-line bg-white p-8 text-center sm:p-12">
             <div
               className="
                 mx-auto flex h-20 w-20 items-center justify-center
-                rounded-full bg-[#f0f3e9] text-[#385e3e]
+                rounded-full bg-brand-75 text-brand-700
                 transition-transform duration-300 hover:scale-110
               "
             >
               <ShoppingCart size={36} />
             </div>
 
-            <h1 className="mt-6 text-2xl font-black text-slate-900">
+            <h1 className="mt-6 text-2xl font-black text-ink">
               سبد خرید شما خالی است
             </h1>
 
-            <p className="mt-3 text-sm leading-8 text-slate-500">
+            <p className="mt-3 text-sm leading-8 text-muted">
               هنوز محصولی به سبد خرید خود اضافه نکرده‌اید. می‌توانید محصولات
               فروشگاه را مشاهده کنید و خرید خود را شروع کنید.
             </p>
@@ -123,9 +126,9 @@ function Cart() {
               to="/products"
               className="
                 mt-7 inline-flex items-center justify-center gap-2
-                rounded-xl bg-[#385e3e] px-6 py-3
+                rounded-xl bg-brand-700 px-6 py-3
                 font-bold text-white transition
-                hover:bg-[#2d4d33]
+                hover:bg-brand-800
               "
             >
               مشاهده محصولات
@@ -146,7 +149,7 @@ function Cart() {
             to="/products"
             className="
               inline-flex items-center gap-2 text-sm
-              text-slate-500 transition hover:text-[#385e3e]
+              text-muted transition hover:text-brand-700
             "
           >
             <ArrowRight size={17} />
@@ -155,11 +158,11 @@ function Cart() {
 
           <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h1 className="text-2xl font-black text-slate-900 sm:text-3xl">
+              <h1 className="text-2xl font-black text-ink sm:text-3xl">
                 سبد خرید
               </h1>
 
-              <p className="mt-2 text-sm text-slate-500">
+              <p className="mt-2 text-sm text-muted">
                 {totalQuantity.toLocaleString("fa-IR")} عدد محصول در سبد خرید
                 شما
               </p>
@@ -170,9 +173,9 @@ function Cart() {
               onClick={clearCart}
               className="
                 inline-flex items-center gap-2 rounded-xl
-                border border-red-100 px-4 py-2.5
-                text-sm font-bold text-red-500 transition
-                hover:bg-red-50
+                border border-blush-100 px-4 py-2.5
+                text-sm font-bold text-discount transition
+                hover:bg-blush-50
               "
             >
               <Trash2 size={16} />
@@ -195,7 +198,7 @@ function Cart() {
                   key={getCartKey(item)}
                   className="
                     overflow-hidden rounded-2xl border
-                    border-slate-100 bg-white p-4 sm:p-5
+                    border-line bg-white p-4 sm:p-5
                   "
                 >
                   <div className="flex flex-col gap-5 sm:flex-row">
@@ -205,7 +208,7 @@ function Cart() {
                       className="
                         flex h-36 w-full shrink-0 items-center
                         justify-center overflow-hidden rounded-xl
-                        bg-slate-50 sm:h-36 sm:w-36
+                        bg-cream sm:h-36 sm:w-36
                       "
                     >
                       {imageUrl ? (
@@ -215,7 +218,7 @@ function Cart() {
                           className="h-full w-full object-contain p-3"
                         />
                       ) : (
-                        <Package size={38} className="text-slate-300" />
+                        <Package size={38} className="text-line-strong" />
                       )}
                     </Link>
 
@@ -226,15 +229,15 @@ function Cart() {
                           <Link
                             to={`/product/${item.slug}`}
                             className="
-                              text-base font-black text-slate-800
-                              transition hover:text-[#385e3e]
+                              text-base font-black text-ink
+                              transition hover:text-brand-700
                             "
                           >
                             {item.name}
                           </Link>
 
                           {item.variant_name && (
-                            <div className="mt-2 flex items-center gap-2 text-sm text-[#385e3e]">
+                            <div className="mt-2 flex items-center gap-2 text-sm text-brand-700">
                               <Layers size={15} />
                               <span className="font-bold">
                                 تنوع: {item.variant_name}
@@ -243,7 +246,7 @@ function Cart() {
                           )}
 
                           {item.sku && (
-                            <p className="mt-2 text-xs text-slate-400">
+                            <p className="mt-2 text-xs text-muted-soft">
                               کد کالا: {item.sku}
                             </p>
                           )}
@@ -256,8 +259,8 @@ function Cart() {
                           className="
                             inline-flex shrink-0 items-center gap-1.5
                             rounded-lg px-2 py-1.5 text-sm
-                            text-red-500 transition
-                            hover:bg-red-50 hover:text-red-600
+                            text-discount transition
+                            hover:bg-blush-50 hover:text-discount
                           "
                         >
                           <Trash2 size={16} />
@@ -271,27 +274,27 @@ function Cart() {
                         style={{ direction: "ltr" }}
                       >
                         {hasDiscount && (
-                          <span className="text-sm text-slate-400 line-through">
+                          <span className="text-sm text-muted-soft line-through">
                             {formatPrice(originalPrice)} تومان
                           </span>
                         )}
 
-                        <span className="text-lg font-black text-[#385e3e]">
+                        <span className="text-lg font-black text-brand-700">
                           {formatPrice(Number(item.price))} تومان
                         </span>
                       </div>
 
                       {/* Quantity and Total */}
-                      <div className="mt-5 flex flex-col justify-between gap-4 border-t border-slate-100 pt-4 sm:flex-row sm:items-end">
+                      <div className="mt-5 flex flex-col justify-between gap-4 border-t border-line pt-4 sm:flex-row sm:items-end">
                         <div>
-                          <div className="mb-2 text-xs text-slate-400">
+                          <div className="mb-2 text-xs text-muted-soft">
                             تعداد
                           </div>
 
                           <div
                             className="
                               inline-flex items-center overflow-hidden
-                              rounded-xl border border-slate-200 bg-white
+                              rounded-xl border border-line bg-white
                             "
                           >
                             <button
@@ -301,15 +304,15 @@ function Cart() {
                               aria-label="کاهش تعداد"
                               className="
                                 flex h-10 w-10 items-center justify-center
-                                text-slate-600 transition
-                                hover:bg-[#f0f3e9] hover:text-[#385e3e]
+                                text-muted transition
+                                hover:bg-brand-75 hover:text-brand-700
                                 disabled:cursor-not-allowed disabled:opacity-40
                               "
                             >
                               <Minus size={16} />
                             </button>
 
-                            <span className="w-12 text-center text-sm font-bold text-slate-800">
+                            <span className="w-12 text-center text-sm font-bold text-ink">
                               {item.quantity.toLocaleString("fa-IR")}
                             </span>
 
@@ -320,8 +323,8 @@ function Cart() {
                               aria-label="افزایش تعداد"
                               className="
                                 flex h-10 w-10 items-center justify-center
-                                text-slate-600 transition
-                                hover:bg-[#f0f3e9] hover:text-[#385e3e]
+                                text-muted transition
+                                hover:bg-brand-75 hover:text-brand-700
                                 disabled:cursor-not-allowed disabled:opacity-40
                               "
                             >
@@ -329,24 +332,24 @@ function Cart() {
                             </button>
                           </div>
 
-                          <p className="mt-2 text-xs text-slate-400">
+                          <p className="mt-2 text-xs text-muted-soft">
                             موجودی: {item.stock.toLocaleString("fa-IR")} عدد
                           </p>
                         </div>
 
                         <div
                           className="
-                            w-full rounded-xl border border-slate-100
-                            bg-slate-50 px-4 py-3 text-left sm:w-auto
+                            w-full rounded-xl border border-line
+                            bg-cream px-4 py-3 text-left sm:w-auto
                             sm:min-w-44
                           "
                           style={{ direction: "ltr" }}
                         >
-                          <div className="text-xs font-medium text-slate-400">
+                          <div className="text-xs font-medium text-muted-soft">
                             مبلغ این ردیف
                           </div>
 
-                          <div className="mt-1 text-lg font-black text-slate-800">
+                          <div className="mt-1 text-lg font-black text-ink">
                             {formatPrice(itemTotal)} تومان
                           </div>
                         </div>
@@ -362,7 +365,7 @@ function Cart() {
               to="/products"
               className="
                 inline-flex items-center gap-2 rounded-xl
-                px-2 py-3 text-sm font-bold text-[#385e3e]
+                px-2 py-3 text-sm font-bold text-brand-700
                 transition hover:gap-3
               "
             >
@@ -373,54 +376,54 @@ function Cart() {
 
           {/* Order Summary */}
           <aside className="lg:sticky lg:top-6">
-            <div className="rounded-2xl border border-slate-100 bg-white p-5 sm:p-6">
-              <h2 className="text-lg font-black text-slate-900">خلاصه سفارش</h2>
+            <div className="rounded-2xl border border-line bg-white p-5 sm:p-6">
+              <h2 className="text-lg font-black text-ink">خلاصه سفارش</h2>
 
               <div className="mt-6 space-y-4">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-slate-500">تعداد کالا</span>
+                  <span className="text-muted">تعداد کالا</span>
 
-                  <span className="font-bold text-slate-800">
+                  <span className="font-bold text-ink">
                     {totalQuantity.toLocaleString("fa-IR")} عدد
                   </span>
                 </div>
 
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-slate-500">قیمت محصولات</span>
+                  <span className="text-muted">قیمت محصولات</span>
 
-                  <span className="font-bold text-slate-800">
+                  <span className="font-bold text-ink">
                     {formatPrice(cartOriginalTotal)} تومان
                   </span>
                 </div>
 
                 {cartDiscount > 0 && (
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-slate-500">تخفیف محصولات</span>
+                    <span className="text-muted">تخفیف محصولات</span>
 
-                    <span className="font-bold text-green-600">
+                    <span className="font-bold text-stock">
                       {formatPrice(cartDiscount)} تومان
                     </span>
                   </div>
                 )}
 
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-slate-500">هزینه ارسال</span>
+                  <span className="text-muted">هزینه ارسال</span>
 
-                  <span className="font-bold text-green-600">رایگان</span>
+                  <span className="font-bold text-stock">رایگان</span>
                 </div>
 
-                <div className="border-t border-dashed border-slate-200 pt-4">
+                <div className="border-t border-dashed border-line pt-4">
                   <div className="flex items-center justify-between gap-3">
-                    <span className="font-bold text-slate-700">
+                    <span className="font-bold text-ink-soft">
                       مبلغ قابل پرداخت
                     </span>
 
                     <div className="text-left" style={{ direction: "ltr" }}>
-                      <div className="text-xl font-black text-[#385e3e]">
+                      <div className="text-xl font-black text-brand-700">
                         {formatPrice(finalCartTotal)}
                       </div>
 
-                      <div className="mt-1 text-xs text-slate-400">تومان</div>
+                      <div className="mt-1 text-xs text-muted-soft">تومان</div>
                     </div>
                   </div>
                 </div>
@@ -430,17 +433,17 @@ function Cart() {
                 to="/checkout"
                 className="
                   mt-6 flex w-full items-center justify-center gap-2
-                  rounded-xl bg-[#385e3e] px-5 py-4
+                  rounded-xl bg-brand-700 px-5 py-4
                   text-sm font-black text-white transition
-                  hover:bg-[#2d4d33]
+                  hover:bg-brand-800
                 "
               >
                 ادامه و تکمیل خرید
                 <ArrowLeft size={18} />
               </Link>
 
-              <div className="mt-5 flex items-center justify-center gap-2 text-xs text-slate-400">
-                <ShieldCheck size={16} className="text-green-600" />
+              <div className="mt-5 flex items-center justify-center gap-2 text-xs text-muted-soft">
+                <ShieldCheck size={16} className="text-stock" />
                 خرید امن و پرداخت مطمئن
               </div>
             </div>

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Product;
+use App\Models\ProductSizeGuide;
 use App\Models\ProductVariant;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -88,6 +89,7 @@ class AdminProductController extends Controller
             'brand',
             'images',
             'variants',
+            'sizeGuide',
         ]);
 
         return response()->json([
@@ -106,6 +108,10 @@ class AdminProductController extends Controller
         $variants = $validated['variants'] ?? [];
         unset($validated['variants']);
 
+        $hasSizeGuide = array_key_exists('size_guide', $validated);
+        $sizeGuide = $validated['size_guide'] ?? null;
+        unset($validated['size_guide']);
+
         // موجودی اختیاری است؛ پیش‌فرض ستون دیتابیس صفر است.
         $validated['stock'] = $validated['stock'] ?? 0;
 
@@ -115,11 +121,20 @@ class AdminProductController extends Controller
             $slugInput !== '' ? $slugInput : $validated['name']
         );
 
-        $product = DB::transaction(function () use ($validated, $variants) {
+        $product = DB::transaction(function () use (
+            $validated,
+            $variants,
+            $hasSizeGuide,
+            $sizeGuide
+        ) {
             $product = Product::create($validated);
 
             if ($variants !== []) {
                 $this->syncVariants($product, $variants);
+            }
+
+            if ($hasSizeGuide) {
+                $this->saveSizeGuide($product, $sizeGuide);
             }
 
             return $product;
@@ -130,6 +145,7 @@ class AdminProductController extends Controller
             'brand',
             'images',
             'variants',
+            'sizeGuide',
         ]);
 
         return response()->json([
@@ -151,6 +167,11 @@ class AdminProductController extends Controller
 
         unset($validated['variants']);
 
+        $hasSizeGuide = array_key_exists('size_guide', $validated);
+        $sizeGuide = $validated['size_guide'] ?? null;
+
+        unset($validated['size_guide']);
+
         if (array_key_exists('slug', $validated)) {
             $slugInput = trim((string) ($validated['slug'] ?? ''));
 
@@ -168,7 +189,9 @@ class AdminProductController extends Controller
             $product,
             $validated,
             $variants,
-            $hasVariants
+            $hasVariants,
+            $hasSizeGuide,
+            $sizeGuide
         ) {
             $lockedProduct = Product::query()
                 ->whereKey($product->id)
@@ -180,6 +203,10 @@ class AdminProductController extends Controller
             if ($hasVariants) {
                 $this->syncVariants($lockedProduct, $variants);
             }
+
+            if ($hasSizeGuide) {
+                $this->saveSizeGuide($lockedProduct, $sizeGuide);
+            }
         });
 
         $product->refresh()->load([
@@ -187,6 +214,7 @@ class AdminProductController extends Controller
             'brand',
             'images',
             'variants',
+            'sizeGuide',
         ]);
 
         return response()->json([
@@ -240,6 +268,10 @@ class AdminProductController extends Controller
             }
         }
 
+        if ($product->sizeGuide && ! empty($product->sizeGuide->measure_image)) {
+            $imagePaths[] = $product->sizeGuide->measure_image;
+        }
+
         if (! empty($product->thumbnail)) {
             $imagePaths[] = $product->thumbnail;
         }
@@ -247,6 +279,7 @@ class AdminProductController extends Controller
         DB::transaction(function () use ($product) {
             $product->images()->delete();
             $product->variants()->delete();
+            $product->sizeGuide()->delete();
             $product->delete();
         });
 
@@ -409,6 +442,14 @@ class AdminProductController extends Controller
                 'max:255',
             ],
 
+            // سایز تنوع برای فیلتر سایز در فهرست فروشگاه؛ اگر خالی بماند از
+            // نام تنوع استخراج می‌شود (مثلاً «سایز 80B» → 80B).
+            'variants.*.size' => [
+                'nullable',
+                'string',
+                'max:50',
+            ],
+
             'variants.*.sku' => [
                 'required',
                 'string',
@@ -443,7 +484,333 @@ class AdminProductController extends Controller
                 'sometimes',
                 'boolean',
             ],
+
+            ...$this->sizeGuideRules(),
         ];
+    }
+
+    /**
+     * قواعد اعتبارسنجی «راهنمای سایز اختصاصی محصول».
+     *
+     * کلید size_guide اختیاری است؛ اگر ارسال نشود راهنمای موجود دست‌نخورده
+     * می‌ماند و اگر null یا خالی ارسال شود راهنما حذف می‌شود.
+     *
+     * @return array<string, array<int, mixed>>
+     */
+    private function sizeGuideRules(): array
+    {
+        return [
+            'size_guide' => [
+                'sometimes',
+                'nullable',
+                'array',
+            ],
+
+            'size_guide.is_enabled' => [
+                'sometimes',
+                'boolean',
+            ],
+
+            'size_guide.title' => [
+                'nullable',
+                'string',
+                'max:150',
+            ],
+
+            'size_guide.intro' => [
+                'nullable',
+                'string',
+                'max:2000',
+            ],
+
+            'size_guide.unit' => [
+                'sometimes',
+                'string',
+                Rule::in(ProductSizeGuide::UNITS),
+            ],
+
+            'size_guide.measure_image' => [
+                'nullable',
+                'string',
+                'max:2048',
+            ],
+
+            'size_guide.measure_steps' => [
+                'sometimes',
+                'array',
+                'max:8',
+            ],
+
+            'size_guide.measure_steps.*.title' => [
+                'nullable',
+                'string',
+                'max:150',
+            ],
+
+            'size_guide.measure_steps.*.description' => [
+                'nullable',
+                'string',
+                'max:500',
+            ],
+
+            'size_guide.columns' => [
+                'sometimes',
+                'array',
+                'max:8',
+            ],
+
+            'size_guide.columns.*' => [
+                'nullable',
+                'string',
+                'max:60',
+            ],
+
+            'size_guide.rows' => [
+                'sometimes',
+                'array',
+                'max:60',
+            ],
+
+            'size_guide.rows.*' => [
+                'array',
+                'max:8',
+            ],
+
+            'size_guide.rows.*.*' => [
+                'nullable',
+                'string',
+                'max:60',
+            ],
+
+            'size_guide.specs' => [
+                'sometimes',
+                'array',
+                'max:12',
+            ],
+
+            'size_guide.specs.*.label' => [
+                'nullable',
+                'string',
+                'max:120',
+            ],
+
+            'size_guide.specs.*.value' => [
+                'nullable',
+                'string',
+                'max:120',
+            ],
+
+            'size_guide.fit_note' => [
+                'nullable',
+                'string',
+                'max:1000',
+            ],
+
+            'size_guide.note' => [
+                'nullable',
+                'string',
+                'max:1000',
+            ],
+
+            'size_guide.tips' => [
+                'sometimes',
+                'array',
+                'max:12',
+            ],
+
+            'size_guide.tips.*' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+        ];
+    }
+
+    /**
+     * ذخیره یا حذف راهنمای سایز اختصاصی محصول.
+     *
+     * @param  array<string, mixed>|null  $guide
+     */
+    private function saveSizeGuide(Product $product, ?array $guide): void
+    {
+        if ($guide === null) {
+            $product->sizeGuide()->delete();
+
+            return;
+        }
+
+        $data = $this->normalizeSizeGuide($guide);
+
+        if ($this->sizeGuideIsEmpty($data)) {
+            $product->sizeGuide()->delete();
+
+            return;
+        }
+
+        $product->sizeGuide()->updateOrCreate([], $data);
+    }
+
+    /**
+     * پاک‌سازی و هم‌طول‌کردن دادهٔ راهنمای سایز پیش از ذخیره.
+     *
+     * @param  array<string, mixed>  $guide
+     * @return array<string, mixed>
+     */
+    private function normalizeSizeGuide(array $guide): array
+    {
+        /*
+         * ستون‌های بی‌عنوان حذف می‌شوند، اما سلول متناظرشان هم از هر سطر
+         * حذف می‌شود تا داده‌ها جابه‌جا نشوند.
+         */
+        $keptColumnIndexes = [];
+        $columns = [];
+
+        foreach (array_values((array) ($guide['columns'] ?? [])) as $index => $column) {
+            $value = trim((string) $column);
+
+            if ($value !== '') {
+                $keptColumnIndexes[] = $index;
+                $columns[] = $value;
+            }
+        }
+
+        $rows = [];
+
+        if ($columns !== []) {
+            foreach ((array) ($guide['rows'] ?? []) as $row) {
+                $rawCells = array_values((array) $row);
+                $cells = [];
+
+                foreach ($keptColumnIndexes as $index) {
+                    $cells[] = trim((string) ($rawCells[$index] ?? ''));
+                }
+
+                // هر سطر دقیقاً هم‌طول ستون‌ها می‌شود.
+                if (implode('', $cells) === '') {
+                    continue;
+                }
+
+                $rows[] = $cells;
+            }
+        }
+
+        $steps = [];
+
+        foreach ((array) ($guide['measure_steps'] ?? []) as $step) {
+            $title = trim((string) ($step['title'] ?? ''));
+            $description = trim((string) ($step['description'] ?? ''));
+
+            if ($title === '' && $description === '') {
+                continue;
+            }
+
+            $steps[] = [
+                'title' => $title,
+                'description' => $description,
+            ];
+        }
+
+        $specs = [];
+
+        foreach ((array) ($guide['specs'] ?? []) as $spec) {
+            $label = trim((string) ($spec['label'] ?? ''));
+            $value = trim((string) ($spec['value'] ?? ''));
+
+            if ($label === '' && $value === '') {
+                continue;
+            }
+
+            $specs[] = [
+                'label' => $label,
+                'value' => $value,
+            ];
+        }
+
+        $tips = [];
+
+        foreach ((array) ($guide['tips'] ?? []) as $tip) {
+            $value = trim((string) $tip);
+
+            if ($value !== '') {
+                $tips[] = $value;
+            }
+        }
+
+        $unit = (string) ($guide['unit'] ?? ProductSizeGuide::UNIT_CM);
+
+        return [
+            'is_enabled' => (bool) ($guide['is_enabled'] ?? true),
+            'title' => trim((string) ($guide['title'] ?? '')) ?: null,
+            'intro' => trim((string) ($guide['intro'] ?? '')) ?: null,
+            'unit' => in_array($unit, ProductSizeGuide::UNITS, true)
+                ? $unit
+                : ProductSizeGuide::UNIT_CM,
+            'measure_image' => trim((string) ($guide['measure_image'] ?? '')) ?: null,
+            'measure_steps' => $steps,
+            'columns' => $columns,
+            'rows' => $rows,
+            'specs' => $specs,
+            'fit_note' => trim((string) ($guide['fit_note'] ?? '')) ?: null,
+            'note' => trim((string) ($guide['note'] ?? '')) ?: null,
+            'tips' => $tips,
+        ];
+    }
+
+    /**
+     * آیا راهنمای سایز پس از پاک‌سازی هیچ محتوایی ندارد؟
+     *
+     * @param  array<string, mixed>  $data
+     */
+    private function sizeGuideIsEmpty(array $data): bool
+    {
+        return $data['title'] === null
+            && $data['intro'] === null
+            && $data['measure_image'] === null
+            && $data['fit_note'] === null
+            && $data['note'] === null
+            && $data['measure_steps'] === []
+            && $data['columns'] === []
+            && $data['rows'] === []
+            && $data['specs'] === []
+            && $data['tips'] === [];
+    }
+
+    /**
+     * بارگذاری تصویر «نحوهٔ اندازه‌گیری» راهنمای سایز.
+     *
+     * مستقل از شناسهٔ محصول است تا هنگام ساخت محصول جدید هم قابل استفاده باشد.
+     */
+    public function uploadSizeGuideImage(Request $request): JsonResponse
+    {
+        $request->validate([
+            'file' => [
+                'required',
+                'file',
+                'mimes:jpg,jpeg,png,webp',
+                'max:5120',
+            ],
+        ], [
+            'file.mimes' => 'فقط تصویر JPG، PNG یا WebP مجاز است.',
+            'file.max' => 'حجم تصویر نباید بیشتر از ۵ مگابایت باشد.',
+        ]);
+
+        $path = $request->file('file')?->store('product-size-guides', 'public');
+
+        if (! $path) {
+            return response()->json([
+                'success' => false,
+                'message' => 'بارگذاری تصویر انجام نشد.',
+            ], 500);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تصویر راهنمای سایز بارگذاری شد.',
+            'data' => [
+                'path' => $path,
+                'url' => Storage::disk('public')->url($path),
+            ],
+        ], 201);
     }
 
     /**
@@ -520,6 +887,7 @@ class AdminProductController extends Controller
 
             $data = [
                 'name' => $name,
+                'size' => $variantData['size'] ?? null,
                 'sku' => $sku,
                 'price' => $variantData['price'] ?? null,
                 'compare_price' => $variantData['compare_price'] ?? null,

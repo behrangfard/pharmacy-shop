@@ -9,10 +9,16 @@ use Illuminate\Support\Facades\Cache;
 
 class CategoryController extends Controller
 {
+    /**
+     * کلید کش فهرست دسته‌بندی‌های فروشگاه.
+     * با هر تغییر در پنل مدیران (ایجاد/ویرایش/حذف) پاک می‌شود.
+     */
+    public const STOREFRONT_CACHE_KEY = 'storefront.categories.index.v2';
+
     public function index(): JsonResponse
     {
         $categories = Cache::remember(
-            'storefront.categories.index.v2',
+            self::STOREFRONT_CACHE_KEY,
             now()->addMinutes(5),
             function (): array {
                 return Category::query()

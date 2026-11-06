@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { getStorageUrl } from "../utils/images";
 import {
@@ -20,10 +20,22 @@ import {
 import Layout from "../components/Layout";
 import Button from "../components/Button";
 import SizeGuideModal from "../components/SizeGuide";
+import ProductSizeGuide from "../components/ProductSizeGuide";
 import { resolveSizeGuideTab, type SizeGuideTabId } from "../data/sizeGuide";
+import {
+  findSizeGuideRow,
+  normalizeProductSizeGuide,
+} from "../utils/productSizeGuide";
 import api from "../services/api";
 import { useCart } from "../context/CartContext";
 import { calculateProductPrice } from "../utils/price";
+import { usePageMeta } from "../hooks/usePageMeta";
+import { SITE_NAME, plainText, type PageMeta } from "../utils/seo";
+import {
+  breadcrumbJsonLd,
+  productJsonLd,
+  type BreadcrumbItem,
+} from "../utils/structuredData";
 
 interface ProductImage {
   id: number;
@@ -72,6 +84,8 @@ interface Product {
   } | null;
   images?: ProductImage[];
   variants?: ProductVariant[];
+  /** راهنمای سایز اختصاصی همین محصول (از پنل مدیریت) */
+  size_guide?: unknown;
 }
 
 interface ProductReview {
@@ -141,6 +155,72 @@ function ProductDetail() {
   const [submittingReview, setSubmittingReview] = useState(false);
   const [reviewMessage, setReviewMessage] = useState("");
   const [reviewFormError, setReviewFormError] = useState("");
+
+  /*
+   * متای صفحهٔ محصول + دادهٔ ساختاریافته.
+   * قیمت اعلام‌شده در JSON-LD همان قیمت نهایی (پس از تخفیف) است؛ تصویر از
+   * گالری همان محصول گرفته می‌شود تا در نتایج گوگل درست دیده شود.
+   */
+  const pageMeta = useMemo<PageMeta | null>(() => {
+    if (!product) return null;
+
+    const { finalPrice } = calculateProductPrice(
+      product.price,
+      product.discount_percent,
+    );
+
+    const primaryImage =
+      product.thumbnail ||
+      product.images?.find((image) => image.is_primary)?.path ||
+      product.images?.[0]?.path ||
+      null;
+
+    const crumbs: BreadcrumbItem[] = [{ name: "خانه", path: "/" }];
+
+    if (product.category) {
+      crumbs.push({
+        name: product.category.name,
+        path: `/products?category=${product.category.slug}`,
+      });
+    }
+
+    crumbs.push({ name: product.name, path: `/product/${product.slug}` });
+
+    const description =
+      plainText(product.short_description) ||
+      plainText(product.description) ||
+      `خرید ${product.name} از ${SITE_NAME}`;
+
+    return {
+      title: `${product.name} | ${SITE_NAME}`,
+      description,
+      path: `/product/${product.slug}`,
+      image: primaryImage ? getStorageUrl(primaryImage) : null,
+      type: "product",
+      jsonLd: [
+        productJsonLd({
+          name: product.name,
+          slug: product.slug,
+          sku: product.sku,
+          price: finalPrice,
+          stock: Number(product.stock),
+          description,
+          image: primaryImage ? getStorageUrl(primaryImage) : null,
+          brand: product.brand?.name ?? null,
+          category: product.category?.name ?? null,
+          averageRating:
+            product.average_rating != null
+              ? Number(product.average_rating)
+              : null,
+          reviewsCount: product.reviews_count ?? null,
+        }),
+        breadcrumbJsonLd(crumbs),
+      ],
+    };
+  }, [product]);
+
+  usePageMeta(pageMeta);
+
 
   // Load product
   useEffect(() => {
@@ -299,12 +379,25 @@ function ProductDetail() {
     activeVariants.map((variant) => variant.name),
   );
 
+  /**
+   * راهنمای سایز اختصاصی این محصول؛ اگر مدیر برای همین محصول راهنما
+   * نساخته باشد (یا آن را خاموش کرده باشد) مقدار null است و مودال به
+   * راهنمای عمومی سایت برمی‌گردد.
+   */
+  const productSizeGuide = normalizeProductSizeGuide(product?.size_guide);
+
   const availableVariants = activeVariants.filter(
     (variant) => Number(variant.stock) > 0,
   );
 
   const selectedVariant =
     activeVariants.find((variant) => variant.id === selectedVariantId) ?? null;
+
+  /** سطر جدول راهنمای سایز که با تنوع انتخاب‌شده می‌خواند */
+  const matchedSizeRow =
+    productSizeGuide && selectedVariant
+      ? findSizeGuideRow(productSizeGuide, selectedVariant.name)
+      : null;
 
   const currentStock = hasVariants
     ? Number(selectedVariant?.stock ?? 0)
@@ -523,7 +616,7 @@ function ProductDetail() {
           key={star}
           size={size}
           className={
-            star <= rating ? "fill-amber-400 text-amber-400" : "text-slate-300"
+            star <= rating ? "fill-gold text-gold" : "text-line-strong"
           }
         />
       ))}
@@ -543,7 +636,7 @@ function ProductDetail() {
   if (loading) {
     return (
       <Layout>
-        <div className="max-w-7xl mx-auto px-6 py-20 text-center text-slate-500">
+        <div className="max-w-7xl mx-auto px-6 py-20 text-center text-muted">
           در حال دریافت اطلاعات محصول...
         </div>
       </Layout>
@@ -555,7 +648,7 @@ function ProductDetail() {
       <Layout>
         <div className="max-w-7xl mx-auto px-6 py-20">
           <div className="bg-white rounded-2xl p-10 text-center">
-            <div className="text-xl font-black text-slate-800">
+            <div className="text-xl font-black text-ink">
               {error || "محصول پیدا نشد."}
             </div>
 
@@ -566,13 +659,13 @@ function ProductDetail() {
                 items-center
                 gap-2
                 mt-6
-                bg-blue-600
+                bg-brand-600
                 text-white
                 px-5
                 py-3
                 rounded-xl
                 font-bold
-                hover:bg-blue-700
+                hover:bg-brand-700
                 transition
               "
             >
@@ -596,8 +689,8 @@ function ProductDetail() {
               items-center
               gap-2
               text-sm
-              text-slate-500
-              hover:text-blue-600
+              text-muted
+              hover:text-brand-600
               transition
             "
           >
@@ -611,7 +704,7 @@ function ProductDetail() {
             bg-white
             rounded-3xl
             border
-            border-slate-100
+            border-line
             overflow-hidden
           "
         >
@@ -628,7 +721,7 @@ function ProductDetail() {
                   justify-center
                   overflow-hidden
                   rounded-2xl
-                  bg-slate-50
+                  bg-cream
                   p-6
                   sm:p-8
                 "
@@ -647,7 +740,7 @@ function ProductDetail() {
                     "
                   />
                 ) : (
-                  <div className="text-slate-400">تصویر محصول</div>
+                  <div className="text-muted-soft">تصویر محصول</div>
                 )}
 
                 {hasDiscount && (
@@ -657,7 +750,7 @@ function ProductDetail() {
                       right-4
                       top-4
                       rounded-full
-                      bg-red-500
+                      bg-discount
                       px-4
                       py-2
                       font-bold
@@ -685,11 +778,11 @@ function ProductDetail() {
                         justify-center
                         rounded-full
                         bg-white
-                        text-slate-700
+                        text-ink-soft
                         shadow-md
                         transition-all
                         duration-200
-                        hover:bg-blue-600
+                        hover:bg-brand-600
                         hover:text-white
                         active:scale-90
                       "
@@ -713,11 +806,11 @@ function ProductDetail() {
                         justify-center
                         rounded-full
                         bg-white
-                        text-slate-700
+                        text-ink-soft
                         shadow-md
                         transition-all
                         duration-200
-                        hover:bg-blue-600
+                        hover:bg-brand-600
                         hover:text-white
                         active:scale-90
                       "
@@ -765,13 +858,13 @@ function ProductDetail() {
                           overflow-hidden
                           rounded-xl
                           border-2
-                          bg-slate-50
+                          bg-cream
                           transition-all
                           duration-200
                           ${
                             selectedImageIndex === index
-                              ? "scale-100 border-blue-600 ring-2 ring-blue-100"
-                              : "border-slate-200 hover:border-blue-300"
+                              ? "scale-100 border-brand-600 ring-2 ring-brand-100"
+                              : "border-line hover:border-brand-300"
                           }
                         `}
                       >
@@ -782,7 +875,7 @@ function ProductDetail() {
                             className="block h-full w-full object-contain p-2"
                           />
                         ) : (
-                          <div className="flex h-full w-full items-center justify-center text-slate-400">
+                          <div className="flex h-full w-full items-center justify-center text-muted-soft">
                             <Package size={22} />
                           </div>
                         )}
@@ -793,7 +886,7 @@ function ProductDetail() {
               )}
 
               {galleryImages.length > 1 && (
-                <div className="mt-1 text-center text-xs text-slate-400">
+                <div className="mt-1 text-center text-xs text-muted-soft">
                   {(selectedImageIndex + 1).toLocaleString("fa-IR")} از{" "}
                   {galleryImages.length.toLocaleString("fa-IR")} تصویر
                 </div>
@@ -808,14 +901,14 @@ function ProductDetail() {
                     to={`/products?category=${product.category.slug}`}
                     className="
                       text-sm
-                      bg-blue-50
-                      text-blue-600
+                      bg-brand-50
+                      text-brand-600
                       px-3
                       py-1.5
                       rounded-lg
                       font-medium
                       transition
-                      hover:bg-blue-100
+                      hover:bg-brand-100
                     "
                   >
                     {product.category.name}
@@ -826,8 +919,8 @@ function ProductDetail() {
                   <span
                     className="
                       text-sm
-                      bg-slate-100
-                      text-slate-600
+                      bg-line
+                      text-muted
                       px-3
                       py-1.5
                       rounded-lg
@@ -843,7 +936,7 @@ function ProductDetail() {
                   text-3xl
                   lg:text-4xl
                   font-black
-                  text-slate-900
+                  text-ink
                   leading-relaxed
                 "
               >
@@ -853,7 +946,7 @@ function ProductDetail() {
               {/* Rating summary */}
               <div className="mt-4 flex flex-wrap items-center gap-3">
                 {renderStars(Math.round(averageRating))}
-                <span className="text-sm font-bold text-slate-700">
+                <span className="text-sm font-bold text-ink-soft">
                   {averageRating > 0
                     ? averageRating.toLocaleString("fa-IR", {
                         maximumFractionDigits: 1,
@@ -862,14 +955,14 @@ function ProductDetail() {
                 </span>
                 <a
                   href="#product-reviews"
-                  className="text-sm text-blue-600 hover:text-blue-700 transition"
+                  className="text-sm text-brand-600 hover:text-brand-700 transition"
                 >
                   ({reviewsCount.toLocaleString("fa-IR")} نظر)
                 </a>
               </div>
 
               {product.short_description && (
-                <p className="text-slate-500 leading-8 mt-5">
+                <p className="text-muted leading-8 mt-5">
                   {product.short_description}
                 </p>
               )}
@@ -879,8 +972,8 @@ function ProductDetail() {
                 <div className="mt-7">
                   <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
-                      <Layers size={19} className="text-blue-600" />
-                      <h2 className="font-bold text-slate-800">
+                      <Layers size={19} className="text-brand-600" />
+                      <h2 className="font-bold text-ink">
                         انتخاب تنوع محصول
                       </h2>
                     </div>
@@ -890,15 +983,17 @@ function ProductDetail() {
                       onClick={() => setSizeGuideOpen(true)}
                       className="
                         inline-flex items-center gap-1.5 rounded-xl
-                        border border-[#dbe6d6] bg-[#f4f8f0] px-3 py-2
-                        text-xs font-bold text-[#4f7754] transition-colors
-                        hover:border-[#bcd2b8] hover:bg-[#eaf2e3]
+                        border border-brand-250 bg-brand-50 px-3 py-2
+                        text-xs font-bold text-brand-600 transition-colors
+                        hover:border-brand-300 hover:bg-brand-100
                         focus-visible:outline-none focus-visible:ring-2
-                        focus-visible:ring-[#91ad8d]
+                        focus-visible:ring-brand-400
                       "
                     >
                       <Ruler size={15} aria-hidden="true" />
-                      راهنمای انتخاب سایز
+                      {productSizeGuide
+                        ? "راهنمای سایز این محصول"
+                        : "راهنمای انتخاب سایز"}
                     </button>
                   </div>
 
@@ -924,8 +1019,8 @@ function ProductDetail() {
                             transition
                             ${
                               isSelected
-                                ? "border-[#385e3e] bg-[#f0f3e9] text-[#385e3e] ring-2 ring-[#385e3e]/10"
-                                : "border-slate-200 bg-white text-slate-700 hover:border-[#8da58b]"
+                                ? "border-brand-700 bg-brand-75 text-brand-700 ring-2 ring-brand-700/10"
+                                : "border-line bg-white text-ink-soft hover:border-brand-400"
                             }
                             ${
                               !isAvailable
@@ -944,14 +1039,52 @@ function ProductDetail() {
                   </div>
 
                   {availableVariants.length === 0 ? (
-                    <p className="mt-3 text-sm text-red-500">
+                    <p className="mt-3 text-sm text-discount">
                       تمام تنوع‌های این محصول در حال حاضر ناموجود هستند.
                     </p>
                   ) : !selectedVariant ? (
-                    <p className="mt-3 text-sm text-red-500">
+                    <p className="mt-3 text-sm text-discount">
                       لطفاً یکی از تنوع‌های موجود را انتخاب کن.
                     </p>
                   ) : null}
+
+                  {/* خلاصهٔ اندازه‌های سایز انتخاب‌شده از راهنمای سایز خود محصول */}
+                  {productSizeGuide && selectedVariant && (
+                    <div className="mt-3 rounded-2xl border border-brand-100 bg-brand-50 px-4 py-3">
+                      <p className="text-[11.5px] font-bold text-brand-700">
+                        اندازه‌های سایز «{selectedVariant.name}» در این محصول
+                      </p>
+
+                      {matchedSizeRow &&
+                      productSizeGuide.columns.length > 1 ? (
+                        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1.5 text-[11px] text-muted">
+                          {productSizeGuide.columns
+                            .slice(1)
+                            .map((column, index) => (
+                              <span key={`${column}-${index}`}>
+                                {column}:{" "}
+                                <b className="text-ink">
+                                  {matchedSizeRow[index + 1] || "—"}
+                                </b>
+                              </span>
+                            ))}
+                        </div>
+                      ) : (
+                        <p className="mt-1.5 text-[11px] leading-6 text-muted-soft">
+                          برای دیدن اندازه‌های دقیق، جدول راهنمای سایز این
+                          محصول را باز کنید.
+                        </p>
+                      )}
+
+                      <button
+                        type="button"
+                        onClick={() => setSizeGuideOpen(true)}
+                        className="mt-2 text-[11px] font-bold text-brand-600 underline underline-offset-4 hover:text-brand-700"
+                      >
+                        مشاهدهٔ راهنمای کامل این مدل
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -988,7 +1121,7 @@ function ProductDetail() {
                         className="
                           inline-flex
                           items-center
-                          bg-red-500
+                          bg-discount
                           text-white
                           px-3
                           py-1.5
@@ -1003,7 +1136,7 @@ function ProductDetail() {
                       <span
                         className="
                           text-lg
-                          text-slate-400
+                          text-muted-soft
                           line-through
                           text-left
                         "
@@ -1017,7 +1150,7 @@ function ProductDetail() {
                         w-full
                         text-3xl
                         font-black
-                        text-blue-600
+                        text-brand-600
                         text-left
                       "
                     >
@@ -1027,7 +1160,7 @@ function ProductDetail() {
                     <div
                       className="
                         w-full
-                        text-green-600
+                        text-stock
                         text-sm
                         font-medium
                         mt-2
@@ -1043,7 +1176,7 @@ function ProductDetail() {
                       w-full
                       text-3xl
                       font-black
-                      text-blue-600
+                      text-brand-600
                       text-left
                     "
                   >
@@ -1067,17 +1200,17 @@ function ProductDetail() {
                     flex
                     items-center
                     gap-3
-                    bg-slate-50
+                    bg-cream
                     rounded-xl
                     p-4
                   "
                 >
-                  <Package size={21} className="text-blue-600" />
+                  <Package size={21} className="text-brand-600" />
 
                   <div>
-                    <div className="text-xs text-slate-400">وضعیت موجودی</div>
+                    <div className="text-xs text-muted-soft">وضعیت موجودی</div>
 
-                    <div className="font-bold text-slate-700 mt-1">
+                    <div className="font-bold text-ink-soft mt-1">
                       {currentStock > 0
                         ? `${currentStock.toLocaleString("fa-IR")} عدد موجود`
                         : "ناموجود"}
@@ -1090,17 +1223,17 @@ function ProductDetail() {
                     flex
                     items-center
                     gap-3
-                    bg-slate-50
+                    bg-cream
                     rounded-xl
                     p-4
                   "
                 >
-                  <CheckCircle2 size={21} className="text-green-600" />
+                  <CheckCircle2 size={21} className="text-stock" />
 
                   <div>
-                    <div className="text-xs text-slate-400">وضعیت محصول</div>
+                    <div className="text-xs text-muted-soft">وضعیت محصول</div>
 
-                    <div className="font-bold text-slate-700 mt-1">
+                    <div className="font-bold text-ink-soft mt-1">
                       محصول فعال
                     </div>
                   </div>
@@ -1116,7 +1249,7 @@ function ProductDetail() {
                         flex
                         items-center
                         border
-                        border-slate-200
+                        border-line
                         rounded-xl
                         overflow-hidden
                         bg-white
@@ -1135,8 +1268,8 @@ function ProductDetail() {
                           text-lg
                           transition-all
                           duration-150
-                          hover:bg-[#f0f3e9]
-                          hover:text-[#385e3e]
+                          hover:bg-brand-75
+                          hover:text-brand-700
                           active:scale-90
                           disabled:opacity-40
                         "
@@ -1170,8 +1303,8 @@ function ProductDetail() {
                           text-lg
                           transition-all
                           duration-150
-                          hover:bg-[#f0f3e9]
-                          hover:text-[#385e3e]
+                          hover:bg-brand-75
+                          hover:text-brand-700
                           active:scale-90
                           disabled:opacity-40
                         "
@@ -1211,8 +1344,8 @@ function ProductDetail() {
                   className="
                     mt-8
                     rounded-xl
-                    bg-red-50
-                    text-red-600
+                    bg-blush-50
+                    text-discount
                     p-4
                     text-center
                     font-bold
@@ -1226,23 +1359,23 @@ function ProductDetail() {
                 </div>
               )}
 
-              <div className="mt-8 pt-6 border-t border-slate-100">
+              <div className="mt-8 pt-6 border-t border-line">
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div className="flex items-center whitespace-nowrap">
-                    <span className="text-slate-400">
+                    <span className="text-muted-soft">
                       {selectedVariant ? "کد تنوع:" : "کد محصول:"}
                     </span>
 
-                    <span className="font-bold text-slate-700 mr-2 whitespace-nowrap">
+                    <span className="font-bold text-ink-soft mr-2 whitespace-nowrap">
                       {selectedVariant?.sku || product.sku}
                     </span>
                   </div>
 
                   {product.weight && (
                     <div>
-                      <span className="text-slate-400">وزن:</span>
+                      <span className="text-muted-soft">وزن:</span>
 
-                      <span className="font-bold text-slate-700 mr-2">
+                      <span className="font-bold text-ink-soft mr-2">
                         {product.weight}
                       </span>
                     </div>
@@ -1255,14 +1388,14 @@ function ProductDetail() {
 
         {/* Product Description */}
         {product.description && (
-          <div className="mt-8 bg-white rounded-3xl border border-slate-100 p-8">
-            <h2 className="text-2xl font-black text-slate-900 mb-5">
+          <div className="mt-8 bg-white rounded-3xl border border-line p-8">
+            <h2 className="text-2xl font-black text-ink mb-5">
               توضیحات محصول
             </h2>
 
             <div
               className="
-                text-slate-600
+                text-muted
                 leading-9
                 whitespace-pre-line
               "
@@ -1275,25 +1408,25 @@ function ProductDetail() {
         {/* Product Reviews */}
         <section
           id="product-reviews"
-          className="mt-8 bg-white rounded-3xl border border-slate-100 p-6 sm:p-8"
+          className="mt-8 bg-white rounded-3xl border border-line p-6 sm:p-8"
         >
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5 border-b border-slate-100 pb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5 border-b border-line pb-6">
             <div>
               <div className="flex items-center gap-2">
-                <MessageSquare className="text-blue-600" size={23} />
-                <h2 className="text-2xl font-black text-slate-900">
+                <MessageSquare className="text-brand-600" size={23} />
+                <h2 className="text-2xl font-black text-ink">
                   نظرات کاربران
                 </h2>
               </div>
 
-              <p className="text-sm text-slate-500 mt-2">
+              <p className="text-sm text-muted mt-2">
                 تجربه خرید و نظر کاربران درباره این محصول
               </p>
             </div>
 
-            <div className="flex items-center gap-4 rounded-2xl bg-slate-50 px-5 py-4">
+            <div className="flex items-center gap-4 rounded-2xl bg-cream px-5 py-4">
               <div className="text-center">
-                <div className="text-3xl font-black text-slate-900">
+                <div className="text-3xl font-black text-ink">
                   {averageRating > 0
                     ? averageRating.toLocaleString("fa-IR", {
                         maximumFractionDigits: 1,
@@ -1305,11 +1438,11 @@ function ProductDetail() {
                 </div>
               </div>
 
-              <div className="border-r border-slate-200 pr-4">
-                <div className="font-bold text-slate-800">
+              <div className="border-r border-line pr-4">
+                <div className="font-bold text-ink">
                   {reviewsCount.toLocaleString("fa-IR")}
                 </div>
-                <div className="text-xs text-slate-500 mt-1">نظر ثبت‌شده</div>
+                <div className="text-xs text-muted mt-1">نظر ثبت‌شده</div>
               </div>
             </div>
           </div>
@@ -1317,20 +1450,20 @@ function ProductDetail() {
           {/* Review List */}
           <div className="py-6">
             {reviewsLoading ? (
-              <div className="py-8 text-center text-slate-400">
+              <div className="py-8 text-center text-muted-soft">
                 در حال دریافت نظرات...
               </div>
             ) : reviewsError ? (
-              <div className="py-6 text-center text-sm text-red-500">
+              <div className="py-6 text-center text-sm text-discount">
                 {reviewsError}
               </div>
             ) : reviews.length === 0 ? (
               <div className="py-10 text-center">
-                <MessageSquare size={36} className="mx-auto text-slate-300" />
-                <p className="font-bold text-slate-600 mt-3">
+                <MessageSquare size={36} className="mx-auto text-line-strong" />
+                <p className="font-bold text-muted mt-3">
                   هنوز نظری برای این محصول ثبت نشده است.
                 </p>
-                <p className="text-sm text-slate-400 mt-2">
+                <p className="text-sm text-muted-soft mt-2">
                   اولین نفری باش که تجربه‌اش را با دیگران به اشتراک می‌گذارد.
                 </p>
               </div>
@@ -1339,20 +1472,20 @@ function ProductDetail() {
                 {reviews.map((review) => (
                   <article
                     key={review.id}
-                    className="rounded-2xl border border-slate-100 p-5"
+                    className="rounded-2xl border border-line p-5"
                   >
                     <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-blue-50 text-blue-600">
+                        <div className="flex h-11 w-11 items-center justify-center rounded-full bg-brand-50 text-brand-600">
                           <User size={21} />
                         </div>
 
                         <div>
-                          <div className="font-bold text-slate-800">
+                          <div className="font-bold text-ink">
                             {review.user?.name || "کاربر"}
                           </div>
 
-                          <div className="flex items-center gap-1.5 text-xs text-slate-400 mt-1">
+                          <div className="flex items-center gap-1.5 text-xs text-muted-soft mt-1">
                             <CalendarDays size={13} />
                             {formatReviewDate(review.created_at)}
                           </div>
@@ -1363,23 +1496,23 @@ function ProductDetail() {
                     </div>
 
                     {review.title && (
-                      <h3 className="font-bold text-slate-800 mt-4">
+                      <h3 className="font-bold text-ink mt-4">
                         {review.title}
                       </h3>
                     )}
 
-                    <p className="text-sm text-slate-600 leading-8 mt-3 whitespace-pre-line">
+                    <p className="text-sm text-muted leading-8 mt-3 whitespace-pre-line">
                       {review.comment}
                     </p>
 
                     {review.admin_reply && (
-                      <div className="mt-5 rounded-xl bg-blue-50 border border-blue-100 p-4">
-                        <div className="flex items-center gap-2 text-sm font-bold text-blue-700">
+                      <div className="mt-5 rounded-xl bg-brand-50 border border-brand-100 p-4">
+                        <div className="flex items-center gap-2 text-sm font-bold text-brand-700">
                           <MessageSquare size={16} />
                           پاسخ فروشگاه
                         </div>
 
-                        <p className="text-sm text-slate-600 leading-7 mt-2 whitespace-pre-line">
+                        <p className="text-sm text-muted leading-7 mt-2 whitespace-pre-line">
                           {review.admin_reply}
                         </p>
                       </div>
@@ -1391,28 +1524,28 @@ function ProductDetail() {
           </div>
 
           {/* Review Form */}
-          <div className="border-t border-slate-100 pt-7">
+          <div className="border-t border-line pt-7">
             <div className="flex items-center gap-2 mb-2">
-              <Send size={20} className="text-blue-600" />
-              <h3 className="text-xl font-black text-slate-900">
+              <Send size={20} className="text-brand-600" />
+              <h3 className="text-xl font-black text-ink">
                 ثبت نظر درباره محصول
               </h3>
             </div>
 
-            <p className="text-sm text-slate-500 leading-7 mb-6">
+            <p className="text-sm text-muted leading-7 mb-6">
               ثبت نظر فقط برای سفارش‌های پرداخت‌شده و تحویل‌شده امکان‌پذیر است.
               نظر شما پس از بررسی مدیر در صفحه محصول نمایش داده می‌شود.
             </p>
 
             {!isLoggedIn && !ordersLoading && (
-              <div className="rounded-2xl bg-blue-50 border border-blue-100 p-5">
-                <p className="text-sm text-slate-700 leading-7">
+              <div className="rounded-2xl bg-brand-50 border border-brand-100 p-5">
+                <p className="text-sm text-ink-soft leading-7">
                   برای ثبت نظر ابتدا وارد حساب کاربری خود شوید.
                 </p>
 
                 <Link
                   to="/login"
-                  className="inline-flex items-center gap-2 mt-4 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-blue-700 transition"
+                  className="inline-flex items-center gap-2 mt-4 rounded-xl bg-brand-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-brand-700 transition"
                 >
                   ورود به حساب کاربری
                   <ArrowRight size={16} />
@@ -1421,14 +1554,14 @@ function ProductDetail() {
             )}
 
             {isLoggedIn && ordersLoading && (
-              <div className="py-6 text-center text-sm text-slate-400">
+              <div className="py-6 text-center text-sm text-muted-soft">
                 در حال بررسی سفارش‌های شما...
               </div>
             )}
 
             {isLoggedIn && !ordersLoading && eligibleOrders.length === 0 && (
-              <div className="rounded-2xl bg-slate-50 border border-slate-100 p-5">
-                <p className="text-sm text-slate-600 leading-7">
+              <div className="rounded-2xl bg-cream border border-line p-5">
+                <p className="text-sm text-muted leading-7">
                   در حال حاضر سفارش پرداخت‌شده و تحویل‌شده‌ای شامل این محصول
                   برای ثبت نظر پیدا نشد.
                 </p>
@@ -1440,7 +1573,7 @@ function ProductDetail() {
                 <div>
                   <label
                     htmlFor="review-order"
-                    className="block text-sm font-bold text-slate-700 mb-2"
+                    className="block text-sm font-bold text-ink-soft mb-2"
                   >
                     انتخاب سفارش
                   </label>
@@ -1454,16 +1587,16 @@ function ProductDetail() {
                       w-full
                       rounded-xl
                       border
-                      border-slate-200
+                      border-line
                       bg-white
                       px-4
                       py-3
                       text-sm
-                      text-slate-700
+                      text-ink-soft
                       outline-none
-                      focus:border-blue-500
+                      focus:border-brand-500
                       focus:ring-2
-                      focus:ring-blue-100
+                      focus:ring-brand-100
                     "
                   >
                     <option value="">سفارش موردنظر را انتخاب کنید</option>
@@ -1477,7 +1610,7 @@ function ProductDetail() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-bold text-slate-700 mb-3">
+                  <label className="block text-sm font-bold text-ink-soft mb-3">
                     امتیاز شما به محصول
                   </label>
 
@@ -1495,15 +1628,15 @@ function ProductDetail() {
                           size={29}
                           className={
                             rating <= reviewRating
-                              ? "fill-amber-400 text-amber-400"
-                              : "text-slate-300"
+                              ? "fill-gold text-gold"
+                              : "text-line-strong"
                           }
                         />
                       </button>
                     ))}
                   </div>
 
-                  <p className="text-xs text-slate-400 mt-2">
+                  <p className="text-xs text-muted-soft mt-2">
                     {reviewRating.toLocaleString("fa-IR")} از ۵
                   </p>
                 </div>
@@ -1511,7 +1644,7 @@ function ProductDetail() {
                 <div>
                   <label
                     htmlFor="review-title"
-                    className="block text-sm font-bold text-slate-700 mb-2"
+                    className="block text-sm font-bold text-ink-soft mb-2"
                   >
                     عنوان نظر (اختیاری)
                   </label>
@@ -1527,16 +1660,16 @@ function ProductDetail() {
                       w-full
                       rounded-xl
                       border
-                      border-slate-200
+                      border-line
                       bg-white
                       px-4
                       py-3
                       text-sm
                       outline-none
                       transition
-                      focus:border-blue-500
+                      focus:border-brand-500
                       focus:ring-2
-                      focus:ring-blue-100
+                      focus:ring-brand-100
                     "
                   />
                 </div>
@@ -1544,7 +1677,7 @@ function ProductDetail() {
                 <div>
                   <label
                     htmlFor="review-comment"
-                    className="block text-sm font-bold text-slate-700 mb-2"
+                    className="block text-sm font-bold text-ink-soft mb-2"
                   >
                     متن نظر
                   </label>
@@ -1563,7 +1696,7 @@ function ProductDetail() {
                       resize-y
                       rounded-xl
                       border
-                      border-slate-200
+                      border-line
                       bg-white
                       px-4
                       py-3
@@ -1571,25 +1704,25 @@ function ProductDetail() {
                       leading-7
                       outline-none
                       transition
-                      focus:border-blue-500
+                      focus:border-brand-500
                       focus:ring-2
-                      focus:ring-blue-100
+                      focus:ring-brand-100
                     "
                   />
 
-                  <div className="text-left text-xs text-slate-400 mt-1">
+                  <div className="text-left text-xs text-muted-soft mt-1">
                     {reviewComment.length.toLocaleString("fa-IR")} / ۳۰۰۰
                   </div>
                 </div>
 
                 {reviewFormError && (
-                  <div className="rounded-xl bg-red-50 border border-red-100 px-4 py-3 text-sm text-red-600 leading-7">
+                  <div className="rounded-xl bg-blush-50 border border-blush-100 px-4 py-3 text-sm text-discount leading-7">
                     {reviewFormError}
                   </div>
                 )}
 
                 {reviewMessage && (
-                  <div className="rounded-xl bg-green-50 border border-green-100 px-4 py-3 text-sm text-green-700 leading-7">
+                  <div className="rounded-xl bg-brand-50 border border-brand-100 px-4 py-3 text-sm text-stock-700 leading-7">
                     <div className="flex items-center gap-2 font-bold mb-1">
                       <CheckCircle2 size={17} />
                       نظر ثبت شد
@@ -1619,7 +1752,20 @@ function ProductDetail() {
         open={sizeGuideOpen}
         onClose={() => setSizeGuideOpen(false)}
         initialTab={sizeGuideTab}
-      />
+        title={productSizeGuide?.title || undefined}
+        subtitle={
+          productSizeGuide
+            ? "اندازه‌ها و توضیحات سایزبندی همین محصول."
+            : undefined
+        }
+      >
+        {productSizeGuide ? (
+          <ProductSizeGuide
+            guide={productSizeGuide}
+            selectedSize={selectedVariant?.name ?? null}
+          />
+        ) : undefined}
+      </SizeGuideModal>
     </Layout>
   );
 }

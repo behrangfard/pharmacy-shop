@@ -11,6 +11,24 @@ export const STORAGE_KEYS = {
   adminToken: "behrang-shop-admin-token",
   adminUser: "behrang-shop-admin-user",
   cart: "behrang-shop-cart",
+  /** علاقه‌مندی‌های مهمان؛ پس از ورود به حساب به سرور منتقل می‌شود. */
+  wishlist: "behrang-shop-wishlist",
+  /** کش فهرست دسته‌بندی‌های فروشگاه برای رندر فوری منو. */
+  storefrontCategories: "behrang-shop-storefront-categories",
+  /** کش فهرست برندهای فروشگاه برای فیلتر صفحهٔ محصولات. */
+  storefrontBrands: "behrang-shop-storefront-brands",
+  /** کش تنظیمات عمومی فروشگاه (تماس، ارسال، مالیات). */
+  storefrontSettings: "behrang-shop-storefront-settings",
+  /** کش نوار اطلاع‌رسانی بالای هدر (متن/تصویر/ویدیوهای تبلیغاتی). */
+  storefrontAnnouncementBar: "behrang-shop-storefront-announcement-bar",
+  /** کش نشان‌های اعتماد و مجوزهای فوتر (اینماد، ساماندهی و ...). */
+  storefrontTrustBadges: "behrang-shop-storefront-trust-badges",
+  /** توکن گفتگوی پشتیبانی مهمان (چت فروشگاه). */
+  supportConversation: "behrang-shop-support-conversation",
+  /** آخرین پیام دیده‌شدهٔ گفتگوی پشتیبانی (برای نشانگر پیام جدید). */
+  supportLastSeen: "behrang-shop-support-last-seen",
+  /** چیدمان شخصی‌سازی‌شدهٔ منوی سایدبار پنل مدیریت (ترتیب + پین). */
+  adminSidebar: "behrang-shop-admin-sidebar",
 } as const;
 
 const LEGACY_STORAGE_KEYS: Record<string, string> = {

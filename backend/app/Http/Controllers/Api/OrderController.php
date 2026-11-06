@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Coupon;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductVariant;
@@ -34,6 +35,7 @@ class OrderController extends Controller
                 'exists:product_variants,id',
             ],
             'items.*.quantity' => ['required', 'integer', 'min:1'],
+            'coupon_code' => ['nullable', 'string', 'max:60'],
         ]);
 
         // جلوگیری از تکرار یک تنوع در چند ردیف سفارش
@@ -216,7 +218,63 @@ class OrderController extends Controller
 
                 $subtotal = round($subtotal, 2);
                 $discount = round($discount, 2);
-                $shippingCost = 0;
+
+                $couponCode = isset($validated['coupon_code'])
+                    ? Coupon::normalizeCode($validated['coupon_code'])
+                    : null;
+
+                $couponDiscount = 0.0;
+                $appliedCoupon = null;
+
+                if ($couponCode !== null && $couponCode !== '') {
+                    $appliedCoupon = Coupon::query()
+                        ->where('code', $couponCode)
+                        ->lockForUpdate()
+                        ->first();
+
+                    if (! $appliedCoupon || ! $appliedCoupon->is_active) {
+                        abort(422, 'کد تخفیف معتبر نیست یا منقضی شده است.');
+                    }
+
+                    if (
+                        $appliedCoupon->starts_at !== null
+                        && $appliedCoupon->starts_at->isFuture()
+                    ) {
+                        abort(422, 'زمان استفاده از این کد تخفیف فرا نرسیده است.');
+                    }
+
+                    if (
+                        $appliedCoupon->expires_at !== null
+                        && $appliedCoupon->expires_at->isPast()
+                    ) {
+                        abort(422, 'کد تخفیف منقضی شده است.');
+                    }
+
+                    $couponSubtotal = round($subtotal - $discount, 2);
+
+                    $couponError = $appliedCoupon->validationError($couponSubtotal);
+
+                    if ($couponError !== null) {
+                        abort(422, $couponError);
+                    }
+
+                    $couponDiscount = $appliedCoupon->calculateDiscount($couponSubtotal);
+
+                    if ($couponDiscount <= 0) {
+                        abort(
+                            422,
+                            'این کد تخفیف برای سبد خرید فعلی مبلغی کاهش نمی‌دهد.'
+                        );
+                    }
+
+                    $discount = round($discount + $couponDiscount, 2);
+
+                    $appliedCoupon->increment('used_count');
+                }
+
+                $netSubtotal = round($subtotal - $discount, 2);
+
+                $shippingCost = $this->resolveShippingCost($netSubtotal);
 
                 $vatEnabled = filter_var(
                     (string) StoreSetting::getValue('vat_enabled', '0'),
@@ -234,7 +292,7 @@ class OrderController extends Controller
                     : 0;
 
                 $taxableAmount = round(
-                    $taxableAmount + $shippingCost,
+                    max($taxableAmount - $couponDiscount, 0) + $shippingCost,
                     2
                 );
 
@@ -264,6 +322,8 @@ class OrderController extends Controller
                     'subtotal' => $subtotal,
                     'shipping_cost' => $shippingCost,
                     'discount' => $discount,
+                    'coupon_code' => $couponDiscount > 0 ? $couponCode : null,
+                    'coupon_discount' => $couponDiscount,
                     'tax_percent' => $vatPercent,
                     'tax_amount' => $taxAmount,
                     'total' => $total,
@@ -308,6 +368,27 @@ class OrderController extends Controller
             'message' => 'سفارش با موفقیت ایجاد شد و آماده پرداخت است.',
             'data' => $order,
         ], 201);
+    }
+
+    /**
+     * هزینه ارسال بر اساس تنظیمات فروشگاه و مبلغ نهایی سبد.
+     */
+    private function resolveShippingCost(float $netSubtotal): float
+    {
+        $settings = StoreSetting::publicSettings();
+
+        $freeShippingEnabled = filter_var(
+            (string) $settings['free_shipping_enabled'],
+            FILTER_VALIDATE_BOOLEAN
+        );
+
+        $threshold = (float) $settings['free_shipping_threshold'];
+
+        if ($freeShippingEnabled && $threshold > 0 && $netSubtotal >= $threshold) {
+            return 0.0;
+        }
+
+        return round(max((float) $settings['shipping_cost'], 0), 2);
     }
 
     private function requestMatchesOrder(
@@ -388,7 +469,11 @@ class OrderController extends Controller
         $order = Order::query()
             ->where('user_id', $request->user()->id)
             ->where('order_number', $orderNumber)
-            ->with('items.product.images', 'items.variant')
+            ->with(
+                'items.product.images',
+                'items.variant',
+                'returnRequest'
+            )
             ->first();
 
         if (! $order) {

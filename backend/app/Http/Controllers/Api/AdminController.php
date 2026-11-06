@@ -188,4 +188,127 @@ class AdminController extends Controller
             ],
         ]);
     }
+
+    /**
+     * روند فروش بازه‌ای برای نمودار «نبض فروشگاه».
+     *
+     * range: 7d (هفت روز اخیر) | 30d (سی روز اخیر) | 12m (دوازده ماه اخیر)
+     */
+    public function salesTrend(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'range' => ['nullable', 'string', 'in:7d,30d,12m'],
+        ]);
+
+        $range = $validated['range'] ?? '7d';
+
+        // فقط سفارش‌های پرداخت‌شده و لغو‌نشده به‌عنوان فروش محاسبه می‌شوند.
+        $eligibleSales = Order::query()
+            ->where('payment_status', 'paid')
+            ->whereNotIn('status', ['cancelled', 'canceled']);
+
+        $now = Carbon::now(config('app.timezone'));
+        $isMonthly = $range === '12m';
+
+        if ($isMonthly) {
+            $granularity = 'month';
+            $bucketCount = 12;
+            $seriesStart = $now->copy()->startOfMonth()->subMonths($bucketCount - 1);
+            $seriesEnd = $now->copy()->startOfMonth()->addMonth();
+            $previousStart = $seriesStart->copy()->subMonths($bucketCount);
+            $previousEnd = $seriesStart->copy();
+            // substr هم در MySQL و هم در SQLite تاریخ ذخیره‌شده را به «YYYY-MM» تبدیل می‌کند.
+            $bucketExpression = 'substr(created_at, 1, 7)';
+        } else {
+            $granularity = 'day';
+            $bucketCount = $range === '30d' ? 30 : 7;
+            $seriesStart = $now->copy()->startOfDay()->subDays($bucketCount - 1);
+            $seriesEnd = $now->copy()->startOfDay()->addDay();
+            $previousStart = $seriesStart->copy()->subDays($bucketCount);
+            $previousEnd = $seriesStart->copy();
+            $bucketExpression = 'DATE(created_at)';
+        }
+
+        $bucketRows = (clone $eligibleSales)
+            ->where('created_at', '>=', $seriesStart)
+            ->where('created_at', '<', $seriesEnd)
+            ->selectRaw(
+                $bucketExpression.' as bucket_key,
+                 COUNT(*) as orders_count,
+                 COALESCE(SUM(total), 0) as sales_total'
+            )
+            ->groupBy('bucket_key')
+            ->get()
+            ->keyBy('bucket_key');
+
+        $points = [];
+
+        for ($index = 0; $index < $bucketCount; $index++) {
+            $bucketStart = $isMonthly
+                ? $seriesStart->copy()->addMonths($index)
+                : $seriesStart->copy()->addDays($index);
+
+            $key = $isMonthly
+                ? $bucketStart->format('Y-m')
+                : $bucketStart->toDateString();
+
+            $row = $bucketRows->get($key);
+
+            $points[] = [
+                'key' => $key,
+                'date' => $bucketStart->toDateString(),
+                'sales' => round((float) ($row->sales_total ?? 0), 2),
+                'orders' => (int) ($row->orders_count ?? 0),
+            ];
+        }
+
+        $totalSales = 0.0;
+        $totalOrders = 0;
+        $peakPoint = null;
+
+        foreach ($points as $point) {
+            $totalSales += $point['sales'];
+            $totalOrders += $point['orders'];
+
+            if ($point['sales'] > 0 && ($peakPoint === null || $point['sales'] > $peakPoint['sales'])) {
+                $peakPoint = $point;
+            }
+        }
+
+        $previousTotalSales = (float) (clone $eligibleSales)
+            ->where('created_at', '>=', $previousStart)
+            ->where('created_at', '<', $previousEnd)
+            ->sum('total');
+
+        $changePercent = null;
+
+        if ($previousTotalSales > 0) {
+            $changePercent = round(
+                (($totalSales - $previousTotalSales) / $previousTotalSales) * 100,
+                1
+            );
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'range' => $range,
+                'granularity' => $granularity,
+                'start_date' => $seriesStart->toDateString(),
+                'end_date' => $seriesEnd->copy()->subDay()->toDateString(),
+                'points' => $points,
+                'summary' => [
+                    'total_sales' => round($totalSales, 2),
+                    'total_orders' => $totalOrders,
+                    'previous_total_sales' => round($previousTotalSales, 2),
+                    'change_percent' => $changePercent,
+                    'average_sales' => round($totalSales / $bucketCount, 2),
+                    'average_order' => $totalOrders > 0
+                        ? round($totalSales / $totalOrders, 2)
+                        : 0,
+                    'peak' => $peakPoint,
+                ],
+            ],
+        ]);
+    }
 }

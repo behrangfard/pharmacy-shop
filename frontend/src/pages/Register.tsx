@@ -3,11 +3,14 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ArrowRight, Lock, Mail, User } from "lucide-react";
 
 import Layout from "../components/Layout";
+import { usePrivatePageMeta } from "../hooks/usePageMeta";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { STORAGE_KEYS } from "../utils/storageKeys";
 
 function Register() {
+  usePrivatePageMeta("ثبت‌نام", "/register");
+
   const navigate = useNavigate();
   const location = useLocation();
   const { setUser } = useAuth();
@@ -87,17 +90,17 @@ function Register() {
   return (
     <Layout>
       <main dir="rtl" className="max-w-md mx-auto px-6 py-16">
-        <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-8">
+        <div className="bg-white rounded-3xl border border-line shadow-sm p-8">
           <div className="text-center mb-8">
-            <div className="w-16 h-16 mx-auto rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center">
+            <div className="w-16 h-16 mx-auto rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center">
               <User size={30} />
             </div>
 
-            <h1 className="text-2xl font-black text-slate-900 mt-5">
+            <h1 className="text-2xl font-black text-ink mt-5">
               ایجاد حساب کاربری
             </h1>
 
-            <p className="text-slate-500 mt-2">
+            <p className="text-muted mt-2">
               برای خرید سریع‌تر حساب خود را بسازید
             </p>
           </div>
@@ -105,7 +108,7 @@ function Register() {
           {error && (
             <div
               role="alert"
-              className="mb-5 rounded-xl bg-red-50 border border-red-100 text-red-600 px-4 py-3 text-sm"
+              className="mb-5 rounded-xl bg-blush-50 border border-blush-100 text-discount px-4 py-3 text-sm"
             >
               {error}
             </div>
@@ -115,7 +118,7 @@ function Register() {
             <div>
               <label
                 htmlFor="register-name"
-                className="block text-sm font-bold text-slate-700 mb-2"
+                className="block text-sm font-bold text-ink-soft mb-2"
               >
                 نام و نام خانوادگی
               </label>
@@ -129,12 +132,12 @@ function Register() {
                   placeholder="نام و نام خانوادگی"
                   autoComplete="name"
                   required
-                  className="w-full rounded-xl border border-slate-200 py-3 pr-11 pl-4 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  className="w-full rounded-xl border border-line py-3 pr-11 pl-4 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
                 />
 
                 <User
                   size={19}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-soft"
                 />
               </div>
             </div>
@@ -142,7 +145,7 @@ function Register() {
             <div>
               <label
                 htmlFor="register-email"
-                className="block text-sm font-bold text-slate-700 mb-2"
+                className="block text-sm font-bold text-ink-soft mb-2"
               >
                 ایمیل
               </label>
@@ -156,12 +159,12 @@ function Register() {
                   placeholder="example@email.com"
                   autoComplete="email"
                   required
-                  className="w-full rounded-xl border border-slate-200 py-3 pr-11 pl-4 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  className="w-full rounded-xl border border-line py-3 pr-11 pl-4 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
                 />
 
                 <Mail
                   size={19}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-soft"
                 />
               </div>
             </div>
@@ -169,7 +172,7 @@ function Register() {
             <div>
               <label
                 htmlFor="register-password"
-                className="block text-sm font-bold text-slate-700 mb-2"
+                className="block text-sm font-bold text-ink-soft mb-2"
               >
                 رمز عبور
               </label>
@@ -184,12 +187,12 @@ function Register() {
                   autoComplete="new-password"
                   minLength={8}
                   required
-                  className="w-full rounded-xl border border-slate-200 py-3 pr-11 pl-4 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  className="w-full rounded-xl border border-line py-3 pr-11 pl-4 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
                 />
 
                 <Lock
                   size={19}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-soft"
                 />
               </div>
             </div>
@@ -197,7 +200,7 @@ function Register() {
             <div>
               <label
                 htmlFor="register-password-confirmation"
-                className="block text-sm font-bold text-slate-700 mb-2"
+                className="block text-sm font-bold text-ink-soft mb-2"
               >
                 تکرار رمز عبور
               </label>
@@ -214,12 +217,12 @@ function Register() {
                   autoComplete="new-password"
                   minLength={8}
                   required
-                  className="w-full rounded-xl border border-slate-200 py-3 pr-11 pl-4 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                  className="w-full rounded-xl border border-line py-3 pr-11 pl-4 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
                 />
 
                 <Lock
                   size={19}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-soft"
                 />
               </div>
             </div>
@@ -227,21 +230,21 @@ function Register() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white py-3.5 rounded-xl font-bold transition"
+              className="w-full bg-brand-600 hover:bg-brand-700 disabled:opacity-60 text-white py-3.5 rounded-xl font-bold transition"
             >
               {loading ? "در حال ثبت‌نام..." : "ایجاد حساب"}
             </button>
           </form>
 
           <div className="text-center mt-6">
-            <span className="text-sm text-slate-500">
+            <span className="text-sm text-muted">
               قبلاً حساب ساخته‌اید؟
             </span>
 
             <Link
               to="/login"
               state={{ from: redirectPath }}
-              className="text-sm text-blue-600 font-bold mr-2 hover:text-blue-700"
+              className="text-sm text-brand-600 font-bold mr-2 hover:text-brand-700"
             >
               وارد شوید
             </Link>
@@ -249,7 +252,7 @@ function Register() {
 
           <Link
             to="/"
-            className="flex items-center justify-center gap-2 text-sm text-slate-400 hover:text-blue-600 mt-6"
+            className="flex items-center justify-center gap-2 text-sm text-muted-soft hover:text-brand-600 mt-6"
           >
             <ArrowRight size={16} />
             بازگشت به فروشگاه

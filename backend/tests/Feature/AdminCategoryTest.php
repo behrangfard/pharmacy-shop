@@ -2,10 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Http\Controllers\Api\CategoryController;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -172,4 +174,31 @@ public function test_admin_cannot_delete_category_with_children(): void
         $this->getJson('/api/v1/admin/categories')
             ->assertForbidden();
     }
+
+    public function test_storefront_category_cache_is_cleared_after_admin_changes(): void
+    {
+        $this->admin();
+
+        $category = $this->createCategory([
+            'name' => 'Cached Category',
+            'slug' => 'cached-category',
+        ]);
+
+        Cache::put(
+            CategoryController::STOREFRONT_CACHE_KEY,
+            [['id' => $category->id, 'name' => 'Cached Category']],
+            now()->addMinutes(5)
+        );
+
+        $this->assertNotNull(Cache::get(CategoryController::STOREFRONT_CACHE_KEY));
+
+        $this->putJson("/api/v1/admin/categories/{$category->id}", [
+            'name' => 'Renamed Category',
+            'is_active' => true,
+            'sort_order' => 0,
+        ])->assertOk();
+
+        $this->assertNull(Cache::get(CategoryController::STOREFRONT_CACHE_KEY));
+    }
+
 }

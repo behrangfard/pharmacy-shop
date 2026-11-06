@@ -1,4 +1,10 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import type {
+  ComponentType,
+  CSSProperties,
+  DragEvent,
+  PointerEvent as ReactPointerEvent,
+} from "react";
 import {
   Link,
   NavLink,
@@ -18,17 +24,78 @@ import {
   Search,
   Bell,
   ChevronLeft,
+  ChevronDown,
   CalendarDays,
   Command,
   Users,
   MessageSquare,
   Megaphone,
+  Headset,
   Pencil,
+  Settings,
+  TicketPercent,
+  RotateCcw,
+  Image,
+  Newspaper,
+  TrendingUp,
+  BadgeCheck,
+  ArrowUp,
+  ArrowDown,
+  Check,
+  GripVertical,
+  Pin,
+  PinOff,
+  SlidersHorizontal,
+  Type,
 } from "lucide-react";
 import { useAdminAuth } from "../context/AdminAuthContext";
+import { usePageMeta } from "../hooks/usePageMeta";
+import { NO_INDEX_ROBOTS, SITE_NAME } from "../utils/seo";
+import {
+  ADMIN_PERMISSIONS,
+  hasAdminPermission,
+} from "../utils/adminPermissions";
+import {
+  ADMIN_SIDEBAR_DENSITIES,
+  ADMIN_SIDEBAR_DENSITY_LABELS,
+  ADMIN_SIDEBAR_GROUP_IDS,
+  ADMIN_SIDEBAR_PINNED_GROUP_ID,
+  ADMIN_SIDEBAR_WIDTH_DEFAULT,
+  ADMIN_SIDEBAR_WIDTH_MAX,
+  ADMIN_SIDEBAR_WIDTH_MIN,
+  clampAdminSidebarWidth,
+  defaultSidebarGroupOf,
+  normalizeAdminSidebarLayout,
+  readAdminSidebarLayout,
+  saveAdminSidebarLayout,
+  type AdminSidebarContainerId,
+  type AdminSidebarGroupId,
+  type AdminSidebarLayout,
+} from "../utils/adminSidebarLayout";
+
+type AdminSidebarSection = {
+  id: AdminSidebarGroupId;
+  label: string;
+  icon: ComponentType<{ size?: number | string; strokeWidth?: number | string }>;
+};
+
+/* گروه‌های اصلی منو با عنوان و آیکن روشن؛ ترتیب و جای آیتم‌ها قابل تغییر است */
+const adminSidebarSections: AdminSidebarSection[] = [
+  { id: "general", label: "عمومی", icon: LayoutDashboard },
+  { id: "store", label: "فروشگاه", icon: Store },
+  { id: "orders", label: "سفارشات", icon: ShoppingCart },
+  { id: "reports", label: "گزارشات", icon: TrendingUp },
+];
 
 function AdminLayout() {
-  const { user, logout } = useAdminAuth();
+  // همهٔ صفحه‌های پنل از ایندکس موتورهای جست‌وجو خارج می‌شوند.
+  usePageMeta({
+    title: `پنل مدیریت | ${SITE_NAME}`,
+    path: "/admin",
+    robots: NO_INDEX_ROBOTS,
+  });
+
+  const { user, logout, can, roleLabel } = useAdminAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -41,6 +108,7 @@ function AdminLayout() {
   const navItems = [
     {
       to: "/admin",
+      permission: ADMIN_PERMISSIONS.dashboard,
       label: "نمای کلی",
       end: true,
       icon: LayoutDashboard,
@@ -48,36 +116,100 @@ function AdminLayout() {
     },
     {
       to: "/admin/products",
+      permission: ADMIN_PERMISSIONS.products,
       label: "محصولات",
       icon: Package,
       keywords: "کالا موجودی قیمت افزودن محصول",
     },
     {
       to: "/admin/categories",
+      permission: ADMIN_PERMISSIONS.categories,
       label: "دسته‌بندی‌ها",
       icon: Tags,
       keywords: "گروه دسته بندی",
     },
     {
+      to: "/admin/brands",
+      permission: ADMIN_PERMISSIONS.brands,
+      label: "برندها",
+      icon: Tags,
+      keywords: "برند سازنده لوگو تولیدکننده",
+    },
+    {
       to: "/admin/orders",
+      permission: ADMIN_PERMISSIONS.orders,
       label: "سفارش‌ها",
       icon: ShoppingCart,
       keywords: "خرید پرداخت ارسال سفارش",
     },
     {
+      to: "/admin/returns",
+      permission: ADMIN_PERMISSIONS.returns,
+      label: "مرجوعی‌ها",
+      icon: RotateCcw,
+      keywords: "مرجوعی بازگشت کالا بازپرداخت شکایت",
+    },
+    {
+      to: "/admin/coupons",
+      permission: ADMIN_PERMISSIONS.coupons,
+      label: "کدهای تخفیف",
+      icon: TicketPercent,
+      keywords: "کوپن تخفیف کد درصد مبلغ بازاریابی",
+    },
+    {
+      to: "/admin/banners",
+      permission: ADMIN_PERMISSIONS.banners,
+      label: "بنرها",
+      icon: Image,
+      keywords: "بنر اسلایدر تصویر تبلیغات صفحه اول",
+    },
+    {
+      to: "/admin/announcement-bar",
+      permission: ADMIN_PERMISSIONS.banners,
+      label: "نوار اطلاع‌رسانی",
+      icon: Megaphone,
+      keywords:
+        "نوار اطلاع رسانی تیکر تخفیف تبلیغات بالای هدر متن متحرک تصویر متحرک ویدیو",
+    },
+    {
+      to: "/admin/trust-badges",
+      permission: ADMIN_PERMISSIONS.settings,
+      label: "نمادها و مجوزها",
+      icon: BadgeCheck,
+      keywords:
+        "اینماد نماد اعتماد مجوز ساماندهی نشان اعتماد الکترونیکی فوتر نمادها",
+    },
+    {
+      to: "/admin/articles",
+      permission: ADMIN_PERMISSIONS.articles,
+      label: "مقالات",
+      icon: Newspaper,
+      keywords: "مقاله وبلاگ محتوا پست نوشتن انتشار بلاگ",
+    },
+    {
       to: "/admin/reviews",
+      permission: ADMIN_PERMISSIONS.reviews,
       label: "نظرات محصولات",
       icon: MessageSquare,
       keywords: "نظر دیدگاه امتیاز ستاره بررسی تأیید رد پاسخ مشتری",
     },
     {
       to: "/admin/customers",
+      permission: ADMIN_PERMISSIONS.customers,
       label: "مشتریان",
       icon: Users,
       keywords: "مشتری کاربران اعضا سابقه خرید اطلاعات مشتری",
     },
     {
+      to: "/admin/support",
+      permission: ADMIN_PERMISSIONS.messaging,
+      label: "پشتیبانی",
+      icon: Headset,
+      keywords: "پشتیبانی چت گفتگو صندوق تیکت تلگرام واتساپ بله",
+    },
+    {
       to: "/admin/messaging",
+      permission: ADMIN_PERMISSIONS.messaging,
       label: "پیام‌رسانی",
       icon: Megaphone,
       keywords:
@@ -85,11 +217,374 @@ function AdminLayout() {
     },
     {
       to: "/admin/admins",
+      permission: ADMIN_PERMISSIONS.admins,
       label: "مدیران",
       icon: ShieldCheck,
       keywords: "مدیر ادمین حساب کاربری رمز عبور افزودن مدیر ویرایش حساب",
     },
+    {
+      to: "/admin/reports",
+      permission: ADMIN_PERMISSIONS.reports,
+      label: "گزارش فروش",
+      icon: TrendingUp,
+      keywords: "گزارش فروش درآمد آمار پرفروش موجودی کم تحلیل",
+    },
+    {
+      to: "/admin/settings",
+      permission: ADMIN_PERMISSIONS.settings,
+      label: "تنظیمات فروشگاه",
+      icon: Settings,
+      keywords:
+        "تنظیمات هزینه ارسال مالیات تماس شبکه اجتماعی فوتر مرجوعی ارسال رایگان",
+    },
   ];
+
+  /* فقط بخش‌هایی که نقش مدیر به آن‌ها دسترسی دارد در منو و جست‌وجو می‌آیند. */
+  const visibleNavItems = useMemo(
+    () => navItems.filter((item) => hasAdminPermission(user, item.permission)),
+    [user],
+  );
+
+  /* چیدمان منو: ترتیب گروه‌ها/آیتم‌ها و آیتم‌های پین‌شده (ذخیره‌شده برای هر مدیر) */
+  const allNavPaths = useMemo(() => navItems.map((item) => item.to), []);
+
+  const [sidebarLayout, setSidebarLayout] = useState<AdminSidebarLayout>(() =>
+    readAdminSidebarLayout(user?.id, allNavPaths),
+  );
+  const [layoutEditing, setLayoutEditing] = useState(false);
+  const [draggingPath, setDraggingPath] = useState<string | null>(null);
+  const [dropTarget, setDropTarget] = useState<{
+    containerId: AdminSidebarContainerId;
+    index: number;
+  } | null>(null);
+
+  /* عرض سایدبار در حین کشیدن لبه؛ فقط بعد از رها کردن ذخیره می‌شود */
+  const [dragWidth, setDragWidth] = useState<number | null>(null);
+  const resizeRef = useRef({
+    startX: 0,
+    startWidth: ADMIN_SIDEBAR_WIDTH_DEFAULT,
+  });
+
+  const sidebarWidth = dragWidth ?? sidebarLayout.width;
+
+  useEffect(() => {
+    setSidebarLayout(readAdminSidebarLayout(user?.id, allNavPaths));
+  }, [user?.id, allNavPaths]);
+
+  const resolveNavItems = (paths: string[]) =>
+    paths
+      .map((path) => visibleNavItems.find((item) => item.to === path))
+      .filter((item): item is (typeof visibleNavItems)[number] => Boolean(item));
+
+  const layoutSections = useMemo(
+    () =>
+      ADMIN_SIDEBAR_GROUP_IDS.map((groupId) => {
+        const meta = adminSidebarSections.find(
+          (section) => section.id === groupId,
+        );
+
+        return {
+          id: groupId,
+          label: meta?.label ?? groupId,
+          icon: meta?.icon ?? LayoutDashboard,
+          items: resolveNavItems(sidebarLayout.groups[groupId]),
+        };
+      }).filter((section) => section.items.length > 0 || layoutEditing),
+    [layoutEditing, sidebarLayout, visibleNavItems],
+  );
+
+  const pinnedNavItems = useMemo(
+    () => resolveNavItems(sidebarLayout.pinned),
+    [sidebarLayout, visibleNavItems],
+  );
+
+  const persistSidebarLayout = (next: AdminSidebarLayout) => {
+    setSidebarLayout(next);
+    saveAdminSidebarLayout(user?.id, next);
+  };
+
+  /** شروع کشیدن لبهٔ سایدبار برای تغییر عرض. */
+  const handleResizeStart = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === "mouse" && event.button !== 0) {
+      return;
+    }
+
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    resizeRef.current = {
+      startX: event.clientX,
+      startWidth: sidebarLayout.width,
+    };
+    setDragWidth(sidebarLayout.width);
+  };
+
+  const handleResizeMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (dragWidth === null) {
+      return;
+    }
+
+    /* سایدبار سمت راست است؛ کشیدن لبه به سمت چپ عرض را زیاد می‌کند */
+    const { startX, startWidth } = resizeRef.current;
+
+    setDragWidth(clampAdminSidebarWidth(startWidth + (startX - event.clientX)));
+  };
+
+  const handleResizeEnd = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (dragWidth === null) {
+      return;
+    }
+
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+
+    const { startX, startWidth } = resizeRef.current;
+    const width = clampAdminSidebarWidth(startWidth + (startX - event.clientX));
+
+    setDragWidth(null);
+    persistSidebarLayout({ ...sidebarLayout, width });
+  };
+
+  const resetSidebarWidth = () => {
+    setDragWidth(null);
+    persistSidebarLayout({
+      ...sidebarLayout,
+      width: ADMIN_SIDEBAR_WIDTH_DEFAULT,
+    });
+  };
+
+  /** تغییر اندازهٔ آیتم‌های منو: فشرده → عادی → بزرگ. */
+  const cycleSidebarDensity = () => {
+    const currentIndex = ADMIN_SIDEBAR_DENSITIES.indexOf(
+      sidebarLayout.density,
+    );
+    const density =
+      ADMIN_SIDEBAR_DENSITIES[
+        (currentIndex + 1) % ADMIN_SIDEBAR_DENSITIES.length
+      ];
+
+    persistSidebarLayout({ ...sidebarLayout, density });
+  };
+
+  /** جابه‌جایی یک آیتم به گروه و جای مشخص؛ گروه «pinned» یعنی پین کردن. */
+  const moveNavItem = (
+    path: string,
+    targetContainerId: AdminSidebarContainerId,
+    targetIndex: number,
+  ) => {
+    if (!path) {
+      return;
+    }
+
+    const groups: Record<AdminSidebarGroupId, string[]> = {
+      general: sidebarLayout.groups.general.filter((item) => item !== path),
+      store: sidebarLayout.groups.store.filter((item) => item !== path),
+      orders: sidebarLayout.groups.orders.filter((item) => item !== path),
+      reports: sidebarLayout.groups.reports.filter((item) => item !== path),
+    };
+    const pinned = sidebarLayout.pinned.filter((item) => item !== path);
+
+    if (targetContainerId === ADMIN_SIDEBAR_PINNED_GROUP_ID) {
+      const pinnedIndex = Math.max(0, Math.min(targetIndex, pinned.length));
+
+      persistSidebarLayout({
+        ...sidebarLayout,
+        groups,
+        collapsed: sidebarLayout.collapsed.filter(
+          (id) => id !== ADMIN_SIDEBAR_PINNED_GROUP_ID,
+        ),
+        pinned: [
+          ...pinned.slice(0, pinnedIndex),
+          path,
+          ...pinned.slice(pinnedIndex),
+        ],
+      });
+
+      return;
+    }
+
+    const list = groups[targetContainerId];
+    const index = Math.max(0, Math.min(targetIndex, list.length));
+
+    persistSidebarLayout({
+      ...sidebarLayout,
+      pinned,
+      /* گروه مقصد باز می‌شود تا آیتم منتقل‌شده دیده شود */
+      collapsed: sidebarLayout.collapsed.filter(
+        (id) => id !== targetContainerId,
+      ),
+      groups: {
+        ...groups,
+        [targetContainerId]: [
+          ...list.slice(0, index),
+          path,
+          ...list.slice(index),
+        ],
+      },
+    });
+  };
+
+  /** پین/آنپین آیتم؛ بعد از آنپین به گروه پیش‌فرض خودش برمی‌گردد. */
+  const togglePinNavItem = (path: string) => {
+    if (sidebarLayout.pinned.includes(path)) {
+      const groupId = defaultSidebarGroupOf(path);
+
+      moveNavItem(path, groupId, sidebarLayout.groups[groupId].length);
+
+      return;
+    }
+
+    moveNavItem(
+      path,
+      ADMIN_SIDEBAR_PINNED_GROUP_ID,
+      sidebarLayout.pinned.length,
+    );
+  };
+
+  /** جابه‌جایی یک پله بالا/پایین در همان گروه (برای موبایل و لمس). */
+  const moveNavItemByOffset = (path: string, offset: number) => {
+    const pinnedIndex = sidebarLayout.pinned.indexOf(path);
+
+    if (pinnedIndex >= 0) {
+      const target = pinnedIndex + offset;
+
+      if (target < 0 || target >= sidebarLayout.pinned.length) {
+        return;
+      }
+
+      const pinned = [...sidebarLayout.pinned];
+
+      pinned.splice(pinnedIndex, 1);
+      pinned.splice(target, 0, path);
+      persistSidebarLayout({ ...sidebarLayout, pinned });
+
+      return;
+    }
+
+    const groupId = ADMIN_SIDEBAR_GROUP_IDS.find((id) =>
+      sidebarLayout.groups[id].includes(path),
+    );
+
+    if (!groupId) {
+      return;
+    }
+
+    const list = [...sidebarLayout.groups[groupId]];
+    const from = list.indexOf(path);
+    const to = from + offset;
+
+    if (from < 0 || to < 0 || to >= list.length) {
+      return;
+    }
+
+    list.splice(from, 1);
+    list.splice(to, 0, path);
+    persistSidebarLayout({
+      ...sidebarLayout,
+      groups: { ...sidebarLayout.groups, [groupId]: list },
+    });
+  };
+
+  const resetSidebarLayout = () => {
+    persistSidebarLayout(normalizeAdminSidebarLayout(null, allNavPaths));
+  };
+
+  /** بستن/باز کردن گروه‌ها (dropdown)؛ وضعیت برای همین مدیر ذخیره می‌شود. */
+  const toggleGroupCollapsed = (containerId: AdminSidebarContainerId) => {
+    const collapsed = sidebarLayout.collapsed.includes(containerId)
+      ? sidebarLayout.collapsed.filter((id) => id !== containerId)
+      : [...sidebarLayout.collapsed, containerId];
+
+    persistSidebarLayout({ ...sidebarLayout, collapsed });
+  };
+
+  const isGroupCollapsed = (containerId: AdminSidebarContainerId) =>
+    sidebarLayout.collapsed.includes(containerId);
+
+  const allGroupsCollapsed = ADMIN_SIDEBAR_GROUP_IDS.every((groupId) =>
+    sidebarLayout.collapsed.includes(groupId),
+  );
+
+  /** بستن یا باز کردن یک‌جای همهٔ گروه‌ها (منوی خلوت‌تر). */
+  const toggleAllGroupsCollapsed = () => {
+    const keepPinned: AdminSidebarContainerId[] = sidebarLayout.collapsed.includes(
+      ADMIN_SIDEBAR_PINNED_GROUP_ID,
+    )
+      ? [ADMIN_SIDEBAR_PINNED_GROUP_ID]
+      : [];
+    const collapsed: AdminSidebarContainerId[] = allGroupsCollapsed
+      ? keepPinned
+      : [...ADMIN_SIDEBAR_GROUP_IDS, ...keepPinned];
+
+    persistSidebarLayout({ ...sidebarLayout, collapsed });
+  };
+
+  /** آیا مسیر فعلی داخل این آیتم است؟ (برای نقطهٔ نشانگر گروه بسته) */
+  const isNavItemActive = (item: (typeof visibleNavItems)[number]) =>
+    item.end
+      ? location.pathname === item.to
+      : location.pathname === item.to ||
+        location.pathname.startsWith(`${item.to}/`);
+
+  const handleNavDragStart = (event: DragEvent<HTMLElement>, path: string) => {
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", path);
+    setDraggingPath(path);
+  };
+
+  const handleNavDragOver = (
+    event: DragEvent<HTMLElement>,
+    containerId: AdminSidebarContainerId,
+    index: number,
+  ) => {
+    if (!draggingPath) {
+      return;
+    }
+
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+
+    const rect = event.currentTarget.getBoundingClientRect();
+    const ratio = (event.clientY - rect.top) / Math.max(rect.height, 1);
+
+    setDropTarget({ containerId, index: index + (ratio > 0.5 ? 1 : 0) });
+  };
+
+  const handleNavDrop = (
+    event: DragEvent<HTMLElement>,
+    containerId: AdminSidebarContainerId,
+    index: number,
+  ) => {
+    event.preventDefault();
+
+    const path = event.dataTransfer.getData("text/plain") || draggingPath;
+    const targetIndex =
+      dropTarget && dropTarget.containerId === containerId
+        ? dropTarget.index
+        : index;
+
+    if (path) {
+      moveNavItem(path, containerId, targetIndex);
+    }
+
+    setDraggingPath(null);
+    setDropTarget(null);
+  };
+
+  const handleNavDragEnd = () => {
+    setDraggingPath(null);
+    setDropTarget(null);
+  };
+
+  /** آیا خط «رها کردن» باید بالای آیتم این خانه کشیده شود؟ */
+  const isDropTarget = (containerId: AdminSidebarContainerId, index: number) =>
+    dropTarget?.containerId === containerId && dropTarget.index === index;
+
+  const toggleLayoutEditing = () => {
+    setLayoutEditing((editing) => !editing);
+    setDraggingPath(null);
+    setDropTarget(null);
+  };
 
   const currentPage = useMemo(() => {
     const match = [...navItems]
@@ -107,12 +602,12 @@ function AdminLayout() {
   const filteredItems = useMemo(() => {
     const query = searchQuery.trim().toLocaleLowerCase("fa");
 
-    if (!query) return navItems;
+    if (!query) return visibleNavItems;
 
-    return navItems.filter((item) =>
+    return visibleNavItems.filter((item) =>
       `${item.label} ${item.keywords}`.toLocaleLowerCase("fa").includes(query),
     );
-  }, [searchQuery]);
+  }, [searchQuery, visibleNavItems]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -163,8 +658,133 @@ function AdminLayout() {
     setSearchQuery("");
   };
 
+  /* یک ردیف منو؛ در حالت «چیدمان» قابل کشیدن، پین و جابه‌جایی است. */
+  const renderNavRow = (
+    item: (typeof visibleNavItems)[number],
+    containerId: AdminSidebarContainerId,
+    index: number,
+    total: number,
+  ) => {
+    const Icon = item.icon;
+    const isPinned = sidebarLayout.pinned.includes(item.to);
+    const showDropLineAfter = index === total - 1 && isDropTarget(containerId, total);
+
+    return (
+      <Fragment key={`${containerId}:${item.to}`}>
+        {isDropTarget(containerId, index) && (
+          <span className="admin-nav-drop-line" aria-hidden="true" />
+        )}
+
+        <div
+          className={`admin-nav-row ${draggingPath === item.to ? "is-dragging" : ""}`}
+          draggable={layoutEditing}
+          onDragStart={(event) => handleNavDragStart(event, item.to)}
+          onDragEnd={handleNavDragEnd}
+          onDragOver={(event) => {
+            event.stopPropagation();
+            handleNavDragOver(event, containerId, index);
+          }}
+          onDrop={(event) => {
+            event.stopPropagation();
+            handleNavDrop(event, containerId, index);
+          }}
+        >
+          <NavLink
+            to={item.to}
+            end={item.end}
+            tabIndex={layoutEditing ? -1 : undefined}
+            onClick={(event) => {
+              if (layoutEditing) {
+                event.preventDefault();
+
+                return;
+              }
+
+              setMobileMenuOpen(false);
+            }}
+            className={({ isActive }) =>
+              `admin-nav-link ${isActive ? "is-active" : ""}`
+            }
+          >
+            <span className="admin-nav-icon">
+              <Icon size={19} strokeWidth={1.9} />
+            </span>
+            <span className="admin-nav-label">{item.label}</span>
+            <span className="admin-nav-indicator" />
+          </NavLink>
+
+          {layoutEditing ? (
+            <div className="admin-nav-actions">
+              <button
+                type="button"
+                className="admin-nav-action"
+                onClick={() => moveNavItemByOffset(item.to, -1)}
+                disabled={index === 0}
+                title="انتقال به بالا"
+                aria-label={`انتقال ${item.label} به بالا`}
+              >
+                <ArrowUp size={13} />
+              </button>
+
+              <button
+                type="button"
+                className="admin-nav-action"
+                onClick={() => moveNavItemByOffset(item.to, 1)}
+                disabled={index === total - 1}
+                title="انتقال به پایین"
+                aria-label={`انتقال ${item.label} به پایین`}
+              >
+                <ArrowDown size={13} />
+              </button>
+
+              <button
+                type="button"
+                className={`admin-nav-action ${isPinned ? "is-pinned" : ""}`}
+                onClick={() => togglePinNavItem(item.to)}
+                title={
+                  isPinned ? "حذف از دسترسی سریع" : "پین در دسترسی سریع"
+                }
+                aria-label={
+                  isPinned
+                    ? `حذف ${item.label} از دسترسی سریع`
+                    : `پین کردن ${item.label} در دسترسی سریع`
+                }
+              >
+                {isPinned ? <PinOff size={13} /> : <Pin size={13} />}
+              </button>
+
+              <span className="admin-nav-grip" aria-hidden="true">
+                <GripVertical size={13} />
+              </span>
+            </div>
+          ) : (
+            isPinned && (
+              <span
+                className="admin-nav-pin-mark"
+                title="پین‌شده در دسترسی سریع"
+                aria-hidden="true"
+              >
+                <Pin size={12} />
+              </span>
+            )
+          )}
+        </div>
+
+        {showDropLineAfter && (
+          <span className="admin-nav-drop-line" aria-hidden="true" />
+        )}
+      </Fragment>
+    );
+  };
+
   return (
-    <div className="admin-layout" dir="rtl">
+    <div
+      className={`admin-layout ${
+        dragWidth !== null ? "is-resizing-sidebar" : ""
+      }`}
+      dir="rtl"
+      style={{ "--admin-sidebar-w": `${sidebarWidth}px` } as CSSProperties}
+    >
       <style>{`
         .admin-topbar {
           position: relative;
@@ -477,7 +1097,41 @@ function AdminLayout() {
         />
       )}
 
-      <aside className={`admin-sidebar ${mobileMenuOpen ? "is-open" : ""}`}>
+      <aside
+        className={`admin-sidebar is-density-${sidebarLayout.density} ${
+          mobileMenuOpen ? "is-open" : ""
+        }`}
+      >
+        <div
+          className="admin-sidebar-resizer"
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="تغییر عرض سایدبار"
+          aria-valuenow={sidebarWidth}
+          aria-valuemin={ADMIN_SIDEBAR_WIDTH_MIN}
+          aria-valuemax={ADMIN_SIDEBAR_WIDTH_MAX}
+          tabIndex={0}
+          title="برای تغییر عرض بکشید • دوبار کلیک: عرض پیش‌فرض"
+          onPointerDown={handleResizeStart}
+          onPointerMove={handleResizeMove}
+          onPointerUp={handleResizeEnd}
+          onPointerCancel={handleResizeEnd}
+          onDoubleClick={resetSidebarWidth}
+          onKeyDown={(event) => {
+            if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") {
+              return;
+            }
+
+            event.preventDefault();
+
+            const delta = event.key === "ArrowLeft" ? 16 : -16;
+
+            persistSidebarLayout({
+              ...sidebarLayout,
+              width: clampAdminSidebarWidth(sidebarLayout.width + delta),
+            });
+          }}
+        />
         <button
           type="button"
           className="admin-mobile-close-button"
@@ -498,28 +1152,242 @@ function AdminLayout() {
           </span>
         </Link>
 
-        <div className="admin-nav-heading">منوی اصلی</div>
+        <nav
+          className={`admin-nav ${layoutEditing ? "is-editing" : ""}`}
+          aria-label="منوی مدیریت"
+        >
+          <div className="admin-nav-tools">
+            <span className="admin-nav-tools-title">منوی مدیریت</span>
 
-        <nav className="admin-nav" aria-label="منوی مدیریت">
-          {navItems.map((item) => {
-            const Icon = item.icon;
+            <div className="admin-nav-tools-actions">
+              {layoutEditing && (
+                <button
+                  type="button"
+                  className="admin-nav-tool-button"
+                  onClick={resetSidebarLayout}
+                  title="بازگشت به چیدمان پیش‌فرض"
+                >
+                  <RotateCcw size={13} />
+                  <span>پیش‌فرض</span>
+                </button>
+              )}
 
-            return (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.end}
-                onClick={() => setMobileMenuOpen(false)}
-                className={({ isActive }) =>
-                  `admin-nav-link ${isActive ? "is-active" : ""}`
+              <button
+                type="button"
+                className="admin-nav-tool-button"
+                onClick={cycleSidebarDensity}
+                title={`اندازهٔ منو: ${
+                  ADMIN_SIDEBAR_DENSITY_LABELS[sidebarLayout.density]
+                } (کلیک برای تغییر)`}
+                aria-label={`اندازهٔ منو: ${
+                  ADMIN_SIDEBAR_DENSITY_LABELS[sidebarLayout.density]
+                }. کلیک برای تغییر`}
+              >
+                <Type size={13} />
+              </button>
+
+              <button
+                type="button"
+                className="admin-nav-tool-button"
+                onClick={toggleAllGroupsCollapsed}
+                title={
+                  allGroupsCollapsed
+                    ? "باز کردن همهٔ گروه‌ها"
+                    : "بستن همهٔ گروه‌ها"
+                }
+                aria-label={
+                  allGroupsCollapsed
+                    ? "باز کردن همهٔ گروه‌ها"
+                    : "بستن همهٔ گروه‌ها"
+                }
+                aria-pressed={allGroupsCollapsed}
+              >
+                <span
+                  className={`admin-nav-heading-chevron ${
+                    allGroupsCollapsed ? "is-collapsed" : ""
+                  }`}
+                  aria-hidden="true"
+                >
+                  <ChevronDown size={13} strokeWidth={2.4} />
+                </span>
+              </button>
+
+              <button
+                type="button"
+                className={`admin-nav-tool-button ${layoutEditing ? "is-active" : ""}`}
+                onClick={toggleLayoutEditing}
+                aria-pressed={layoutEditing}
+                title={
+                  layoutEditing
+                    ? "پایان شخصی‌سازی منو"
+                    : "شخصی‌سازی چیدمان منو"
                 }
               >
-                <span className="admin-nav-icon">
-                  <Icon size={20} strokeWidth={1.9} />
+                {layoutEditing ? (
+                  <Check size={13} />
+                ) : (
+                  <SlidersHorizontal size={13} />
+                )}
+                <span>{layoutEditing ? "پایان" : "چیدمان"}</span>
+              </button>
+            </div>
+          </div>
+
+          {layoutEditing && (
+            <p className="admin-nav-tools-hint">
+              آیتم‌ها را بکشید یا با ↑ ↓ جابه‌جا کنید؛ با پین هم به «دسترسی
+              سریع» می‌آیند. برای خلوت شدن منو روی عنوان هر گروه بزنید تا بسته
+              شود.
+            </p>
+          )}
+
+          {(pinnedNavItems.length > 0 || layoutEditing) && (
+            <div
+              className={`admin-nav-group admin-nav-group-pinned ${
+                isGroupCollapsed(ADMIN_SIDEBAR_PINNED_GROUP_ID)
+                  ? "is-collapsed"
+                  : ""
+              } ${
+                dropTarget?.containerId === ADMIN_SIDEBAR_PINNED_GROUP_ID
+                  ? "is-drop-active"
+                  : ""
+              }`}
+              onDragOver={(event) =>
+                handleNavDragOver(
+                  event,
+                  ADMIN_SIDEBAR_PINNED_GROUP_ID,
+                  pinnedNavItems.length,
+                )
+              }
+              onDrop={(event) =>
+                handleNavDrop(
+                  event,
+                  ADMIN_SIDEBAR_PINNED_GROUP_ID,
+                  pinnedNavItems.length,
+                )
+              }
+            >
+              <button
+                type="button"
+                className="admin-nav-heading admin-nav-heading-toggle"
+                onClick={() =>
+                  toggleGroupCollapsed(ADMIN_SIDEBAR_PINNED_GROUP_ID)
+                }
+                aria-expanded={!isGroupCollapsed(ADMIN_SIDEBAR_PINNED_GROUP_ID)}
+                aria-controls="admin-nav-panel-pinned"
+                title="باز و بسته کردن دسترسی سریع"
+              >
+                <span className="admin-nav-heading-icon">
+                  <Pin size={13} strokeWidth={2.1} />
                 </span>
-                <span className="admin-nav-label">{item.label}</span>
-                <span className="admin-nav-indicator" />
-              </NavLink>
+                <span className="admin-nav-heading-text">دسترسی سریع</span>
+
+                {isGroupCollapsed(ADMIN_SIDEBAR_PINNED_GROUP_ID) &&
+                  pinnedNavItems.some(isNavItemActive) && (
+                    <span
+                      className="admin-nav-heading-active-dot"
+                      title="صفحهٔ فعلی در این بخش است"
+                    />
+                  )}
+
+                <span
+                  className={`admin-nav-heading-chevron ${
+                    isGroupCollapsed(ADMIN_SIDEBAR_PINNED_GROUP_ID)
+                      ? "is-collapsed"
+                      : ""
+                  }`}
+                  aria-hidden="true"
+                >
+                  <ChevronDown size={13} strokeWidth={2.4} />
+                </span>
+              </button>
+
+              {!isGroupCollapsed(ADMIN_SIDEBAR_PINNED_GROUP_ID) && (
+                <div className="admin-nav-panel" id="admin-nav-panel-pinned">
+                  {pinnedNavItems.length > 0 ? (
+                    pinnedNavItems.map((item, index) =>
+                      renderNavRow(
+                        item,
+                        ADMIN_SIDEBAR_PINNED_GROUP_ID,
+                        index,
+                        pinnedNavItems.length,
+                      ),
+                    )
+                  ) : (
+                    <div className="admin-nav-empty">
+                      با پین کردن، بخش‌های پرکاربرد بالای منو می‌آیند.
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {layoutSections.map((section) => {
+            const SectionIcon = section.icon;
+
+            return (
+              <div
+                className={`admin-nav-group ${
+                  isGroupCollapsed(section.id) ? "is-collapsed" : ""
+                } ${
+                  dropTarget?.containerId === section.id ? "is-drop-active" : ""
+                }`}
+                key={section.id}
+                onDragOver={(event) =>
+                  handleNavDragOver(event, section.id, section.items.length)
+                }
+                onDrop={(event) =>
+                  handleNavDrop(event, section.id, section.items.length)
+                }
+              >
+                <button
+                  type="button"
+                  className="admin-nav-heading admin-nav-heading-toggle"
+                  onClick={() => toggleGroupCollapsed(section.id)}
+                  aria-expanded={!isGroupCollapsed(section.id)}
+                  aria-controls={`admin-nav-panel-${section.id}`}
+                  title={`باز و بسته کردن ${section.label}`}
+                >
+                  <span className="admin-nav-heading-icon">
+                    <SectionIcon size={13} strokeWidth={2.1} />
+                  </span>
+                  <span className="admin-nav-heading-text">{section.label}</span>
+
+                  {isGroupCollapsed(section.id) &&
+                    section.items.some(isNavItemActive) && (
+                      <span
+                        className="admin-nav-heading-active-dot"
+                        title="صفحهٔ فعلی در این بخش است"
+                      />
+                    )}
+
+                  <span
+                    className={`admin-nav-heading-chevron ${
+                      isGroupCollapsed(section.id) ? "is-collapsed" : ""
+                    }`}
+                    aria-hidden="true"
+                  >
+                    <ChevronDown size={13} strokeWidth={2.4} />
+                  </span>
+                </button>
+
+                {!isGroupCollapsed(section.id) && (
+                  <div
+                    className="admin-nav-panel"
+                    id={`admin-nav-panel-${section.id}`}
+                  >
+                    {section.items.map((item, index) =>
+                      renderNavRow(
+                        item,
+                        section.id,
+                        index,
+                        section.items.length,
+                      ),
+                    )}
+                  </div>
+                )}
+              </div>
             );
           })}
         </nav>
@@ -531,37 +1399,42 @@ function AdminLayout() {
             </div>
 
             <div className="admin-user-info">
-              <span className="admin-user-caption">حساب کاربری</span>
+              <span className="admin-user-caption">{roleLabel}</span>
               <strong className="admin-user-name">
                 {user?.name || "مدیر فروشگاه"}
               </strong>
             </div>
 
-            <Link
-              to="/admin/admins"
-              className="admin-user-edit"
-              aria-label="ویرایش حساب مدیر"
-              title="ویرایش حساب مدیر"
-            >
-              <Pencil size={15} strokeWidth={1.9} />
-            </Link>
+            {can(ADMIN_PERMISSIONS.admins) && (
+              <Link
+                to="/admin/admins"
+                className="admin-user-edit"
+                aria-label="ویرایش حساب مدیر"
+                title="ویرایش حساب مدیر"
+              >
+                <Pencil size={15} strokeWidth={1.9} />
+              </Link>
+            )}
           </div>
 
-          <Link to="/" className="admin-store-link">
-            <Store size={19} strokeWidth={1.9} />
-            <span>مشاهده فروشگاه</span>
-          </Link>
+          <div className="admin-sidebar-footer-actions">
+            <Link to="/" className="admin-store-link" title="مشاهده فروشگاه">
+              <Store size={17} strokeWidth={1.9} />
+              <span>فروشگاه</span>
+            </Link>
 
-          <button
-            type="button"
-            className="admin-logout-button"
-            onClick={() => {
-              void logout();
-            }}
-          >
-            <LogOut size={19} strokeWidth={1.9} />
-            <span>خروج از حساب</span>
-          </button>
+            <button
+              type="button"
+              className="admin-logout-button"
+              title="خروج از حساب"
+              onClick={() => {
+                void logout();
+              }}
+            >
+              <LogOut size={17} strokeWidth={1.9} />
+              <span>خروج</span>
+            </button>
+          </div>
         </div>
       </aside>
 

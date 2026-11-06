@@ -40,22 +40,22 @@ const baseClasses =
 
 const variantClasses = {
   primary:
-    "bg-[#4f7754] text-white shadow-sm hover:bg-[#385e3e] hover:shadow-md focus-visible:ring-[#4f7754]",
+    "bg-brand-600 text-white shadow-sm hover:bg-brand-700 hover:shadow-md focus-visible:ring-brand-600",
 
   secondary:
-    "bg-[#e8efe2] text-[#385e3e] shadow-sm hover:bg-[#dce7d5] focus-visible:ring-[#8da68a]",
+    "bg-brand-100 text-brand-700 shadow-sm hover:bg-brand-200 focus-visible:ring-brand-400",
 
   danger:
-    "bg-red-600 text-white shadow-sm hover:bg-red-700 hover:shadow-md focus-visible:ring-red-500",
+    "bg-discount text-white shadow-sm hover:bg-discount-700 hover:shadow-md focus-visible:ring-discount",
 
   success:
-    "bg-emerald-600 text-white shadow-sm hover:bg-emerald-700 hover:shadow-md focus-visible:ring-emerald-500",
+    "bg-stock text-white shadow-sm hover:bg-stock-700 hover:shadow-md focus-visible:ring-stock",
 
   outline:
-    "border border-[#dce5d7] bg-white text-[#385e3e] shadow-sm hover:border-[#a8bea1] hover:bg-[#faf9f4] hover:shadow-md focus-visible:ring-[#8da68a]",
+    "border border-brand-200 bg-white text-brand-700 shadow-sm hover:border-brand-400 hover:bg-cream hover:shadow-md focus-visible:ring-brand-400",
 
   ghost:
-    "bg-transparent text-[#4b5f4a] hover:bg-[#e8efe2] focus-visible:ring-[#8da68a]",
+    "bg-transparent text-ink-soft hover:bg-brand-100 focus-visible:ring-brand-400",
 };
 
 const sizeClasses = {

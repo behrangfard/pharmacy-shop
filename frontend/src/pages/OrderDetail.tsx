@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import {
@@ -9,11 +9,13 @@ import {
   MapPin,
   Package,
   Receipt,
+  RotateCcw,
   Truck,
   XCircle,
 } from "lucide-react";
 
 import api from "../services/api";
+import { usePrivatePageMeta } from "../hooks/usePageMeta";
 
 type OrderItem = {
   id: number;
@@ -47,6 +49,8 @@ type Order = {
   subtotal: string | number;
   shipping_cost: string | number;
   discount: string | number;
+  coupon_code?: string | null;
+  coupon_discount?: string | number;
   tax_percent?: string | number;
   tax_amount?: string | number;
   total: string | number;
@@ -56,9 +60,21 @@ type Order = {
   phone: string;
   address: string;
   postal_code: string;
+  shipping_method?: string | null;
+  tracking_code?: string | null;
+  shipped_at?: string | null;
+  delivered_at?: string | null;
   notes?: string | null;
   created_at: string;
   items: OrderItem[];
+  return_request?: {
+    id: number;
+    status: string;
+    reason: string;
+    admin_note?: string | null;
+    refund_amount?: string | number | null;
+    created_at?: string;
+  } | null;
 };
 
 const formatPrice = (value: number) =>
@@ -98,6 +114,13 @@ const paymentStatusLabels: Record<string, string> = {
   refunded: "مستردشده",
 };
 
+const returnStatusLabels: Record<string, string> = {
+  pending: "در انتظار بررسی",
+  approved: "تأییدشده",
+  rejected: "ردشده",
+  refunded: "بازپرداخت‌شده",
+};
+
 const getImageUrl = (path?: string | null) => {
   if (!path) return "";
   if (/^https?:\/\//i.test(path)) return path;
@@ -125,11 +148,60 @@ const getItemImage = (item: OrderItem) =>
   );
 
 export default function OrderDetail() {
+  usePrivatePageMeta("جزئیات سفارش", "/order");
+
   const { orderNumber } = useParams<{ orderNumber: string }>();
 
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  const [returnReason, setReturnReason] = useState("");
+  const [returnDescription, setReturnDescription] = useState("");
+  const [returnSubmitting, setReturnSubmitting] = useState(false);
+  const [returnError, setReturnError] = useState("");
+  const [returnSuccess, setReturnSuccess] = useState("");
+
+  async function submitReturnRequest(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!order || returnSubmitting) return;
+
+    if (!returnReason.trim()) {
+      setReturnError("دلیل مرجوعی را بنویسید.");
+      return;
+    }
+
+    setReturnSubmitting(true);
+    setReturnError("");
+    setReturnSuccess("");
+
+    try {
+      const response = await api.post(
+        `/orders/${encodeURIComponent(order.order_number)}/returns`,
+        {
+          reason: returnReason.trim(),
+          description: returnDescription.trim() || null,
+        },
+      );
+
+      const created = response.data?.data;
+
+      setOrder((current) =>
+        current ? { ...current, return_request: created } : current,
+      );
+
+      setReturnSuccess(response.data?.message ?? "درخواست مرجوعی ثبت شد.");
+      setReturnReason("");
+      setReturnDescription("");
+    } catch (err: any) {
+      setReturnError(
+        err?.response?.data?.message ?? "ثبت درخواست مرجوعی ناموفق بود.",
+      );
+    } finally {
+      setReturnSubmitting(false);
+    }
+  }
 
   useEffect(() => {
     let active = true;
@@ -184,8 +256,8 @@ export default function OrderDetail() {
   if (loading) {
     return (
       <div className="mx-auto max-w-5xl px-4 py-16 text-center" dir="rtl">
-        <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-slate-200 border-t-slate-800" />
-        <p className="text-slate-600">در حال دریافت اطلاعات سفارش...</p>
+        <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-line border-t-ink" />
+        <p className="text-muted">در حال دریافت اطلاعات سفارش...</p>
       </div>
     );
   }
@@ -193,18 +265,18 @@ export default function OrderDetail() {
   if (error || !order) {
     return (
       <div className="mx-auto max-w-5xl px-4 py-16 text-center" dir="rtl">
-        <div className="rounded-2xl border border-red-100 bg-red-50 p-6">
-          <XCircle className="mx-auto mb-3 h-10 w-10 text-red-500" />
+        <div className="rounded-2xl border border-blush-100 bg-blush-50 p-6">
+          <XCircle className="mx-auto mb-3 h-10 w-10 text-discount" />
 
-          <h1 className="mb-2 text-xl font-bold text-slate-900">
+          <h1 className="mb-2 text-xl font-bold text-ink">
             دریافت سفارش ناموفق بود
           </h1>
 
-          <p className="mb-5 text-sm text-red-700">{error}</p>
+          <p className="mb-5 text-sm text-discount">{error}</p>
 
           <Link
             to="/account"
-            className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-5 py-3 text-sm font-bold text-white hover:bg-slate-700"
+            className="inline-flex items-center gap-2 rounded-xl bg-ink px-5 py-3 text-sm font-bold text-white hover:bg-ink-soft"
           >
             <ArrowRight size={18} />
             بازگشت به حساب کاربری
@@ -235,11 +307,11 @@ export default function OrderDetail() {
   const isPaid = order.payment_status === "paid";
 
   return (
-    <main className="min-h-screen bg-slate-50 py-8 sm:py-12" dir="rtl">
+    <main className="min-h-screen bg-cream py-8 sm:py-12" dir="rtl">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <Link
           to="/account"
-          className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-slate-950"
+          className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-muted hover:text-ink"
         >
           <ArrowRight size={18} />
           بازگشت به حساب کاربری
@@ -247,16 +319,16 @@ export default function OrderDetail() {
 
         <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <div>
-            <div className="mb-2 flex items-center gap-2 text-sm text-slate-500">
+            <div className="mb-2 flex items-center gap-2 text-sm text-muted">
               <Receipt size={18} />
               جزئیات سفارش
             </div>
 
-            <h1 className="text-2xl font-black text-slate-950 sm:text-3xl">
+            <h1 className="text-2xl font-black text-ink sm:text-3xl">
               سفارش {order.order_number}
             </h1>
 
-            <p className="mt-2 flex items-center gap-2 text-sm text-slate-500">
+            <p className="mt-2 flex items-center gap-2 text-sm text-muted">
               <CalendarDays size={16} />
               {formatDate(order.created_at)}
             </p>
@@ -266,8 +338,8 @@ export default function OrderDetail() {
             <span
               className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-bold ${
                 isCancelled
-                  ? "bg-red-100 text-red-700"
-                  : "bg-blue-100 text-blue-700"
+                  ? "bg-blush-100 text-discount"
+                  : "bg-brand-100 text-brand-700"
               }`}
             >
               {isCancelled ? <XCircle size={16} /> : <Package size={16} />}
@@ -277,8 +349,8 @@ export default function OrderDetail() {
             <span
               className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-bold ${
                 isPaid
-                  ? "bg-emerald-100 text-emerald-700"
-                  : "bg-amber-100 text-amber-700"
+                  ? "bg-brand-100 text-stock-700"
+                  : "bg-gold-100 text-gold"
               }`}
             >
               {isPaid ? <CheckCircle2 size={16} /> : <Clock size={16} />}
@@ -289,19 +361,19 @@ export default function OrderDetail() {
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <div className="space-y-6 lg:col-span-2">
-            <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-              <div className="border-b border-slate-100 px-5 py-4 sm:px-6">
-                <h2 className="text-lg font-bold text-slate-900">
+            <section className="overflow-hidden rounded-2xl border border-line bg-white shadow-sm">
+              <div className="border-b border-line px-5 py-4 sm:px-6">
+                <h2 className="text-lg font-bold text-ink">
                   محصولات سفارش
                 </h2>
               </div>
 
               {!order.items?.length ? (
-                <div className="p-8 text-center text-sm text-slate-500">
+                <div className="p-8 text-center text-sm text-muted">
                   محصولی برای این سفارش ثبت نشده است.
                 </div>
               ) : (
-                <div className="divide-y divide-slate-100">
+                <div className="divide-y divide-line">
                   {order.items.map((item, index) => {
                     const name = getItemName(item);
                     const imageUrl = getItemImage(item);
@@ -327,7 +399,7 @@ export default function OrderDetail() {
                         key={item.id ?? `${name}-${index}`}
                         className="flex items-center gap-4 p-4 sm:p-5"
                       >
-                        <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-slate-100">
+                        <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-line">
                           {imageUrl ? (
                             <img
                               src={imageUrl}
@@ -338,44 +410,44 @@ export default function OrderDetail() {
                               }}
                             />
                           ) : (
-                            <Package size={28} className="text-slate-400" />
+                            <Package size={28} className="text-muted-soft" />
                           )}
                         </div>
 
                         <div className="min-w-0 flex-1">
-                          <h3 className="line-clamp-2 font-bold text-slate-900">
+                          <h3 className="line-clamp-2 font-bold text-ink">
                             {name}
                           </h3>
 
                           {variantName && (
-                            <p className="mt-2 text-sm font-semibold text-emerald-700">
+                            <p className="mt-2 text-sm font-semibold text-stock-700">
                               تنوع: {variantName}
                             </p>
                           )}
 
                           {itemSku && (
                             <p
-                              className="mt-1 text-xs text-slate-400"
+                              className="mt-1 text-xs text-muted-soft"
                               dir="ltr"
                             >
                               SKU: {itemSku}
                             </p>
                           )}
 
-                          <p className="mt-2 text-sm text-slate-500">
+                          <p className="mt-2 text-sm text-muted">
                             تعداد: {formatPrice(quantity)}
                           </p>
 
-                          <p className="mt-1 text-sm text-slate-500">
+                          <p className="mt-1 text-sm text-muted">
                             قیمت واحد: {formatPrice(unitPrice)} تومان
                           </p>
                         </div>
 
                         <div className="shrink-0 text-left">
-                          <p className="font-black text-slate-900">
+                          <p className="font-black text-ink">
                             {formatPrice(lineTotal)}
                           </p>
-                          <p className="mt-1 text-xs text-slate-500">تومان</p>
+                          <p className="mt-1 text-xs text-muted">تومان</p>
                         </div>
                       </div>
                     );
@@ -384,81 +456,240 @@ export default function OrderDetail() {
               )}
             </section>
 
-            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+            <section className="rounded-2xl border border-line bg-white p-5 shadow-sm sm:p-6">
               <div className="mb-5 flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100">
-                  <MapPin size={21} className="text-slate-700" />
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-line">
+                  <MapPin size={21} className="text-ink-soft" />
                 </div>
 
                 <div>
-                  <h2 className="font-bold text-slate-900">
+                  <h2 className="font-bold text-ink">
                     اطلاعات گیرنده و ارسال
                   </h2>
-                  <p className="mt-1 text-xs text-slate-500">
+                  <p className="mt-1 text-xs text-muted">
                     اطلاعات ثبت‌شده برای این سفارش
                   </p>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="rounded-xl bg-slate-50 p-4">
-                  <p className="mb-1 text-xs text-slate-500">نام گیرنده</p>
-                  <p className="font-bold text-slate-900">
+                <div className="rounded-xl bg-cream p-4">
+                  <p className="mb-1 text-xs text-muted">نام گیرنده</p>
+                  <p className="font-bold text-ink">
                     {order.recipient_name || "—"}
                   </p>
                 </div>
 
-                <div className="rounded-xl bg-slate-50 p-4">
-                  <p className="mb-1 text-xs text-slate-500">شماره تماس</p>
-                  <p className="font-bold text-slate-900" dir="ltr">
+                <div className="rounded-xl bg-cream p-4">
+                  <p className="mb-1 text-xs text-muted">شماره تماس</p>
+                  <p className="font-bold text-ink" dir="ltr">
                     {order.phone || "—"}
                   </p>
                 </div>
 
-                <div className="rounded-xl bg-slate-50 p-4 sm:col-span-2">
-                  <p className="mb-1 text-xs text-slate-500">نشانی</p>
-                  <p className="leading-7 text-slate-800">
+                <div className="rounded-xl bg-cream p-4 sm:col-span-2">
+                  <p className="mb-1 text-xs text-muted">نشانی</p>
+                  <p className="leading-7 text-ink">
                     {order.address || "—"}
                   </p>
                 </div>
 
-                <div className="rounded-xl bg-slate-50 p-4">
-                  <p className="mb-1 text-xs text-slate-500">کد پستی</p>
-                  <p className="font-bold text-slate-900">
+                <div className="rounded-xl bg-cream p-4">
+                  <p className="mb-1 text-xs text-muted">کد پستی</p>
+                  <p className="font-bold text-ink">
                     {order.postal_code || "—"}
                   </p>
                 </div>
 
-                <div className="rounded-xl bg-slate-50 p-4">
-                  <p className="mb-1 text-xs text-slate-500">هزینه ارسال</p>
-                  <p className="font-bold text-slate-900">
+                <div className="rounded-xl bg-cream p-4">
+                  <p className="mb-1 text-xs text-muted">هزینه ارسال</p>
+                  <p className="font-bold text-ink">
                     {shippingCost === 0
                       ? "رایگان"
                       : `${formatPrice(shippingCost)} تومان`}
                   </p>
                 </div>
+
+                {order.shipping_method && (
+                  <div className="rounded-xl bg-cream p-4">
+                    <p className="mb-1 text-xs text-muted">روش ارسال</p>
+                    <p className="font-bold text-ink">
+                      {order.shipping_method}
+                    </p>
+                  </div>
+                )}
+
+                {order.tracking_code && (
+                  <div className="rounded-xl border border-brand-200 bg-brand-50 p-4">
+                    <p className="mb-1 text-xs text-stock-700">
+                      کد رهگیری مرسوله
+                    </p>
+                    <p
+                      className="font-black text-stock-700"
+                      dir="ltr"
+                    >
+                      {order.tracking_code}
+                    </p>
+                  </div>
+                )}
+
+                {order.shipped_at && (
+                  <div className="rounded-xl bg-cream p-4">
+                    <p className="mb-1 text-xs text-muted">تاریخ ارسال</p>
+                    <p className="font-bold text-ink">
+                      {formatDate(order.shipped_at)}
+                    </p>
+                  </div>
+                )}
+
+                {order.delivered_at && (
+                  <div className="rounded-xl bg-cream p-4">
+                    <p className="mb-1 text-xs text-muted">تاریخ تحویل</p>
+                    <p className="font-bold text-ink">
+                      {formatDate(order.delivered_at)}
+                    </p>
+                  </div>
+                )}
               </div>
 
               {order.notes && (
-                <div className="mt-4 rounded-xl border border-slate-200 p-4">
-                  <p className="mb-1 text-xs text-slate-500">توضیحات سفارش</p>
-                  <p className="text-sm leading-7 text-slate-700">
+                <div className="mt-4 rounded-xl border border-line p-4">
+                  <p className="mb-1 text-xs text-muted">توضیحات سفارش</p>
+                  <p className="text-sm leading-7 text-ink-soft">
                     {order.notes}
                   </p>
                 </div>
               )}
             </section>
+
+            <section className="rounded-2xl border border-line bg-white p-5 shadow-sm sm:p-6">
+              <div className="mb-4 flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gold-50 text-gold">
+                  <RotateCcw size={21} />
+                </div>
+
+                <div>
+                  <h2 className="font-bold text-ink">
+                    مرجوعی و بازپرداخت
+                  </h2>
+                  <p className="mt-1 text-xs text-muted">
+                    درخواست مرجوعی برای سفارش‌های تحویل‌شده و پرداخت‌شده فعال
+                    است.
+                  </p>
+                </div>
+              </div>
+
+              {order.return_request ? (
+                <div className="rounded-xl border border-line bg-cream p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-sm font-bold text-ink">
+                      درخواست مرجوعی شما ثبت شده است
+                    </span>
+
+                    <span className="rounded-full bg-gold-100 px-3 py-1 text-xs font-bold text-gold">
+                      {returnStatusLabels[order.return_request.status] ??
+                        order.return_request.status}
+                    </span>
+                  </div>
+
+                  <p className="mt-2 text-sm text-muted">
+                    دلیل: {order.return_request.reason}
+                  </p>
+
+                  {order.return_request.admin_note && (
+                    <p className="mt-2 rounded-lg bg-white p-3 text-xs leading-6 text-muted">
+                      پاسخ پشتیبانی: {order.return_request.admin_note}
+                    </p>
+                  )}
+
+                  {order.return_request.refund_amount && (
+                    <p className="mt-2 text-xs font-bold text-stock-700">
+                      مبلغ بازپرداخت:{" "}
+                      {formatPrice(Number(order.return_request.refund_amount))}{" "}
+                      تومان
+                    </p>
+                  )}
+                </div>
+              ) : order.status === "delivered" &&
+                order.payment_status === "paid" ? (
+                <form onSubmit={submitReturnRequest} className="space-y-3">
+                  <div>
+                    <label
+                      htmlFor="return-reason"
+                      className="mb-1.5 block text-xs font-bold text-ink-soft"
+                    >
+                      دلیل مرجوعی *
+                    </label>
+
+                    <input
+                      id="return-reason"
+                      value={returnReason}
+                      onChange={(event) => setReturnReason(event.target.value)}
+                      maxLength={255}
+                      placeholder="مثال: سایز نامناسب"
+                      className="w-full rounded-xl border border-line px-3 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="return-description"
+                      className="mb-1.5 block text-xs font-bold text-ink-soft"
+                    >
+                      توضیحات (اختیاری)
+                    </label>
+
+                    <textarea
+                      id="return-description"
+                      value={returnDescription}
+                      onChange={(event) =>
+                        setReturnDescription(event.target.value)
+                      }
+                      rows={3}
+                      maxLength={2000}
+                      className="w-full resize-none rounded-xl border border-line px-3 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+                    />
+                  </div>
+
+                  {returnError && (
+                    <p className="text-xs font-bold text-discount">
+                      {returnError}
+                    </p>
+                  )}
+
+                  {returnSuccess && (
+                    <p className="text-xs font-bold text-stock-700">
+                      {returnSuccess}
+                    </p>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={returnSubmitting}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-500 px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {returnSubmitting ? "در حال ثبت..." : "ثبت درخواست مرجوعی"}
+                  </button>
+                </form>
+              ) : (
+                <p className="rounded-xl bg-cream p-4 text-sm text-muted">
+                  پس از تحویل و پرداخت کامل سفارش، امکان ثبت درخواست مرجوعی
+                  فراهم می‌شود.
+                </p>
+              )}
+            </section>
           </div>
 
-          <aside className="h-fit rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+          <aside className="h-fit rounded-2xl border border-line bg-white p-5 shadow-sm sm:p-6">
             <div className="mb-5 flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100">
-                <Receipt size={21} className="text-slate-700" />
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-line">
+                <Receipt size={21} className="text-ink-soft" />
               </div>
 
               <div>
-                <h2 className="font-bold text-slate-900">خلاصه پرداخت</h2>
-                <p className="mt-1 text-xs text-slate-500">
+                <h2 className="font-bold text-ink">خلاصه پرداخت</h2>
+                <p className="mt-1 text-xs text-muted">
                   جزئیات مبالغ سفارش
                 </p>
               </div>
@@ -466,24 +697,27 @@ export default function OrderDetail() {
 
             <div className="space-y-4">
               <div className="flex items-center justify-between gap-3 text-sm">
-                <span className="text-slate-500">مبلغ کالاها</span>
-                <span className="whitespace-nowrap font-semibold text-slate-900">
+                <span className="text-muted">مبلغ کالاها</span>
+                <span className="whitespace-nowrap font-semibold text-ink">
                   {formatPrice(subtotal)} تومان
                 </span>
               </div>
 
               {discount > 0 && (
                 <div className="flex items-center justify-between gap-3 text-sm">
-                  <span className="text-emerald-700">تخفیف</span>
-                  <span className="whitespace-nowrap font-bold text-emerald-700">
+                  <span className="text-stock-700">
+                    تخفیف
+                    {order.coupon_code ? ` (${order.coupon_code})` : ""}
+                  </span>
+                  <span className="whitespace-nowrap font-bold text-stock-700">
                     − {formatPrice(discount)} تومان
                   </span>
                 </div>
               )}
 
               <div className="flex items-center justify-between gap-3 text-sm">
-                <span className="text-slate-500">هزینه ارسال</span>
-                <span className="whitespace-nowrap font-semibold text-slate-900">
+                <span className="text-muted">هزینه ارسال</span>
+                <span className="whitespace-nowrap font-semibold text-ink">
                   {shippingCost === 0
                     ? "رایگان"
                     : `${formatPrice(shippingCost)} تومان`}
@@ -491,50 +725,50 @@ export default function OrderDetail() {
               </div>
 
               {taxAmount > 0 && (
-                <div className="rounded-xl border border-amber-100 bg-amber-50 p-4">
+                <div className="rounded-xl border border-gold-100 bg-gold-50 p-4">
                   <div className="flex items-center justify-between gap-3 text-sm">
-                    <span className="text-amber-800">
+                    <span className="text-gold">
                       ارزش افزوده ({formatPrice(taxPercent)}٪)
                     </span>
-                    <span className="whitespace-nowrap font-bold text-amber-900">
+                    <span className="whitespace-nowrap font-bold text-gold">
                       {formatPrice(taxAmount)} تومان
                     </span>
                   </div>
                 </div>
               )}
 
-              <div className="border-t border-dashed border-slate-200 pt-4">
-                <div className="rounded-xl bg-slate-900 p-4 text-white">
-                  <p className="text-sm text-slate-300">مبلغ نهایی سفارش</p>
+              <div className="border-t border-dashed border-line pt-4">
+                <div className="rounded-xl bg-ink p-4 text-white">
+                  <p className="text-sm text-line-strong">مبلغ نهایی سفارش</p>
 
                   <p className="mt-2 text-2xl font-black">
                     {formatPrice(total)}
-                    <span className="mr-2 text-sm font-medium text-slate-300">
+                    <span className="mr-2 text-sm font-medium text-line-strong">
                       تومان
                     </span>
                   </p>
 
-                  <p className="mt-2 text-xs leading-6 text-slate-300">
+                  <p className="mt-2 text-xs leading-6 text-line-strong">
                     مبلغ نهایی مطابق اطلاعات ثبت‌شده برای این سفارش است.
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="mt-5 rounded-xl border border-slate-200 p-4">
+            <div className="mt-5 rounded-xl border border-line p-4">
               <div className="flex items-start gap-3">
                 {isPaid ? (
                   <CheckCircle2
                     size={20}
-                    className="mt-0.5 shrink-0 text-emerald-600"
+                    className="mt-0.5 shrink-0 text-stock"
                   />
                 ) : (
-                  <Clock size={20} className="mt-0.5 shrink-0 text-amber-600" />
+                  <Clock size={20} className="mt-0.5 shrink-0 text-gold" />
                 )}
 
                 <div>
-                  <p className="font-bold text-slate-900">وضعیت پرداخت</p>
-                  <p className="mt-1 text-sm leading-6 text-slate-600">
+                  <p className="font-bold text-ink">وضعیت پرداخت</p>
+                  <p className="mt-1 text-sm leading-6 text-muted">
                     {isPaid
                       ? "پرداخت این سفارش با موفقیت ثبت شده است."
                       : "وضعیت پرداخت این سفارش هنوز پرداخت‌شده نیست."}
@@ -545,7 +779,7 @@ export default function OrderDetail() {
 
             <Link
               to="/products"
-              className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl border border-slate-300 px-4 py-3 text-sm font-bold text-slate-800 transition hover:bg-slate-50"
+              className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl border border-line-strong px-4 py-3 text-sm font-bold text-ink transition hover:bg-cream"
             >
               <Truck size={18} />
               ادامه خرید

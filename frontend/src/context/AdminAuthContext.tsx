@@ -9,6 +9,7 @@ import {
 import { adminApi } from "../services/api";
 import type { AuthUser } from "./AuthContext";
 import { STORAGE_KEYS } from "../utils/storageKeys";
+import { adminRoleLabel, hasAdminPermission } from "../utils/adminPermissions";
 
 const ADMIN_TOKEN_KEY = STORAGE_KEYS.adminToken;
 const ADMIN_USER_KEY = STORAGE_KEYS.adminUser;
@@ -17,6 +18,10 @@ interface AdminAuthContextType {
   user: AuthUser | null;
   loading: boolean;
   setUser: (user: AuthUser | null) => void;
+  /** بررسی مجوز پنل بر اساس نقش مدیر؛ بدون آرگومان یعنی «مدیر است؟». */
+  can: (permission?: string) => boolean;
+  /** برچسب فارسی نقش مدیر برای نمایش در رابط کاربری. */
+  roleLabel: string;
   logout: () => Promise<void>;
 }
 
@@ -106,8 +111,13 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const can = (permission?: string) => hasAdminPermission(user, permission);
+  const roleLabel = adminRoleLabel(user);
+
   return (
-    <AdminAuthContext.Provider value={{ user, loading, setUser, logout }}>
+    <AdminAuthContext.Provider
+      value={{ user, loading, setUser, can, roleLabel, logout }}
+    >
       {children}
     </AdminAuthContext.Provider>
   );

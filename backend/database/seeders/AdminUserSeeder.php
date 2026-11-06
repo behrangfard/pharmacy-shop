@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\User;
+use App\Support\AdminRole;
 use Illuminate\Database\Seeder;
 
 /**
@@ -41,6 +42,8 @@ class AdminUserSeeder extends Seeder
                 'name' => (string) config('admin.name'),
                 'password' => $password,
                 'role' => 'admin',
+                // حساب ساخته‌شده توسط seeder همیشه «مدیر ارشد» است.
+                'admin_role' => AdminRole::SUPER_ADMIN,
             ]
         );
 

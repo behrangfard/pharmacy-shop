@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -336,6 +337,19 @@ class AdminOrderController extends Controller
                 $order->save();
             } else {
                 $order->status = $newStatus;
+
+                if (
+                    $newStatus === 'shipped'
+                    && $order->shipped_at === null
+                ) {
+                    $order->shipped_at = now();
+                }
+
+                if ($newStatus === 'delivered') {
+                    $order->shipped_at = $order->shipped_at ?? now();
+                    $order->delivered_at = now();
+                }
+
                 $order->save();
             }
 
@@ -359,6 +373,66 @@ class AdminOrderController extends Controller
             'success' => true,
             'message' => 'وضعیت سفارش با موفقیت به‌روزرسانی شد.',
             'data' => $result['order'],
+        ]);
+    }
+
+    /**
+     * ثبت اطلاعات ارسال (روش ارسال و کد رهگیری) برای یک سفارش.
+     */
+    public function updateShipping(
+        Request $request,
+        string $orderNumber
+    ): JsonResponse {
+        $validated = $request->validate([
+            'shipping_method' => ['nullable', 'string', 'max:60'],
+            'tracking_code' => ['nullable', 'string', 'max:60'],
+            'mark_shipped' => ['sometimes', 'boolean'],
+        ]);
+
+        $order = Order::query()
+            ->where('order_number', $orderNumber)
+            ->first();
+
+        if (! $order) {
+            return response()->json([
+                'success' => false,
+                'message' => 'سفارش موردنظر پیدا نشد.',
+            ], 404);
+        }
+
+        if (in_array($order->status, ['cancelled', 'canceled'], true)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'برای سفارش لغوشده امکان ثبت اطلاعات ارسال وجود ندارد.',
+            ], 422);
+        }
+
+        if (array_key_exists('shipping_method', $validated)) {
+            $order->shipping_method = $validated['shipping_method'];
+        }
+
+        if (array_key_exists('tracking_code', $validated)) {
+            $order->tracking_code = $validated['tracking_code'];
+        }
+
+        if (! empty($validated['mark_shipped'])) {
+            if ($order->status !== 'delivered') {
+                $order->status = 'shipped';
+            }
+
+            $order->shipped_at = $order->shipped_at ?? now();
+        }
+
+        $order->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'اطلاعات ارسال سفارش ذخیره شد.',
+            'data' => $order->fresh()->load([
+                'items.product.images',
+                'items.variant',
+                'user',
+            ]),
         ]);
     }
 }

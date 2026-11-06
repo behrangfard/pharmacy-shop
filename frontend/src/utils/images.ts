@@ -34,6 +34,16 @@ export function getStorageUrl(path?: string | null): string | null {
     return value;
   }
 
+  /**
+   * تصاویر آمادهٔ خودِ سایت (پوشهٔ frontend/public/images) در بک‌اند وجود
+   * ندارند؛ پس نباید با API_ORIGIN ترکیب شوند. مسیر را همان‌طور نسبی برمی‌گردانیم
+   * تا از دامنهٔ فرانت‌اند سرو شود. (مثلاً بنری که روی تصویر پیش‌فرض هیرو ساخته
+   * می‌شود.)
+   */
+  if (/^\/?images\//i.test(value)) {
+    return value.startsWith("/") ? value : `/${value}`;
+  }
+
   if (value.startsWith("/storage/")) {
     return `${API_ORIGIN}${value}`;
   }

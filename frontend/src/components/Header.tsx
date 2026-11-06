@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Search, ShoppingCart, User, LogOut } from "lucide-react";
+import { Search, ShoppingCart, User, LogOut, Heart } from "lucide-react";
 
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
+import { useWishlist } from "../context/WishlistContext";
 
 function Header() {
   const navigate = useNavigate();
@@ -11,6 +12,7 @@ function Header() {
 
   const { cartCount } = useCart();
   const { user, logout } = useAuth();
+  const { count: wishlistCount } = useWishlist();
 
   const handleSearch = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -35,7 +37,9 @@ function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-40 border-b border-[#e8eee5] bg-white/95 shadow-sm backdrop-blur-md">
+    // چسبان‌بودن (sticky) و لایهٔ z در Layout اعمال می‌شود، جایی که نوار
+    // اطلاع‌رسانی بالای هدر قرار می‌گیرد؛ این‌جا فقط ظاهر هدر ساخته می‌شود.
+    <header className="border-b border-line bg-white/95 shadow-sm backdrop-blur-md">
       <div className="mx-auto max-w-7xl px-3 py-3 sm:px-6 sm:py-4">
         <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-6">
           {/* Logo */}
@@ -44,8 +48,8 @@ function Header() {
               to="/"
               className="
                 whitespace-nowrap text-2xl font-black
-                tracking-tight text-[#4f7754]
-                transition-colors hover:text-[#385e3e]
+                tracking-tight text-brand-600
+                transition-colors hover:text-brand-700
               "
             >
               بهرنگ شاپ
@@ -58,7 +62,7 @@ function Header() {
                   <Link
                     to="/account"
                     aria-label="حساب کاربری"
-                    className="text-[#526b55] transition-colors hover:text-[#8066a2]"
+                    className="text-ink-soft transition-colors hover:text-plum-500"
                   >
                     <User size={22} />
                   </Link>
@@ -67,7 +71,7 @@ function Header() {
                     type="button"
                     onClick={handleLogout}
                     aria-label="خروج"
-                    className="text-[#7b847b] transition-colors hover:text-[#bd626d]"
+                    className="text-muted transition-colors hover:text-discount"
                   >
                     <LogOut size={19} />
                   </button>
@@ -77,21 +81,35 @@ function Header() {
                   type="button"
                   onClick={handleLogin}
                   aria-label="ورود"
-                  className="text-[#526b55] transition-colors hover:text-[#8066a2]"
+                  className="text-ink-soft transition-colors hover:text-plum-500"
                 >
                   <User size={22} />
                 </button>
               )}
 
               <Link
+                to="/wishlist"
+                className="relative flex items-center justify-center text-blush-400 transition-colors hover:text-plum-500"
+                aria-label="علاقه‌مندی‌ها"
+              >
+                <Heart size={23} />
+
+                {wishlistCount > 0 && (
+                  <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-blush-100 px-1 text-xs font-bold text-blush-600">
+                    {wishlistCount.toLocaleString("fa-IR")}
+                  </span>
+                )}
+              </Link>
+
+              <Link
                 to="/cart"
-                className="relative flex items-center justify-center text-[#537653] transition-colors hover:text-[#8066a2]"
+                className="relative flex items-center justify-center text-brand-600 transition-colors hover:text-plum-500"
                 aria-label="سبد خرید"
               >
                 <ShoppingCart size={25} />
 
                 {cartCount > 0 && (
-                  <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#d9cbed] px-1 text-xs font-bold text-[#594477]">
+                  <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-plum-200 px-1 text-xs font-bold text-plum-700">
                     {cartCount.toLocaleString("fa-IR")}
                   </span>
                 )}
@@ -113,14 +131,14 @@ function Header() {
                 placeholder="جستجوی محصول، برند یا دسته‌بندی..."
                 aria-label="جستجوی محصولات"
                 className="
-                  w-full rounded-2xl border border-[#e3e9df]
-                  bg-[#faf9f4] py-3 pl-4 pr-12
-                  text-sm text-[#283b2d]
+                  w-full rounded-2xl border border-line-soft
+                  bg-cream py-3 pl-4 pr-12
+                  text-sm text-ink
                   outline-none transition-all
-                  placeholder:text-[#9aa397]
-                  focus:border-[#91ad8d]
+                  placeholder:text-muted-soft
+                  focus:border-brand-400
                   focus:bg-white
-                  focus:ring-4 focus:ring-[#648767]/10
+                  focus:ring-4 focus:ring-brand-500/10
                 "
               />
 
@@ -130,8 +148,8 @@ function Header() {
                 className="
                   absolute right-0 top-0 flex h-full w-12
                   items-center justify-center
-                  text-[#7b947a] transition-colors
-                  hover:text-[#4f7754]
+                  text-brand-500 transition-colors
+                  hover:text-brand-600
                 "
               >
                 <Search size={21} />
@@ -147,11 +165,11 @@ function Header() {
                   to="/account"
                   className="
                     flex items-center gap-2
-                    text-[#526b55] transition-colors
-                    hover:text-[#8066a2]
+                    text-ink-soft transition-colors
+                    hover:text-plum-500
                   "
                 >
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#e8efe2] text-[#537653]">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-100 text-brand-600">
                     <User size={20} />
                   </div>
 
@@ -165,8 +183,8 @@ function Header() {
                   onClick={handleLogout}
                   className="
                     flex items-center gap-1.5
-                    text-sm text-[#8b9188]
-                    transition-colors hover:text-[#bd626d]
+                    text-sm text-muted
+                    transition-colors hover:text-discount
                   "
                 >
                   <LogOut size={18} />
@@ -179,11 +197,11 @@ function Header() {
                 onClick={handleLogin}
                 className="
                   flex items-center gap-2 whitespace-nowrap
-                  rounded-xl border border-[#e3e9df]
+                  rounded-xl border border-line-soft
                   bg-white px-4 py-2.5
-                  font-bold text-[#526b55]
-                  transition-all hover:border-[#cbdcc9]
-                  hover:bg-[#f4f6ee]
+                  font-bold text-ink-soft
+                  transition-all hover:border-brand-300
+                  hover:bg-brand-50
                 "
               >
                 <User size={21} />
@@ -192,19 +210,38 @@ function Header() {
             )}
 
             <Link
+              to="/wishlist"
+              aria-label="علاقه‌مندی‌ها"
+              className="
+                relative flex h-11 w-11 items-center justify-center
+                rounded-xl bg-blush-50 text-blush-500
+                transition-all hover:bg-blush-200
+                hover:text-blush-600
+              "
+            >
+              <Heart size={22} />
+
+              {wishlistCount > 0 && (
+                <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-plum-200 px-1 text-xs font-bold text-plum-700">
+                  {wishlistCount.toLocaleString("fa-IR")}
+                </span>
+              )}
+            </Link>
+
+            <Link
               to="/cart"
               aria-label="سبد خرید"
               className="
                 relative flex h-11 w-11 items-center justify-center
-                rounded-xl bg-[#e8efe2] text-[#537653]
-                transition-all hover:bg-[#dce8d4]
-                hover:text-[#385e3e]
+                rounded-xl bg-brand-100 text-brand-600
+                transition-all hover:bg-brand-200
+                hover:text-brand-700
               "
             >
               <ShoppingCart size={23} />
 
               {cartCount > 0 && (
-                <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#d9cbed] px-1 text-xs font-bold text-[#594477]">
+                <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-plum-200 px-1 text-xs font-bold text-plum-700">
                   {cartCount.toLocaleString("fa-IR")}
                 </span>
               )}

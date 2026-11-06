@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -27,11 +27,39 @@ import {
 import type { LucideIcon } from "lucide-react";
 import { adminApi } from "../services/api";
 
-interface DailySalesItem {
+type SalesTrendRange = "7d" | "30d" | "12m";
+
+interface SalesTrendPoint {
+  key: string;
   date: string;
-  day: string;
   sales: number | string;
+  orders: number;
 }
+
+interface SalesTrendSummary {
+  total_sales: number | string;
+  total_orders: number;
+  previous_total_sales: number | string;
+  change_percent: number | null;
+  average_sales: number | string;
+  average_order: number | string;
+  peak: SalesTrendPoint | null;
+}
+
+interface SalesTrendData {
+  range: SalesTrendRange;
+  granularity: "day" | "month";
+  start_date: string;
+  end_date: string;
+  points: SalesTrendPoint[];
+  summary: SalesTrendSummary;
+}
+
+const salesTrendRanges: { value: SalesTrendRange; label: string; caption: string }[] = [
+  { value: "7d", label: "۷ روز", caption: "هفت روز اخیر" },
+  { value: "30d", label: "۳۰ روز", caption: "سی روز اخیر" },
+  { value: "12m", label: "۱۲ ماه", caption: "دوازده ماه اخیر" },
+];
 
 interface SalesChannelItem {
   channel: string;
@@ -59,7 +87,6 @@ interface DashboardData {
     change_percent: number | null;
     week_starts_at?: string;
     next_week_starts_at?: string;
-    daily?: DailySalesItem[];
     channels?: SalesChannelItem[];
   };
 }
@@ -96,6 +123,45 @@ const formatNumber = (value: string | number | null | undefined) =>
 
 const formatPrice = (value: string | number | null | undefined) =>
   `${formatNumber(value)} تومان`;
+
+/** خلاصه‌سازی مبلغ برای برچسب‌های محور نمودار. */
+const formatCompactPrice = (value: number) => {
+  const amount = Number.isFinite(value) ? value : 0;
+  const formatDecimal = (input: number) =>
+    new Intl.NumberFormat("fa-IR", {
+      maximumFractionDigits: input >= 10 ? 0 : 1,
+    }).format(input);
+
+  if (amount >= 1_000_000_000)
+    return `${formatDecimal(amount / 1_000_000_000)} میلیارد`;
+  if (amount >= 1_000_000) return `${formatDecimal(amount / 1_000_000)} میلیون`;
+  if (amount >= 1_000) return `${formatDecimal(amount / 1_000)} هزار`;
+
+  return formatNumber(amount);
+};
+
+/** تاریخ «YYYY-MM-DD» یا «YYYY-MM» را بدون جابه‌جایی منطقه زمانی پارس می‌کند. */
+const parseDateValue = (value: string) => {
+  const [year, month, day] = value.split("-").map((part) => Number(part));
+
+  return new Date(year || 1970, (month || 1) - 1, day || 1);
+};
+
+const faWeekdayFormat = new Intl.DateTimeFormat("fa-IR", { weekday: "long" });
+const faDayMonthFormat = new Intl.DateTimeFormat("fa-IR", {
+  day: "numeric",
+  month: "long",
+});
+const faMonthFormat = new Intl.DateTimeFormat("fa-IR", { month: "long" });
+const faMonthYearFormat = new Intl.DateTimeFormat("fa-IR", {
+  month: "long",
+  year: "numeric",
+});
+const faFullDateFormat = new Intl.DateTimeFormat("fa-IR", {
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+});
 
 const pageStyle: CSSProperties = {
   width: "100%",
@@ -304,22 +370,52 @@ const dashboardStyles = `
 .dashboard-weekly-period {color:#b9cbd0;font-size:9px;line-height:1.9;}
 .dashboard-chart-value {font-size:12px;font-weight:900;color:#263442;overflow-wrap:anywhere;}
 .dashboard-chart-muted {color:#929ba5;font-size:10px;line-height:2;}
-.dashboard-sales-chart { min-width:0; }
-.dashboard-sales-chart-summary { display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin:-2px 0 6px; }
-.dashboard-sales-chart-summary-label { display:block;color:#929ba5;font-size:10px;line-height:1.9; }
-.dashboard-sales-chart-summary-value { display:block;margin-top:3px;color:#263442;font-size:16px;font-weight:900;line-height:1.8;overflow-wrap:anywhere; }
-.dashboard-sales-chart-legend { display:inline-flex;align-items:center;gap:7px;color:#718072;font-size:10px;font-weight:800;white-space:nowrap; }
-.dashboard-sales-chart-legend i,.dashboard-tooltip-dot { display:inline-block;width:8px;height:8px;border-radius:50%;background:#638965; }
+.dashboard-trend { display:flex;flex-direction:column;gap:14px;min-width:0; }
+.dashboard-trend-head { display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap; }
+.dashboard-trend-headline { display:flex;flex-direction:column;gap:5px;min-width:0; }
+.dashboard-trend-headline-label { color:#98a2ad;font-size:10px;font-weight:700; }
+.dashboard-trend-headline-value { color:#1f2d3a;font-size:clamp(16px,1.9vw,21px);font-weight:900;line-height:1.7;overflow-wrap:anywhere; }
+.dashboard-trend-change { display:inline-flex;align-items:center;gap:5px;align-self:flex-start;max-width:100%;padding:4px 9px;border-radius:999px;font-size:10px;font-weight:800;line-height:1.9;white-space:normal; }
+.dashboard-trend-change small { font-size:9px;font-weight:600;opacity:.72; }
+.dashboard-trend-change.is-up { background:#eaf5ec;color:#3f7a52; }
+.dashboard-trend-change.is-down { background:#fbeeea;color:#c0664e; }
+.dashboard-trend-change.is-neutral { background:#f1f4f6;color:#7b8791; }
+.dashboard-trend-tabs { display:inline-flex;align-items:center;gap:3px;padding:4px;border:1px solid #e9edea;border-radius:12px;background:#f6f9f6; }
+.dashboard-trend-tab { padding:6px 13px;border:0;border-radius:9px;background:transparent;color:#7d8994;font-family:inherit;font-size:11px;font-weight:800;cursor:pointer;transition:background .18s ease,color .18s ease,box-shadow .18s ease; }
+.dashboard-trend-tab:hover { color:#456b51;background:#ecf2e9; }
+.dashboard-trend-tab.is-active { background:#fff;color:#2f5c3b;box-shadow:0 4px 12px rgba(47,92,59,.13); }
+.dashboard-trend-tab:focus-visible { outline:2px solid #8fb79a;outline-offset:2px; }
+.dashboard-trend-meta { display:flex;flex-wrap:wrap;align-items:center;gap:6px 18px;color:#8b959f;font-size:10px; }
+.dashboard-trend-meta span { display:inline-flex;align-items:center;gap:6px; }
+.dashboard-trend-meta strong { color:#4a5763;font-weight:800; }
+.dashboard-trend-meta i { display:inline-block;width:7px;height:7px;border-radius:50%;background:#638965; }
 .dashboard-chart-wrap { width:100%;min-width:0;height:300px;min-height:240px;display:flex;align-items:stretch; }
 .dashboard-chart-svg { display:block;width:100%;height:100%;max-height:none;min-height:0;overflow:visible; }
-.dashboard-chart-gridline {stroke:#edf0f2;stroke-width:1;stroke-dasharray:3 5;}
-.dashboard-chart-label {fill:#8c96a0;font-size:10px;font-family:inherit;}
-.dashboard-chart-tooltip {display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:4px;padding:12px 14px;border:1px solid #e8eee7;border-radius:11px;background:#f8faf7;color:#596775;font-size:11px;}
-.dashboard-chart-tooltip span {display:inline-flex;align-items:center;gap:8px;}
-.dashboard-chart-tooltip strong {color:#2f5c3b;font-size:12px;font-weight:900;}
-.dashboard-sales-chart-hint { margin:8px 0 0;color:#a0a8b0;font-size:10px;line-height:1.9; }
-.sales-chart-point { cursor:pointer;outline:none; }
-.sales-chart-point:focus-visible circle:last-child { stroke:#315b3b;stroke-width:2; }
+.dashboard-chart-gridline {stroke:#eef1f3;stroke-width:1;stroke-dasharray:3 5;}
+.dashboard-chart-label {fill:#98a2ad;font-size:9.5px;font-family:inherit;}
+.dashboard-chart-axis {stroke:#e6ebe7;stroke-width:1;}
+.dashboard-trend-chart-wrap {position:relative;}
+.dashboard-trend-hit {cursor:crosshair;}
+.dashboard-trend-detail { display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:11px 14px;border:1px solid #eaf0ea;border-radius:12px;background:#f8faf7;transition:background .2s ease,border-color .2s ease; }
+.dashboard-trend-detail.is-active { border-color:#d7e6db;background:#f3f9f2; }
+.dashboard-trend-detail-label { display:block;color:#9aa4ae;font-size:9px;font-weight:700; }
+.dashboard-trend-detail-date { display:block;margin-top:2px;color:#33414e;font-size:11px;font-weight:800; }
+.dashboard-trend-detail-metrics { display:flex;align-items:center;gap:16px;flex-wrap:wrap; }
+.dashboard-trend-detail-metrics span { display:flex;flex-direction:column;gap:2px; }
+.dashboard-trend-detail-metrics b { color:#2f5c3b;font-size:11px;font-weight:900; }
+.dashboard-trend-detail-metrics small { color:#9aa4ae;font-size:9px; }
+.dashboard-trend-empty, .dashboard-trend-error { display:flex;flex-direction:column;align-items:center;gap:6px;padding:26px 18px;border:1px dashed #e3eae4;border-radius:14px;background:#fafcfa;text-align:center;color:#8b959f; }
+.dashboard-trend-empty p, .dashboard-trend-error p { margin:0;color:#4d5b68;font-size:11px;font-weight:800; }
+.dashboard-trend-empty span { font-size:10px;line-height:1.9; }
+.dashboard-trend-error { border-color:#f0ded8;background:#fdf7f5;color:#c0664e; }
+.dashboard-trend-error p { color:#8a5142; }
+.dashboard-trend-error button { margin-top:4px;padding:6px 14px;border:0;border-radius:9px;background:#fff;color:#c0664e;font-family:inherit;font-size:10px;font-weight:800;box-shadow:0 3px 10px rgba(192,102,78,.14);cursor:pointer; }
+.dashboard-trend-skeleton { display:flex;flex-direction:column;gap:10px; }
+.dashboard-trend-skeleton span { height:14px;border-radius:8px;background:linear-gradient(90deg,#f2f5f2 25%,#e8eee8 37%,#f2f5f2 63%);background-size:400% 100%;animation:dashboardShimmer 1.4s ease infinite; }
+.dashboard-trend-skeleton span:nth-child(1) { height:24px;width:44%; }
+.dashboard-trend-skeleton span:nth-child(2) { height:210px;border-radius:14px; }
+.dashboard-trend-skeleton span:nth-child(3) { height:42px;border-radius:12px; }
+@keyframes dashboardShimmer { 0% {background-position:100% 0;} 100% {background-position:0 0;} }
 .dashboard-channel-list {display:flex;flex-direction:column;gap:15px;margin-top:20px;}
 .dashboard-channel-row {display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;}
 .dashboard-channel-main {display:flex;align-items:center;gap:9px;min-width:0;}
@@ -355,7 +451,10 @@ const dashboardStyles = `
   .dashboard-stat-card,.dashboard-panel {padding:15px;}
   .dashboard-payment-summary {grid-template-columns:minmax(0,1fr);}
   .dashboard-chart-wrap {height:235px;min-height:200px;}
-  .dashboard-sales-chart-summary-value {font-size:14px;}
+  .dashboard-trend-headline-value {font-size:16px;}
+  .dashboard-trend-tabs {width:100%;justify-content:space-between;}
+  .dashboard-trend-tab {flex:1;padding:7px 6px;}
+  .dashboard-trend-detail-metrics {gap:12px;}
   .dashboard-title {font-size:23px;}
   .dashboard-header-badge {display:none;}
 }
@@ -367,268 +466,484 @@ const dashboardStyles = `
 }
 `;
 
-function SalesLineChart({ items }: { items: DailySalesItem[] }) {
-  const [activeIndex, setActiveIndex] = useState<number | null>(null);
-  const width = 760;
-  const height = 330;
-  const padding = { top: 28, right: 26, bottom: 46, left: 76 };
-  const chartWidth = width - padding.left - padding.right;
-  const chartHeight = height - padding.top - padding.bottom;
-  const values = items.map((item) => Math.max(0, Number(item.sales) || 0));
-  const maxValue = Math.max(...values, 0);
-  const upperBound = maxValue > 0 ? maxValue * 1.18 : 1;
-  const tickCount = 4;
+/** منحنی نرم (Catmull-Rom) با کنترل نقاط خارج از محدوده نمودار. */
+function buildSmoothPath(
+  points: { x: number; y: number }[],
+  minY: number,
+  maxY: number,
+) {
+  if (points.length === 0) return "";
+  if (points.length === 1) return `M ${points[0].x} ${points[0].y}`;
 
-  const points = items.map((item, index) => {
+  const clamp = (value: number) => Math.min(maxY, Math.max(minY, value));
+  const tension = 0.18;
+  let path = `M ${points[0].x} ${points[0].y}`;
+
+  for (let index = 0; index < points.length - 1; index += 1) {
+    const previous = points[index - 1] ?? points[index];
+    const current = points[index];
+    const next = points[index + 1];
+    const after = points[index + 2] ?? next;
+
+    const control1X = current.x + (next.x - previous.x) * tension;
+    const control1Y = clamp(current.y + (next.y - previous.y) * tension);
+    const control2X = next.x - (after.x - current.x) * tension;
+    const control2Y = clamp(next.y - (after.y - current.y) * tension);
+
+    path += ` C ${control1X} ${control1Y}, ${control2X} ${control2Y}, ${next.x} ${next.y}`;
+  }
+
+  return path;
+}
+
+function SalesTrendChart() {
+  const [range, setRange] = useState<SalesTrendRange>("7d");
+  const [trend, setTrend] = useState<SalesTrendData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [reloadToken, setReloadToken] = useState(0);
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    let cancelled = false;
+
+    setLoading(true);
+    setError("");
+    setActiveIndex(null);
+
+    adminApi
+      .get<{ success: boolean; data: SalesTrendData }>(
+        "/admin/dashboard/sales-trend",
+        { params: { range }, signal: controller.signal },
+      )
+      .then((response) => {
+        if (cancelled) return;
+        setTrend(response.data.data);
+        setLoading(false);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setError("دریافت آمار روند فروش انجام نشد. دوباره تلاش کن.");
+        setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+  }, [range, reloadToken]);
+
+  const points = trend?.points ?? [];
+  const values = points.map((point) => Math.max(0, Number(point.sales) || 0));
+  const totalSales = values.reduce((sum, value) => sum + value, 0);
+  const summary = trend?.summary ?? null;
+  const totalOrders = Number(summary?.total_orders ?? 0);
+  const averageSales = Number(summary?.average_sales ?? 0);
+  const changePercent =
+    typeof summary?.change_percent === "number" ? summary.change_percent : null;
+  const peakPoint = summary?.peak ?? null;
+  const hasData = points.length > 0 && totalSales > 0;
+  const isMonthly = trend?.granularity === "month";
+  const activeRangeOption = salesTrendRanges.find(
+    (option) => option.value === range,
+  );
+
+  const chartWrapRef = useRef<HTMLDivElement | null>(null);
+  const [chartSize, setChartSize] = useState({ width: 760, height: 320 });
+
+  useEffect(() => {
+    const element = chartWrapRef.current;
+
+    if (!element || typeof ResizeObserver === "undefined") return;
+
+    const updateSize = (width: number, height: number) => {
+      if (width < 1 || height < 1) return;
+
+      setChartSize({
+        width: Math.round(width),
+        height: Math.round(height),
+      });
+    };
+
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+
+      updateSize(entry.contentRect.width, entry.contentRect.height);
+    });
+
+    observer.observe(element);
+    updateSize(element.clientWidth, element.clientHeight);
+
+    return () => observer.disconnect();
+  }, [hasData]);
+
+  const canvasWidth = chartSize.width;
+  const canvasHeight = chartSize.height;
+  const padding =
+    canvasWidth < 560
+      ? { top: 18, right: 68, bottom: 36, left: 10 }
+      : { top: 20, right: 86, bottom: 40, left: 14 };
+  const { top, right, bottom, left } = padding;
+  const chartWidth = Math.max(160, canvasWidth - left - right);
+  const chartHeight = Math.max(90, canvasHeight - top - bottom);
+  const plotBottom = top + chartHeight;
+  const maxValue = values.length > 0 ? Math.max(...values) : 0;
+  const upperBound = maxValue > 0 ? maxValue * 1.12 : 1;
+  const tickCount = 4;
+  const step = points.length > 1 ? chartWidth / (points.length - 1) : 0;
+
+  const chartPoints = points.map((point, index) => {
     const value = values[index];
-    const x =
-      padding.left +
-      (items.length <= 1
-        ? chartWidth / 2
-        : (index / (items.length - 1)) * chartWidth);
-    const y = padding.top + chartHeight - (value / upperBound) * chartHeight;
+    const x = points.length <= 1 ? left + chartWidth / 2 : left + step * index;
+    const y = top + chartHeight - (value / upperBound) * chartHeight;
+
     return {
       x,
       y,
       value,
-      label: item.day || item.date,
-      date: item.date,
-      key: `${item.date}-${index}`,
       index,
+      key: point.key,
+      date: point.date,
+      orders: point.orders,
     };
   });
 
-  const linePath = points.reduce((path, point, index) => {
-    if (index === 0) return `M ${point.x} ${point.y}`;
-    const previous = points[index - 1];
-    const middleX = (previous.x + point.x) / 2;
-    return `${path} C ${middleX} ${previous.y}, ${middleX} ${point.y}, ${point.x} ${point.y}`;
-  }, "");
-
-  const firstPoint = points[0];
-  const lastPoint = points[points.length - 1];
+  const linePath = buildSmoothPath(chartPoints, top, plotBottom);
+  const lastChartPoint = chartPoints[chartPoints.length - 1];
   const areaPath =
-    points.length > 0
-      ? `${linePath} L ${lastPoint.x} ${padding.top + chartHeight} L ${firstPoint.x} ${padding.top + chartHeight} Z`
+    chartPoints.length > 0
+      ? `${linePath} L ${lastChartPoint.x} ${plotBottom} L ${chartPoints[0].x} ${plotBottom} Z`
       : "";
+  const labelsThatFit = Math.max(2, Math.floor(chartWidth / 56));
+  const labelStep = Math.max(1, Math.ceil(points.length / labelsThatFit));
+  const activePoint =
+    activeIndex === null ? null : (chartPoints[activeIndex] ?? null);
+  const detailPoint: SalesTrendPoint | null = activePoint
+    ? (points[activePoint.index] ?? null)
+    : peakPoint;
+  const detailValue = detailPoint ? Number(detailPoint.sales) || 0 : 0;
+  const detailAverage =
+    detailPoint && detailPoint.orders > 0
+      ? detailValue / detailPoint.orders
+      : 0;
 
-  const formatAxisValue = (value: number) => {
-    if (value >= 1_000_000)
-      return `${(value / 1_000_000).toLocaleString("fa-IR", { maximumFractionDigits: 1 })}م`;
-    if (value >= 1_000)
-      return `${(value / 1_000).toLocaleString("fa-IR", { maximumFractionDigits: 1 })}ه`;
-    return formatNumber(value);
+  const formatPointDate = (point: SalesTrendPoint) =>
+    isMonthly
+      ? faMonthYearFormat.format(parseDateValue(point.date))
+      : faFullDateFormat.format(parseDateValue(point.date));
+
+  const formatAxisLabel = (index: number) => {
+    const date = parseDateValue(points[index].date);
+
+    if (isMonthly) return faMonthFormat.format(date);
+    if (points.length <= 7) return faWeekdayFormat.format(date);
+
+    return faDayMonthFormat.format(date);
   };
 
-  const activePoint =
-    activeIndex === null ? null : (points[activeIndex] ?? null);
-
-  if (items.length === 0) {
-    return (
-      <div className="dashboard-empty-note">
-        هنوز اطلاعاتی برای نمایش روند فروش وجود ندارد.
-      </div>
-    );
-  }
-
   return (
-    <div
-      className="dashboard-sales-chart"
-      onMouseLeave={() => setActiveIndex(null)}
-    >
-      <div className="dashboard-sales-chart-summary">
-        <div>
-          <span className="dashboard-sales-chart-summary-label">
-            مجموع فروش ثبت‌شده
-          </span>
-          <strong className="dashboard-sales-chart-summary-value">
-            {formatPrice(values.reduce((sum, value) => sum + value, 0))}
+    <div className="dashboard-trend">
+      <div className="dashboard-trend-head">
+        <div className="dashboard-trend-headline">
+          <span className="dashboard-trend-headline-label">مجموع فروش بازه</span>
+          <strong className="dashboard-trend-headline-value">
+            {hasData ? formatPrice(totalSales) : "—"}
           </strong>
+          {!loading && changePercent !== null && (
+            <span
+              className={`dashboard-trend-change ${
+                changePercent > 0
+                  ? "is-up"
+                  : changePercent < 0
+                    ? "is-down"
+                    : "is-neutral"
+              }`}
+            >
+              {changePercent > 0 ? (
+                <TrendingUp size={12} aria-hidden="true" />
+              ) : changePercent < 0 ? (
+                <TrendingDown size={12} aria-hidden="true" />
+              ) : (
+                <Activity size={12} aria-hidden="true" />
+              )}
+              {`${changePercent > 0 ? "+" : ""}${formatNumber(changePercent)}٪`}
+              <small>نسبت به بازه قبل</small>
+            </span>
+          )}
+          {!loading && changePercent === null && hasData && (
+            <span className="dashboard-trend-change is-neutral">
+              <Activity size={12} aria-hidden="true" />
+              بدون فروش در بازه قبل
+            </span>
+          )}
         </div>
-        <span className="dashboard-sales-chart-legend">
-          <i /> فروش روزانه
-        </span>
-      </div>
 
-      <div className="dashboard-chart-wrap">
-        <svg
-          className="dashboard-chart-svg"
-          viewBox={`0 0 ${width} ${height}`}
-          role="img"
-          aria-label="نمودار تعاملی روند فروش روزانه"
-          preserveAspectRatio="xMidYMid meet"
+        <div
+          className="dashboard-trend-tabs"
+          role="tablist"
+          aria-label="بازه زمانی نمودار فروش"
         >
-          <defs>
-            <linearGradient
-              id="mehrSalesAreaGradient"
-              x1="0"
-              y1="0"
-              x2="0"
-              y2="1"
+          {salesTrendRanges.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              role="tab"
+              aria-selected={option.value === range}
+              title={option.caption}
+              className={`dashboard-trend-tab ${
+                option.value === range ? "is-active" : ""
+              }`}
+              onClick={() => setRange(option.value)}
             >
-              <stop offset="0%" stopColor="#739777" stopOpacity="0.24" />
-              <stop offset="100%" stopColor="#739777" stopOpacity="0.015" />
-            </linearGradient>
-            <linearGradient
-              id="mehrSalesLineGradient"
-              x1="0"
-              y1="0"
-              x2="1"
-              y2="0"
-            >
-              <stop offset="0%" stopColor="#8cae83" />
-              <stop offset="100%" stopColor="#477653" />
-            </linearGradient>
-            <filter
-              id="mehrSalesPointShadow"
-              x="-100%"
-              y="-100%"
-              width="300%"
-              height="300%"
-            >
-              <feDropShadow
-                dx="0"
-                dy="2"
-                stdDeviation="2.5"
-                floodColor="#477653"
-                floodOpacity="0.2"
-              />
-            </filter>
-          </defs>
-
-          {Array.from({ length: tickCount + 1 }, (_, index) => {
-            const value = (upperBound / tickCount) * index;
-            const y =
-              padding.top + chartHeight - (index / tickCount) * chartHeight;
-            return (
-              <g key={`sales-tick-${index}`}>
-                <line
-                  x1={padding.left}
-                  x2={width - padding.right}
-                  y1={y}
-                  y2={y}
-                  className="dashboard-chart-gridline"
-                />
-                <text
-                  x={padding.left - 12}
-                  y={y + 4}
-                  textAnchor="end"
-                  className="dashboard-chart-label"
-                >
-                  {formatAxisValue(value)}
-                </text>
-              </g>
-            );
-          })}
-
-          {points.length > 1 && (
-            <path d={areaPath} fill="url(#mehrSalesAreaGradient)" />
-          )}
-          {points.length > 1 && (
-            <path
-              d={linePath}
-              fill="none"
-              stroke="url(#mehrSalesLineGradient)"
-              strokeWidth="3.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          )}
-
-          {activePoint && (
-            <line
-              x1={activePoint.x}
-              x2={activePoint.x}
-              y1={padding.top}
-              y2={padding.top + chartHeight}
-              stroke="#8ba58b"
-              strokeWidth="1"
-              strokeDasharray="4 5"
-            />
-          )}
-
-          {points.map((point) => (
-            <g
-              key={point.key}
-              className="sales-chart-point"
-              onMouseEnter={() => setActiveIndex(point.index)}
-              onFocus={() => setActiveIndex(point.index)}
-            >
-              <circle
-                cx={point.x}
-                cy={point.y}
-                r={activeIndex === point.index ? 11 : 8}
-                fill="#6c936e"
-                opacity={activeIndex === point.index ? 0.18 : 0.1}
-              />
-              <circle
-                cx={point.x}
-                cy={point.y}
-                r={activeIndex === point.index ? 5 : 3.5}
-                fill="#fff"
-                stroke="#52775a"
-                strokeWidth={activeIndex === point.index ? 3 : 2}
-                filter="url(#mehrSalesPointShadow)"
-              />
-              <circle
-                cx={point.x}
-                cy={point.y}
-                r="12"
-                fill="transparent"
-                tabIndex={0}
-                role="button"
-                aria-label={`${point.label}: ${formatPrice(point.value)}`}
-                onFocus={() => setActiveIndex(point.index)}
-                onBlur={() => setActiveIndex(null)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    setActiveIndex(point.index);
-                  }
-                }}
-              />
-            </g>
+              {option.label}
+            </button>
           ))}
-
-          {points.map((point, index) => {
-            const labelStep = Math.max(1, Math.ceil(points.length / 7));
-            if (
-              index !== 0 &&
-              index !== points.length - 1 &&
-              index % labelStep !== 0
-            )
-              return null;
-            return (
-              <text
-                key={`sales-date-${point.key}`}
-                x={point.x}
-                y={height - 13}
-                textAnchor="middle"
-                className="dashboard-chart-label"
-              >
-                {point.label}
-              </text>
-            );
-          })}
-        </svg>
+        </div>
       </div>
 
-      {activePoint && (
-        <div className="dashboard-chart-tooltip" role="status">
+      {hasData && (
+        <div className="dashboard-trend-meta">
           <span>
-            <i className="dashboard-tooltip-dot" />
-            {activePoint.label}
-            {activePoint.date && activePoint.date !== activePoint.label
-              ? ` · ${activePoint.date}`
-              : ""}
+            <i /> {activeRangeOption?.caption}
           </span>
-          <strong>{formatPrice(activePoint.value)}</strong>
+          <span>
+            <strong>{formatNumber(totalOrders)}</strong> سفارش پرداخت‌شده
+          </span>
+          <span>
+            میانگین هر {isMonthly ? "ماه" : "روز"}:{" "}
+            <strong>{formatPrice(Math.round(averageSales))}</strong>
+          </span>
+          {peakPoint && (
+            <span>
+              اوج فروش: <strong>{formatPointDate(peakPoint)}</strong>
+            </span>
+          )}
         </div>
       )}
-      {!activePoint && (
-        <p className="dashboard-sales-chart-hint">
-          برای مشاهده مبلغ فروش هر روز، نشانگر را روی نقاط نمودار قرار بده.
-        </p>
+
+      {loading ? (
+        <div
+          className="dashboard-trend-skeleton"
+          role="status"
+          aria-label="در حال دریافت نمودار روند فروش"
+        >
+          <span />
+          <span />
+          <span />
+        </div>
+      ) : error ? (
+        <div className="dashboard-trend-error" role="alert">
+          <XCircle size={17} aria-hidden="true" />
+          <p>{error}</p>
+          <button
+            type="button"
+            onClick={() => setReloadToken((token) => token + 1)}
+          >
+            تلاش دوباره
+          </button>
+        </div>
+      ) : !hasData ? (
+        <div className="dashboard-trend-empty">
+          <ChartNoAxesCombined size={20} aria-hidden="true" />
+          <p>در این بازه فروش پرداخت‌شده‌ای ثبت نشده است.</p>
+          <span>
+            بازه زمانی دیگری را انتخاب کن یا منتظر ثبت سفارش‌های جدید بمان.
+          </span>
+        </div>
+      ) : (
+        <>
+          <div
+            className="dashboard-chart-wrap dashboard-trend-chart-wrap"
+            ref={chartWrapRef}
+          >
+            <svg
+              className="dashboard-chart-svg"
+              viewBox={`0 0 ${canvasWidth} ${canvasHeight}`}
+              role="img"
+              aria-label={`نمودار روند فروش، ${activeRangeOption?.caption}`}
+              preserveAspectRatio="xMidYMid meet"
+              onPointerLeave={() => setActiveIndex(null)}
+            >
+              <title>{`روند فروش ${activeRangeOption?.caption}`}</title>
+              <defs>
+                <linearGradient id="mehrTrendArea" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#6f9773" stopOpacity="0.3" />
+                  <stop offset="55%" stopColor="#6f9773" stopOpacity="0.1" />
+                  <stop offset="100%" stopColor="#6f9773" stopOpacity="0.01" />
+                </linearGradient>
+                <linearGradient id="mehrTrendLine" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor="#9ab894" />
+                  <stop offset="100%" stopColor="#43714f" />
+                </linearGradient>
+              </defs>
+
+              {Array.from({ length: tickCount + 1 }, (_, index) => {
+                const value = (upperBound / tickCount) * index;
+                const y = plotBottom - (index / tickCount) * chartHeight;
+
+                return (
+                  <g key={`trend-tick-${index}`}>
+                    <line
+                      x1={left}
+                      x2={left + chartWidth}
+                      y1={y}
+                      y2={y}
+                      className={
+                        index === 0
+                          ? "dashboard-chart-axis"
+                          : "dashboard-chart-gridline"
+                      }
+                    />
+                    <text
+                      x={left + chartWidth + 12}
+                      y={y + 3.5}
+                      textAnchor="start"
+                      className="dashboard-chart-label"
+                    >
+                      {formatCompactPrice(value)}
+                    </text>
+                  </g>
+                );
+              })}
+
+              <path d={areaPath} fill="url(#mehrTrendArea)" />
+              <path
+                d={linePath}
+                fill="none"
+                stroke="url(#mehrTrendLine)"
+                strokeWidth={2.8}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+
+              {points.length <= 7 &&
+                chartPoints.map((point) => (
+                  <circle
+                    key={`trend-dot-${point.key}`}
+                    cx={point.x}
+                    cy={point.y}
+                    r={2.9}
+                    fill="#fff"
+                    stroke="#5c8564"
+                    strokeWidth={1.8}
+                  />
+                ))}
+
+              {activePoint && (
+                <g>
+                  <line
+                    x1={activePoint.x}
+                    x2={activePoint.x}
+                    y1={top}
+                    y2={plotBottom}
+                    stroke="#9fbca4"
+                    strokeWidth={1}
+                    strokeDasharray="4 4"
+                  />
+                  <circle
+                    cx={activePoint.x}
+                    cy={activePoint.y}
+                    r={8}
+                    fill="#477653"
+                    opacity={0.15}
+                  />
+                  <circle
+                    cx={activePoint.x}
+                    cy={activePoint.y}
+                    r={4}
+                    fill="#fff"
+                    stroke="#3f6b4c"
+                    strokeWidth={2.4}
+                  />
+                </g>
+              )}
+
+              {points.map((point, index) => {
+                const isLast = index === points.length - 1;
+                const isLabelled = index % labelStep === 0;
+
+                if (!isLabelled && !isLast) return null;
+
+                if (isLast && !isLabelled) {
+                  const previousLabelIndex =
+                    Math.floor(index / labelStep) * labelStep;
+
+                  if (index - previousLabelIndex < labelStep / 2) return null;
+                }
+
+                return (
+                  <text
+                    key={`trend-label-${point.key}`}
+                    x={chartPoints[index].x}
+                    y={canvasHeight - 12}
+                    textAnchor="middle"
+                    className="dashboard-chart-label"
+                  >
+                    {formatAxisLabel(index)}
+                  </text>
+                );
+              })}
+
+              {chartPoints.map((entry) => {
+                const hitWidth = step || chartWidth;
+                const hitX = Math.min(
+                  Math.max(entry.x - hitWidth / 2, left),
+                  left + chartWidth - hitWidth,
+                );
+
+                return (
+                  <rect
+                    key={`trend-hit-${entry.key}`}
+                    className="dashboard-trend-hit"
+                    x={hitX}
+                    y={top}
+                    width={hitWidth}
+                    height={chartHeight}
+                    fill="transparent"
+                    onPointerEnter={() => setActiveIndex(entry.index)}
+                    onPointerDown={() => setActiveIndex(entry.index)}
+                  />
+                );
+              })}
+            </svg>
+          </div>
+
+          <div
+            className={`dashboard-trend-detail ${
+              activePoint ? "is-active" : ""
+            }`}
+          >
+            <div>
+              <span className="dashboard-trend-detail-label">
+                {activePoint ? "بازه انتخاب‌شده" : "پرفروش‌ترین بازه"}
+              </span>
+              <strong className="dashboard-trend-detail-date">
+                {detailPoint ? formatPointDate(detailPoint) : "—"}
+              </strong>
+            </div>
+
+            <div className="dashboard-trend-detail-metrics">
+              <span>
+                <b>{formatPrice(detailValue)}</b>
+                <small>فروش</small>
+              </span>
+              <span>
+                <b>{formatNumber(detailPoint?.orders ?? 0)}</b>
+                <small>سفارش</small>
+              </span>
+              <span>
+                <b>
+                  {detailAverage > 0
+                    ? formatPrice(Math.round(detailAverage))
+                    : "—"}
+                </b>
+                <small>میانگین هر سفارش</small>
+              </span>
+            </div>
+          </div>
+        </>
       )}
     </div>
   );
@@ -986,7 +1301,6 @@ function AdminDashboard() {
       )
     : 0;
 
-  const dailySales = data?.sales?.daily ?? [];
   const salesChannels = data?.sales?.channels ?? [];
 
   return (
@@ -1214,15 +1528,15 @@ function AdminDashboard() {
             <div className="dashboard-section-heading">
               <h2 className="dashboard-section-title">نبض فروشگاه</h2>
               <span className="dashboard-section-caption">
-                روند فروش روزانه
+                نمودار تعاملی روند فروش
               </span>
             </div>
             <div className="dashboard-panel">
               <div className="dashboard-panel-header">
                 <div>
-                  <h3 className="dashboard-panel-title">روند فروش روزانه</h3>
+                  <h3 className="dashboard-panel-title">روند فروش</h3>
                   <p className="dashboard-panel-subtitle">
-                    تغییرات فروش در روزهای ثبت‌شده
+                    فروش پرداخت‌شده در بازه‌های زمانی مختلف
                   </p>
                 </div>
                 <span
@@ -1232,7 +1546,7 @@ function AdminDashboard() {
                   <ChartNoAxesCombined size={19} aria-hidden="true" />
                 </span>
               </div>
-              <SalesLineChart items={dailySales} />
+              <SalesTrendChart />
             </div>
           </section>
 

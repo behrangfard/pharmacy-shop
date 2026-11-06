@@ -33,7 +33,10 @@ return [
         'local' => [
             'driver' => 'local',
             'root' => storage_path('app/private'),
-            'serve' => true,
+            // آدرس /storage/{path} در routes/web.php از دیسک public سرو می‌شود؛
+            // اگر این گزینه true باشد لاراول همان مسیر را برای دیسک خصوصی
+            // رزرو می‌کند و تصاویر بارگذاری‌شده (بنر/محصول) ۴۰۳ می‌شوند.
+            'serve' => false,
             'throw' => false,
             'report' => false,
         ],

@@ -8,6 +8,89 @@
 @import "@fontsource/vazirmatn/900.css";
 
 /* ==================================================
+   توکن‌های طراحی فروشگاه (Tailwind v4)
+
+   تا امروز رنگ‌ها به‌صورت هگز پراکنده داخل کلاس‌ها نوشته می‌شدند
+   (مثل text-[#4f7754]) که تغییر تم را تقریباً غیرممکن می‌کرد.
+   از این پس رنگ‌های فروشگاه از این توکن‌ها می‌آیند:
+     bg-brand-600 · text-brand-700 · border-line · text-muted
+   نام‌ها عمداً از رنگ‌های پیش‌فرض Tailwind (rose/emerald/slate) جدا
+   هستند تا مقدار پیش‌فرض آن‌ها را بازنویسی نکنیم.
+
+   کنتراست روی پس‌زمینهٔ سفید:
+     brand-600 ۵.۱ · brand-700 ۸.۱ · ink ۱۰.۹
+     muted ۵.۹ · muted-soft ۵.۰ · save ۵.۷ · stock ۵.۰ · discount ۵.۲
+     brand-550 ۵.۱ · gold ۴.۵ · info ۵.۱
+   توکن‌های سطح (brand-75/250، cream، cream-deep، line، line-soft، line-strong)
+   فقط برای پس‌زمینه و خط‌اند و متن نیستند.
+================================================== */
+
+@theme {
+  /* سبز برند */
+  --color-brand-50: #f4f6ee;
+  --color-brand-75: #eef2e7;
+  --color-brand-100: #e8efe2;
+  --color-brand-200: #dce7d5;
+  --color-brand-250: #dbe7d5;
+  --color-brand-300: #cbdcc9;
+  --color-brand-400: #91ad8d;
+  --color-brand-500: #648767;
+  --color-brand-550: #537653;
+  --color-brand-600: #4f7754;
+  --color-brand-700: #385e3e;
+  --color-brand-800: #354a37;
+  --color-brand-900: #283b2d;
+
+  /* کرم، سطح و خطوط */
+  --color-cream: #faf9f4;
+  --color-cream-deep: #f8f7f1;
+  --color-line: #e8eee5;
+  --color-line-soft: #e3e9df;
+  --color-line-strong: #d7ddd2;
+
+  /* متن */
+  --color-ink: #283b2d;
+  --color-ink-soft: #526b55;
+  --color-muted: #5b655c;
+  --color-muted-soft: #6b7268;
+
+  /* تخفیف، موجودی و صرفه‌جویی */
+  --color-discount: #b5475a;
+  --color-discount-700: #94394b;
+  --color-stock: #2f7d4f;
+  --color-stock-700: #215f3c;
+  --color-save: #4b7048;
+
+  /* صورتی (علاقه‌مندی و بج تخفیف ملایم) */
+  --color-blush-50: #f6ecef;
+  --color-blush-100: #f4dfe5;
+  --color-blush-200: #f0dfe5;
+  --color-blush-400: #b0768c;
+  --color-blush-500: #a2657b;
+  --color-blush-600: #854c61;
+
+  /* بنفش مکمل (پشتیبانی و سبد خرید) */
+  --color-plum-50: #f7f3fb;
+  --color-plum-100: #eee6f7;
+  --color-plum-200: #d9cbed;
+  --color-plum-300: #c9b6df;
+  --color-plum-500: #8066a2;
+  --color-plum-600: #725a91;
+  --color-plum-700: #594477;
+
+  /* اطلاع‌رسانی (ارسال، راهنما) و طلایی (هشدار ملایم) */
+  --color-info: #4f7291;
+  --color-info-100: #dde7f1;
+  --color-info-200: #c8d8e6;
+  --color-gold-50: #fbf4e4;
+  --color-gold-100: #f5e8c8;
+  --color-gold: #96702c;
+
+  /* شعاع گوشه‌ها */
+  --radius-card: 1.5rem;
+}
+
+/* ==================================================
    تنظیمات عمومی
 ================================================== */
 
@@ -2809,5 +2892,2598 @@ body {
   .dashboard-page .dashboard-chart-wrap {
     height: 280px;
     min-height: 280px;
+  }
+}
+/* ==================================================
+   کامپوننت‌های مشترک صفحه‌های جدید پنل مدیریت
+================================================== */
+
+.admin-page {
+  width: 100%;
+  min-width: 0;
+  color: #111827;
+}
+
+.admin-page-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.admin-page-eyebrow {
+  display: inline-block;
+  margin-bottom: 8px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #f0f5ec;
+  color: #6b8e6b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.admin-page-title {
+  margin: 0 0 8px;
+  font-size: 26px;
+  color: #111827;
+}
+
+.admin-page-subtitle {
+  margin: 0;
+  max-width: 700px;
+  color: #6b7280;
+  font-size: 15px;
+  line-height: 2;
+  text-align: justify;
+}
+
+.admin-alert {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: 14px;
+}
+
+.admin-alert-error {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.admin-alert-success {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.admin-card {
+  margin-bottom: 20px;
+  padding: 20px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.admin-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.admin-card-title {
+  margin: 0;
+  font-size: 18px;
+  color: #111827;
+}
+
+.admin-card-desc {
+  margin: 6px 0 0;
+  color: #6b7280;
+  font-size: 13px;
+  line-height: 1.9;
+}
+
+.admin-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.admin-form-grid-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.admin-full {
+  grid-column: 1 / -1;
+}
+
+.admin-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+}
+
+.admin-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #374151;
+}
+
+.admin-input,
+.admin-select,
+.admin-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 9px;
+  background: #fff;
+  color: #111827;
+  font-size: 14px;
+  outline: none;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.admin-input:focus,
+.admin-select:focus,
+.admin-textarea:focus {
+  border-color: #648767;
+  box-shadow: 0 0 0 3px #e8efe2;
+}
+
+.admin-textarea {
+  min-height: 92px;
+  resize: vertical;
+  line-height: 1.9;
+}
+
+.admin-help {
+  color: #9ca3af;
+  font-size: 11.5px;
+  line-height: 1.7;
+}
+
+.admin-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #374151;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.admin-checkbox input {
+  width: 17px;
+  height: 17px;
+  accent-color: #648767;
+}
+
+.admin-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.admin-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 9px;
+  background: #fff;
+  color: #374151;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.admin-btn:hover:not(:disabled) {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+.admin-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.admin-btn-primary {
+  background: #648767;
+  border-color: #648767;
+  color: #fff;
+}
+
+.admin-btn-primary:hover:not(:disabled) {
+  background: #527354;
+  border-color: #527354;
+  color: #fff;
+}
+
+.admin-btn-danger {
+  background: #fff;
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
+.admin-btn-danger:hover:not(:disabled) {
+  background: #fef2f2;
+  border-color: #fca5a5;
+}
+
+.admin-btn-sm {
+  padding: 6px 11px;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.admin-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid #eef0f2;
+  border-radius: 10px;
+}
+
+.admin-table {
+  width: 100%;
+  min-width: 680px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.admin-table th {
+  padding: 11px 12px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f8faf7;
+  color: #4b5563;
+  font-weight: 700;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.admin-table td {
+  padding: 11px 12px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #1f2937;
+  vertical-align: middle;
+}
+
+.admin-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.admin-table tbody tr:hover {
+  background: #fbfcf9;
+}
+
+/* فهرست درخواست‌های مرجوعی: هر ردیف در یک خط و ستون‌ها هم‌تراز */
+.admin-returns-table th,
+.admin-returns-table td {
+  padding: 10px;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.admin-returns-table th:last-child,
+.admin-returns-table td:last-child {
+  text-align: center;
+}
+
+.admin-returns-ltr {
+  direction: ltr;
+  text-align: right;
+  unicode-bidi: isolate;
+}
+
+.admin-returns-customer {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 12px;
+  max-width: 100%;
+}
+
+.admin-returns-name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-returns-phone {
+  color: #9ca3af;
+  font-size: 11.5px;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.admin-returns-reason {
+  display: inline-block;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.admin-empty {
+  padding: 26px;
+  color: #9ca3af;
+  font-size: 13px;
+  text-align: center;
+}
+
+.admin-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.admin-badge-green {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.admin-badge-red {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.admin-badge-amber {
+  background: #fffbeb;
+  color: #b45309;
+}
+
+.admin-badge-blue {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.admin-badge-gray {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+.admin-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.admin-stat {
+  padding: 16px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+}
+
+.admin-stat-label {
+  display: block;
+  margin-bottom: 8px;
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.admin-stat-value {
+  color: #31443a;
+  font-size: 21px;
+  font-weight: 800;
+}
+
+.admin-stat-hint {
+  display: block;
+  margin-top: 6px;
+  color: #9ca3af;
+  font-size: 11px;
+}
+
+.admin-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.admin-toolbar-spacer {
+  margin-inline-start: auto;
+}
+
+.admin-row-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* فاکتور چاپی */
+.invoice-print {
+  padding: 22px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  color: #111827;
+}
+
+.invoice-print h2 {
+  margin: 0 0 4px;
+  font-size: 20px;
+}
+
+.invoice-print-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 22px;
+  margin: 12px 0 18px;
+  color: #4b5563;
+  font-size: 12.5px;
+}
+
+.invoice-print table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.invoice-print th,
+.invoice-print td {
+  padding: 9px 8px;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: right;
+}
+
+.invoice-print-totals {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  margin-top: 14px;
+  font-size: 13px;
+}
+
+.invoice-print-totals strong {
+  font-size: 15px;
+}
+
+.invoice-print-footer {
+  margin-top: 18px;
+  padding-top: 12px;
+  border-top: 1px dashed #d1d5db;
+  color: #6b7280;
+  font-size: 11.5px;
+  line-height: 2;
+}
+
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+
+  #invoice-print-area,
+  #invoice-print-area * {
+    visibility: visible !important;
+  }
+
+  #invoice-print-area {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    margin: 0;
+    padding: 16px;
+    border: none;
+    box-shadow: none;
+  }
+
+  .admin-print-hide {
+    display: none !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .admin-form-grid,
+  .admin-form-grid-3 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ==================================================
+   سایدبار فشرده و مرتب پنل مدیریت
+   هدف: جا شدن کامل منو بدون نیاز به اسکرول
+   و عرض کافی برای اینکه متن آیتم‌ها بریده نشود
+================================================== */
+:root {
+  --admin-sidebar-w: 264px;
+}
+
+/* عرض کمی بیشتر + حذف نوار اسکرول که باعث بریدن متن می‌شد */
+.admin-sidebar {
+  width: var(--admin-sidebar-w) !important;
+  min-width: var(--admin-sidebar-w) !important;
+  max-width: var(--admin-sidebar-w) !important;
+  padding: 14px 12px !important;
+  gap: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  scrollbar-width: none;
+}
+
+.admin-sidebar::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+/* لوگو و عنوان پنل */
+.admin-sidebar .admin-brand {
+  margin-bottom: 10px !important;
+  padding: 4px 6px !important;
+  gap: 10px !important;
+}
+
+.admin-sidebar .admin-brand-icon {
+  flex: 0 0 36px !important;
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 11px !important;
+}
+
+.admin-sidebar .admin-brand-text strong {
+  font-size: 15px !important;
+  line-height: 1.5;
+}
+
+.admin-sidebar .admin-brand-text small {
+  font-size: 10px !important;
+  line-height: 1.4;
+}
+
+/* عنوان گروه منو */
+.admin-sidebar .admin-nav-heading {
+  margin: 2px 8px 8px !important;
+  font-size: 10px !important;
+  line-height: 1.6;
+  letter-spacing: 0.3px;
+}
+
+/* ناحیه منو: اگر ارتفاع صفحه کم بود فقط همین بخش اسکرول داخلی دارد */
+.admin-sidebar .admin-nav {
+  flex: 1 1 auto;
+  min-height: 0;
+  gap: 3px !important;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+
+.admin-sidebar .admin-nav::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+/* آیتم‌های منو: کوتاه‌تر، یک‌خطی و خوانا */
+.admin-sidebar .admin-nav-link {
+  display: flex;
+  align-items: center;
+  min-height: 36px !important;
+  padding: 4px 9px !important;
+  gap: 9px !important;
+  border-radius: 10px !important;
+}
+
+.admin-sidebar .admin-nav-icon {
+  flex: 0 0 28px !important;
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 8px !important;
+}
+
+.admin-sidebar .admin-nav-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 13px !important;
+  line-height: 1.7;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.admin-sidebar .admin-nav-indicator {
+  flex: 0 0 5px;
+}
+
+/* گروه‌بندی منو: هر گروه با یک عنوان کوچک و فاصلهٔ کم */
+.admin-sidebar .admin-nav-group {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.admin-sidebar .admin-nav-group .admin-nav-heading {
+  margin: 8px 8px 4px !important;
+}
+
+.admin-sidebar .admin-nav-group:first-child .admin-nav-heading {
+  margin-top: 0 !important;
+}
+
+/* فوتر سایدبار: همیشه پایین می‌ماند و فشرده است */
+.admin-sidebar .admin-sidebar-footer {
+  flex: 0 0 auto;
+  margin-top: 8px !important;
+  padding-top: 10px !important;
+  gap: 3px !important;
+}
+
+.admin-sidebar .admin-user-card {
+  gap: 8px !important;
+  margin-bottom: 6px !important;
+  padding: 7px 8px !important;
+  border-radius: 11px !important;
+}
+
+.admin-sidebar .admin-user-avatar {
+  flex: 0 0 30px !important;
+  width: 30px !important;
+  height: 30px !important;
+  border-radius: 9px !important;
+  font-size: 13px !important;
+}
+
+.admin-sidebar .admin-user-info {
+  gap: 1px !important;
+}
+
+.admin-sidebar .admin-user-caption {
+  font-size: 9px !important;
+  line-height: 1.6;
+}
+
+.admin-sidebar .admin-user-name {
+  margin: 0 !important;
+  padding: 0 !important;
+  font-size: 12px !important;
+  line-height: 1.6;
+}
+
+.admin-sidebar .admin-user-edit {
+  flex: 0 0 26px;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+}
+
+.admin-sidebar .admin-store-link,
+.admin-sidebar .admin-logout-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 6px 9px !important;
+  border-radius: 9px !important;
+  font-size: 12.5px !important;
+  line-height: 1.6;
+  text-align: right;
+}
+
+/* دو دکمه پایین سایدبار در یک ردیف تا ارتفاع کمتری بگیرند */
+.admin-sidebar .admin-sidebar-footer-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+
+.admin-sidebar .admin-sidebar-footer-actions .admin-store-link,
+.admin-sidebar .admin-sidebar-footer-actions .admin-logout-button {
+  justify-content: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 5px 6px !important;
+  font-size: 12px !important;
+  white-space: nowrap;
+}
+
+/* محتوای اصلی متناسب با عرض جدید سایدبار */
+.admin-main {
+  width: calc(100% - var(--admin-sidebar-w));
+  max-width: calc(100% - var(--admin-sidebar-w));
+  margin: 0 var(--admin-sidebar-w) 0 0;
+}
+
+/* ارتفاع‌های کوتاه (لپ‌تاپ‌های ۱۳ تا ۱۵ اینچ) */
+@media (min-width: 769px) and (max-height: 960px) {
+  .admin-sidebar .admin-nav-heading {
+    margin: 8px 8px 4px !important;
+    font-size: 9px !important;
+  }
+
+  .admin-sidebar .admin-brand {
+    margin-bottom: 8px !important;
+  }
+
+  .admin-sidebar .admin-nav-link {
+    min-height: 34px !important;
+    padding: 3px 9px !important;
+  }
+
+  .admin-sidebar .admin-nav-icon {
+    flex: 0 0 26px !important;
+    width: 26px !important;
+    height: 26px !important;
+  }
+}
+
+/* ارتفاع متوسط: عنوان گروه‌ها حذف می‌شود تا منو جا شود */
+@media (min-width: 769px) and (max-height: 860px) {
+  .admin-sidebar .admin-nav-heading {
+    display: none;
+  }
+
+  .admin-sidebar .admin-nav-link {
+    min-height: 32px !important;
+  }
+
+  .admin-sidebar .admin-nav-icon {
+    flex: 0 0 24px !important;
+    width: 24px !important;
+    height: 24px !important;
+  }
+
+  /* به‌جای عنوان گروه، یک خط جداکنندهٔ نازک تا گروه‌ها از هم مشخص باشند */
+  .admin-sidebar .admin-nav-group + .admin-nav-group {
+    margin-top: 2px;
+    padding-top: 2px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+}
+
+/* ارتفاع کم: فشرده‌ترین حالت بدون اسکرول */
+@media (min-width: 769px) and (max-height: 760px) {
+  .admin-sidebar .admin-nav-link {
+    min-height: 30px !important;
+  }
+
+  .admin-sidebar .admin-nav-icon {
+    flex: 0 0 22px !important;
+    width: 22px !important;
+    height: 22px !important;
+  }
+
+  .admin-sidebar .admin-brand-icon {
+    flex: 0 0 32px !important;
+    width: 32px !important;
+    height: 32px !important;
+  }
+
+  .admin-sidebar .admin-brand-text small,
+  .admin-sidebar .admin-user-caption {
+    display: none;
+  }
+
+  .admin-sidebar .admin-user-card {
+    margin-bottom: 4px !important;
+    padding: 5px 8px !important;
+  }
+}
+
+/* ارتفاع خیلی کم: فشرده‌ترین حالت برای نمایشگرهای کوچک */
+@media (min-width: 769px) and (max-height: 640px) {
+  .admin-sidebar {
+    padding: 10px 12px !important;
+  }
+
+  .admin-sidebar .admin-nav-link {
+    min-height: 28px !important;
+    padding: 2px 9px !important;
+  }
+
+  .admin-sidebar .admin-nav-icon {
+    flex: 0 0 20px !important;
+    width: 20px !important;
+    height: 20px !important;
+  }
+
+  .admin-sidebar .admin-brand {
+    margin-bottom: 6px !important;
+    padding: 2px 6px !important;
+  }
+
+  .admin-sidebar .admin-user-avatar {
+    flex: 0 0 26px !important;
+    width: 26px !important;
+    height: 26px !important;
+  }
+
+  .admin-sidebar .admin-sidebar-footer {
+    margin-top: 4px !important;
+    padding-top: 6px !important;
+  }
+
+  .admin-sidebar .admin-sidebar-footer-actions .admin-store-link,
+  .admin-sidebar .admin-sidebar-footer-actions .admin-logout-button {
+    min-height: 27px;
+    font-size: 11.5px !important;
+  }
+}
+
+/* موبایل و تبلت: کشوی منو با همان عرض، ولی آیتم‌های لمس‌پذیرتر */
+@media (max-width: 768px) {
+  .admin-sidebar {
+    width: min(var(--admin-sidebar-w), 84vw) !important;
+    min-width: min(var(--admin-sidebar-w), 84vw) !important;
+    max-width: min(var(--admin-sidebar-w), 84vw) !important;
+  }
+
+  .admin-sidebar .admin-mobile-close-button {
+    margin-top: 2px;
+    margin-bottom: 10px;
+    padding: 8px 10px;
+  }
+
+  .admin-sidebar .admin-nav-link {
+    min-height: 42px !important;
+  }
+
+  .admin-main {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+  }
+}
+
+/* =========================================================
+   Support Widget (چت پشتیبانی فروشگاه)
+   ========================================================= */
+
+.support-widget {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 900;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  font-family: inherit;
+}
+
+.support-launcher {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 18px;
+  color: #ffffff;
+  background: linear-gradient(135deg, #4c7a52, #33583c);
+  border: 0;
+  border-radius: 999px;
+  box-shadow: 0 12px 26px rgba(51, 88, 60, 0.28);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.support-launcher:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 30px rgba(51, 88, 60, 0.32);
+}
+
+.support-launcher.is-open {
+  color: #33583c;
+  background: #f3f5f2;
+  box-shadow: 0 10px 22px rgba(31, 55, 35, 0.16);
+}
+
+.support-launcher-badge {
+  position: absolute;
+  top: 6px;
+  left: 10px;
+  width: 9px;
+  height: 9px;
+  background: #ef4444;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+}
+
+.support-panel {
+  width: 370px;
+  max-height: min(620px, calc(100vh - 130px));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #ffffff;
+  border: 1px solid #e6ebe3;
+  border-radius: 20px;
+  box-shadow: 0 24px 60px rgba(24, 42, 29, 0.22);
+  animation: support-pop 0.18s ease-out;
+}
+
+@keyframes support-pop {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.support-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 16px;
+  color: #ffffff;
+  background: linear-gradient(135deg, #4c7a52, #33583c);
+}
+
+.support-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.support-panel-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 12px;
+}
+
+.support-panel-title strong {
+  display: block;
+  font-size: 14px;
+}
+
+.support-panel-status {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.support-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.14);
+  border: 0;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.support-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.24);
+}
+
+.support-panel-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.support-intro {
+  margin: 0;
+  color: #55635a;
+  font-size: 13px;
+  line-height: 1.9;
+}
+
+.support-primary-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 12px 14px;
+  color: #ffffff;
+  background: linear-gradient(135deg, #4c7a52, #3a6444);
+  border: 0;
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.support-primary-action:hover {
+  filter: brightness(1.05);
+}
+
+.support-divider-text {
+  font-size: 11.5px;
+  color: #95a096;
+  text-align: center;
+}
+
+.support-channels {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.support-channel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  color: #33402f;
+  background: #f7f9f5;
+  border: 1px solid #e8eee4;
+  border-radius: 12px;
+  text-decoration: none;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease;
+}
+
+.support-channel:hover {
+  background: #eef4ea;
+  border-color: #d6e2d2;
+}
+
+.support-channel-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  color: #ffffff;
+  background: #4c7a52;
+  border-radius: 10px;
+}
+
+.support-channel-telegram .support-channel-icon {
+  background: #2aabee;
+}
+
+.support-channel-whatsapp .support-channel-icon {
+  background: #25d366;
+}
+
+.support-channel-bale .support-channel-icon {
+  background: #0f9d8f;
+}
+
+.support-channel-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.support-channel-text strong {
+  font-size: 13px;
+}
+
+.support-channel-text small {
+  font-size: 11px;
+  color: #8b968c;
+}
+
+.support-channel > svg {
+  color: #a7b2a8;
+}
+
+.support-phone {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  color: #4c7a52;
+  background: #f4f7f2;
+  border-radius: 10px;
+  font-size: 12.5px;
+  text-decoration: none;
+}
+
+.support-footnote {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: #95a096;
+  font-size: 11.5px;
+}
+
+.support-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: #93a094;
+  font-size: 12px;
+}
+
+.support-error {
+  margin: 0;
+  padding: 9px 11px;
+  color: #b42318;
+  background: #fef3f2;
+  border: 1px solid #fdd9d5;
+  border-radius: 10px;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.support-spin {
+  animation: support-rotate 1s linear infinite;
+}
+
+@keyframes support-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.support-form {
+  gap: 10px;
+}
+
+.support-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  color: #4f5d51;
+  font-size: 12px;
+}
+
+.support-field > span {
+  color: #48564a;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.support-field input,
+.support-field textarea {
+  padding: 10px 11px;
+  color: #26332a;
+  background: #fbfcfa;
+  border: 1px solid #e2e9df;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.support-field input:focus,
+.support-field textarea:focus {
+  outline: none;
+  border-color: #7ba37f;
+  box-shadow: 0 0 0 3px rgba(76, 122, 82, 0.12);
+}
+
+.support-field textarea {
+  min-height: 90px;
+  resize: vertical;
+}
+
+.support-form-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 2px;
+}
+
+.support-ghost-btn {
+  padding: 10px 14px;
+  color: #5c6b5e;
+  background: #f4f6f2;
+  border: 1px solid #e6ece3;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.support-send-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 16px;
+  color: #ffffff;
+  background: linear-gradient(135deg, #4c7a52, #3a6444);
+  border: 0;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.support-send-btn:disabled,
+.support-ghost-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.support-chat {
+  flex: 1;
+  gap: 0;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.support-chat-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 14px;
+  background: #fafbf9;
+  border-bottom: 1px solid #eef2ec;
+}
+
+.support-chat-subject {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: #3c4a3e;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.support-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 6px;
+  color: #6b7a6d;
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 11px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.support-link-btn:hover {
+  color: #3f5a43;
+  background: #eef3ec;
+}
+
+.support-messages {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  overflow-y: auto;
+}
+
+.support-bubble {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 86%;
+}
+
+.support-bubble-user {
+  align-items: flex-start;
+  align-self: flex-start;
+}
+
+.support-bubble-admin {
+  align-items: flex-end;
+  align-self: flex-end;
+}
+
+.support-bubble-body {
+  padding: 9px 12px;
+  border-radius: 14px;
+  font-size: 13px;
+  line-height: 1.85;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.support-bubble-user .support-bubble-body {
+  color: #ffffff;
+  background: linear-gradient(135deg, #4c7a52, #3c6444);
+  border-bottom-right-radius: 4px;
+}
+
+.support-bubble-admin .support-bubble-body {
+  color: #26332a;
+  background: #f2f6f0;
+  border: 1px solid #e6ece3;
+  border-bottom-left-radius: 4px;
+}
+
+.support-bubble-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #94a095;
+  font-size: 10.5px;
+}
+
+.support-composer {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #ffffff;
+  border-top: 1px solid #eef2ec;
+}
+
+.support-composer textarea {
+  flex: 1;
+  max-height: 110px;
+  padding: 9px 11px;
+  color: #26332a;
+  background: #fbfcfa;
+  border: 1px solid #e2e9df;
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.7;
+  resize: none;
+}
+
+.support-composer textarea:focus {
+  outline: none;
+  border-color: #7ba37f;
+  box-shadow: 0 0 0 3px rgba(76, 122, 82, 0.12);
+}
+
+.support-send-btn-icon {
+  flex: 0 0 auto;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  border-radius: 12px;
+}
+
+.support-closed {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 14px 16px;
+}
+
+.support-closed p {
+  margin: 0;
+  color: #7c8a7e;
+  font-size: 12.5px;
+}
+
+@media (max-width: 520px) {
+  .support-widget {
+    right: 12px;
+    bottom: 12px;
+    left: 12px;
+    align-items: flex-start;
+  }
+
+  .support-panel {
+    width: 100%;
+    max-height: calc(100vh - 96px);
+    border-radius: 16px;
+  }
+
+  .support-launcher {
+    padding: 11px 14px;
+  }
+
+  .support-launcher-text {
+    display: none;
+  }
+}
+
+/* =========================================================
+   Admin Support Inbox (صندوق پشتیبانی)
+   ========================================================= */
+
+.admin-support-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.admin-support-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 118px;
+  padding: 12px 16px;
+  color: #22301f;
+  background: #ffffff;
+  border: 1px solid #e9eee7;
+  border-radius: 14px;
+  font-family: inherit;
+  text-align: right;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.admin-support-stat strong {
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.admin-support-stat span {
+  color: #849084;
+  font-size: 12px;
+}
+
+.admin-support-stat:hover {
+  border-color: #cfdccb;
+}
+
+.admin-support-stat.is-active {
+  border-color: #4c7a52;
+  box-shadow: 0 0 0 2px rgba(76, 122, 82, 0.14);
+}
+
+.admin-support-stat-static {
+  cursor: default;
+}
+
+.admin-support-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-support-filters .admin-input {
+  flex: 1 1 260px;
+  min-width: 200px;
+}
+
+.admin-support-filters .admin-select {
+  min-width: 160px;
+}
+
+.admin-support-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+  margin-top: 18px;
+}
+
+.admin-support-layout .admin-card {
+  margin-bottom: 0;
+}
+
+.admin-support-list-card {
+  display: flex;
+  flex-direction: column;
+  max-height: calc(100vh - 250px);
+}
+
+.admin-support-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-left: 2px;
+  overflow-y: auto;
+}
+
+.admin-support-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  padding: 11px 12px;
+  color: #2a372c;
+  background: #fbfcfa;
+  border: 1px solid #e9eee7;
+  border-radius: 12px;
+  font-family: inherit;
+  text-align: right;
+  cursor: pointer;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease;
+}
+
+.admin-support-item:hover {
+  background: #f2f6ef;
+}
+
+.admin-support-item.is-active {
+  background: #eef4ea;
+  border-color: #b8ccb2;
+  box-shadow: inset 0 0 0 1px rgba(76, 122, 82, 0.18);
+}
+
+.admin-support-item-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.admin-support-item-name {
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-support-item-time {
+  flex: 0 0 auto;
+  color: #97a298;
+  font-size: 10.5px;
+}
+
+.admin-support-item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-support-channel {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #7c897d;
+  font-size: 11px;
+}
+
+.admin-support-unread {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  color: #ffffff;
+  background: #e0483d;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 700;
+}
+
+.admin-support-item-excerpt {
+  overflow: hidden;
+  color: #6c7a6e;
+  font-size: 12px;
+  line-height: 1.7;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-support-item-contact {
+  color: #94a095;
+  font-size: 11px;
+}
+
+.admin-support-pager {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 10px;
+  margin-top: 10px;
+  color: #7c8a7e;
+  background: #ffffff;
+  border-top: 1px solid #eef2ec;
+  font-size: 11.5px;
+}
+
+.admin-support-thread-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 420px;
+  max-height: calc(100vh - 250px);
+}
+
+.admin-support-thread-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #eef2ec;
+}
+
+.admin-support-thread-head .admin-select {
+  width: auto;
+  min-width: 150px;
+}
+
+.admin-support-messages {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 2px;
+  overflow-y: auto;
+}
+
+.admin-support-msg {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 78%;
+}
+
+.admin-support-msg.is-user {
+  align-items: flex-start;
+  align-self: flex-start;
+}
+
+.admin-support-msg.is-admin {
+  align-items: flex-end;
+  align-self: flex-end;
+}
+
+.admin-support-msg-body {
+  padding: 10px 13px;
+  border-radius: 14px;
+  font-size: 13px;
+  line-height: 1.85;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.admin-support-msg.is-user .admin-support-msg-body {
+  color: #26332a;
+  background: #f3f6f1;
+  border: 1px solid #e6ece3;
+  border-bottom-right-radius: 4px;
+}
+
+.admin-support-msg.is-admin .admin-support-msg-body {
+  color: #ffffff;
+  background: linear-gradient(135deg, #4c7a52, #3a6444);
+  border-bottom-left-radius: 4px;
+}
+
+.admin-support-msg-meta {
+  color: #94a095;
+  font-size: 10.5px;
+}
+
+.admin-support-reply {
+  padding-top: 12px;
+  border-top: 1px solid #eef2ec;
+}
+
+.admin-support-reply textarea {
+  width: 100%;
+  resize: vertical;
+}
+
+.admin-support-reply-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.admin-support-reply-actions .admin-card-desc {
+  margin: 0;
+}
+
+.admin-support-empty-thread {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 40px 20px;
+  color: #9aa69b;
+  text-align: center;
+}
+
+.admin-support-empty-thread p {
+  margin: 0;
+  font-size: 13px;
+}
+
+@media (max-width: 1100px) {
+  .admin-support-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-support-list-card,
+  .admin-support-thread-card {
+    max-height: none;
+  }
+
+  .admin-support-messages {
+    max-height: 420px;
+  }
+}
+
+/* ==================================================
+   منوی سایدبار قابل شخصی‌سازی
+   گروه‌بندی روشن‌تر (عمومی/فروشگاه/سفارشات/گزارشات)
+   + جابه‌جایی آیتم‌ها با کشیدن + پین در «دسترسی سریع»
+================================================== */
+.admin-sidebar .admin-nav-tools {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 6px;
+  padding: 5px 4px 7px;
+  margin: -4px 0 6px;
+  background: linear-gradient(180deg, #17152b 62%, rgba(23, 21, 43, 0.92));
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.12);
+}
+
+.admin-sidebar .admin-nav-tools-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: #8f93ad !important;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-sidebar .admin-nav-tools-actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  margin-inline-start: auto;
+}
+
+.admin-sidebar .admin-nav-tool-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 7px;
+  color: #cbd5e1 !important;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background-color 0.16s ease,
+    border-color 0.16s ease;
+}
+
+.admin-sidebar .admin-nav-tool-button:hover {
+  color: #fff !important;
+  background: rgba(255, 255, 255, 0.16) !important;
+  border-color: rgba(255, 255, 255, 0.24);
+}
+
+.admin-sidebar .admin-nav-tool-button.is-active {
+  color: #fff !important;
+  background: rgba(99, 102, 241, 0.55) !important;
+  border-color: rgba(165, 180, 252, 0.6);
+}
+
+.admin-sidebar .admin-nav-tools-hint {
+  margin: 0 5px 8px;
+  color: #9298b5 !important;
+  font-size: 9.5px;
+  line-height: 1.9;
+}
+
+/* سرتیتر گروه‌ها: آیکن + عنوان + شمارندهٔ آیتم‌ها */
+.admin-sidebar .admin-nav-heading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 9px 5px 5px !important;
+  padding: 0 1px 4px !important;
+  color: #a5a9c4 !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+}
+
+/* هم‌سطح‌سازی با قاعدهٔ قدیمی‌تر گروه‌ها (اولویت انتخابگر) */
+.admin-sidebar .admin-nav-group .admin-nav-heading {
+  margin: 9px 5px 5px !important;
+  padding: 0 1px 4px !important;
+}
+
+.admin-sidebar .admin-nav-group:first-child .admin-nav-heading {
+  margin-top: 2px !important;
+}
+
+.admin-sidebar .admin-nav-heading-icon {
+  display: inline-flex;
+  flex: 0 0 20px;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  color: #a5b4fc !important;
+  background: rgba(255, 255, 255, 0.07);
+  border-radius: 6px;
+}
+
+.admin-sidebar .admin-nav-heading-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: #ebaf0a !important;
+  font-size: 13px !important;
+  font-weight: 800;
+  letter-spacing: 0.25px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* سرتیتر گروه به‌صورت دکمهٔ باز/بسته شدن (dropdown) */
+.admin-sidebar .admin-nav-group button.admin-nav-heading {
+  width: 100%;
+  margin: 9px 5px 5px !important;
+  padding: 3px 4px 5px !important;
+  color: #a5a9c4 !important;
+  background: transparent !important;
+  border: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.09) !important;
+  border-radius: 9px 9px 0 0;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.admin-sidebar .admin-nav-group button.admin-nav-heading:hover {
+  color: #fff !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+
+.admin-sidebar .admin-nav-group button.admin-nav-heading:focus-visible {
+  outline: 2px solid rgba(165, 180, 252, 0.55);
+  outline-offset: 1px;
+}
+
+.admin-sidebar .admin-nav-heading-chevron {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  color: #8b90ad !important;
+  transition: transform 0.2s ease;
+}
+
+.admin-sidebar .admin-nav-heading-chevron.is-collapsed {
+  transform: rotate(90deg);
+}
+
+/* نقطهٔ نشانگر: صفحهٔ فعلی داخل گروه بسته است */
+.admin-sidebar .admin-nav-heading-active-dot {
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  background: #a5b4fc;
+  border-radius: 50%;
+  box-shadow: 0 0 7px rgba(165, 180, 252, 0.85);
+}
+
+/* گروه بسته: بدون خط جداکننده و با فاصلهٔ کمتر تا منو خلوت شود */
+.admin-sidebar .admin-nav-group.is-collapsed .admin-nav-heading {
+  margin-bottom: 3px !important;
+  border-bottom-color: transparent !important;
+}
+
+.admin-sidebar .admin-nav-group.is-collapsed button.admin-nav-heading:hover {
+  border-bottom-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+/* پنل آیتم‌های هر گروه (با بستن گروه پنهان می‌شود) */
+.admin-sidebar .admin-nav-panel {
+  display: block;
+  padding-bottom: 2px;
+}
+
+/* ردیف‌های منو (لینک + دکمه‌های چیدمان) */
+.admin-sidebar .admin-nav-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  border-radius: 10px;
+}
+
+.admin-sidebar .admin-nav-row[draggable="true"] {
+  cursor: grab;
+}
+
+.admin-sidebar .admin-nav-row.is-dragging {
+  opacity: 0.45;
+}
+
+.admin-sidebar .admin-nav-row .admin-nav-link {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.admin-nav.is-editing .admin-nav-link {
+  cursor: default;
+}
+
+.admin-nav.is-editing .admin-nav-link {
+  padding-inline-end: 78px !important;
+}
+
+.admin-sidebar .admin-nav-actions {
+  position: absolute;
+  inset-inline-end: 3px;
+  top: 50%;
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  padding: 2px 3px;
+  background: linear-gradient(
+    90deg,
+    rgba(23, 21, 43, 0.96),
+    rgba(23, 21, 43, 0.7)
+  );
+  border-radius: 8px;
+  transform: translateY(-50%);
+}
+
+.admin-sidebar .admin-nav-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 19px;
+  height: 19px;
+  padding: 0;
+  color: #a2a7c2 !important;
+  background: transparent !important;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.admin-sidebar .admin-nav-action:hover:not(:disabled) {
+  color: #fff !important;
+  background: rgba(255, 255, 255, 0.16) !important;
+}
+
+.admin-sidebar .admin-nav-action:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.admin-sidebar .admin-nav-action.is-pinned {
+  color: #c7d2fe !important;
+  background: rgba(99, 102, 241, 0.32) !important;
+}
+
+.admin-sidebar .admin-nav-grip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 13px;
+  color: #6f7392 !important;
+  cursor: grab;
+}
+
+.admin-sidebar .admin-nav-pin-mark {
+  display: inline-flex;
+  flex: 0 0 15px;
+  align-items: center;
+  justify-content: center;
+  color: #8b93c9 !important;
+}
+
+/* خط نشانگر محل رها کردن آیتم */
+.admin-sidebar .admin-nav-drop-line {
+  display: block;
+  height: 2px;
+  margin: 1px 7px;
+  background: #818cf8;
+  border-radius: 2px;
+  box-shadow: 0 0 8px rgba(129, 140, 248, 0.65);
+}
+
+.admin-sidebar .admin-nav-group.is-drop-active {
+  background: rgba(99, 102, 241, 0.09);
+  border-radius: 10px;
+}
+
+.admin-sidebar .admin-nav-group.is-drop-active .admin-nav-heading {
+  border-bottom-color: rgba(165, 180, 252, 0.35);
+}
+
+.admin-sidebar .admin-nav-group-pinned .admin-nav-heading-icon {
+  color: #c7d2fe !important;
+  background: rgba(99, 102, 241, 0.22);
+}
+
+.admin-sidebar .admin-nav-empty {
+  margin: 2px 6px 5px;
+  color: #8d93ae !important;
+  font-size: 9.5px;
+  line-height: 1.9;
+}
+
+/* ==================================================
+   تغییر دستی عرض سایدبار (کشیدن لبه) و اندازهٔ آیتم‌های منو
+================================================== */
+.admin-sidebar-resizer {
+  /* سایدبار همیشه به لبهٔ راست چسبیده است، پس از موقعیت فیزیکی استفاده
+     می‌کنیم تا دسته در تمام ارتفاع صفحه (حتی هنگام اسکرول منو) بماند. */
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  right: calc(var(--admin-sidebar-w, 264px) - 10px);
+  z-index: 6;
+  width: 10px;
+  background: transparent;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.admin-sidebar-resizer::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 3px;
+  width: 3px;
+  height: 44px;
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 3px;
+  transform: translateY(-50%);
+  transition:
+    height 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.admin-sidebar-resizer:hover::after,
+.admin-sidebar-resizer:focus-visible::after {
+  height: 68px;
+  background: #818cf8;
+}
+
+.admin-sidebar-resizer:focus-visible {
+  outline: none;
+}
+
+/* در حین کشیدن، مکان‌نما و انتخاب متن غیرفعال می‌شود */
+.admin-layout.is-resizing-sidebar,
+.admin-layout.is-resizing-sidebar * {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
+
+/* اندازهٔ آیتم‌های منو: فشرده / عادی (پیش‌فرض) / بزرگ */
+.admin-sidebar.is-density-compact .admin-nav-link {
+  min-height: 30px !important;
+  padding: 2px 8px !important;
+  gap: 7px !important;
+}
+
+.admin-sidebar.is-density-compact .admin-nav-icon {
+  flex: 0 0 24px !important;
+  width: 24px !important;
+  height: 24px !important;
+}
+
+.admin-sidebar.is-density-compact .admin-nav-label {
+  font-size: 12px !important;
+}
+
+.admin-sidebar.is-density-compact .admin-nav-heading {
+  margin: 6px 8px 3px !important;
+  font-size: 9px !important;
+}
+
+.admin-sidebar.is-density-relaxed .admin-nav-link {
+  min-height: 46px !important;
+  padding: 9px 11px !important;
+  gap: 10px !important;
+}
+
+.admin-sidebar.is-density-relaxed .admin-nav-icon {
+  flex: 0 0 32px !important;
+  width: 32px !important;
+  height: 32px !important;
+}
+
+.admin-sidebar.is-density-relaxed .admin-nav-label {
+  font-size: 15px !important;
+}
+
+.admin-sidebar.is-density-relaxed .admin-nav-heading {
+  margin: 12px 8px 6px !important;
+  font-size: 11px !important;
+}
+
+/* روی موبایل سایدبار کشویی است و تغییر عرض دستی ندارد */
+@media (max-width: 768px) {
+  .admin-sidebar-resizer {
+    display: none;
+  }
+}
+
+/* در ارتفاع‌های کم، سرتیتر گروه‌ها پنهان نشوند تا والدها همیشه واضح بمانند */
+@media (min-width: 769px) and (max-height: 860px) {
+  .admin-sidebar .admin-nav-heading {
+    display: flex !important;
+    margin: 7px 5px 4px !important;
+  }
+
+  .admin-sidebar .admin-nav-group button.admin-nav-heading {
+    margin: 5px 5px 3px !important;
+    padding: 2px 4px 4px !important;
+  }
+
+  .admin-sidebar .admin-nav-group + .admin-nav-group {
+    border-top: 0 !important;
+  }
+}
+
+/* ==================================================
+   انتخابگر تاریخ شمسی (تقویم جلالی) در پنل مدیریت
+================================================== */
+.admin-jalali {
+  position: relative;
+  min-width: 0;
+}
+
+.admin-jalali-control {
+  position: relative;
+}
+
+.admin-jalali-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-inline-end: 34px;
+  font-family: inherit;
+  text-align: right;
+  cursor: pointer;
+}
+
+.admin-jalali-trigger svg {
+  flex: 0 0 auto;
+  color: #648767;
+}
+
+.admin-jalali-trigger.is-open {
+  border-color: #648767;
+  box-shadow: 0 0 0 3px #e8efe2;
+}
+
+.admin-jalali-trigger:disabled {
+  background: #f9fafb;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.admin-jalali-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.admin-jalali-clear {
+  position: absolute;
+  inset-inline-end: 8px;
+  top: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 19px;
+  height: 19px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: #eef2ee;
+  color: #6b7280;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.admin-jalali-clear:hover {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.admin-jalali-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  inset-inline-start: 0;
+  z-index: 60;
+  width: 296px;
+  padding: 12px;
+  border: 1px solid #dfe7d8;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 20px 44px rgba(15, 23, 42, 0.16);
+}
+
+.admin-jalali-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.admin-jalali-nav {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+  color: #4b5563;
+  cursor: pointer;
+}
+
+.admin-jalali-nav:hover {
+  border-color: #648767;
+  color: #648767;
+}
+
+.admin-jalali-title {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.admin-jalali-select {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 5px 6px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+  color: #111827;
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.admin-jalali-select:focus {
+  border-color: #648767;
+  box-shadow: 0 0 0 2px #e8efe2;
+  outline: none;
+}
+
+.admin-jalali-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 3px;
+}
+
+.admin-jalali-weekdays {
+  margin-bottom: 4px;
+}
+
+.admin-jalali-weekday {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+  color: #9ca3af;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.admin-jalali-day {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 30px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: #374151;
+  font-family: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition:
+    background-color 0.12s ease,
+    color 0.12s ease;
+}
+
+.admin-jalali-day:hover {
+  background: #eef2ee;
+  color: #2f5132;
+}
+
+.admin-jalali-day.is-empty {
+  cursor: default;
+}
+
+.admin-jalali-day.is-today {
+  border-color: #b7cdb6;
+}
+
+.admin-jalali-day.is-selected {
+  border-color: #648767;
+  background: #648767;
+  color: #fff;
+  font-weight: 700;
+}
+
+.admin-jalali-time {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed #e5e7eb;
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.admin-jalali-time-label {
+  font-weight: 700;
+}
+
+.admin-jalali-time .admin-jalali-select {
+  flex: 0 0 68px;
+}
+
+.admin-jalali-footer {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.admin-jalali-action {
+  flex: 1 1 auto;
+  padding: 6px 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+  color: #4b5563;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-jalali-action:hover {
+  border-color: #648767;
+  color: #648767;
+}
+
+.admin-jalali-action.is-primary {
+  border-color: #648767;
+  background: #648767;
+  color: #fff;
+}
+
+.admin-jalali-action.is-primary:hover {
+  background: #567257;
+  color: #fff;
+}
+
+.admin-jalali-action.is-danger {
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
+.admin-jalali-action.is-danger:hover {
+  border-color: #fecaca;
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+@media (max-width: 420px) {
+  .admin-jalali-popover {
+    width: min(296px, calc(100vw - 28px));
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   نوار اطلاع‌رسانی بالای هدر (تبلیغات و تخفیف‌های روزانه)
+   ارتفاع از تنظیمات پنل می‌آید: دسکتاپ با --ab-height و موبایل با
+   --ab-height-mobile (این متغیرها inline روی همان عنصر ست می‌شوند).
+--------------------------------------------------------------------------- */
+.announcement-bar {
+  position: relative;
+  width: 100%;
+  height: var(--ab-height-mobile, 40px);
+  overflow: hidden;
+  background-color: #385e3e;
+  color: #f7f8f2;
+}
+
+@media (min-width: 768px) {
+  .announcement-bar {
+    height: var(--ab-height, 44px);
+  }
+}
+
+.announcement-bar-inner {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  /* فضای سمت نشانگرها تا متن زیر نقطه‌ها نرود (در RTL، پایان خط = چپ) */
+  padding-inline: 12px 46px;
+}
+
+.announcement-bar-slide {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  animation: announcement-bar-fade-in 0.45s ease;
+}
+
+.announcement-bar-slide[data-animation="slide"] {
+  animation-name: announcement-bar-slide-in;
+}
+
+.announcement-bar-slide[data-animation="none"] {
+  animation: none;
+}
+
+.announcement-bar-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: inherit;
+  text-decoration: none;
+}
+
+.announcement-bar-link:hover .announcement-bar-text {
+  text-decoration: underline;
+}
+
+.announcement-bar-text {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: inherit;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.announcement-bar-media {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.announcement-bar-dots {
+  position: absolute;
+  inset-inline-end: 10px;
+  top: 50%;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transform: translateY(-50%);
+}
+
+.announcement-bar-dot {
+  width: 5px;
+  height: 5px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background-color: currentColor;
+  opacity: 0.35;
+  cursor: pointer;
+  transition:
+    width 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.announcement-bar-dot.is-active {
+  width: 14px;
+  opacity: 1;
+}
+
+@keyframes announcement-bar-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes announcement-bar-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .announcement-bar-slide {
+    animation: none;
   }
 }

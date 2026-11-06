@@ -1,28 +1,37 @@
 import type { ReactNode } from "react";
 
+import AnnouncementBar from "./AnnouncementBar";
 import Header from "./Header";
 import Footer from "./Footer";
 import CategoryMenu from "./CategoryMenu";
+import SupportWidget from "./SupportWidget";
 
 interface LayoutProps {
-children: ReactNode;
+  children: ReactNode;
 }
 
 function Layout({ children }: LayoutProps) {
-return ( <div className="min-h-screen bg-slate-50"> <Header />
+  return (
+    <div className="min-h-screen bg-cream">
+      {/*
+        نوار اطلاع‌رسانی و هدر داخل یک wrapper چسبان قرار می‌گیرند تا مانند
+        همیشه هنگام اسکرول ناپدید نشوند و نوار همیشه بالای هدر بماند.
+      */}
+      <div className="sticky top-0 z-50">
+        <AnnouncementBar />
 
+        <Header />
+      </div>
 
-  <CategoryMenu />
+      <CategoryMenu />
 
-  <main>
-    {children}
-  </main>
+      <main>{children}</main>
 
-  <Footer />
-</div>
+      <Footer />
 
-
-);
+      <SupportWidget />
+    </div>
+  );
 }
 
 export default Layout;
