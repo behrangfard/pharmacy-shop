@@ -9,6 +9,10 @@ import {
 import { ImagePlus, Loader2, Plus, Upload } from "lucide-react";
 
 import AdminBannerFontsPanel from "../components/AdminBannerFontsPanel";
+import AdminBannerSectionCard, {
+  type AdminBannerSection,
+  type AdminBannerSectionKind,
+} from "../components/AdminBannerSectionCard";
 import AdminBannerTextEditor from "../components/AdminBannerTextEditor";
 import JalaliDatePicker from "../components/JalaliDatePicker";
 import { useAdminBannerFonts } from "../hooks/useBannerFonts";
@@ -23,6 +27,22 @@ import {
   type BannerTextLayer,
   type BannerTextScrim,
 } from "../utils/bannerText";
+import {
+  BANNER_RADIUS_PRESETS,
+  DEFAULT_BANNER_RADIUS,
+  HOME_GRID_POSITION,
+  HOME_HERO_POSITION,
+  HOME_MOBILE_MIDDLE_POSITION,
+  HOME_MOBILE_TOP_POSITION,
+  MAX_BANNER_RADIUS,
+  bannerSectionSlots,
+  normalizeBannerRadius,
+  normalizeBannerSectionAnimation,
+  normalizeBannerSectionFit,
+  normalizeBannerSectionLayout,
+  type BannerSectionLayout,
+} from "../utils/bannerGrid";
+import { isMobileBannerPosition } from "../utils/banners";
 import { getStorageUrl } from "../utils/images";
 
 interface Banner {
@@ -30,7 +50,7 @@ interface Banner {
   title: string | null;
   subtitle: string | null;
   image: string;
-  /** تصویر نسخهٔ موبایل (مثلاً ۷۵۰×۱۰۰۰)؛ اختیاری. */
+  /** تصویر نسخهٔ موبایل (برای بنرهای موبایل همان تصویر اصلی است). */
   mobile_image: string | null;
   /** متن جایگزین تصویر برای سئو و screen reader. */
   image_alt: string | null;
@@ -40,12 +60,102 @@ interface Banner {
   text_layers: unknown;
   link: string | null;
   button_label: string | null;
-  position: "home_hero" | "home_strip" | "products_top";
+  position:
+    | "home_hero"
+    | "home_strip"
+    | "home_grid"
+    | "home_mobile_top"
+    | "home_mobile_middle"
+    | "products_top";
   sort_order: number;
   is_active: boolean;
   starts_at: string | null;
   ends_at: string | null;
 }
+
+/**
+ * تنظیمات بخش‌های بنر صفحهٔ اول.
+ *
+ * چهار بخش مستقل: بالای صفحه (دسکتاپ)، وسط صفحه (دسکتاپ)، بالای موبایل و
+ * وسط موبایل. هر بخش تعداد، ارتفاع و گردی گوشهٔ خودش را دارد.
+ */
+type BannerSectionPosition =
+  | typeof HOME_HERO_POSITION
+  | typeof HOME_GRID_POSITION
+  | typeof HOME_MOBILE_TOP_POSITION
+  | typeof HOME_MOBILE_MIDDLE_POSITION;
+
+/** تنظیمات بخش بنر (شکل مشترک با کارت تنظیمات). */
+type BannerSection = AdminBannerSection & { position: BannerSectionPosition };
+
+/** تنظیمات قابل ویرایش هر بخش در پنل + جای نمایش آن. */
+const BANNER_SECTION_CARDS: {
+  position: BannerSectionPosition;
+  kind: AdminBannerSectionKind;
+  tab: "desktop" | "mobile";
+  title: string;
+  description: string;
+  addLabel: string;
+}[] = [
+  {
+    position: HOME_HERO_POSITION,
+    kind: "hero",
+    tab: "desktop",
+    title: "بنر بالای صفحهٔ اول (دسکتاپ)",
+    description:
+      "اسلایدر بالای صفحهٔ اول در دسکتاپ. تعداد تصاویر، حداکثر ارتفاع، گردی گوشه و انیمیشن هاور این بخش مستقل از بقیهٔ بنرهاست. با «بدون برش و بدون بزرگ‌نمایی» تصویر با نسبت خودش نمایش داده می‌شود و کیفیتش پایین نمی‌آید. تعداد خالی یا ۰ یعنی همهٔ بنرهای این بخش.",
+    addLabel: "افزودن بنر به این بخش",
+  },
+  {
+    position: HOME_GRID_POSITION,
+    kind: "grid",
+    tab: "desktop",
+    title: "بنر وسط صفحهٔ اول (دسکتاپ)",
+    description:
+      "ردیف بنرهای چندستونهٔ وسط صفحهٔ اول در دسکتاپ (بعد از دسته‌بندی محصولات). چیدمان، ارتفاع کاشی‌ها، گردی گوشه و انیمیشن هاور این بخش مستقل است؛ مثلاً «دو بنر راست، یکی چپ» دو بنر کوچک را روی هم سمت راست و یک بنر بلند را سمت چپ می‌گذارد.",
+    addLabel: "افزودن بنر به این بخش",
+  },
+  {
+    position: HOME_MOBILE_TOP_POSITION,
+    kind: "mobile",
+    tab: "mobile",
+    title: "بنر بالای صفحه (موبایل)",
+    description:
+      "این بنر فقط روی موبایل (عرض کمتر از ۷۶۸ پیکسل) و بالای صفحهٔ اول نمایش داده می‌شود. تصویر، تعداد، ارتفاع و گردی گوشهٔ آن کاملاً مستقل از بنرهای دسکتاپ است.",
+    addLabel: "افزودن بنر موبایل",
+  },
+  {
+    position: HOME_MOBILE_MIDDLE_POSITION,
+    kind: "mobile",
+    tab: "mobile",
+    title: "بنر وسط صفحه (موبایل)",
+    description:
+      "این بنر فقط روی موبایل و وسط صفحهٔ اول (بعد از دسته‌بندی محصولات) نمایش داده می‌شود. تعداد، ارتفاع و گردی گوشهٔ آن مستقل از بنر بالای موبایل و بنرهای دسکتاپ است.",
+    addLabel: "افزودن بنر موبایل",
+  },
+];
+
+/** بنرهای هر تب؛ «سایر» شامل نوار تبلیغاتی و بنر بالای صفحهٔ محصولات است. */
+type BannerTab = "desktop" | "mobile" | "other";
+
+const POSITIONS_BY_TAB: Record<BannerTab, Banner["position"][]> = {
+  desktop: [HOME_HERO_POSITION, HOME_GRID_POSITION],
+  mobile: [HOME_MOBILE_TOP_POSITION, HOME_MOBILE_MIDDLE_POSITION],
+  other: ["home_strip", "products_top"],
+};
+
+/** اولین موقعیت هر تب؛ فرم «افزودن بنر» با همین موقعیت باز می‌شود. */
+const DEFAULT_POSITION_BY_TAB: Record<BannerTab, Banner["position"]> = {
+  desktop: HOME_HERO_POSITION,
+  mobile: HOME_MOBILE_TOP_POSITION,
+  other: "home_strip",
+};
+
+const TAB_LABELS: Record<BannerTab, string> = {
+  desktop: "بنرهای دسکتاپ",
+  mobile: "بنرهای موبایل",
+  other: "سایر بنرها",
+};
 
 interface BannerForm {
   title: string;
@@ -82,47 +192,42 @@ const initialForm: BannerForm = {
 };
 
 const positionLabels: Record<Banner["position"], string> = {
-  home_hero: "اسلایدر اصلی صفحهٔ اول",
+  home_hero: "بنر بالای صفحهٔ اول (دسکتاپ)",
+  home_grid: "بنر وسط صفحهٔ اول (دسکتاپ)",
   home_strip: "نوار تبلیغاتی صفحهٔ اول",
+  home_mobile_top: "بنر بالای صفحه (موبایل)",
+  home_mobile_middle: "بنر وسط صفحه (موبایل)",
   products_top: "بالای صفحهٔ محصولات",
 };
 
 /**
- * تصاویر آمادهٔ خودِ سایت (پوشهٔ frontend/public/images).
- * این تصاویر در بک‌اند نیستند و لازم نیست بارگذاری شوند؛ کافی است مسیرشان در
- * بنر ذخیره شود. این‌ها فقط میان‌بر انتخاب تصویرند و هیچ بنر پیش‌فرضی در سایت
- * نمایش داده نمی‌شود؛ تا بنری در پنل ثبت نشود، هیرو صفحهٔ اول خالی می‌ماند.
+ * گزینه‌های «محل نمایش» فرم بنر؛ فقط موقعیت‌های همان تب.
+ *
+ * بنرهای دسکتاپ و موبایل کاملاً جدا هستند: در تب «بنرهای دسکتاپ» هیچ گزینه یا
+ * نشانی از بنرهای موبایل دیده نمی‌شود و برعکس. بنر موبایل فقط در همان دو
+ * بخش موبایل ثبت می‌شود و بنر دسکتاپ فقط در دو بخش دسکتاپ.
  */
-const SITE_IMAGE_PRESETS = [
-  {
-    path: "/images/women-sport-hero.png",
-    label: "هیرو اصلی سایت",
-    hint: "تصویر عریض دسکتاپ؛ متن و دکمه داخل خود تصویر است. برای موبایل باید تصویر موبایل جدا ثبت شود",
-  },
-  {
-    path: "/images/women-sport-hero2.png",
-    label: "هیرو جایگزین",
-    hint: "مناسب اسلاید دوم اسلایدر اصلی",
-  },
-] as const;
+function positionOptionsForTab(tab: BannerTab): [Banner["position"], string][] {
+  return POSITIONS_BY_TAB[tab].map((position) => [
+    position,
+    positionLabels[position],
+  ]);
+}
 
 /**
- * تصویر نسخهٔ موبایل بنر هیرو.
- * تصویر عریض دسکتاپ روی موبایل خیلی کوتاه و ریز می‌شود؛ با این تصویر (نسبت
- * عمودی/مربع، مثل ۷۵۰×۱۰۰۰) سایت زیر ۷۶۸ پیکسل این نسخه را نشان می‌دهد.
+ * موقعیت‌هایی که هم در دسکتاپ و هم در موبایل دیده می‌شوند (نوار تبلیغاتی و
+ * بالای صفحهٔ محصولات)؛ فقط برای این‌ها فیلد «تصویر موبایل» نمایش داده می‌شود.
+ * بنرهای بالای/وسط صفحهٔ اول هر نما بنر مستقل و تک‌تصویری‌اند.
  */
-const SITE_MOBILE_IMAGE_PRESETS = [
-  {
-    path: "/images/women-sport-hero-mobile.png",
-    label: "هیرو موبایل",
-    hint: "نسخهٔ موبایل تصویر اصلی سایت؛ در عرض کمتر از ۷۶۸ پیکسل نمایش داده می‌شود",
-  },
-] as const;
+const POSITIONS_WITH_MOBILE_IMAGE: Banner["position"][] = [
+  "home_strip",
+  "products_top",
+];
 
 /**
  * ابعاد پیشنهادی تصویر بنر.
- * بنر هیرو در تمام عرض صفحه و با نسبت تصویر خودش (بدون برش) نمایش داده
- * می‌شود؛ پس هر یک از این نسبت‌ها بدون بریدگی می‌نشیند.
+ * بنرها با تنظیم «بدون برش و بدون بزرگنمایی» و نسبت تصویر خودشان نمایش داده
+ * می‌شوند؛ پس هر یک از این نسبت‌ها بدون بریدگی می‌نشیند.
  */
 const BANNER_SIZE_HINTS = [
   { label: "دسکتاپ عریض", size: "۱۹۲۰ × ۶۵۰" },
@@ -131,7 +236,13 @@ const BANNER_SIZE_HINTS = [
   { label: "موبایل", size: "۷۵۰ × ۱۰۰۰" },
 ] as const;
 
-function AdminBanners() {
+/**
+ * بخش مدیریت بنرهای فروشگاه.
+ *
+ * `embedded` برای زمانی است که این صفحه داخل تب «بنرها» از بخش «مدیریت محتوا»
+ * نمایش داده می‌شود؛ در آن حالت سربرگ بزرگ صفحه حذف و فقط نوار دکمه‌ها می‌ماند.
+ */
+function AdminBanners({ embedded = false }: { embedded?: boolean }) {
   const [banners, setBanners] = useState<Banner[]>([]);
   const [form, setForm] = useState<BannerForm>(initialForm);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -157,6 +268,24 @@ function AdminBanners() {
   const [mobilePreviewBroken, setMobilePreviewBroken] = useState(false);
   const [brokenImages, setBrokenImages] = useState<Record<number, boolean>>({});
 
+  // تنظیمات بخش‌های بنر صفحهٔ اول (هیرو و چندستونه): چیدمان، ابعاد، تعداد
+  // تصاویر، عنوان و فعال/غیرفعال.
+  const [sections, setSections] = useState<
+    Partial<Record<BannerSectionPosition, BannerSection>>
+  >({});
+  const [sectionLoading, setSectionLoading] = useState(false);
+  const [sectionSaving, setSectionSaving] = useState(false);
+
+  // ظاهر پیش‌فرض بنرهای «سایر» (نوار تبلیغاتی و بالای صفحهٔ محصولات)؛ هر بخش
+  // صفحهٔ اول گردی گوشهٔ مستقل خودش را دارد.
+  const [bannerRadius, setBannerRadius] = useState<number>(
+    DEFAULT_BANNER_RADIUS,
+  );
+  const [appearanceSaving, setAppearanceSaving] = useState(false);
+
+  /** تبی که کاربر می‌بیند: بنرهای دسکتاپ، بنرهای موبایل یا سایر بنرها. */
+  const [activeTab, setActiveTab] = useState<BannerTab>("desktop");
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const mobileImageInputRef = useRef<HTMLInputElement>(null);
   const formRef = useRef<HTMLElement>(null);
@@ -181,9 +310,72 @@ function AdminBanners() {
     }
   }, []);
 
+  /**
+   * تنظیمات بخش‌های بنر صفحهٔ اول را می‌خواند (چیدمان + ابعاد + تعداد تصاویر +
+   * عنوان + فعال/غیرفعال + تعداد بنرهای ثبت‌شده در هر بخش).
+   */
+  const loadSections = useCallback(async () => {
+    setSectionLoading(true);
+
+    try {
+      const response = await adminApi.get("/admin/banner-sections");
+      const result = response.data?.data;
+      // ظاهر مشترک بنرها (گردی گوشه) در همان پاسخ و زیر کلید appearance است.
+      setBannerRadius(
+        normalizeBannerRadius(response.data?.appearance?.radius),
+      );
+
+      if (!Array.isArray(result)) {
+        setSections({});
+        return;
+      }
+
+      const next: Partial<Record<BannerSectionPosition, BannerSection>> = {};
+
+      BANNER_SECTION_CARDS.forEach(({ position }) => {
+        const raw = result.find(
+          (item: { position?: string }) => item?.position === position,
+        );
+
+        if (!raw) return;
+
+        const layout = normalizeBannerSectionLayout(raw.layout);
+
+        next[position] = {
+          position,
+          layout,
+          slots: bannerSectionSlots(layout),
+          title: typeof raw.title === "string" ? raw.title : "",
+          subtitle: typeof raw.subtitle === "string" ? raw.subtitle : "",
+          image_count: Number(raw.image_count ?? 0) || 0,
+          height_desktop: Number(raw.height_desktop ?? 0) || 0,
+          height_mobile: Number(raw.height_mobile ?? 0) || 0,
+          fit: normalizeBannerSectionFit(raw.fit),
+          radius: normalizeBannerRadius(raw.radius),
+          animation: normalizeBannerSectionAnimation(raw.animation),
+          radius_default: normalizeBannerRadius(
+            raw.radius_default ?? response.data?.appearance?.radius,
+          ),
+          is_active: raw.is_active !== false,
+          banners_count: Number(raw.banners_count ?? 0),
+        };
+      });
+
+      setSections(next);
+    } catch (err) {
+      setError(getAdminErrorMessage(err));
+    } finally {
+      setSectionLoading(false);
+    }
+  }, []);
+
+  const refreshAll = useCallback(async () => {
+    await Promise.all([loadBanners(), loadSections()]);
+  }, [loadBanners, loadSections]);
+
   useEffect(() => {
-    void loadBanners();
-  }, [loadBanners]);
+    void refreshAll();
+  }, [refreshAll]);
 
   useEffect(() => {
     setBrokenImages({});
@@ -224,10 +416,29 @@ function AdminBanners() {
     }
   }
 
-  function openCreateForm() {
+  /**
+   * تغییر تب فعال.
+   *
+   * اگر فرم باز باشد و «محل نمایش» انتخاب‌شده در تب جدید نباشد، فرم روی بخش
+   * پیش‌فرض همان تب تنظیم می‌شود؛ بنابراین بنر موبایل در تب دسکتاپ (و برعکس)
+   * ثبت نمی‌شود.
+   */
+  function switchTab(tab: BannerTab) {
+    setActiveTab(tab);
+
+    if (formOpen && !POSITIONS_BY_TAB[tab].includes(form.position)) {
+      updateField("position", DEFAULT_POSITION_BY_TAB[tab]);
+    }
+  }
+
+  /**
+   * باز کردن فرم ایجاد بنر. با `position` می‌توان فرم را از پیش روی بخش
+   * موردنظر (مثلاً بخش چندستونهٔ صفحهٔ اول) تنظیم کرد.
+   */
+  function openCreateForm(position: Banner["position"] = "home_hero") {
     setError("");
     setSuccess("");
-    setForm(initialForm);
+    setForm({ ...initialForm, position });
     setEditingId(null);
     setFormOpen(true);
 
@@ -342,7 +553,11 @@ function AdminBanners() {
         title: form.title.trim() || null,
         subtitle: form.subtitle.trim() || null,
         image: form.image.trim(),
-        mobile_image: form.mobile_image.trim() || null,
+        // تصویر موبایل فقط برای نوار تبلیغاتی و بنر بالای صفحهٔ محصولات؛
+        // بنرهای بالای/وسط صفحهٔ اول هر نما بنر مستقل و تک‌تصویری‌اند.
+        mobile_image: showMobileImageField
+          ? form.mobile_image.trim() || null
+          : null,
         image_alt: form.image_alt.trim() || null,
         text_scrim: form.text_scrim,
         // لایه‌های بدون متن را نمی‌فرستیم تا بک‌اند آن‌ها را دور بریزد.
@@ -370,11 +585,109 @@ function AdminBanners() {
       }
 
       resetForm();
-      await loadBanners();
+      await refreshAll();
     } catch (err) {
       setError(getAdminErrorMessage(err));
     } finally {
       setSaving(false);
+    }
+  }
+
+  /** تغییر چیدمان یک بخش (با دکمهٔ «ذخیرهٔ تنظیمات بخش» ذخیره می‌شود). */
+  function selectSectionLayout(
+    position: BannerSectionPosition,
+    layout: BannerSectionLayout,
+  ) {
+    setSections((current) => {
+      const section = current[position];
+
+      if (!section) return current;
+
+      return {
+        ...current,
+        [position]: { ...section, layout, slots: bannerSectionSlots(layout) },
+      };
+    });
+  }
+
+  function updateSectionField<K extends keyof AdminBannerSection>(
+    position: BannerSectionPosition,
+    field: K,
+    value: AdminBannerSection[K],
+  ) {
+    setSections((current) => {
+      const section = current[position];
+
+      if (!section) return current;
+
+      return { ...current, [position]: { ...section, [field]: value } };
+    });
+  }
+
+  /**
+   * ذخیرهٔ تنظیمات یک بخش بنر (چیدمان، ابعاد، تعداد تصاویر، عنوان و وضعیت).
+   * هر تغییر در این بخش کش بنرهای فروشگاه را هم پاک می‌کند؛ بنابراین تنظیم
+   * جدید بلافاصله در صفحهٔ اول دیده می‌شود.
+   */
+  async function saveSection(position: BannerSectionPosition) {
+    const section = sections[position];
+
+    if (!section || sectionSaving) return;
+
+    setSectionSaving(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const response = await adminApi.put(
+        `/admin/banner-sections/${position}`,
+        {
+          layout: section.layout,
+          title: section.title.trim() || null,
+          subtitle: section.subtitle.trim() || null,
+          // صفر یعنی «همه»/«ارتفاع طبیعی»؛ برای همین به null تبدیل می‌شود.
+          image_count: section.image_count > 0 ? section.image_count : null,
+          height_desktop: section.height_desktop > 0 ? section.height_desktop : null,
+          height_mobile: section.height_mobile > 0 ? section.height_mobile : null,
+          fit: section.fit,
+          radius: normalizeBannerRadius(section.radius),
+          animation: section.animation,
+          is_active: section.is_active,
+        },
+      );
+
+      setSuccess(response.data?.message ?? "تنظیمات بخش بنر ذخیره شد.");
+      await refreshAll();
+    } catch (err) {
+      setError(getAdminErrorMessage(err));
+    } finally {
+      setSectionSaving(false);
+    }
+  }
+
+  /**
+   * ذخیرهٔ ظاهر مشترک بنرها (گردی گوشه).
+   * این تنظیم روی همهٔ بنرها اعمال می‌شود و کش بنرهای فروشگاه را پاک می‌کند.
+   */
+  async function saveAppearance() {
+    if (appearanceSaving) return;
+
+    setAppearanceSaving(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const response = await adminApi.put("/admin/banner-appearance", {
+        radius: normalizeBannerRadius(bannerRadius),
+      });
+
+      setSuccess(response.data?.message ?? "ظاهر بنرها ذخیره شد.");
+      setBannerRadius(normalizeBannerRadius(response.data?.data?.radius));
+      await refreshAll();
+    } catch (err) {
+      setError(getAdminErrorMessage(err));
+    } finally {
+      setAppearanceSaving(false);
     }
   }
 
@@ -389,7 +702,7 @@ function AdminBanners() {
       });
 
       setSuccess(banner.is_active ? "بنر غیرفعال شد." : "بنر فعال شد.");
-      await loadBanners();
+      await refreshAll();
     } catch (err) {
       setError(getAdminErrorMessage(err));
     } finally {
@@ -410,7 +723,7 @@ function AdminBanners() {
       const response = await adminApi.delete(`/admin/banners/${banner.id}`);
 
       setSuccess(response.data?.message ?? "بنر حذف شد.");
-      await loadBanners();
+      await refreshAll();
     } catch (err) {
       setError(getAdminErrorMessage(err));
     } finally {
@@ -421,54 +734,118 @@ function AdminBanners() {
   const imagePreview = getStorageUrl(form.image);
   const mobileImagePreview = getStorageUrl(form.mobile_image);
 
+  // تصویر موبایل فقط برای بنرهایی است که هم در دسکتاپ و هم در موبایل دیده
+  // می‌شوند (نوار تبلیغاتی و بالای صفحهٔ محصولات).
+  const showMobileImageField = POSITIONS_WITH_MOBILE_IMAGE.includes(
+    form.position,
+  );
+
+  // در فرم بنر موبایل فقط یک تصویر لازم است (همان تصویر روی موبایل رندر
+  // می‌شود)؛ فرم بنرهای دیگر همان دو فیلد قبلی را دارد.
+  const isMobileFormPosition = isMobileBannerPosition(form.position);
+
+  const imageFieldLabel = isMobileFormPosition
+    ? "تصویر بنر موبایل *"
+    : form.position === "home_hero" || form.position === "home_grid"
+      ? "تصویر بنر دسکتاپ *"
+      : "تصویر بنر *";
+
+  // بنرهای تب فعال؛ هر تب فقط بنرهای خودش را نشان می‌دهد تا موبایل و دسکتاپ
+  // قاطی نشوند.
+  const tabBanners = banners.filter((banner) =>
+    POSITIONS_BY_TAB[activeTab].includes(banner.position),
+  );
+
+  const tabSections = BANNER_SECTION_CARDS.filter(
+    (card) => card.tab === activeTab,
+  );
+
+  const toolbar = (
+    <div
+      style={{
+        display: "flex",
+        flexWrap: "wrap",
+        alignItems: "center",
+        gap: 8,
+      }}
+    >
+      <button
+        type="button"
+        className="admin-btn admin-btn-primary"
+        onClick={() => openCreateForm(DEFAULT_POSITION_BY_TAB[activeTab])}
+      >
+        <span className="inline-flex items-center gap-1.5">
+          <Plus size={15} aria-hidden="true" />
+          افزودن بنر
+        </span>
+      </button>
+
+      <button
+        type="button"
+        className="admin-btn"
+        onClick={() => void refreshAll()}
+        disabled={loading}
+      >
+        {loading ? "در حال دریافت..." : "بارگذاری مجدد"}
+      </button>
+    </div>
+  );
+
   return (
     <div dir="rtl" className="admin-page">
-      <header className="admin-page-head">
-        <div>
-          <span className="admin-page-eyebrow">مدیریت محتوا</span>
-          <h1 className="admin-page-title">بنرهای فروشگاه</h1>
-          <p className="admin-page-subtitle">
-            تصاویر بنر بالای صفحهٔ اول و نوار تبلیغاتی را مدیریت کنید. بنرهای
-            «اسلایدر اصلی» جای تصویر بزرگ صفحهٔ اول را می‌گیرند، در تمام عرض
-            صفحه و با نسبت تصویر خودشان (بدون برش) نمایش داده می‌شوند و اگر بیش
-            از یکی باشند هر ۵ ثانیه خودکار اسلاید می‌شوند؛ اگر هیچ بنر فعالی در
-            این بخش نباشد تصویر پیش‌فرض سایت نمایش داده می‌شود. «نوار تبلیغاتی»
-            تصویر بنر را در کارت‌های ریز زیر هیرو نشان می‌دهد. بنر غیرفعال یا
-            خارج از بازهٔ زمانی در سایت دیده نمی‌شود. با دکمهٔ «بنر اصلی از
-            تصویر پیش‌فرض» همان تصویر بزرگ فعلی سایت به یک بنر قابل ویرایش تبدیل
-            می‌شود؛ نیازی به بارگذاری دوبارهٔ فایل نیست.
-          </p>
-        </div>
+      {!embedded && (
+        <header className="admin-page-head">
+          <div>
+            <span className="admin-page-eyebrow">مدیریت محتوا</span>
+            <h1 className="admin-page-title">بنرهای فروشگاه</h1>
+            <p className="admin-page-subtitle">
+              بنرها در سه تب جدا دسته‌بندی شده‌اند: «بنرهای دسکتاپ» (بالا و وسط
+              صفحهٔ اول)، «بنرهای موبایل» (بالا و وسط صفحه، فقط روی گوشی) و «سایر
+              بنرها» (نوار تبلیغاتی و بالای صفحهٔ محصولات). هر بخش تعداد، ارتفاع
+              و گردی گوشهٔ مستقل خودش را دارد. بنر غیرفعال یا خارج از بازهٔ
+              زمانی در سایت دیده نمی‌شود.
+            </p>
+          </div>
 
-        <div
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            alignItems: "center",
-            gap: 8,
-          }}
-        >
-          <button
-            type="button"
-            className="admin-btn admin-btn-primary"
-            onClick={openCreateForm}
-          >
-            <span className="inline-flex items-center gap-1.5">
-              <Plus size={15} aria-hidden="true" />
-              افزودن بنر
-            </span>
-          </button>
+          {toolbar}
+        </header>
+      )}
 
-          <button
-            type="button"
-            className="admin-btn"
-            onClick={() => void loadBanners()}
-            disabled={loading}
-          >
-            {loading ? "در حال دریافت..." : "بارگذاری مجدد"}
-          </button>
-        </div>
-      </header>
+      {embedded && <div className="mb-4">{toolbar}</div>}
+
+      {/* تب‌ها: بنرهای دسکتاپ، بنرهای موبایل و سایر بنرها کاملاً جدا هستند. */}
+      <div
+        role="tablist"
+        aria-label="دسته‌بندی بنرها"
+        className="mb-4 flex flex-wrap gap-2"
+      >
+        {(Object.keys(TAB_LABELS) as BannerTab[]).map((tab) => {
+          const selected = activeTab === tab;
+          const count = banners.filter((banner) =>
+            POSITIONS_BY_TAB[tab].includes(banner.position),
+          ).length;
+
+          return (
+            <button
+              key={tab}
+              type="button"
+              role="tab"
+              aria-selected={selected}
+              onClick={() => switchTab(tab)}
+              className={`rounded-xl border-2 px-4 py-2 text-sm font-bold transition ${
+                selected
+                  ? "border-[#648767] bg-[#f4f8ef] text-[#385e3e]"
+                  : "border-[#e3ebdc] bg-white text-[#6b7a67] hover:border-[#a8bea1]"
+              }`}
+            >
+              {TAB_LABELS[tab]}
+              <span className="mr-1.5 text-[11px] font-normal opacity-70">
+                ({count})
+              </span>
+            </button>
+          );
+        })}
+      </div>
 
       {error && (
         <div className="admin-alert admin-alert-error" role="alert">
@@ -492,10 +869,10 @@ function AdminBanners() {
                 {editingId === null ? "افزودن بنر جدید" : "ویرایش بنر"}
               </h2>
               <p className="admin-card-desc">
-                تصویر را بارگذاری کنید، یکی از «تصاویر آمادهٔ سایت» را انتخاب کنید
-                یا نشانی کامل/مسیر فایل را وارد کنید؛ برای اسلایدر اصلی می‌توانید
-                تصویر موبایل جداگانه هم ثبت کنید. بازهٔ نمایش به تاریخ شمسی ثبت
-                می‌شود.
+                تصویر بنر را بارگذاری کنید یا نشانی کامل/مسیر فایل را وارد کنید.
+                بنرهای دسکتاپ و موبایل تک‌تصویری و کاملاً جدا هستند؛ فیلد «تصویر
+                موبایل» فقط برای نوار تبلیغاتی و بنر بالای صفحهٔ محصولات (تب
+                «سایر بنرها») لازم است. بازهٔ نمایش به تاریخ شمسی ثبت می‌شود.
               </p>
             </div>
 
@@ -541,7 +918,7 @@ function AdminBanners() {
 
               <div className="admin-field admin-full">
                 <label className="admin-label" htmlFor="banner-image">
-                  تصویر بنر *
+                  {imageFieldLabel}
                 </label>
 
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
@@ -606,41 +983,6 @@ function AdminBanners() {
                       )}
                     </div>
 
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-[11px] font-bold text-[#6b7a67]">
-                        تصاویر آمادهٔ سایت:
-                      </span>
-
-                      {SITE_IMAGE_PRESETS.map((preset) => {
-                        const isSelected = form.image.trim() === preset.path;
-
-                        return (
-                          <button
-                            key={preset.path}
-                            type="button"
-                            onClick={() => updateField("image", preset.path)}
-                            disabled={uploading || saving}
-                            aria-pressed={isSelected}
-                            title={preset.hint}
-                            className={`overflow-hidden rounded-lg border-2 bg-white p-0 transition ${
-                              isSelected
-                                ? "border-[#648767] ring-2 ring-[#648767]/20"
-                                : "border-[#e3ebdc] hover:border-[#a8bea1]"
-                            }`}
-                          >
-                            <img
-                              src={preset.path}
-                              alt={preset.label}
-                              className="block h-12 w-24 object-cover"
-                            />
-                            <span className="block px-1 py-0.5 text-[10px] font-bold text-[#4b5f4a]">
-                              {preset.label}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-
                     <input
                       id="banner-image"
                       className="admin-input"
@@ -669,11 +1011,9 @@ function AdminBanners() {
 
                     <p className="text-[11px] leading-6 text-[#9aa894]">
                       مسیر فایل بارگذاری‌شده (مثل{" "}
-                      <span dir="ltr">banners/banner.jpg</span>)، آدرس کامل، یا
-                      مسیر تصویر آمادهٔ سایت (مثل{" "}
-                      <span dir="ltr">/images/women-sport-hero.png</span>) را
-                      می‌توانید وارد کنید. حداکثر ۵ مگابایت با فرمت JPG، PNG یا
-                      WebP.
+                      <span dir="ltr">banners/banner.jpg</span>) یا آدرس کامل
+                      تصویر را می‌توانید وارد کنید. حداکثر ۵ مگابایت با فرمت
+                      JPG، PNG یا WebP.
                     </p>
 
                     <div className="rounded-xl border border-[#e6ecdf] bg-[#f8faf5] p-3">
@@ -706,12 +1046,13 @@ function AdminBanners() {
                 </div>
               </div>
 
-              <div className="admin-field admin-full">
-                <label className="admin-label" htmlFor="banner-mobile-image">
-                  تصویر موبایل (اختیاری)
-                </label>
+              {showMobileImageField && (
+                <div className="admin-field admin-full">
+                  <label className="admin-label" htmlFor="banner-mobile-image">
+                    تصویر موبایل (اختیاری)
+                  </label>
 
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
                   <div className="flex h-24 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-dashed border-[#dfe7d8] bg-[#f8faf5]">
                     {mobileImagePreview && !mobilePreviewBroken ? (
                       <img
@@ -773,38 +1114,6 @@ function AdminBanners() {
                           حذف تصویر موبایل
                         </button>
                       )}
-
-                      {SITE_MOBILE_IMAGE_PRESETS.map((preset) => {
-                        const isSelected =
-                          form.mobile_image.trim() === preset.path;
-
-                        return (
-                          <button
-                            key={preset.path}
-                            type="button"
-                            onClick={() =>
-                              updateField("mobile_image", preset.path)
-                            }
-                            disabled={uploading || saving}
-                            aria-pressed={isSelected}
-                            title={preset.hint}
-                            className={`overflow-hidden rounded-lg border-2 bg-white p-0 transition ${
-                              isSelected
-                                ? "border-[#648767] ring-2 ring-[#648767]/20"
-                                : "border-[#e3ebdc] hover:border-[#a8bea1]"
-                            }`}
-                          >
-                            <img
-                              src={preset.path}
-                              alt={preset.label}
-                              className="block h-12 w-12 object-cover"
-                            />
-                            <span className="block px-1 py-0.5 text-[10px] font-bold text-[#4b5f4a]">
-                              {preset.label}
-                            </span>
-                          </button>
-                        );
-                      })}
                     </div>
 
                     <input
@@ -816,31 +1125,30 @@ function AdminBanners() {
                       }
                       dir="ltr"
                       maxLength={2048}
-                      placeholder="/images/women-sport-hero-mobile.png"
+                      placeholder="banners/banner-mobile.jpg"
                     />
 
                     <p className="text-[11px] leading-6 text-[#9aa894]">
-                      این تصویر کاملاً مستقل از تصویر دسکتاپ است و فقط روی
-                      موبایل (عرض کمتر از ۷۶۸ پیکسل) نمایش داده می‌شود. ابعاد
-                      پیشنهادی موبایل:{" "}
+                      این تصویر مستقل از تصویر دسکتاپ است و فقط روی موبایل
+                      (عرض کمتر از ۷۶۸ پیکسل) نمایش داده می‌شود. ابعاد پیشنهادی
+                      موبایل:{" "}
                       <span dir="ltr" className="font-bold">
                         ۷۵۰ × ۱۰۰۰
                       </span>{" "}
-                      و این تصویر در بنر هیرو، نوار تبلیغاتی و بنر بالای صفحهٔ
-                      محصولات استفاده می‌شود.
+                      و در نوار تبلیغاتی و بنر بالای صفحهٔ محصولات استفاده
+                      می‌شود.
                     </p>
 
                     {!form.mobile_image.trim() && (
                       <p className="rounded-lg border border-[#f0d9a8] bg-[#fff9ec] px-3 py-2 text-[11px] leading-6 text-[#8a5a00]">
                         ⚠️ تصویر موبایل ثبت نشده است؛ این بنر روی گوشی نمایش
-                        داده نمی‌شود (تصویر دسکتاپ جای آن نمی‌نشیند و هیچ نسخهٔ
-                        پیش‌فرضی هم وجود ندارد). برای نمایش بنر روی موبایل،
-                        تصویر موبایل را بارگذاری کنید.
+                        داده نمی‌شود (تصویر دسکتاپ جای آن نمی‌نشیند).
                       </p>
                     )}
                   </div>
                 </div>
-              </div>
+                </div>
+              )}
 
               <div className="admin-field">
                 <label className="admin-label" htmlFor="banner-position">
@@ -857,7 +1165,7 @@ function AdminBanners() {
                     )
                   }
                 >
-                  {Object.entries(positionLabels).map(([value, label]) => (
+                  {positionOptionsForTab(activeTab).map(([value, label]) => (
                     <option key={value} value={value}>
                       {label}
                     </option>
@@ -865,8 +1173,11 @@ function AdminBanners() {
                 </select>
 
                 <p className="text-[11px] leading-6 text-[#9aa894]">
-                  «اسلایدر اصلی» تصویر بزرگ بالای صفحهٔ اول را نمایش می‌دهد؛ با
-                  ثبت بیش از یک بنر فعال در این بخش، اسلایدر خودکار فعال می‌شود.
+                  {activeTab === "desktop"
+                    ? "این بنر فقط در دسکتاپ دیده می‌شود؛ بنرهای موبایل در تب «بنرهای موبایل» ثبت می‌شوند. «بنر بالای صفحه» تصویر بزرگ بالای صفحهٔ اول است و با ثبت بیش از یک بنر فعال، اسلایدر خودکار فعال می‌شود."
+                    : activeTab === "mobile"
+                      ? "این بنر فقط روی موبایل (عرض کمتر از ۷۶۸ پیکسل) دیده می‌شود و با بنرهای دسکتاپ اشتراکی ندارد."
+                      : "نوار تبلیغاتی زیر بنر بالای صفحه و بنر بالای فهرست محصولات؛ برای این دو بخش می‌توانید تصویر موبایل جداگانه هم ثبت کنید."}
                 </p>
               </div>
 
@@ -1001,6 +1312,112 @@ function AdminBanners() {
         </section>
       )}
 
+      {/*
+        تنظیمات بنرها بر اساس تب فعال:
+        - دسکتاپ/موبایل: کارت تنظیمات هر بخش (بالا و وسط) با تعداد یا چیدمان،
+          ارتفاع و گردی گوشهٔ همان بخش
+        - سایر بنرها: گردی گوشهٔ پیش‌فرض نوار تبلیغاتی و بنر محصولات
+      */}
+      {activeTab === "other" ? (
+        <section className="admin-card">
+          <div className="admin-card-head">
+            <div>
+              <h2 className="admin-card-title">
+                گردی گوشهٔ نوار تبلیغاتی و بنر محصولات
+              </h2>
+              <p className="admin-card-desc">
+                این مقدار پیش‌فرض بنرهای این تب است (و پیش‌فرض بخش‌هایی که گردی
+                اختصاصی ندارند). صفر یعنی گوشهٔ تیز. بنرهای بالای صفحه و وسط
+                صفحهٔ اول گردی گوشهٔ مستقل خودشان را در تب‌های «دسکتاپ» و
+                «موبایل» دارند.
+              </p>
+            </div>
+          </div>
+
+          <div className="admin-form-grid">
+            <div className="admin-field">
+              <label className="admin-label" htmlFor="banner-radius">
+                گردی گوشه (پیکسل)
+              </label>
+              <input
+                id="banner-radius"
+                type="number"
+                min={0}
+                max={MAX_BANNER_RADIUS}
+                step={1}
+                className="admin-input"
+                value={bannerRadius}
+                onChange={(event) =>
+                  setBannerRadius(normalizeBannerRadius(event.target.value))
+                }
+                disabled={appearanceSaving}
+              />
+
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {BANNER_RADIUS_PRESETS.map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    className={`admin-btn admin-btn-sm ${
+                      bannerRadius === preset ? "admin-btn-primary" : ""
+                    }`}
+                    onClick={() => setBannerRadius(preset)}
+                    disabled={appearanceSaving}
+                  >
+                    {preset === 0 ? "بدون گردی" : `${preset}px`}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="admin-field">
+              <span className="admin-label">پیش‌نمایش کادر بنر</span>
+
+              <div className="flex items-center gap-3">
+                <span
+                  className="inline-block h-16 w-28 border border-[#c9d8c2] bg-gradient-to-t from-[#648767] to-[#a8bea1]"
+                  style={{ borderRadius: `${bannerRadius}px` }}
+                  aria-hidden="true"
+                />
+                <span className="text-xs font-bold text-[#3f5140]">
+                  {bannerRadius}px
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="admin-actions">
+            <button
+              type="button"
+              className="admin-btn admin-btn-primary"
+              onClick={() => void saveAppearance()}
+              disabled={appearanceSaving}
+            >
+              {appearanceSaving ? "در حال ذخیره..." : "ذخیرهٔ گردی گوشه"}
+            </button>
+          </div>
+        </section>
+      ) : (
+        tabSections.map((card) => (
+          <AdminBannerSectionCard
+            key={card.position}
+            kind={card.kind}
+            title={card.title}
+            description={card.description}
+            addLabel={card.addLabel}
+            section={sections[card.position] ?? null}
+            loading={sectionLoading}
+            saving={sectionSaving}
+            onChange={(field, value) =>
+              updateSectionField(card.position, field, value)
+            }
+            onLayout={(layout) => selectSectionLayout(card.position, layout)}
+            onSave={() => void saveSection(card.position)}
+            onAdd={() => openCreateForm(card.position)}
+          />
+        ))
+      )}
+
       <AdminBannerFontsPanel
         fonts={fonts}
         loading={fontsLoading}
@@ -1014,17 +1431,20 @@ function AdminBanners() {
       <section className="admin-card">
         <div className="admin-card-head">
           <div>
-            <h2 className="admin-card-title">فهرست بنرها</h2>
+            <h2 className="admin-card-title">
+              فهرست بنرها — {TAB_LABELS[activeTab]}
+            </h2>
             <p className="admin-card-desc">
-              بنرهای فعال به ترتیب «ترتیب نمایش» در سایت قرار می‌گیرند؛ در اسلایدر
-              اصلی همین ترتیب، ترتیب اسلایدها است.
+              بنرهای فعال به ترتیب «ترتیب نمایش» در سایت قرار می‌گیرند؛ در
+              اسلایدر همین ترتیب، ترتیب اسلایدها است. برای دیدن بنرهای بخش‌های
+              دیگر، تب بالا را عوض کنید.
             </p>
           </div>
 
           <button
             type="button"
             className="admin-btn admin-btn-sm"
-            onClick={openCreateForm}
+            onClick={() => openCreateForm(DEFAULT_POSITION_BY_TAB[activeTab])}
           >
             <span className="inline-flex items-center gap-1.5">
               <Plus size={14} aria-hidden="true" />
@@ -1035,8 +1455,8 @@ function AdminBanners() {
 
         {loading ? (
           <p className="admin-empty">در حال دریافت بنرها...</p>
-        ) : banners.length === 0 ? (
-          <p className="admin-empty">هنوز بنری ثبت نشده است.</p>
+        ) : tabBanners.length === 0 ? (
+          <p className="admin-empty">در این بخش هنوز بنری ثبت نشده است.</p>
         ) : (
           <div className="admin-table-wrap">
             <table className="admin-table">
@@ -1053,7 +1473,7 @@ function AdminBanners() {
               </thead>
 
               <tbody>
-                {banners.map((banner) => {
+                {tabBanners.map((banner) => {
                   const busy = actionId === banner.id;
                   const imageUrl = getStorageUrl(banner.image);
 

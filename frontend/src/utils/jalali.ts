@@ -289,3 +289,88 @@ export function formatJalaliShort(value: string | null | undefined): string {
 
   return `${toPersianDigits(parts.jy)}/${pad(parts.jm)}/${pad(parts.jd)}`;
 }
+
+/**
+ * اجزای شمسی یک «زمان واقعی» (رشتهٔ ISO سرور) با تبدیل به وقت محلی دستگاه.
+ *
+ * `parseDateTimeInput` رشته را همان‌طور که هست می‌خواند و برای ورودی دستی و
+ * تاریخ‌های بدون ساعت درست است؛ اما زمان‌های ISO سرور (UTC) باید اول به وقت
+ * محلی تبدیل شوند، وگرنه ساعت و حتی روز نمایش‌داده‌شده جابه‌جا می‌شود.
+ */
+export function toJalaliDateTime(
+  value: string | null | undefined,
+): JalaliDateTime | null {
+  if (!value) return null;
+
+  const raw = value.trim();
+
+  // تاریخ بدون ساعت (تاریخ تولد، فیلتر «از تاریخ/تا تاریخ» و ...): بدون
+  // جابه‌جایی منطقهٔ زمانی خوانده می‌شود تا روز عوض نشود.
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    return parseDateTimeInput(raw);
+  }
+
+  // مقادیر «فقط تاریخ» که سرور نیمه‌شب UTC ذخیره می‌کند (مثل تاریخ تحویل
+  // مورد انتظار) هم نباید جابه‌جا شوند؛ ساعتِ ۰۰:۰۰ نشانهٔ تاریخ خالی است، نه
+  // یک رویداد واقعی.
+  if (/^\d{4}-\d{2}-\d{2}[T ]00:00(:00)?(?:\.\d+)?(?:Z|[+-]00:00)?$/.test(raw)) {
+    return parseDateTimeInput(raw.slice(0, 10));
+  }
+
+  const date = new Date(raw);
+
+  if (Number.isNaN(date.getTime())) {
+    return parseDateTimeInput(raw);
+  }
+
+  const { jy, jm, jd } = gregorianToJalali(
+    date.getFullYear(),
+    date.getMonth() + 1,
+    date.getDate(),
+  );
+
+  return { jy, jm, jd, hour: date.getHours(), minute: date.getMinutes() };
+}
+
+/**
+ * نمایش خوانای تاریخ شمسی برای زمان واقعی سرور؛ مثلاً
+ * «۱۲ مرداد ۱۴۰۳، ساعت ۱۴:۳۰». ورودی نامعتبر → رشتهٔ خالی.
+ */
+export function formatJalaliDateTime(
+  value: string | null | undefined,
+  options: { withTime?: boolean; withWeekday?: boolean } = {},
+): string {
+  const parts = toJalaliDateTime(value);
+
+  if (!parts) return "";
+
+  const weekday = options.withWeekday
+    ? `${JALALI_WEEKDAY_NAMES[jalaliWeekdayIndex(parts.jy, parts.jm, parts.jd)]} `
+    : "";
+
+  const base = `${toPersianDigits(parts.jd)} ${
+    JALALI_MONTH_NAMES[parts.jm - 1]
+  } ${toPersianDigits(parts.jy)}`;
+
+  const time = options.withTime
+    ? `، ساعت ${toPersianDigits(
+        String(parts.hour).padStart(2, "0"),
+      )}:${toPersianDigits(String(parts.minute).padStart(2, "0"))}`
+    : "";
+
+  return `${weekday}${base}${time}`;
+}
+
+/** نمایش کوتاه عددی تاریخ شمسی برای زمان واقعی؛ مثلاً «۱۴۰۳/۰۵/۱۲». */
+export function formatJalaliDateTimeShort(
+  value: string | null | undefined,
+): string {
+  const parts = toJalaliDateTime(value);
+
+  if (!parts) return "";
+
+  const pad = (part: number) => toPersianDigits(String(part).padStart(2, "0"));
+
+  return `${toPersianDigits(parts.jy)}/${pad(parts.jm)}/${pad(parts.jd)}`;
+}
+

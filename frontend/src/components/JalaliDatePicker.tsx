@@ -25,6 +25,10 @@ interface JalaliDatePickerProps {
   /** ساعت پیش‌فرض هنگام انتخاب روز، وقتی مقدار قبلی ساعتی ندارد */
   defaultHour?: number;
   defaultMinute?: number;
+  /** کوچک‌ترین سال قابل انتخاب (پیش‌فرض: ۲۰ سال قبل از سال در حال نمایش) */
+  minYear?: number;
+  /** بزرگ‌ترین سال قابل انتخاب (پیش‌فرض: ۲۰ سال بعد از سال در حال نمایش) */
+  maxYear?: number;
 }
 
 const pad = (part: number) => String(part).padStart(2, "0");
@@ -53,6 +57,8 @@ function JalaliDatePicker({
   disabled = false,
   defaultHour = 0,
   defaultMinute = 0,
+  minYear,
+  maxYear,
 }: JalaliDatePickerProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -115,15 +121,22 @@ function JalaliDatePicker({
   const hour = selected?.hour ?? defaultHour;
   const minute = selected?.minute ?? defaultMinute;
   const minuteOptions = buildMinuteOptions(minute);
-  const yearOptions = Array.from(
-    { length: 41 },
-    (_, index) => view.jy - 20 + index,
-  );
+  const yearOptions = useMemo(() => {
+    // سال در حال نمایش همیشه باید در فهرست باشد، حتی اگر بیرون از بازهٔ داده‌شده باشد
+    const from = Math.min(minYear ?? view.jy - 20, view.jy);
+    const to = Math.max(maxYear ?? view.jy + 20, view.jy, from);
+
+    return Array.from({ length: to - from + 1 }, (_, index) => from + index);
+  }, [view.jy, minYear, maxYear]);
 
   function shiftMonth(delta: number) {
     setView((current) => {
       const total = current.jy * 12 + (current.jm - 1) + delta;
-      const jy = Math.floor(total / 12);
+      const rawYear = Math.floor(total / 12);
+      const jy = Math.min(
+        Math.max(rawYear, minYear ?? rawYear),
+        maxYear ?? rawYear,
+      );
       const jm = (((total % 12) + 12) % 12) + 1;
 
       return { jy, jm };

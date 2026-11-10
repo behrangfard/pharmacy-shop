@@ -181,6 +181,59 @@ class AdminProductValidationTest extends TestCase
         ]);
     }
 
+    public function test_product_update_can_disable_return_guarantee(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $product = $this->createProduct();
+
+        // پیش‌فرض ستون «ضمانت بازگشت» برای محصولات تازه «دارد» است.
+        $this->assertTrue((bool) $product->fresh()->is_returnable);
+
+        $response = $this->putJson(
+            '/api/v1/admin/products/'.$product->id,
+            [
+                'is_returnable' => false,
+            ]
+        );
+
+        $response->assertOk();
+
+        $this->assertDatabaseHas('products', [
+            'id' => $product->id,
+            'is_returnable' => false,
+        ]);
+    }
+
+    public function test_product_creation_defaults_return_guarantee_to_true(): void
+    {
+        $admin = User::factory()->create([
+            'role' => 'admin',
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $category = $this->createProduct()->category;
+
+        $response = $this->postJson('/api/v1/admin/products', [
+            'category_id' => $category->id,
+            'name' => 'Returnable Creation Test Product',
+            'sku' => 'RETURNABLE-CREATION-TEST-SKU',
+            'price' => 100000,
+        ]);
+
+        $response->assertCreated();
+
+        $this->assertDatabaseHas('products', [
+            'sku' => 'RETURNABLE-CREATION-TEST-SKU',
+            'is_returnable' => true,
+        ]);
+    }
+
     public function test_product_detail_returns_variants_with_size_for_the_admin_form(): void
     {
         $admin = User::factory()->create([

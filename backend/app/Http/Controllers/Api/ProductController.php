@@ -164,6 +164,17 @@ class ProductController extends Controller
                         ->where('is_active', true)
                         ->orderBy('id');
                 },
+                /*
+                 * پالت رنگ و قطعات پک فقط در حالت فعال به مشتری نشان داده
+                 * می‌شوند؛ رنگ یا قطعهٔ غیرفعال در پاسخ نمی‌آید.
+                 */
+                'colors' => function ($colorQuery) {
+                    $colorQuery
+                        ->where('is_active', true)
+                        ->orderBy('sort_order')
+                        ->orderBy('id');
+                },
+                'packItems',
             ])
             ->withAvg([
                 'reviews as average_rating' => function ($q) {

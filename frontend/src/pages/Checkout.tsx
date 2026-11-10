@@ -12,14 +12,24 @@ import {
   ShieldCheck,
   Truck,
   AlertCircle,
+  Check,
+  MapPinned,
+  Plus,
 } from "lucide-react";
 
 import Layout from "../components/Layout";
+import AddressMapPicker from "../components/AddressMapPicker";
 import { usePrivatePageMeta } from "../hooks/usePageMeta";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 import api from "../services/api";
+import {
+  createAddress,
+  fetchAddresses,
+  type SavedAddress,
+} from "../services/addresses";
 import { useStoreSettings } from "../hooks/useStoreSettings";
+import { toEnglishDigits } from "../utils/jalali";
 
 const CHECKOUT_KEY_STORAGE = "checkout_idempotency_key";
 const CHECKOUT_FINGERPRINT_STORAGE = "checkout_fingerprint";
@@ -28,6 +38,10 @@ type CheckoutItem = {
   product_id: number;
   variant_id?: number;
   quantity: number;
+  /** رنگ انتخاب‌شدهٔ محصول (در صورت رنگ‌بندی) */
+  color_name?: string;
+  /** رنگ هر قطعهٔ پک چندعددی */
+  pack_colors?: { name: string; color: string }[];
 };
 
 type CheckoutPayload = {
@@ -50,6 +64,8 @@ type LegacyCartItem = {
   product_id?: number | string | null;
   product?: { id?: number | string | null } | null;
   variant_id?: number | string | null;
+  color_name?: string | null;
+  pack_colors?: { name?: string | null; color?: string | null }[] | null;
 };
 
 function Checkout() {
@@ -89,6 +105,20 @@ function Checkout() {
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponError, setCouponError] = useState("");
 
+  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
+  const [addressesLoading, setAddressesLoading] = useState(false);
+  const [addressesError, setAddressesError] = useState("");
+  const [addressesReloadKey, setAddressesReloadKey] = useState(0);
+  const [selectedAddressId, setSelectedAddressId] = useState<number | "new">(
+    "new",
+  );
+  const [saveAddressToBook, setSaveAddressToBook] = useState(false);
+  const [showAddressMap, setShowAddressMap] = useState(false);
+  const [mapPoint, setMapPoint] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
+
   // مقداردهی اولیه نام کاربر بدون بازنویسی اطلاعاتی که خودش ویرایش کرده است.
   useEffect(() => {
     if (authLoading || !user || nameInitialized.current) {
@@ -105,6 +135,97 @@ function Checkout() {
 
     nameInitialized.current = true;
   }, [authLoading, user]);
+
+  // پر کردن فرم با آدرس انتخاب‌شده از دفترچهٔ آدرس مشتری.
+  function applySavedAddress(address: SavedAddress) {
+    const fullName = (address.recipient_name ?? "").trim();
+
+    if (fullName) {
+      const parts = fullName.split(/\s+/);
+      setFirstName(parts[0] ?? "");
+      setLastName(parts.slice(1).join(" "));
+    }
+
+    setPhone(toEnglishDigits(address.phone ?? "").replace(/\D/g, ""));
+    setProvince(address.province ?? "");
+    setCity(address.city ?? "");
+    setAddress(address.address ?? "");
+    setPostalCode(
+      toEnglishDigits(address.postal_code ?? "")
+        .replace(/\D/g, "")
+        .slice(0, 10),
+    );
+    setSelectedAddressId(address.id);
+    setMapPoint(
+      address.latitude !== null && address.longitude !== null
+        ? { latitude: address.latitude, longitude: address.longitude }
+        : null,
+    );
+    setShowAddressMap(false);
+  }
+
+  // خالی کردن فیلدهای آدرس برای ثبت آدرس جدید.
+  function startNewAddress() {
+    setSelectedAddressId("new");
+    setProvince("");
+    setCity("");
+    setAddress("");
+    setPostalCode("");
+    setMapPoint(null);
+    setShowAddressMap(false);
+  }
+
+  // بارگذاری آدرس‌های ذخیره‌شده و انتخاب خودکار آدرس پیش‌فرض.
+  // کلید وابستگی «شناسهٔ کاربر» است تا رفرش‌های بی‌ربط، انتخاب کاربر را
+  // بازنویسی نکنند و در حالت StrictMode هم وضعیت بارگذاری قفل نشود.
+  const authUserId = user?.id ?? null;
+
+  useEffect(() => {
+    if (authLoading || authUserId === null) {
+      return;
+    }
+
+    let active = true;
+
+    setAddressesLoading(true);
+    setAddressesError("");
+
+    (async () => {
+      try {
+        const items = await fetchAddresses();
+
+        if (!active) {
+          return;
+        }
+
+        setSavedAddresses(items);
+
+        const preferred = items.find((item) => item.is_default) ?? items[0];
+
+        if (preferred) {
+          applySavedAddress(preferred);
+        }
+      } catch (loadError) {
+        console.error("Checkout addresses load error:", loadError);
+
+        if (active) {
+          setSavedAddresses([]);
+          setAddressesError(
+            "دریافت آدرس‌های ذخیره‌شده ممکن نشد. آدرس را دستی وارد کنید یا دوباره تلاش کنید.",
+          );
+        }
+      } finally {
+        if (active) {
+          setAddressesLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      active = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, authUserId, addressesReloadKey]);
 
   // همگام‌سازی مالیات با تنظیمات فروشگاه (قابل ویرایش از پنل مدیران).
   useEffect(() => {
@@ -332,10 +453,25 @@ function Checkout() {
           ? undefined
           : Number(item.variant_id);
 
+      // رنگ محصول یا رنگ قطعات پک، در صورت انتخاب مشتری.
+      const colorName =
+        typeof item.color_name === "string" ? item.color_name.trim() : "";
+
+      const packColors = Array.isArray(item.pack_colors)
+        ? item.pack_colors
+            .map((entry) => ({
+              name: String(entry?.name ?? "").trim(),
+              color: String(entry?.color ?? "").trim(),
+            }))
+            .filter((entry) => entry.name !== "" && entry.color !== "")
+        : [];
+
       return {
         product_id: productId,
         ...(variantId !== undefined ? { variant_id: variantId } : {}),
         quantity: Number(item.quantity),
+        ...(colorName !== "" ? { color_name: colorName } : {}),
+        ...(packColors.length > 0 ? { pack_colors: packColors } : {}),
       };
     });
 
@@ -354,10 +490,20 @@ function Checkout() {
       return;
     }
 
-    // جلوگیری از تکرار یک محصول با یک تنوع یکسان در payload.
-    const itemKeys = orderItems.map(
-      (item) => `${item.product_id}:${item.variant_id ?? "default"}`,
-    );
+    // جلوگیری از تکرار یک محصول با یک تنوع/رنگ یکسان در payload.
+    const itemKeys = orderItems.map((item) => {
+      const packSignature = (item.pack_colors ?? [])
+        .map((entry) => `${entry.name}=${entry.color}`)
+        .sort()
+        .join("|");
+
+      return [
+        item.product_id,
+        item.variant_id ?? "default",
+        item.color_name ?? "",
+        packSignature,
+      ].join(":");
+    });
 
     if (new Set(itemKeys).size !== itemKeys.length) {
       setError(
@@ -415,6 +561,26 @@ function Checkout() {
         );
 
         return;
+      }
+
+      // در صورت درخواست کاربر، آدرس تازه در دفترچهٔ آدرس ذخیره می‌شود.
+      if (saveAddressToBook && selectedAddressId === "new") {
+        try {
+          await createAddress({
+            title: null,
+            recipient_name: `${firstName.trim()} ${lastName.trim()}`,
+            phone: phone.trim(),
+            province: province.trim(),
+            city: city.trim(),
+            address: address.trim(),
+            postal_code: postalCode.trim() || null,
+            latitude: mapPoint?.latitude ?? null,
+            longitude: mapPoint?.longitude ?? null,
+            is_default: savedAddresses.length === 0,
+          });
+        } catch (saveError) {
+          console.error("Address save error:", saveError);
+        }
       }
 
       clearCart();
@@ -621,6 +787,115 @@ function Checkout() {
                 </div>
               )}
 
+              <div className="mb-6">
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm font-bold text-ink-soft">
+                    انتخاب آدرس
+                  </p>
+
+                  <Link
+                    to="/account"
+                    className="text-xs font-bold text-brand-600 transition hover:text-brand-700"
+                  >
+                    مدیریت آدرس‌ها
+                  </Link>
+                </div>
+
+                {addressesError && !addressesLoading && (
+                  <div className="mb-3 flex flex-wrap items-center gap-3 rounded-2xl border border-blush-100 bg-blush-50 p-3 text-xs font-bold text-discount">
+                    <AlertCircle size={16} className="shrink-0" />
+                    <span className="flex-1">{addressesError}</span>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setAddressesReloadKey((current) => current + 1)
+                      }
+                      className="shrink-0 rounded-lg bg-white px-3 py-1.5 text-[11px] font-bold text-discount"
+                    >
+                      تلاش دوباره
+                    </button>
+                  </div>
+                )}
+
+                {addressesLoading ? (
+                  <div className="flex items-center gap-2 rounded-2xl border border-dashed border-line bg-cream p-4 text-xs text-muted">
+                    <Loader2 size={16} className="animate-spin" />
+                    در حال دریافت آدرس‌های ذخیره‌شده...
+                  </div>
+                ) : savedAddresses.length > 0 ? (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {savedAddresses.map((saved) => {
+                      const isSelected = selectedAddressId === saved.id;
+
+                      return (
+                        <button
+                          key={saved.id}
+                          type="button"
+                          onClick={() => applySavedAddress(saved)}
+                          aria-pressed={isSelected}
+                          className={`rounded-2xl border p-4 text-right transition ${
+                            isSelected
+                              ? "border-brand-500 bg-brand-50 ring-2 ring-brand-100"
+                              : "border-line bg-white hover:border-brand-200"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-sm font-bold text-ink">
+                              {saved.title || "آدرس"}
+                            </span>
+
+                            {isSelected ? (
+                              <Check
+                                size={16}
+                                className="shrink-0 text-brand-600"
+                              />
+                            ) : saved.is_default ? (
+                              <span className="shrink-0 rounded-full bg-brand-100 px-2 py-0.5 text-[10px] font-bold text-brand-700">
+                                پیش‌فرض
+                              </span>
+                            ) : null}
+                          </div>
+
+                          <p className="mt-2 text-xs leading-5 text-muted">
+                            {saved.full_address ??
+                              [saved.province, saved.city, saved.address]
+                                .filter(Boolean)
+                                .join("، ")}
+                          </p>
+
+                          <p className="mt-1 text-[11px] text-muted-soft">
+                            {saved.recipient_name}
+                            {saved.phone ? ` · ${saved.phone}` : ""}
+                          </p>
+                        </button>
+                      );
+                    })}
+
+                    <button
+                      type="button"
+                      onClick={startNewAddress}
+                      aria-pressed={selectedAddressId === "new"}
+                      className={`flex items-center justify-center gap-2 rounded-2xl border border-dashed p-4 text-sm font-bold transition ${
+                        selectedAddressId === "new"
+                          ? "border-brand-500 bg-brand-50 text-brand-700"
+                          : "border-line bg-white text-muted hover:border-brand-200"
+                      }`}
+                    >
+                      <Plus size={16} />
+                      آدرس جدید
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 rounded-2xl border border-dashed border-line bg-cream p-4 text-xs text-muted">
+                    <MapPinned size={16} className="shrink-0 text-muted-soft" />
+                    هنوز آدرسی ذخیره نکرده‌اید؛ آدرس را دستی وارد کنید یا آن را
+                    برای سفارش‌های بعدی ذخیره کنید.
+                  </div>
+                )}
+              </div>
+
+
               <div className="grid gap-5 sm:grid-cols-2">
                 <div>
                   <label
@@ -780,6 +1055,74 @@ function Checkout() {
                     className="w-full rounded-xl border border-line px-4 py-3 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
                   />
                 </div>
+
+                {selectedAddressId === "new" && (
+                  <div className="space-y-3 rounded-2xl border border-dashed border-line bg-cream p-4 sm:col-span-2">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setShowAddressMap((current) => !current)}
+                        className="inline-flex items-center gap-2 rounded-xl border border-line bg-white px-3 py-2 text-xs font-bold text-ink-soft transition hover:border-brand-200 hover:text-brand-700"
+                      >
+                        <MapPinned size={15} />
+                        {showAddressMap
+                          ? "بستن نقشه"
+                          : "انتخاب موقعیت روی نقشه"}
+                      </button>
+
+                      {mapPoint && (
+                        <button
+                          type="button"
+                          onClick={() => setMapPoint(null)}
+                          className="text-[11px] font-bold text-discount"
+                        >
+                          حذف موقعیت انتخاب‌شده
+                        </button>
+                      )}
+                    </div>
+
+                    {showAddressMap && (
+                      <AddressMapPicker
+                        latitude={mapPoint?.latitude ?? null}
+                        longitude={mapPoint?.longitude ?? null}
+                        onChange={setMapPoint}
+                        onResolve={(parts) => {
+                          if (parts.address) {
+                            setAddress(parts.address);
+                          }
+
+                          if (parts.city) {
+                            setCity(parts.city);
+                          }
+
+                          if (parts.province) {
+                            setProvince(parts.province);
+                          }
+
+                          if (parts.postal_code) {
+                            setPostalCode(
+                              toEnglishDigits(parts.postal_code)
+                                .replace(/\D/g, "")
+                                .slice(0, 10),
+                            );
+                          }
+                        }}
+                      />
+                    )}
+
+                    <label className="flex items-center gap-2 text-xs font-bold text-ink-soft">
+                      <input
+                        type="checkbox"
+                        checked={saveAddressToBook}
+                        onChange={(event) =>
+                          setSaveAddressToBook(event.target.checked)
+                        }
+                        className="h-4 w-4 rounded border-line accent-brand-600"
+                      />
+                      این آدرس را برای سفارش‌های بعدی ذخیره کن
+                    </label>
+                  </div>
+                )}
               </div>
             </section>
 

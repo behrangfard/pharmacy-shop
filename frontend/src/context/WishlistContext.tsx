@@ -28,6 +28,8 @@ interface WishlistContextType {
   productIds: Set<number>;
   count: number;
   loading: boolean;
+  /** پیام خطای آخرین عملیات (دریافت یا تغییر)؛ برای نمایش به کاربر. */
+  error: string | null;
   isWishlisted: (productId: number) => boolean;
   /** افزودن/حذف محصول؛ مقدار بازگشتی وضعیت نهایی است. */
   toggle: (product: WishlistProduct) => Promise<boolean>;
@@ -46,6 +48,7 @@ function WishlistProvider({ children }: { children: ReactNode }) {
   // تا قلب‌ها در اولین رندر هم درست باشند.
   const [entries, setEntries] = useState<WishlistEntry[]>(readGuestWishlist);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [pendingIds, setPendingIds] = useState<Set<number>>(new Set());
 
   // درخواست همگام‌سازی فقط یک‌بار برای هر ورود انجام می‌شود.
@@ -59,10 +62,12 @@ function WishlistProvider({ children }: { children: ReactNode }) {
     if (!user) {
       syncedUserId.current = null;
       setEntries(readGuestWishlist());
+      setError(null);
       return;
     }
 
     setLoading(true);
+    setError(null);
 
     try {
       if (syncedUserId.current !== user.id) {
@@ -71,8 +76,11 @@ function WishlistProvider({ children }: { children: ReactNode }) {
       }
 
       setEntries(await fetchWishlist());
-    } catch (error) {
-      console.error("Wishlist load error:", error);
+    } catch (loadError) {
+      console.error("Wishlist load error:", loadError);
+      setError(
+        "دریافت علاقه‌مندی‌ها از سرور انجام نشد. لطفاً اتصال اینترنت را بررسی و دوباره تلاش کنید.",
+      );
     } finally {
       setLoading(false);
     }
@@ -132,10 +140,11 @@ function WishlistProvider({ children }: { children: ReactNode }) {
         }
 
         return nextState;
-      } catch (error) {
-        console.error("Wishlist toggle error:", error);
+      } catch (toggleError) {
+        console.error("Wishlist toggle error:", toggleError);
         setEntries(previousEntries);
-        throw error;
+        setError("ثبت علاقه‌مندی انجام نشد. لطفاً یک‌بار دیگر تلاش کنید.");
+        throw toggleError;
       } finally {
         setPendingIds((current) => {
           const next = new Set(current);
@@ -166,12 +175,13 @@ function WishlistProvider({ children }: { children: ReactNode }) {
       productIds,
       count: entries.length,
       loading,
+      error,
       isWishlisted,
       toggle,
       remove,
       refresh: load,
     }),
-    [entries, productIds, loading, isWishlisted, toggle, remove, load],
+    [entries, productIds, loading, error, isWishlisted, toggle, remove, load],
   );
 
   // pendingIds در وضعیت دکمه‌ها استفاده نمی‌شود ولی نگه‌داشتن آن باعث

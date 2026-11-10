@@ -35,9 +35,9 @@ import {
   Settings,
   TicketPercent,
   RotateCcw,
-  Image,
   Newspaper,
   TrendingUp,
+  Truck,
   BadgeCheck,
   ArrowUp,
   ArrowDown,
@@ -47,6 +47,8 @@ import {
   PinOff,
   SlidersHorizontal,
   Type,
+  Heart,
+  LayoutTemplate,
 } from "lucide-react";
 import { useAdminAuth } from "../context/AdminAuthContext";
 import { usePageMeta } from "../hooks/usePageMeta";
@@ -143,6 +145,14 @@ function AdminLayout() {
       keywords: "خرید پرداخت ارسال سفارش",
     },
     {
+      to: "/admin/shipping",
+      permission: ADMIN_PERMISSIONS.orders,
+      label: "ارسال و حمل‌ونقل",
+      icon: Truck,
+      keywords:
+        "ارسال مرسوله پست تیپاکس باربری هزینه ارسال منطقه تعرفه کد رهگیری بسته‌بندی",
+    },
+    {
       to: "/admin/returns",
       permission: ADMIN_PERMISSIONS.returns,
       label: "مرجوعی‌ها",
@@ -157,11 +167,12 @@ function AdminLayout() {
       keywords: "کوپن تخفیف کد درصد مبلغ بازاریابی",
     },
     {
-      to: "/admin/banners",
+      to: "/admin/content",
       permission: ADMIN_PERMISSIONS.banners,
-      label: "بنرها",
-      icon: Image,
-      keywords: "بنر اسلایدر تصویر تبلیغات صفحه اول",
+      label: "مدیریت محتوا",
+      icon: LayoutTemplate,
+      keywords:
+        "محتوا بنر اسلایدر تصویر تبلیغات صفحه اول صفحات سایت درباره ما تماس با ما قوانین",
     },
     {
       to: "/admin/announcement-bar",
@@ -199,6 +210,14 @@ function AdminLayout() {
       label: "مشتریان",
       icon: Users,
       keywords: "مشتری کاربران اعضا سابقه خرید اطلاعات مشتری",
+    },
+    {
+      to: "/admin/wishlist",
+      permission: ADMIN_PERMISSIONS.customers,
+      label: "علاقه‌مندی‌ها",
+      icon: Heart,
+      keywords:
+        "علاقه مندی لیست آرزو ویش لیست wishlist محصولات ذخیره شده سلیقه مشتری آمار علاقه‌مندی",
     },
     {
       to: "/admin/support",

@@ -10,6 +10,7 @@ import {
   RefreshCw,
   AlertCircle,
   Package,
+  Heart,
 } from "lucide-react";
 import { adminApi } from "../services/api";
 type CustomerOrder = {
@@ -422,6 +423,18 @@ function AdminCustomerDetail() {
             اطلاعات حساب کاربری و تاریخچه سفارش‌های مشتری.
           </p>
         </div>
+
+        {customer && (
+          <Link
+            to={`/admin/wishlist?customer=${customer.id}&name=${encodeURIComponent(
+              customer.name || "مشتری",
+            )}`}
+            className="customer-detail-back"
+          >
+            <Heart size={17} />
+            علاقه‌مندی‌های این مشتری
+          </Link>
+        )}
       </header>
 
       {error ? (

@@ -5,6 +5,7 @@ import Header from "./Header";
 import Footer from "./Footer";
 import CategoryMenu from "./CategoryMenu";
 import SupportWidget from "./SupportWidget";
+import ThemeSwitcher from "./ThemeSwitcher";
 
 interface LayoutProps {
   children: ReactNode;
@@ -30,6 +31,9 @@ function Layout({ children }: LayoutProps) {
       <Footer />
 
       <SupportWidget />
+
+      {/* ابزار مقایسهٔ تم (پیش‌فرض/اقیانوس)؛ در نسخهٔ تولید فقط با تم غیرپیش‌فرض */}
+      <ThemeSwitcher />
     </div>
   );
 }

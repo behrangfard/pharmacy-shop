@@ -12,6 +12,13 @@ class StoreSetting extends Model
      */
     public const CACHE_KEY = 'storefront:store-settings';
 
+    /** کلید تنظیم گردی گوشهٔ بنرها. */
+    public const BANNER_RADIUS_KEY = 'banner_radius';
+
+    /** محدودهٔ مجاز گردی گوشهٔ بنرها (پیکسل). */
+    public const BANNER_RADIUS_MIN = 0;
+    public const BANNER_RADIUS_MAX = 48;
+
     /**
      * مقادیر پیش‌فرض تنظیمات فروشگاه.
      * پنل مدیران فقط همین کلیدها را می‌تواند ویرایش کند.
@@ -35,6 +42,13 @@ class StoreSetting extends Model
         'shipping_note' => 'ارسال سفارش‌ها ۱ تا ۳ روز کاری پس از تأیید پرداخت انجام می‌شود.',
         'return_policy_days' => '7',
         'support_note' => 'همراه شما در مسیر خرید',
+
+        /*
+         * ظاهر بنرهای فروشگاه: گردی گوشهٔ همهٔ بنرها (اسلایدر هیرو، بخش
+         * چندستونه و نوار بنرهای کوتاه) به پیکسل. صفر یعنی گوشهٔ تیز و بدون
+         * گردی. رنگ پس‌زمینه‌ای هم پشت بنرها وجود ندارد؛ کادر بنر شفاف است.
+         */
+        'banner_radius' => '16',
 
         /*
          * نوار اطلاع‌رسانی بالای هدر (تبلیغات و تخفیف‌های روزانه).
@@ -69,6 +83,20 @@ class StoreSetting extends Model
         }
 
         return $default ?? (self::DEFAULTS[$key] ?? null);
+    }
+
+    /**
+     * گردی گوشهٔ همهٔ بنرهای فروشگاه (پیکسل).
+     * مقدار ذخیره‌شده خارج از محدودهٔ مجاز، به نزدیک‌ترین حد اصلاح می‌شود.
+     */
+    public static function bannerRadius(): int
+    {
+        $value = (int) static::getValue(
+            self::BANNER_RADIUS_KEY,
+            self::DEFAULTS[self::BANNER_RADIUS_KEY]
+        );
+
+        return min(max($value, self::BANNER_RADIUS_MIN), self::BANNER_RADIUS_MAX);
     }
 
     public static function setValue(

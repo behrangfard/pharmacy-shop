@@ -34,6 +34,8 @@ class AdminRole
 
     public const ARTICLES_MANAGE = 'articles.manage';
 
+    public const PAGES_MANAGE = 'pages.manage';
+
     public const REVIEWS_MANAGE = 'reviews.manage';
 
     public const ORDERS_MANAGE = 'orders.manage';
@@ -76,7 +78,7 @@ class AdminRole
     {
         return [
             self::SUPER_ADMIN => 'دسترسی کامل به همه بخش‌های پنل، از جمله مدیران و تنظیمات',
-            self::PRODUCT_MANAGER => 'محصولات، دسته‌بندی‌ها، برندها، بنرها، مقالات و نظرات',
+            self::PRODUCT_MANAGER => 'محصولات، دسته‌بندی‌ها، برندها، بنرها، مقالات، صفحات سایت و نظرات',
             self::ORDER_MANAGER => 'سفارش‌ها، مرجوعی‌ها، کدهای تخفیف، مشتریان و گزارش فروش',
             self::SUPPORT => 'سفارش‌ها، مرجوعی‌ها، مشتریان و پیام‌رسانی',
         ];
@@ -96,6 +98,7 @@ class AdminRole
             self::BRANDS_MANAGE,
             self::BANNERS_MANAGE,
             self::ARTICLES_MANAGE,
+            self::PAGES_MANAGE,
             self::REVIEWS_MANAGE,
             self::ORDERS_MANAGE,
             self::RETURNS_MANAGE,
@@ -135,6 +138,7 @@ class AdminRole
                 self::BRANDS_MANAGE,
                 self::BANNERS_MANAGE,
                 self::ARTICLES_MANAGE,
+                self::PAGES_MANAGE,
                 self::REVIEWS_MANAGE,
             ],
 

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 
 import { adminApi } from "../services/api";
 import { useStoreSettings } from "../hooks/useStoreSettings";
+import { formatJalaliDateTime } from "../utils/jalali";
 
 type OrderStatus =
   | "pending"
@@ -29,6 +30,10 @@ interface OrderItem {
   variant_id?: number | null;
   product_name: string;
   variant_name?: string | null;
+  /** رنگ انتخاب‌شدهٔ مشتری */
+  color_name?: string | null;
+  /** رنگ اجزای پک در زمان ثبت سفارش */
+  pack_colors?: { name?: string; color?: string }[] | null;
   sku?: string | null;
   variant?: {
     name?: string;
@@ -225,18 +230,12 @@ function formatPrice(value: string | number | null | undefined) {
   return `${formatNumber(Number(value ?? 0))} تومان`;
 }
 
-function formatDate(value: string) {
+function formatDate(value: string | null | undefined) {
   if (!value) return "—";
 
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) return "—";
-
-  return new Intl.DateTimeFormat("fa-IR", {
-    dateStyle: "short",
-
-    timeStyle: "short",
-  }).format(date);
+  // تاریخ شمسی مستقل از تقویم مرورگر (قبلاً Intl fa-IR بود و روی بعضی
+  // دستگاه‌ها میلادی نمایش داده می‌شد).
+  return formatJalaliDateTime(value, { withTime: true }) || "—";
 }
 
 function getErrorMessage(error: unknown, fallback: string) {
@@ -1968,6 +1967,34 @@ function AdminOrders() {
                             تنوع: {item.variant_name || item.variant?.name}
                           </div>
                         ) : null}
+                        {item.color_name ? (
+                          <div
+                            style={{
+                              color: colors.green,
+                              fontSize: 12,
+                              fontWeight: 700,
+                              marginTop: 4,
+                            }}
+                          >
+                            رنگ: {item.color_name}
+                          </div>
+                        ) : null}
+                        {Array.isArray(item.pack_colors) &&
+                        item.pack_colors.length > 0 ? (
+                          <div
+                            style={{
+                              color: colors.green,
+                              fontSize: 11,
+                              marginTop: 4,
+                              lineHeight: 1.9,
+                            }}
+                          >
+                            رنگ اجزای پک:{" "}
+                            {item.pack_colors
+                              .map((entry) => `${entry.name}: ${entry.color}`)
+                              .join(" · ")}
+                          </div>
+                        ) : null}
                         {item.sku || item.variant?.sku ? (
                           <div
                             style={{
@@ -2248,6 +2275,13 @@ function AdminOrders() {
                         <td>
                           {item.product_name}
                           {item.variant_name ? ` — ${item.variant_name}` : ""}
+                          {item.color_name ? ` — رنگ: ${item.color_name}` : ""}
+                          {Array.isArray(item.pack_colors) &&
+                          item.pack_colors.length > 0
+                            ? ` — ${item.pack_colors
+                                .map((entry) => `${entry.name}: ${entry.color}`)
+                                .join(" · ")}`
+                            : ""}
                         </td>
                         <td>{item.quantity}</td>
                         <td>{formatPrice(item.unit_price)}</td>

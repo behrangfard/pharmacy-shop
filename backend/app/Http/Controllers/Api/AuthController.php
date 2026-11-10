@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\Messaging\Support\PhoneNumber;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
@@ -12,15 +13,25 @@ class AuthController extends Controller
 {
     public function register(Request $request)
     {
+        if ($request->filled('phone')) {
+            $request->merge([
+                'phone' => PhoneNumber::normalize((string) $request->input('phone')),
+            ]);
+        }
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'max:255', 'unique:users,email'],
+            'phone' => ['nullable', 'string', 'regex:/^09\d{9}$/'],
+            'birth_date' => ['nullable', 'date_format:Y-m-d', 'before:today'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
         ]);
 
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
+            'phone' => $validated['phone'] ?? null,
+            'birth_date' => $validated['birth_date'] ?? null,
             'password' => Hash::make($validated['password']),
         ]);
 
@@ -74,6 +85,12 @@ class AuthController extends Controller
     {
         $user = $request->user();
 
+        if ($request->filled('phone')) {
+            $request->merge([
+                'phone' => PhoneNumber::normalize((string) $request->input('phone')),
+            ]);
+        }
+
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => [
@@ -82,12 +99,27 @@ class AuthController extends Controller
                 'max:255',
                 'unique:users,email,'.$user->id,
             ],
+            'phone' => ['nullable', 'string', 'regex:/^09\d{9}$/'],
+            'birth_date' => ['nullable', 'date_format:Y-m-d', 'before:today'],
+            'birthday_greeting_opt_out' => ['nullable', 'boolean'],
         ]);
 
-        $user->update([
+        $data = [
             'name' => $validated['name'],
             'email' => $validated['email'],
-        ]);
+        ];
+
+        foreach (['phone', 'birth_date'] as $field) {
+            if (array_key_exists($field, $validated)) {
+                $data[$field] = $validated[$field];
+            }
+        }
+
+        if (array_key_exists('birthday_greeting_opt_out', $validated)) {
+            $data['birthday_greeting_opt_out'] = (bool) $validated['birthday_greeting_opt_out'];
+        }
+
+        $user->update($data);
 
         return response()->json([
             'success' => true,

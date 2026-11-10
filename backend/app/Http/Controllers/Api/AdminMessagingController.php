@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\OutboundMessage;
+use App\Services\Messaging\BirthdayGreetingService;
 use App\Services\Messaging\MessagingManager;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -12,8 +13,10 @@ use Illuminate\Validation\ValidationException;
 
 class AdminMessagingController extends Controller
 {
-    public function __construct(private readonly MessagingManager $messaging)
-    {
+    public function __construct(
+        private readonly MessagingManager $messaging,
+        private readonly BirthdayGreetingService $birthday
+    ) {
     }
 
     /**
@@ -182,6 +185,77 @@ class AdminMessagingController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'رکورد از تاریخچه حذف شد.',
+        ]);
+    }
+
+    /**
+     * تنظیمات، آمار و فهرست تولدهای امروز/هفتهٔ آینده برای بخش «تبریک تولد».
+     */
+    public function birthdaySettings()
+    {
+        return response()->json([
+            'success' => true,
+            'data' => $this->birthday->overview(),
+        ]);
+    }
+
+    /**
+     * ذخیرهٔ تنظیمات تبریک تولد خودکار.
+     */
+    public function updateBirthdaySettings(Request $request)
+    {
+        $validated = $request->validate([
+            'enabled' => ['required', 'boolean'],
+            'channel' => ['required', Rule::in(OutboundMessage::CHANNELS)],
+            'template' => ['required', 'string', 'min:10', 'max:1000'],
+            'send_time' => ['required', 'date_format:H:i'],
+        ]);
+
+        $this->birthday->updateSettings($validated);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تنظیمات تبریک تولد ذخیره شد.',
+            'data' => $this->birthday->overview(),
+        ]);
+    }
+
+    /**
+     * ارسال دستی تبریک تولد امروز (مستقل از ساعت زمان‌بندی).
+     */
+    public function sendBirthdayGreetings(Request $request)
+    {
+        $validated = $request->validate([
+            'force' => ['nullable', 'boolean'],
+        ]);
+
+        $channel = $this->birthday->settings()['channel'];
+
+        if (! $this->messaging->isAvailable($channel)) {
+            throw ValidationException::withMessages([
+                'channel' => 'کانال انتخاب‌شده برای تبریک تولد فعال یا تنظیم نشده است. ابتدا آن را در فایل .env تنظیم کنید.',
+            ]);
+        }
+
+        $result = $this->birthday->sendForDate(
+            now()->startOfDay(),
+            $request->user()?->id,
+            (bool) ($validated['force'] ?? false)
+        );
+
+        $message = match (true) {
+            $result['total'] === 0 => 'امروز تولدی ثبت نشده است.',
+            $result['skipped'] === $result['total'] => 'تبریک تولد امروز قبلاً برای همهٔ این مشتریان ارسال شده است.',
+            $result['failed'] === 0 => "تبریک تولد برای {$result['sent']} مشتری ارسال شد.",
+            default => "{$result['sent']} موفق و {$result['failed']} ناموفق از {$result['total']} گیرنده.",
+        };
+
+        return response()->json([
+            'success' => $result['failed'] === 0,
+            'message' => $message,
+            'data' => array_merge($result, [
+                'overview' => $this->birthday->overview(),
+            ]),
         ]);
     }
 

@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Banner;
+use App\Models\BannerSection;
+use App\Models\StoreSetting;
 use App\Support\BannerText;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -32,6 +34,162 @@ class AdminBannerController extends Controller
             'success' => true,
             'data' => $banners,
         ]);
+    }
+
+    /**
+     * تنظیمات بخش‌های بنر (چیدمان، عنوان، فعال/غیرفعال) + تعداد بنر هر بخش +
+     * ظاهر مشترک همهٔ بنرها (گردی گوشه).
+     */
+    public function sections(): JsonResponse
+    {
+        // نصب‌های قدیمی ممکن است ردیف بخش را نداشته باشند؛ اینجا ساخته می‌شود.
+        foreach (BannerSection::POSITIONS as $position) {
+            BannerSection::forPosition($position);
+        }
+
+        $counts = Banner::query()
+            ->selectRaw('position, COUNT(*) as aggregate')
+            ->groupBy('position')
+            ->pluck('aggregate', 'position');
+
+        $sections = BannerSection::query()
+            ->whereIn('position', BannerSection::POSITIONS)
+            ->orderBy('id')
+            ->get()
+            ->map(fn (BannerSection $section): array => $this->sectionPayload(
+                $section,
+                (int) ($counts[$section->position] ?? 0)
+            ))
+            ->all();
+
+        return response()->json([
+            'success' => true,
+            'data' => $sections,
+            'appearance' => $this->appearancePayload(),
+        ]);
+    }
+
+    /**
+     * ذخیرهٔ ظاهر مشترک بنرها (گردی گوشه).
+     * یک مقدار برای همهٔ بنرها: اسلایدر هیرو، بخش چندستونه و نوار بنرها.
+     */
+    public function updateAppearance(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'radius' => [
+                'required',
+                'integer',
+                'min:'.StoreSetting::BANNER_RADIUS_MIN,
+                'max:'.StoreSetting::BANNER_RADIUS_MAX,
+            ],
+        ]);
+
+        StoreSetting::setValue(StoreSetting::BANNER_RADIUS_KEY, $validated['radius']);
+        StoreSetting::forgetCache();
+
+        $this->forgetStorefrontCache();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'ظاهر بنرها ذخیره شد.',
+            'data' => $this->appearancePayload(),
+        ]);
+    }
+
+    /**
+     * شکل یکسان پاسخ «ظاهر بنرها» برای پنل مدیریت.
+     */
+    private function appearancePayload(): array
+    {
+        return [
+            'radius' => StoreSetting::bannerRadius(),
+            'radius_min' => StoreSetting::BANNER_RADIUS_MIN,
+            'radius_max' => StoreSetting::BANNER_RADIUS_MAX,
+        ];
+    }
+
+    /**
+     * ذخیرهٔ چیدمان/عنوان یک بخش بنر.
+     * position در مسیر می‌آید (مثل home_grid) تا مسیر وابسته به id نباشد.
+     */
+    public function updateSection(Request $request, string $position): JsonResponse
+    {
+        if (! in_array($position, BannerSection::POSITIONS, true)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'بخش بنر یافت نشد.',
+            ], 404);
+        }
+
+        $validated = $request->validate([
+            'layout' => ['sometimes', Rule::in(BannerSection::LAYOUTS)],
+            'title' => ['nullable', 'string', 'max:255'],
+            'subtitle' => ['nullable', 'string', 'max:255'],
+            'is_active' => ['sometimes', 'boolean'],
+            // سقف تعداد تصاویر؛ null یا 0 یعنی همه.
+            'image_count' => ['nullable', 'integer', 'min:0', 'max:12'],
+            // حداکثر ارتفاع هر نما به پیکسل؛ null یا 0 یعنی ارتفاع طبیعی تصویر.
+            'height_desktop' => ['nullable', 'integer', 'min:0', 'max:1200'],
+            'height_mobile' => ['nullable', 'integer', 'min:0', 'max:1200'],
+            // contain = بدون برش و بدون بزرگ‌نمایی | cover = پرکردن کادر با برش.
+            'fit' => ['sometimes', Rule::in(BannerSection::FITS)],
+            // گردی گوشهٔ مخصوص همین بخش؛ null یعنی پیش‌فرض سراسری سایت.
+            'radius' => [
+                'nullable',
+                'integer',
+                'min:'.BannerSection::RADIUS_MIN,
+                'max:'.BannerSection::RADIUS_MAX,
+            ],
+            // انیمیشن هاور بنرهای دسکتاپ (بالا و وسط صفحهٔ اول).
+            'animation' => ['sometimes', Rule::in(BannerSection::ANIMATIONS)],
+        ]);
+
+        $section = BannerSection::forPosition($position);
+        $section->update($validated);
+
+        $this->forgetStorefrontCache();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تنظیمات بخش بنر ذخیره شد.',
+            'data' => $this->sectionPayload(
+                $section->fresh(),
+                Banner::query()->where('position', $section->position)->count()
+            ),
+        ]);
+    }
+
+    /**
+     * شکل یکسان پاسخ بخش بنر برای پنل مدیریت.
+     */
+    private function sectionPayload(BannerSection $section, int $bannersCount): array
+    {
+        return [
+            'position' => $section->position,
+            'layout' => $section->normalizedLayout(),
+            'layouts' => BannerSection::LAYOUTS,
+            'slots' => $section->slots(),
+            'title' => $section->title,
+            'subtitle' => $section->subtitle,
+            // تنظیمات ابعاد و تعداد تصاویر (برای اسلایدر هیرو و بخش چندستونه).
+            'image_count' => (int) ($section->image_count ?? 0),
+            'height_desktop' => (int) ($section->height_desktop ?? 0),
+            'height_mobile' => (int) ($section->height_mobile ?? 0),
+            'fit' => $section->normalizedFit(),
+            'fits' => BannerSection::FITS,
+            // گردی گوشهٔ همین بخش + پیش‌فرض سراسری (برای دکمهٔ «پیش‌فرض»).
+            'radius' => $section->effectiveRadius(),
+            'radius_default' => StoreSetting::bannerRadius(),
+            'radius_custom' => $section->radius !== null,
+            'radius_min' => BannerSection::RADIUS_MIN,
+            'radius_max' => BannerSection::RADIUS_MAX,
+            // انیمیشن هاور بنرهای این بخش + فهرست گزینه‌ها برای پنل مدیریت.
+            'animation' => $section->normalizedAnimation(),
+            'animations' => BannerSection::ANIMATIONS,
+            'is_mobile' => $section->isMobile(),
+            'is_active' => (bool) $section->is_active,
+            'banners_count' => $bannersCount,
+        ];
     }
 
     public function store(Request $request): JsonResponse
@@ -76,6 +234,54 @@ class AdminBannerController extends Controller
                 ? 'بنر فعال شد.'
                 : 'بنر غیرفعال شد.',
             'data' => $banner->fresh(),
+        ]);
+    }
+
+    /**
+     * مرتب‌سازی بنرهای یک بخش (درگ‌ون‌دراپ/دکمه‌های بالا و پایین در پنل).
+     *
+     * فهرست idها به همان ترتیبی که مدیر می‌خواهد ذخیره می‌شود؛ فقط بنرهای
+     * همان بخش جابه‌جا می‌شوند تا امکان جابه‌جایی بین بخش‌ها نباشد.
+     */
+    public function reorder(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'position' => ['required', Rule::in(Banner::POSITIONS)],
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['integer', 'distinct'],
+        ]);
+
+        $ids = array_map('intval', $validated['ids']);
+
+        $valid = Banner::query()
+            ->where('position', $validated['position'])
+            ->whereIn('id', $ids)
+            ->pluck('id')
+            ->all();
+
+        if (count($valid) !== count($ids)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'فهرست بنرها با این بخش هم‌خوانی ندارد.',
+            ], 422);
+        }
+
+        foreach ($ids as $index => $id) {
+            Banner::query()
+                ->whereKey($id)
+                ->update(['sort_order' => $index + 1]);
+        }
+
+        $this->forgetStorefrontCache();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'ترتیب بنرها ذخیره شد.',
+            'data' => Banner::query()
+                ->where('position', $validated['position'])
+                ->orderBy('sort_order')
+                ->orderByDesc('id')
+                ->get(),
         ]);
     }
 
@@ -185,6 +391,19 @@ class AdminBannerController extends Controller
 
         if (array_key_exists('text_scrim', $validated)) {
             $validated['text_scrim'] = BannerText::normalizeScrim($validated['text_scrim']);
+        }
+
+        /*
+         * بنرهای مخصوص موبایل فقط یک تصویر دارند و در فروشگاه با تصویر موبایل
+         * رندر می‌شوند؛ برای همین هر تصویری که ثبت شود در هر دو ستون
+         * image و mobile_image ذخیره می‌شود تا پنل و فروشگاه یک تصویر ببینند.
+         */
+        if (Banner::isMobilePosition($validated['position'] ?? null)) {
+            $image = $validated['image'] ?? null;
+            $mobileImage = $validated['mobile_image'] ?? null;
+
+            $validated['mobile_image'] = $mobileImage ?: $image;
+            $validated['image'] = $image ?: $mobileImage;
         }
 
         return $validated;

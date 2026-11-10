@@ -1,12 +1,14 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { ArrowRight, Lock, Mail, User } from "lucide-react";
+import { ArrowRight, Cake, Lock, Mail, Phone, User } from "lucide-react";
 
 import Layout from "../components/Layout";
+import JalaliDatePicker from "../components/JalaliDatePicker";
 import { usePrivatePageMeta } from "../hooks/usePageMeta";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 import { STORAGE_KEYS } from "../utils/storageKeys";
+import { toEnglishDigits, todayJalali } from "../utils/jalali";
 
 function Register() {
   usePrivatePageMeta("ثبت‌نام", "/register");
@@ -17,11 +19,20 @@ function Register() {
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [mobile, setMobile] = useState("");
+  const [birthDate, setBirthDate] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirmation, setPasswordConfirmation] = useState("");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  // سال‌های قابل انتخاب برای تاریخ تولد: ۱۰۰ سال قبل تا سال جاری شمسی
+  const birthYearRange = useMemo(() => {
+    const currentYear = todayJalali().jy;
+
+    return { minYear: currentYear - 100, maxYear: currentYear };
+  }, []);
 
   const requestedPath = (location.state as { from?: string } | null)?.from;
 
@@ -39,6 +50,13 @@ function Register() {
       return;
     }
 
+    const normalizedMobile = toEnglishDigits(mobile).replace(/\D/g, "");
+
+    if (normalizedMobile && !/^09\d{9}$/.test(normalizedMobile)) {
+      setError("شمارهٔ موبایل باید با ۰۹ شروع شود و ۱۱ رقم باشد.");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -47,6 +65,8 @@ function Register() {
         email,
         password,
         password_confirmation: passwordConfirmation,
+        phone: normalizedMobile || null,
+        birth_date: birthDate ? birthDate.slice(0, 10) : null,
       });
 
       const token = response.data.token;
@@ -167,6 +187,68 @@ function Register() {
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-soft"
                 />
               </div>
+            </div>
+
+            <div>
+              <label
+                htmlFor="register-mobile"
+                className="block text-sm font-bold text-ink-soft mb-2"
+              >
+                شمارهٔ موبایل{" "}
+                <span className="text-xs font-normal text-muted-soft">
+                  (اختیاری)
+                </span>
+              </label>
+
+              <div className="relative">
+                <input
+                  id="register-mobile"
+                  type="tel"
+                  inputMode="numeric"
+                  value={mobile}
+                  onChange={(event) => setMobile(event.target.value)}
+                  placeholder="09121234567"
+                  autoComplete="tel"
+                  dir="ltr"
+                  className="w-full rounded-xl border border-line py-3 pr-11 pl-4 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+                />
+
+                <Phone
+                  size={19}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-soft"
+                />
+              </div>
+
+              <p className="mt-1.5 text-xs text-muted-soft">
+                برای اطلاع‌رسانی سفارش‌ها و دریافت پیامک تبریک تولد.
+              </p>
+            </div>
+
+            <div>
+              <label
+                htmlFor="register-birth-date"
+                className="flex items-center gap-2 text-sm font-bold text-ink-soft mb-2"
+              >
+                <Cake size={16} className="text-brand-600" />
+                تاریخ تولد{" "}
+                <span className="text-xs font-normal text-muted-soft">
+                  (اختیاری)
+                </span>
+              </label>
+
+              <JalaliDatePicker
+                id="register-birth-date"
+                value={birthDate}
+                onChange={setBirthDate}
+                withTime={false}
+                minYear={birthYearRange.minYear}
+                maxYear={birthYearRange.maxYear}
+                placeholder="انتخاب تاریخ تولد"
+              />
+
+              <p className="mt-1.5 text-xs text-muted-soft">
+                برای دریافت تخفیفات و جشنواره‌های مخصوص روز تولد شما.
+              </p>
             </div>
 
             <div>

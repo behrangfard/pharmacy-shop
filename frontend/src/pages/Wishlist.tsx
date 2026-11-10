@@ -1,6 +1,14 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Heart, Loader2, ShoppingBag, Trash2 } from "lucide-react";
+import {
+  AlertCircle,
+  ArrowLeft,
+  Heart,
+  Loader2,
+  RefreshCw,
+  ShoppingBag,
+  Trash2,
+} from "lucide-react";
 
 import Layout from "../components/Layout";
 import ProductCard from "../components/ProductCard";
@@ -18,8 +26,23 @@ function Wishlist() {
   usePrivatePageMeta("علاقه‌مندی‌های من", "/wishlist");
 
   const { user } = useAuth();
-  const { entries, loading, remove } = useWishlist();
+  const { entries, loading, remove, error, refresh } = useWishlist();
   const [removingId, setRemovingId] = useState<number | null>(null);
+  const [retrying, setRetrying] = useState(false);
+
+  const handleRetry = async () => {
+    if (retrying) {
+      return;
+    }
+
+    setRetrying(true);
+
+    try {
+      await refresh();
+    } finally {
+      setRetrying(false);
+    }
+  };
 
   const handleRemove = async (productId: number) => {
     if (removingId !== null) {
@@ -78,6 +101,29 @@ function Wishlist() {
         </section>
 
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+          {error && (
+            <div className="mb-5 flex flex-col gap-3 rounded-2xl border border-blush-200 bg-blush-50 px-4 py-4 text-sm text-blush-600 sm:flex-row sm:items-center sm:justify-between">
+              <span className="flex items-start gap-2 font-bold leading-6">
+                <AlertCircle size={18} className="mt-0.5 shrink-0" />
+                {error}
+              </span>
+
+              <button
+                type="button"
+                onClick={handleRetry}
+                disabled={retrying}
+                className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-blush-200 bg-white px-4 py-2 text-xs font-bold text-blush-600 transition hover:border-blush-400 disabled:cursor-wait disabled:opacity-60"
+              >
+                {retrying ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  <RefreshCw size={14} />
+                )}
+                تلاش دوباره
+              </button>
+            </div>
+          )}
+
           {loading && entries.length === 0 && (
             <div className="rounded-3xl border border-line bg-white py-20 text-center shadow-sm">
               <Loader2
@@ -90,7 +136,7 @@ function Wishlist() {
             </div>
           )}
 
-          {!loading && entries.length === 0 && (
+          {!loading && !error && entries.length === 0 && (
             <div className="rounded-3xl border border-line bg-white px-6 py-16 text-center shadow-sm">
               <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-blush-100 text-blush-400">
                 <ShoppingBag size={30} />

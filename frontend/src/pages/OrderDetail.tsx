@@ -6,6 +6,7 @@ import {
   CalendarDays,
   CheckCircle2,
   Clock,
+  CreditCard,
   MapPin,
   Package,
   Receipt,
@@ -16,6 +17,7 @@ import {
 
 import api from "../services/api";
 import { usePrivatePageMeta } from "../hooks/usePageMeta";
+import { formatJalaliDateTime } from "../utils/jalali";
 
 type OrderItem = {
   id: number;
@@ -23,6 +25,10 @@ type OrderItem = {
   variant_id?: number | null;
   product_name?: string;
   variant_name?: string | null;
+  /** رنگ انتخاب‌شدهٔ محصول در زمان ثبت سفارش */
+  color_name?: string | null;
+  /** رنگ هر قطعهٔ پک در زمان ثبت سفارش */
+  pack_colors?: { name?: string; color?: string }[] | null;
   sku?: string | null;
   name?: string;
   quantity: number;
@@ -83,16 +89,8 @@ const formatPrice = (value: number) =>
 const formatDate = (value: string) => {
   if (!value) return "—";
 
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-
-  return new Intl.DateTimeFormat("fa-IR", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(date);
+  // تاریخ شمسی مستقل از تقویم مرورگر؛ زمان UTC سرور به وقت محلی تبدیل می‌شود.
+  return formatJalaliDateTime(value, { withTime: true }) || value;
 };
 
 const orderStatusLabels: Record<string, string> = {
@@ -306,6 +304,14 @@ export default function OrderDetail() {
 
   const isPaid = order.payment_status === "paid";
 
+  /*
+   * سفارشی که پرداختش انجام نشده و لغو هم نشده باید بتواند مرحلهٔ پرداخت را
+   * ادامه دهد؛ این همان شرطی است که سرور در pay() بررسی می‌کند.
+   */
+  const isOutstandingPayment =
+    order.payment_status === "unpaid" &&
+    !["cancelled", "canceled"].includes(order.status);
+
   return (
     <main className="min-h-screen bg-cream py-8 sm:py-12" dir="rtl">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
@@ -424,6 +430,30 @@ export default function OrderDetail() {
                               تنوع: {variantName}
                             </p>
                           )}
+
+                          {item.color_name && (
+                            <p className="mt-1.5 text-sm font-semibold text-brand-700">
+                              رنگ: {item.color_name}
+                            </p>
+                          )}
+
+                          {Array.isArray(item.pack_colors) &&
+                            item.pack_colors.length > 0 && (
+                              <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-brand-700">
+                                <span className="font-bold">
+                                  رنگ اجزای پک:
+                                </span>
+
+                                {item.pack_colors.map((entry, colorIndex) => (
+                                  <span
+                                    key={`${entry.name}-${entry.color}-${colorIndex}`}
+                                    className="rounded-md bg-brand-50 px-2 py-0.5"
+                                  >
+                                    {entry.name}: <b>{entry.color}</b>
+                                  </span>
+                                ))}
+                              </div>
+                            )}
 
                           {itemSku && (
                             <p
@@ -777,13 +807,43 @@ export default function OrderDetail() {
               </div>
             </div>
 
-            <Link
-              to="/products"
-              className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl border border-line-strong px-4 py-3 text-sm font-bold text-ink transition hover:bg-cream"
-            >
-              <Truck size={18} />
-              ادامه خرید
-            </Link>
+            {/*
+             * وقتی سفارش هنوز پرداخت نشده، «ادامه خرید» کاربر را به مرحلهٔ
+             * پرداخت همین سفارش می‌برد تا خرید را کامل کند؛ در غیر این صورت
+             * به فهرست محصولات می‌رود تا خرید تازه‌ای شروع شود.
+             */}
+            {isOutstandingPayment ? (
+              <>
+                <Link
+                  to={`/payment/${encodeURIComponent(order.order_number)}`}
+                  className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-brand-600 px-4 py-3 text-sm font-black text-white shadow-sm transition hover:bg-brand-700 hover:shadow-md active:scale-[0.99]"
+                >
+                  <CreditCard size={18} />
+                  ادامه خرید و پرداخت
+                </Link>
+
+                <p className="mt-2 text-center text-xs leading-6 text-muted">
+                  این سفارش هنوز پرداخت نشده است؛ برای تکمیل خرید، مرحلهٔ
+                  پرداخت را انجام دهید.
+                </p>
+
+                <Link
+                  to="/products"
+                  className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border border-line px-4 py-2.5 text-xs font-bold text-ink-soft transition hover:border-brand-200 hover:bg-brand-50 hover:text-brand-700"
+                >
+                  <Truck size={16} />
+                  مشاهدهٔ محصولات فروشگاه
+                </Link>
+              </>
+            ) : (
+              <Link
+                to="/products"
+                className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl border border-line-strong px-4 py-3 text-sm font-bold text-ink transition hover:bg-cream"
+              >
+                <Truck size={18} />
+                ادامه خرید
+              </Link>
+            )}
           </aside>
         </div>
       </div>

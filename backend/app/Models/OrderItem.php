@@ -16,6 +16,8 @@ class OrderItem extends Model
         'variant_id',
         'product_name',
         'variant_name',
+        'color_name',
+        'pack_colors',
         'sku',
         'quantity',
         'unit_price',
@@ -26,6 +28,7 @@ class OrderItem extends Model
         'quantity' => 'integer',
         'unit_price' => 'decimal:2',
         'total_price' => 'decimal:2',
+        'pack_colors' => 'array',
     ];
 
     public function order(): BelongsTo

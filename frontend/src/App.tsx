@@ -1,9 +1,10 @@
 import { lazy, Suspense } from "react";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 
 import AdminRoute from "./components/AdminRoute";
 import AdminLayout from "./components/AdminLayout";
 import AdminPermissionGuard from "./components/AdminPermissionGuard";
+import ScrollToTop from "./components/ScrollToTop";
 import { AdminAuthProvider } from "./context/AdminAuthContext";
 import { ADMIN_PERMISSIONS } from "./utils/adminPermissions";
 
@@ -21,6 +22,7 @@ const OrderDetail = lazy(() => import("./pages/OrderDetail"));
 const SizeGuide = lazy(() => import("./pages/SizeGuide"));
 const Articles = lazy(() => import("./pages/Articles"));
 const ArticleDetail = lazy(() => import("./pages/ArticleDetail"));
+const PageView = lazy(() => import("./pages/PageView"));
 
 const AdminLogin = lazy(() => import("./pages/AdminLogin"));
 const AdminCategories = lazy(() => import("./pages/AdminCategories"));
@@ -37,16 +39,21 @@ const AdminSettings = lazy(() => import("./pages/AdminSettings"));
 const AdminBrands = lazy(() => import("./pages/AdminBrands"));
 const AdminCoupons = lazy(() => import("./pages/AdminCoupons"));
 const AdminReturns = lazy(() => import("./pages/AdminReturns"));
+const AdminShipping = lazy(() => import("./pages/AdminShipping"));
 const AdminSupport = lazy(() => import("./pages/AdminSupport"));
-const AdminBanners = lazy(() => import("./pages/AdminBanners"));
+const AdminContent = lazy(() => import("./pages/AdminContent"));
 const AdminAnnouncementBar = lazy(() => import("./pages/AdminAnnouncementBar"));
 const AdminTrustBadges = lazy(() => import("./pages/AdminTrustBadges"));
 const AdminArticles = lazy(() => import("./pages/AdminArticles"));
 const AdminReports = lazy(() => import("./pages/AdminReports"));
+const AdminWishlist = lazy(() => import("./pages/AdminWishlist"));
 
 function App() {
   return (
     <BrowserRouter>
+      {/* هر صفحهٔ جدید از بالای خودش باز می‌شود، نه از موقعیت اسکرول صفحهٔ قبلی */}
+      <ScrollToTop />
+
       <AdminAuthProvider>
         <Suspense
           fallback={
@@ -73,6 +80,7 @@ function App() {
             <Route path="/size-guide" element={<SizeGuide />} />
             <Route path="/articles" element={<Articles />} />
             <Route path="/articles/:slug" element={<ArticleDetail />} />
+            <Route path="/pages/:slug" element={<PageView />} />
 
             <Route path="/cart" element={<Cart />} />
             <Route path="/wishlist" element={<Wishlist />} />
@@ -183,6 +191,17 @@ function App() {
                   }
                 />
                 <Route
+                  path="shipping"
+                  element={
+                    <AdminPermissionGuard
+                      permission={ADMIN_PERMISSIONS.orders}
+                      section="ارسال و حمل‌ونقل"
+                    >
+                      <AdminShipping />
+                    </AdminPermissionGuard>
+                  }
+                />
+                <Route
                   path="coupons"
                   element={
                     <AdminPermissionGuard
@@ -194,14 +213,21 @@ function App() {
                   }
                 />
                 <Route
-                  path="banners"
+                  path="content"
                   element={
                     <AdminPermissionGuard
                       permission={ADMIN_PERMISSIONS.banners}
-                      section="بنرها"
+                      section="مدیریت محتوا"
                     >
-                      <AdminBanners />
+                      <AdminContent />
                     </AdminPermissionGuard>
+                  }
+                />
+                {/* آدرس قدیمی بنرها به تب «بنرها» در بخش مدیریت محتوا منتقل شده است. */}
+                <Route
+                  path="banners"
+                  element={
+                    <Navigate to="/admin/content?tab=banners" replace />
                   }
                 />
                 <Route
@@ -290,6 +316,18 @@ function App() {
                       section="مشتریان"
                     >
                       <AdminCustomerDetail />
+                    </AdminPermissionGuard>
+                  }
+                />
+
+                <Route
+                  path="wishlist"
+                  element={
+                    <AdminPermissionGuard
+                      permission={ADMIN_PERMISSIONS.customers}
+                      section="علاقه‌مندی‌های مشتریان"
+                    >
+                      <AdminWishlist />
                     </AdminPermissionGuard>
                   }
                 />

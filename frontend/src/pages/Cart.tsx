@@ -9,6 +9,7 @@ import {
   Package,
   ShieldCheck,
   Layers,
+  Palette,
 } from "lucide-react";
 
 import Layout from "../components/Layout";
@@ -21,6 +22,10 @@ interface CartItemView {
   cartKey?: string;
   variant_id?: number | null;
   variant_name?: string | null;
+  /** رنگ انتخاب‌شدهٔ محصول */
+  color_name?: string | null;
+  /** رنگ هر قطعهٔ پک چندعددی */
+  pack_colors?: { name: string; color: string }[] | null;
   sku?: string;
   name: string;
   slug: string;
@@ -242,6 +247,33 @@ function Cart() {
                               <span className="font-bold">
                                 تنوع: {item.variant_name}
                               </span>
+                            </div>
+                          )}
+
+                          {item.color_name && (
+                            <div className="mt-2 flex items-center gap-2 text-sm text-brand-700">
+                              <Palette size={15} />
+                              <span className="font-bold">
+                                رنگ: {item.color_name}
+                              </span>
+                            </div>
+                          )}
+
+                          {item.pack_colors && item.pack_colors.length > 0 && (
+                            <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-brand-700">
+                              <span className="inline-flex items-center gap-1.5 font-bold">
+                                <Palette size={14} />
+                                رنگ اجزای پک:
+                              </span>
+
+                              {item.pack_colors.map((entry) => (
+                                <span
+                                  key={`${entry.name}-${entry.color}`}
+                                  className="rounded-md bg-brand-50 px-2 py-0.5"
+                                >
+                                  {entry.name}: <b>{entry.color}</b>
+                                </span>
+                              ))}
                             </div>
                           )}
 

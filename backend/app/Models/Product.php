@@ -29,6 +29,7 @@ class Product extends Model
         'is_featured',
         'is_new',
         'is_taxable',
+        'is_returnable',
         'views_count',
         'sales_count',
         'meta_title',
@@ -44,6 +45,7 @@ class Product extends Model
         'is_featured' => 'boolean',
         'is_new' => 'boolean',
         'is_taxable' => 'boolean',
+        'is_returnable' => 'boolean',
     ];
 
     public function category()
@@ -66,6 +68,26 @@ class Product extends Model
         return $this->hasMany(ProductVariant::class);
     }
 
+    /**
+     * پالت رنگ این محصول (ترتیب نمایش در صفحهٔ محصول).
+     */
+    public function colors(): HasMany
+    {
+        return $this->hasMany(ProductColor::class)
+            ->orderBy('sort_order')
+            ->orderBy('id');
+    }
+
+    /**
+     * قطعات پک چندعددی این محصول.
+     */
+    public function packItems(): HasMany
+    {
+        return $this->hasMany(ProductPackItem::class)
+            ->orderBy('sort_order')
+            ->orderBy('id');
+    }
+
     public function reviews(): HasMany
     {
         return $this->hasMany(ProductReview::class);
@@ -77,6 +99,14 @@ class Product extends Model
     public function sizeGuide(): HasOne
     {
         return $this->hasOne(ProductSizeGuide::class);
+    }
+
+    /**
+     * ردیف‌های علاقه‌مندی که این محصول در آن‌ها ذخیره شده است.
+     */
+    public function wishlistItems(): HasMany
+    {
+        return $this->hasMany(WishlistItem::class);
     }
 
     public function getDiscountAmountAttribute()

@@ -10,8 +10,28 @@ class Banner extends Model
     public const POSITIONS = [
         'home_hero',
         'home_strip',
+        'home_grid',
+        'home_mobile_top',
+        'home_mobile_middle',
         'products_top',
     ];
+
+    /**
+     * بنرهای مخصوص موبایل.
+     *
+     * این دو بخش کاملاً از بنرهای دسکتاپ جدا هستند: تصویر، تعداد، ارتفاع و
+     * گردی گوشهٔ خودشان را دارند و فقط زیر ۷۶۸ پیکسل نمایش داده می‌شوند.
+     */
+    public const MOBILE_POSITIONS = [
+        'home_mobile_top',
+        'home_mobile_middle',
+    ];
+
+    /** بنر مخصوص موبایل است؟ (برای الزام تصویر موبایل هنگام ذخیره) */
+    public static function isMobilePosition(?string $position): bool
+    {
+        return in_array($position, self::MOBILE_POSITIONS, true);
+    }
 
     protected $fillable = [
         'title',

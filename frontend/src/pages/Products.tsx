@@ -32,6 +32,11 @@ import {
   type StorefrontBanner,
 } from "../utils/banners";
 import { usePageMeta } from "../hooks/usePageMeta";
+import {
+  DEFAULT_BANNER_RADIUS,
+  bannerRadiusStyle,
+  parseBannerAppearance,
+} from "../utils/bannerGrid";
 import { NO_INDEX_ROBOTS, SITE_NAME } from "../utils/seo";
 import { breadcrumbJsonLd } from "../utils/structuredData";
 
@@ -104,7 +109,14 @@ interface Category {
  * تصویر دسکتاپ و موبایل کاملاً مستقل‌اند (BannerImage): در دسکتاپ `image` و در
  * موبایل `mobile_image`. بنر بدون تصویرِ یک نما در همان نما نمایش داده نمی‌شود.
  */
-function TopBannerCard({ banner }: { banner: StorefrontBanner }) {
+function TopBannerCard({
+  banner,
+  radius,
+}: {
+  banner: StorefrontBanner;
+  /** گردی گوشهٔ کادر بنر (از تنظیم «ظاهر بنرها» در پنل مدیریت). */
+  radius: number;
+}) {
   const target = bannerTarget(banner);
   const isExternal = isExternalBannerLink(target);
 
@@ -140,20 +152,22 @@ function TopBannerCard({ banner }: { banner: StorefrontBanner }) {
   );
 
   const className = `
-    group relative block overflow-hidden rounded-3xl bg-brand-75 shadow-sm
+    group relative block overflow-hidden shadow-sm
     ${bannerViewportClass(banner)}
   `;
+  // گردی گوشهٔ بنر از تنظیم «ظاهر بنرها» می‌آید؛ پس‌زمینهٔ رنگی پشت بنر نیست.
+  const radiusStyle = bannerRadiusStyle(radius);
 
   if (isExternal) {
     return (
-      <a href={target} target="_blank" rel="noreferrer" className={className}>
+      <a href={target} target="_blank" rel="noreferrer" className={className} style={radiusStyle}>
         {content}
       </a>
     );
   }
 
   return (
-    <Link to={target} className={className}>
+    <Link to={target} className={className} style={radiusStyle}>
       {content}
     </Link>
   );
@@ -207,6 +221,10 @@ function Products() {
 
   const [loading, setLoading] = useState(true);
   const [topBanners, setTopBanners] = useState<StorefrontBanner[]>([]);
+  // گردی گوشهٔ بنر بالای صفحه (از تنظیم «ظاهر بنرها» در پنل مدیریت).
+  const [bannerRadius, setBannerRadius] = useState<number>(
+    DEFAULT_BANNER_RADIUS,
+  );
   const [categoriesLoading, setCategoriesLoading] = useState(
     () => getCachedCategories() === null,
   );
@@ -469,6 +487,11 @@ function Products() {
 
         if (!cancelled && Array.isArray(result)) {
           setTopBanners(result);
+        }
+
+        // ظاهر مشترک بنرها (گردی گوشه) در همان پاسخ و زیر کلید appearance است.
+        if (!cancelled) {
+          setBannerRadius(parseBannerAppearance(response.data).radius);
         }
       })
       .catch((error) => {
@@ -957,7 +980,11 @@ function Products() {
           >
             <div className="grid gap-4 sm:grid-cols-2">
               {topBanners.map((banner) => (
-                <TopBannerCard key={banner.id} banner={banner} />
+                <TopBannerCard
+                  key={banner.id}
+                  banner={banner}
+                  radius={bannerRadius}
+                />
               ))}
             </div>
           </div>

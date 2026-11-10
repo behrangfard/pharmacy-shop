@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import type { CSSProperties } from "react";
 
 import {
   bannerImageAlt,
@@ -30,6 +31,12 @@ interface BannerImageProps {
    * باشد تا دیرتر از بقیهٔ تصاویر دانلود نشود.
    */
   fetchPriority?: "high" | "low" | "auto";
+  /**
+   * استایل درون‌خطی تصویر (هر دو نما).
+   * برای بنر هیرو از `maxHeight` استفاده می‌شود تا اندازهٔ نمایش قابل تنظیم
+   * باشد و تصویر از اندازهٔ اصلی خودش بزرگ‌تر نشود.
+   */
+  style?: CSSProperties;
 }
 
 /** با تغییر نشانی، حالت «تصویر خراب» ریست می‌شود. */
@@ -60,6 +67,7 @@ function BannerImage({
   alt,
   loading = "lazy",
   fetchPriority,
+  style,
 }: BannerImageProps) {
   const desktopSource = hasDesktopImage(banner)
     ? getStorageUrl(banner.image)
@@ -83,6 +91,7 @@ function BannerImage({
         fetchPriority={fetchPriority}
         decoding="async"
         onError={markDesktopBroken}
+        style={style}
         className={
           view === "auto" ? `${desktopClassName} hidden md:block` : desktopClassName
         }
@@ -98,6 +107,7 @@ function BannerImage({
         fetchPriority={fetchPriority}
         decoding="async"
         onError={markMobileBroken}
+        style={style}
         className={
           view === "auto" ? `${mobileClassName} md:hidden` : mobileClassName
         }

@@ -5487,3 +5487,650 @@ body {
     animation: none;
   }
 }
+
+/* ==================================================
+   تم جایگزین «اقیانوس» — پیش‌نمایش پالت
+   #b6dfed (آبی پاستلی) · #002941 (سرمه‌ای) · #fd6e6e (کورال)
+
+   تم پیش‌فرض (سبز مریم‌گلی + کرم) دست‌نخورده است؛ این بلوک فقط زمانی
+   فعال می‌شود که روی <html> صفت data-theme="ocean" ست شود
+   (utils/theme.ts → applyTheme).
+
+   چون کلاس‌های Tailwind به‌صورت var(--color-*) کامپایل می‌شوند، با
+   بازتعریف همین متغیرها کل فروشگاه و پنل مدیریت رنگ عوض می‌کنند و لازم
+   نیست هیچ کلاسی در کامپوننت‌ها تغییر کند.
+
+   کنتراست‌های سنجیده‌شده (روی سفید):
+     ink ۱۵.۰ · brand-600 ۷.۲ · brand-500 ۴.۵ · muted ۶.۳
+     discount ۶.۳ · gold ۴.۶
+     کورال ۴۰۰ روی سفید ۲.۸ ← فقط پرکننده/تزئین، نه متن
+     متن سرمه‌ای روی کورال ۵.۴ ← دکمهٔ کورالی با متن سرمه‌ای
+================================================== */
+
+html[data-theme="ocean"] {
+  /* سرمه‌ای و آبی برند (جای سبز) */
+  --color-brand-50: #f2f8fb;
+  --color-brand-75: #eaf5fa;
+  --color-brand-100: #e2f0f6;
+  --color-brand-200: #c3e2ee;
+  --color-brand-250: #b6dfed;
+  --color-brand-300: #9dccdf;
+  --color-brand-400: #6aa9c4;
+  --color-brand-500: #2f7f9e;
+  --color-brand-550: #1f6b88;
+  --color-brand-600: #135f7d;
+  --color-brand-700: #0b455e;
+  --color-brand-800: #053449;
+  --color-brand-900: #002941;
+
+  /* سطح‌ها و خطوط خنک */
+  --color-cream: #f7fbfd;
+  --color-cream-deep: #eff7fb;
+  --color-line: #dcebf3;
+  --color-line-soft: #e5f1f7;
+  --color-line-strong: #c8deea;
+
+  /* متن */
+  --color-ink: #002941;
+  --color-ink-soft: #135f7d;
+  --color-muted: #4a6472;
+  --color-muted-soft: #5f7887;
+
+  /* تخفیف (کورال تیره برای متن)، موجودی و صرفه‌جویی */
+  --color-discount: #b32c2c;
+  --color-discount-700: #8f2323;
+  --color-stock: #1c7a52;
+  --color-stock-700: #145c3d;
+  --color-save: #1c7a52;
+
+  /* صورتی‌ها → خانوادهٔ کورال */
+  --color-blush-50: #fff4f4;
+  --color-blush-100: #ffe6e6;
+  --color-blush-200: #ffd4d4;
+  --color-blush-400: #fd6e6e;
+  --color-blush-500: #ec4a4a;
+  --color-blush-600: #d93b3b;
+
+  /* یاسی → آبی/فیروزه‌ای */
+  --color-plum-50: #eef8fc;
+  --color-plum-100: #ddf0f8;
+  --color-plum-200: #bfe1ef;
+  --color-plum-300: #9ecfe3;
+  --color-plum-500: #2f7f9e;
+  --color-plum-600: #1f6b88;
+  --color-plum-700: #135f7d;
+
+  /* اطلاع‌رسانی و طلایی */
+  --color-info: #135f7d;
+  --color-info-100: #ddf0f8;
+  --color-info-200: #bfe1ef;
+  --color-gold-50: #fdf6e9;
+  --color-gold-100: #faeac9;
+  --color-gold: #8a5f18;
+
+  /* متغیرهای قدیمی هویت بصری (بخش‌های CSS سفارشی) */
+  --store-green: #135f7d;
+  --store-green-dark: #0b455e;
+  --store-green-soft: #e2f0f6;
+  --store-cream: #f7fbfd;
+  --store-lilac: #ddf0f8;
+  --store-lilac-dark: #1f6b88;
+  --store-border: #dcebf3;
+  --store-text: #002941;
+  --store-muted: #4a6472;
+}
+
+html[data-theme="ocean"] body {
+  background-color: #f7fbfd;
+  color: #002941;
+}
+
+html[data-theme="ocean"] ::selection,
+html[data-theme="ocean"] ::-moz-selection {
+  background-color: #c3e2ee;
+  color: #002941;
+}
+
+/* نوار اطلاع‌رسانی و دکمه‌های اصلی پنل که رنگ ثابت دارند */
+html[data-theme="ocean"] .announcement-bar {
+  background-color: #002941;
+  color: #eaf5fa;
+}
+
+html[data-theme="ocean"] .admin-btn-primary {
+  background: #135f7d;
+  border-color: #135f7d;
+}
+
+html[data-theme="ocean"] .admin-btn-primary:hover:not(:disabled) {
+  background: #0b455e;
+  border-color: #0b455e;
+}
+
+html[data-theme="ocean"] .admin-categories-page {
+  --category-green: #135f7d;
+  --category-green-dark: #0b455e;
+  --category-green-soft: #e2f0f6;
+  --category-cream: #f7fbfd;
+  --category-lilac: #ddf0f8;
+  --category-lilac-dark: #1f6b88;
+  --category-border: #dcebf3;
+  --category-text: #002941;
+  --category-muted: #4a6472;
+}
+
+/* ==================================================
+   سوییچ پیش‌نمایش تم فروشگاه (components/ThemeSwitcher.tsx)
+
+   گوشهٔ پایین-چپ قرار می‌گیرد؛ ابزار پشتیبانی سمت راست است تا روی هم
+   نیفتند. این ابزار فقط برای مقایسهٔ پالت است و با انتخاب کاربر
+   (localStorage) یا پارامتر ?theme= هم کار می‌کند.
+================================================== */
+
+.theme-switcher {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  font-family: Vazirmatn, Tahoma, Arial, sans-serif;
+}
+
+.theme-switcher-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  border: 1px solid var(--color-line-strong);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.96);
+  color: var(--color-brand-700);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 10px 24px rgba(20, 40, 55, 0.18);
+  transition: border-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+.theme-switcher-toggle:hover {
+  border-color: var(--color-brand-400);
+  color: var(--color-brand-800);
+  transform: translateY(-1px);
+}
+
+.theme-switcher-swatches {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.theme-switcher-swatch {
+  width: 11px;
+  height: 11px;
+  border: 1px solid rgba(0, 0, 0, 0.14);
+  border-radius: 999px;
+}
+
+.theme-switcher-panel {
+  width: 236px;
+  padding: 12px;
+  border: 1px solid var(--color-line);
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 18px 40px rgba(20, 40, 55, 0.2);
+}
+
+.theme-switcher-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.theme-switcher-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--color-ink);
+}
+
+.theme-switcher-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--color-cream-deep);
+  color: var(--color-muted);
+  cursor: pointer;
+}
+
+.theme-switcher-close:hover {
+  background: var(--color-brand-100);
+  color: var(--color-brand-700);
+}
+
+.theme-switcher-note {
+  margin: 0 0 8px;
+  font-size: 11px;
+  line-height: 1.8;
+  color: var(--color-muted);
+}
+
+.theme-switcher-option {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--color-ink);
+  text-align: right;
+  cursor: pointer;
+}
+
+.theme-switcher-option + .theme-switcher-option {
+  margin-top: 6px;
+}
+
+.theme-switcher-option:hover {
+  background: var(--color-brand-50);
+  border-color: var(--color-line);
+}
+
+.theme-switcher-option[aria-pressed="true"] {
+  background: var(--color-brand-50);
+  border-color: var(--color-brand-400);
+}
+
+.theme-switcher-option-text {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.theme-switcher-option-name {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.theme-switcher-option-hint {
+  font-size: 11px;
+  color: var(--color-muted);
+}
+
+.theme-switcher-check {
+  flex-shrink: 0;
+  color: var(--color-brand-600);
+}
+
+.theme-switcher-hide {
+  width: 100%;
+  margin-top: 10px;
+  padding: 6px 0 0;
+  border: 0;
+  border-top: 1px solid var(--color-line);
+  background: transparent;
+  color: var(--color-muted);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.theme-switcher-hide:hover {
+  color: var(--color-discount);
+}
+
+@media (max-width: 520px) {
+  .theme-switcher {
+    left: 12px;
+    bottom: 12px;
+  }
+
+  .theme-switcher-panel {
+    width: 208px;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* مدیریت ارسال (AdminShipping)                                        */
+/* ------------------------------------------------------------------ */
+
+.shp-tabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+  padding: 6px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.shp-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 14px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: #4b5563;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.shp-tab:hover {
+  background: #f3f6f1;
+  color: #385e3e;
+}
+
+.shp-tab.is-active {
+  background: #648767;
+  border-color: #648767;
+  color: #fff;
+}
+
+/* لایهٔ چاپ: روی صفحه پیش‌نمایش و در چاپ فقط همین بخش دیده می‌شود */
+.shp-print-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px;
+  overflow: auto;
+  background: rgba(17, 24, 39, 0.55);
+}
+
+.shp-print-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-end;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+}
+
+.shp-print-body {
+  padding: 18px;
+  border-radius: 10px;
+  background: #fff;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
+}
+
+.shp-label-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.shp-label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 12px;
+  border: 1px solid #9ca3af;
+  border-radius: 8px;
+  color: #111827;
+  font-size: 12px;
+  break-inside: avoid;
+}
+
+.shp-label-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px dashed #9ca3af;
+  font-size: 12px;
+}
+
+.shp-label-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.shp-label-row > span {
+  color: #6b7280;
+  font-size: 11px;
+}
+
+.shp-label-address {
+  padding: 5px 6px;
+  border-radius: 6px;
+  background: #f9fafb;
+  font-size: 11px;
+  line-height: 1.8;
+}
+
+.shp-label-code {
+  padding: 6px 8px;
+  border-radius: 6px;
+  background: #111827;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-align: center;
+}
+
+.shp-label-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 6px;
+  border-top: 1px dashed #9ca3af;
+  color: #6b7280;
+  font-size: 11px;
+}
+
+.shp-doc {
+  color: #111827;
+  font-size: 12px;
+}
+
+.shp-doc-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid #111827;
+}
+
+.shp-doc-head h1 {
+  margin: 0 0 4px;
+  font-size: 17px;
+}
+
+.shp-doc-head p {
+  margin: 0;
+  color: #4b5563;
+  font-size: 11px;
+  line-height: 1.8;
+}
+
+.shp-doc-titles {
+  text-align: left;
+}
+
+.shp-doc-titles h2 {
+  margin: 0 0 4px;
+  font-size: 15px;
+}
+
+.shp-doc-titles p {
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.shp-doc-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin: 14px 0;
+}
+
+.shp-doc-grid h3 {
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.shp-doc-grid p {
+  margin: 0 0 3px;
+  line-height: 1.9;
+}
+
+.shp-doc-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 14px;
+}
+
+.shp-doc-table th,
+.shp-doc-table td {
+  padding: 7px 8px;
+  border: 1px solid #d1d5db;
+  font-size: 11px;
+  text-align: right;
+}
+
+.shp-doc-table thead th {
+  background: #f3f4f6;
+  font-weight: 700;
+}
+
+.shp-doc-totals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 24px;
+  justify-content: flex-start;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #f9fafb;
+}
+
+.shp-doc-totals > div {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.shp-doc-totals span {
+  color: #6b7280;
+  font-size: 11px;
+}
+
+.shp-doc-note {
+  margin: 0 0 12px;
+  padding: 9px 11px;
+  border-radius: 8px;
+  background: #fffbeb;
+  color: #92400e;
+  font-size: 11px;
+  line-height: 1.9;
+}
+
+.shp-doc-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 26px;
+  border-top: 1px dashed #9ca3af;
+  color: #6b7280;
+  font-size: 11px;
+}
+
+@media (max-width: 720px) {
+  .shp-label-grid,
+  .shp-doc-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .shp-print-layer {
+    padding: 10px;
+  }
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .shp-print-layer,
+  .shp-print-layer * {
+    visibility: visible;
+  }
+
+  .shp-print-layer {
+    position: static;
+    inset: auto;
+    display: block;
+    padding: 0;
+    background: #fff;
+  }
+
+  .shp-print-actions {
+    display: none;
+  }
+
+  .shp-print-body {
+    padding: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .shp-label {
+    border-color: #6b7280;
+  }
+
+  .shp-label-code {
+    background: #fff;
+    color: #111827;
+    border: 1px solid #111827;
+  }
+
+  .shp-doc-note {
+    background: #fff;
+    border: 1px solid #d1d5db;
+  }
+}
+
+
+/*
+  لایه‌های داخلی Leaflet (پنل کاشی‌ها و کنترل‌ها) z-index بالایی دارند و اگر
+  کانتینر نقشه بستر انباشت مستقل نسازد، هنگام اسکرول روی هدر و نوار
+  اطلاع‌رسانی چسبان صفحه می‌افتند. با z-index صفر و isolation، نقشه همیشه
+  زیر هدر می‌ماند.
+*/
+.leaflet-container {
+  position: relative;
+  z-index: 0;
+  isolation: isolate;
+}
+

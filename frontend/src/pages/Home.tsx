@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import {
   ArrowLeft,
   ChevronLeft,
@@ -28,7 +28,6 @@ import {
   bannerTextLayers,
   bannerTextScrim,
   bannerViewportClass,
-  filterBannersForViewport,
   hasBannerTextLayers,
   hasDesktopImage,
   hasMobileImage,
@@ -38,6 +37,29 @@ import {
   type StorefrontBanner,
 } from "../utils/banners";
 import { usePageMeta } from "../hooks/usePageMeta";
+import {
+  BANNER_GRID_IMAGE_CLASS,
+  BANNER_SECTION_SURFACE_CLASS,
+  BANNER_SHINE_CLASS,
+  DEFAULT_BANNER_RADIUS,
+  HOME_GRID_POSITION,
+  HOME_HERO_POSITION,
+  HOME_MOBILE_MIDDLE_POSITION,
+  HOME_MOBILE_TOP_POSITION,
+  bannerFrameAnimationClass,
+  bannerGridContainerClass,
+  bannerGridTileClass,
+  bannerImageAnimationClass,
+  bannerRadiusStyle,
+  bannerSectionRadius,
+  parseBannerAppearance,
+  parseBannerSection,
+  selectHeroBanners,
+  selectSectionBanners,
+  type BannerSectionAnimation,
+  type BannerSectionConfig,
+  type BannerSectionLayout,
+} from "../utils/bannerGrid";
 import { DEFAULT_DESCRIPTION, SITE_NAME, SITE_TAGLINE } from "../utils/seo";
 import {
   organizationJsonLd,
@@ -86,11 +108,13 @@ function BannerLink({
   banner,
   className,
   tabIndex,
+  style,
   children,
 }: {
   banner: StorefrontBanner;
   className?: string;
   tabIndex?: number;
+  style?: CSSProperties;
   children: ReactNode;
 }) {
   const target = bannerTarget(banner);
@@ -103,6 +127,7 @@ function BannerLink({
         rel="noreferrer"
         className={className}
         tabIndex={tabIndex}
+        style={style}
       >
         {children}
       </a>
@@ -110,10 +135,82 @@ function BannerLink({
   }
 
   return (
-    <Link to={target} className={className} tabIndex={tabIndex}>
+    <Link to={target} className={className} tabIndex={tabIndex} style={style}>
       {children}
     </Link>
   );
+}
+
+/**
+ * قالب نمایش یک اسلاید هیرو بر اساس تنظیمات بخش.
+ *
+ * - `contain` (پیش‌فرض): تصویر کامل و بدون برش دیده می‌شود و بزرگ‌تر از اندازهٔ
+ *   اصلی خودش کشیده نمی‌شود؛ پس کیفیتش پایین نمی‌آید.
+ * - `cover`: کادر تمام‌عرض پر می‌شود و بخشی از تصویر بریده می‌شود.
+ * - حداکثر ارتفاع هر نما از پنل مدیریت می‌آید؛ صفر یعنی ارتفاع طبیعی تصویر.
+ *
+ * نکتهٔ مهم (باگ قبلی موبایل): کادر بنر باید «تمام‌عرض» باشد. وقتی کادر
+ * `w-fit` بود، تصویر پرترهٔ موبایل با عرض ذاتی خودش بیرون از کادر می‌زد،
+ * گوشه‌های گرد کادر بیرون از صفحه می‌افتاد و به همین دلیل گردی گوشه روی
+ * موبایل دیده نمی‌شد. اکنون کادر `w-full` است، تصویر با `max-w-full` داخل آن
+ * می‌نشیند و خود تصویر هم `border-radius: inherit` دارد تا در هر حالتی
+ * گوشه‌هایش گرد بماند.
+ */
+function heroFrame(
+  section: BannerSectionConfig | null,
+  view: BannerViewport,
+  radius: number,
+  animation: BannerSectionAnimation,
+): {
+  frameClass: string;
+  frameStyle: CSSProperties;
+  imageClass: string;
+  imageStyle?: CSSProperties;
+} {
+  const maxHeight = section
+    ? Math.max(
+        0,
+        view === "mobile" ? section.height_mobile : section.height_desktop,
+      )
+    : 0;
+
+  // گردی گوشه از تنظیمات همین بخش می‌آید؛ مقدار صفر یعنی گوشهٔ تیز.
+  const frameStyle = bannerRadiusStyle(radius);
+  const imageRadius: CSSProperties = { borderRadius: "inherit" };
+  const animationClass = bannerFrameAnimationClass(animation);
+  const imageAnimation = bannerImageAnimationClass(animation);
+
+  /*
+    کادر بنر هیچ پس‌زمینه‌ای ندارد و دقیقاً به اندازهٔ خود بنر است؛ بنابراین
+    سایهٔ هاور فقط دور بنر می‌افتد (نه دور عرض کامل سکشن). در حالت «بدون برش»
+    کادر با `w-fit` به اندازهٔ تصویر جمع می‌شود و `max-w-full` جلوی سرریز
+    تصویر پرترهٔ موبایل را می‌گیرد؛ `overflow-hidden` هم برش بزرگ‌نمایی و
+    گوشه‌های گرد را حفظ می‌کند.
+  */
+  const frameClass = `overflow-hidden ${animationClass}`.trim();
+
+  if (section?.fit === "cover") {
+    return {
+      frameClass: `w-full ${frameClass}`.trim(),
+      frameStyle,
+      imageClass: `block w-full object-cover ${imageAnimation}`.trim(),
+      imageStyle: {
+        ...imageRadius,
+        ...(maxHeight > 0 ? { height: `${maxHeight}px` } : {}),
+      },
+    };
+  }
+
+  return {
+    frameClass: `mx-auto w-fit max-w-full ${frameClass}`.trim(),
+    frameStyle,
+    imageClass:
+      `mx-auto block h-auto w-auto max-w-full object-contain ${imageAnimation}`.trim(),
+    imageStyle: {
+      ...imageRadius,
+      ...(maxHeight > 0 ? { maxHeight: `${maxHeight}px` } : {}),
+    },
+  };
 }
 
 /**
@@ -123,13 +220,25 @@ function BannerLink({
  * فعال و اسلاید خودکار هر نما مستقل است و بنرهایی که تصویر همان نما را ندارند
  * اصلاً وارد اسلاید نمی‌شوند. اگر هیچ بنری تصویر آن نما را نداشته باشد، کل
  * اسلایدر آن نما رندر نمی‌شود (هیچ بنر پیش‌فرضی جای آن نمی‌نشیند).
+ *
+ * تعداد اسلایدها، حداکثر ارتفاع هر نما و نحوهٔ جاگیری تصویر از تنظیمات بخش
+ * مربوطه در پنل مدیریت می‌آید (همان بخش در پاسخ `/banners` زیر کلید
+ * `sections` برگردانده می‌شود). گردی گوشهٔ کادر بنر هم از تنظیم گردی همان
+ * بخش گرفته می‌شود.
  */
 function HeroBannerCarousel({
   banners,
   view,
+  section,
+  radius,
+  animation,
 }: {
   banners: StorefrontBanner[];
   view: BannerViewport;
+  section: BannerSectionConfig | null;
+  radius: number;
+  /** انیمیشن هاور همین بخش (فقط بخش‌های دسکتاپ مقدار دارند). */
+  animation: BannerSectionAnimation;
 }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -160,13 +269,16 @@ function HeroBannerCarousel({
 
   if (count === 0) return null;
 
+  // ابعاد، نحوهٔ جاگیری تصویر، گردی گوشه و انیمیشن هاور از تنظیمات همین بخش.
+  const frame = heroFrame(section, view, radius, animation);
+
   const goTo = (next: number) => {
     setActiveIndex(((next % count) + count) % count);
   };
 
   return (
     <section
-      className={`relative w-full overflow-hidden bg-brand-75 ${CAROUSEL_VISIBILITY[view]}`}
+      className={`relative w-full ${CAROUSEL_VISIBILITY[view]}`}
       aria-roledescription="carousel"
       aria-label={CAROUSEL_LABELS[view]}
       onMouseEnter={() => setPaused(true)}
@@ -199,22 +311,29 @@ function HeroBannerCarousel({
               <BannerLink
                 banner={banner}
                 tabIndex={isActive ? 0 : -1}
-                className="group relative block"
+                style={frame.frameStyle}
+                className={`group relative block ${frame.frameClass}`}
               >
                 {/*
                   هر نما فقط تصویر خودش را نمایش می‌دهد: دسکتاپ «image» و
-                  موبایل «mobile_image». بنر هیرو در تمام عرض صفحه و با نسبت
-                  تصویر خودش (h-auto) رندر می‌شود تا ۱۹۲۰×۶۵۰، ۱۹۲۰×۷۵۰،
-                  ۱۴۴۰×۶۰۰ و ۷۵۰×۱۰۰۰ بریده نشوند.
+                  موبایل «mobile_image». ابعاد نمایش از تنظیمات بخش هیرو
+                  می‌آید: به‌صورت پیش‌فرض تصویر با نسبت خودش و «بدون برش و
+                  بدون بزرگ‌نمایی» رندر می‌شود تا کیفیتش پایین نیاید و بنر
+                  کوچک کل صفحه را نگیرد.
                 */}
                 <BannerImage
                   banner={banner}
                   view={view}
                   loading={index === 0 ? "eager" : "lazy"}
                   fetchPriority={index === 0 ? "high" : "low"}
-                  desktopClassName="block h-auto w-full"
-                  mobileClassName="block h-auto w-full"
+                  style={frame.imageStyle}
+                  desktopClassName={frame.imageClass}
+                  mobileClassName={frame.imageClass}
                 />
+
+                {animation === "shine" && (
+                  <span aria-hidden="true" className={BANNER_SHINE_CLASS} />
+                )}
 
                 {hasLayers && (
                   <BannerTextLayers
@@ -365,13 +484,142 @@ function CategoryCard({
 }
 
 
+/**
+ * بخش بنرهای چندستونهٔ صفحهٔ اول (position=home_grid).
+ *
+ * چیدمان و تعداد بنرهای بخش را مدیر در پنل بنرها تعیین می‌کند. برای هر نما یک
+ * گرید جدا رندر می‌شود (دسکتاپ و موبایل) و فقط بنرهایی وارد گرید می‌شوند که
+ * تصویر همان نما را دارند؛ بنابراین کاشی خالی یا جانشین‌شدن تصویر دسکتاپ در
+ * موبایل پیش نمی‌آید (همان قاعدهٔ اسلایدر هیرو).
+ */
+function BannerGrid({
+  banners,
+  layout,
+  viewport,
+  radius,
+  animation,
+  height = 0,
+  className,
+}: {
+  banners: StorefrontBanner[];
+  layout: BannerSectionLayout;
+  viewport: BannerViewport;
+  radius: number;
+  /** انیمیشن هاور کاشی‌ها (فقط بخش دسکتاپ مقدار دارد). */
+  animation: BannerSectionAnimation;
+  /** حداکثر ارتفاع کاشی‌ها (پیکسل)؛ ۰ یعنی نسبت تصویر چیدمان. */
+  height?: number;
+  className: string;
+}) {
+  if (banners.length === 0) return null;
+
+  const frameHover = bannerFrameAnimationClass(animation);
+  const imageAnimation = bannerImageAnimationClass(animation);
+  const gridImageClass = `${BANNER_GRID_IMAGE_CLASS} ${imageAnimation}`.trim();
+
+  // ارتفاع ثابت با چیدمان نامتقارن (سه‌تایی) جمع نمی‌شود؛ آن چیدمان نسبت خودش
+  // را نگه می‌دارد تا کاشی بلند دو ردیف را پر کند.
+  const tileHeight =
+    viewport === "desktop" && height > 0 && layout !== "three_split"
+      ? Math.min(height, 1200)
+      : 0;
+
+  return (
+    <div className={`${className} ${bannerGridContainerClass(layout, viewport)}`}>
+      {banners.map((banner, index) => {
+        const layers = bannerTextLayers(banner);
+        const hasLayers = hasBannerTextLayers(banner);
+        // متن لایه‌ای مقدم است؛ در نبود آن متن سادهٔ عنوان/زیرعنوان.
+        const label = hasLayers ? null : banner.title || banner.subtitle;
+
+        return (
+          <BannerLink
+            key={banner.id}
+            banner={banner}
+            style={{
+              ...bannerRadiusStyle(radius),
+              ...(tileHeight > 0 ? { height: `${tileHeight}px` } : {}),
+            }}
+            className={`
+              group relative block overflow-hidden
+              focus-visible:outline-none focus-visible:ring-2
+              focus-visible:ring-brand-400 focus-visible:ring-offset-2
+              ${frameHover}
+              ${
+                tileHeight > 0
+                  ? ""
+                  : bannerGridTileClass(layout, index, viewport)
+              }
+            `}
+          >
+            <BannerImage
+              banner={banner}
+              view={viewport}
+              alt={label || undefined}
+              style={{ borderRadius: "inherit" }}
+              desktopClassName={gridImageClass}
+              mobileClassName={gridImageClass}
+            />
+
+            {animation === "shine" && (
+              <span aria-hidden="true" className={BANNER_SHINE_CLASS} />
+            )}
+
+            {hasLayers && (
+              <BannerTextLayers
+                layers={layers}
+                viewport={viewport}
+                scrim={bannerTextScrim(banner)}
+              />
+            )}
+
+            {label && (
+              <span className="pointer-events-none absolute inset-0 flex items-end justify-between gap-2 bg-gradient-to-t from-black/60 via-black/10 to-transparent p-3">
+                <span className="line-clamp-2 text-xs font-bold leading-5 text-white sm:text-sm">
+                  {label}
+                </span>
+                <ArrowLeft size={16} className="shrink-0 text-white" />
+              </span>
+            )}
+          </BannerLink>
+        );
+      })}
+    </div>
+  );
+}
+
 function Home() {
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
   const [newestProducts, setNewestProducts] = useState<Product[]>([]);
   const [featuredError, setFeaturedError] = useState("");
   const [newestError, setNewestError] = useState("");
   const [heroBanners, setHeroBanners] = useState<StorefrontBanner[]>([]);
+  // تنظیمات بخش هیرو (تعداد اسلایدها، حداکثر ارتفاع هر نما و جاگیری تصویر).
+  const [heroSection, setHeroSection] = useState<BannerSectionConfig | null>(
+    null,
+  );
   const [stripBanners, setStripBanners] = useState<StorefrontBanner[]>([]);
+  // بخش چندستونهٔ بنرها: چیدمان و تعداد بنرها از پنل مدیریت می‌آید.
+  const [gridBanners, setGridBanners] = useState<StorefrontBanner[]>([]);
+  const [gridSection, setGridSection] = useState<BannerSectionConfig | null>(
+    null,
+  );
+  // بنرهای موبایل کاملاً جدا از بنرهای دسکتاپ‌اند: یکی بالای صفحه و یکی وسط
+  // صفحه؛ هر کدام تعداد، ارتفاع و گردی گوشهٔ خودش را دارد.
+  const [mobileTopBanners, setMobileTopBanners] = useState<StorefrontBanner[]>(
+    [],
+  );
+  const [mobileTopSection, setMobileTopSection] =
+    useState<BannerSectionConfig | null>(null);
+  const [mobileMiddleBanners, setMobileMiddleBanners] = useState<
+    StorefrontBanner[]
+  >([]);
+  const [mobileMiddleSection, setMobileMiddleSection] =
+    useState<BannerSectionConfig | null>(null);
+  // گردی گوشهٔ پیش‌فرض (برای نوار بنرها و بخش‌هایی که مقدار اختصاصی ندارند).
+  const [bannerRadius, setBannerRadius] = useState<number>(
+    DEFAULT_BANNER_RADIUS,
+  );
 
   // متای صفحهٔ اصلی: عنوان/توضیحات ثابت + معرفی فروشگاه و سایت برای گوگل.
   usePageMeta({
@@ -400,6 +648,41 @@ function Home() {
             (banner: StorefrontBanner) => banner.position === "home_strip",
           ),
         );
+        setGridBanners(
+          result.filter(
+            (banner: StorefrontBanner) =>
+              banner.position === HOME_GRID_POSITION,
+          ),
+        );
+        setMobileTopBanners(
+          result.filter(
+            (banner: StorefrontBanner) =>
+              banner.position === HOME_MOBILE_TOP_POSITION,
+          ),
+        );
+        setMobileMiddleBanners(
+          result.filter(
+            (banner: StorefrontBanner) =>
+              banner.position === HOME_MOBILE_MIDDLE_POSITION,
+          ),
+        );
+        // چیدمان بخش چندستونه و تنظیمات بخش‌ها (تعداد، ارتفاع، گردی گوشه) از
+        // همان پاسخ بنرها می‌آید (response.data.sections). گردی گوشهٔ پیش‌فرض
+        // هم در response.data.appearance است.
+        setGridSection(parseBannerSection(response.data?.sections));
+        setHeroSection(
+          parseBannerSection(response.data?.sections, HOME_HERO_POSITION),
+        );
+        setMobileTopSection(
+          parseBannerSection(response.data?.sections, HOME_MOBILE_TOP_POSITION),
+        );
+        setMobileMiddleSection(
+          parseBannerSection(
+            response.data?.sections,
+            HOME_MOBILE_MIDDLE_POSITION,
+          ),
+        );
+        setBannerRadius(parseBannerAppearance(response.data).radius);
       })
       .catch((error) => {
         // بنرها اختیاری هستند؛ خطای دریافت آن‌ها نباید صفحه را خراب کند.
@@ -466,14 +749,47 @@ function Home() {
   }, []);
 
   /**
-   * بنرهای هیرو برای هر نما جدا فیلتر می‌شوند؛ بنری که تصویر موبایل ندارد در
-   * موبایل و بنری که تصویر دسکتاپ ندارد در دسکتاپ نمایش داده نمی‌شود.
+   * بنرهای هیرو (دسکتاپ) و بنر بالای صفحه در موبایل، هر کدام از بخش خودشان
+   * خوانده می‌شوند؛ تعداد اسلایدها و وضعیت فعال/غیرفعال از تنظیمات همان بخش
+   * می‌آید. بنرهای موبایل فقط با تصویر موبایل رندر می‌شوند.
    */
-  const desktopHeroBanners = filterBannersForViewport(heroBanners, "desktop");
-  const mobileHeroBanners = filterBannersForViewport(heroBanners, "mobile");
+  const desktopHeroBanners = selectHeroBanners(
+    heroBanners,
+    heroSection,
+    "desktop",
+  );
+  const mobileTopVisibleBanners = selectHeroBanners(
+    mobileTopBanners,
+    mobileTopSection,
+    "mobile",
+  );
+  const mobileMiddleVisibleBanners = selectHeroBanners(
+    mobileMiddleBanners,
+    mobileMiddleSection,
+    "mobile",
+  );
 
   const stripHasDesktopImage = stripBanners.some(hasDesktopImage);
   const stripHasMobileImage = stripBanners.some(hasMobileImage);
+
+  /**
+   * بنرهای بخش چندستونه فقط در دسکتاپ نمایش داده می‌شوند (تعدادشان با چیدمان
+   * تعیین می‌شود و فقط بنرهایی که تصویر دسکتاپ دارند).
+   */
+  const desktopGridBanners = selectSectionBanners(
+    gridBanners,
+    gridSection,
+    "desktop",
+  );
+
+  // گردی گوشهٔ هر بخش از تنظیمات همان بخش؛ نبودِ مقدار یعنی پیش‌فرض سایت.
+  const heroRadius = bannerSectionRadius(heroSection, bannerRadius);
+  const gridRadius = bannerSectionRadius(gridSection, bannerRadius);
+  const mobileTopRadius = bannerSectionRadius(mobileTopSection, bannerRadius);
+  const mobileMiddleRadius = bannerSectionRadius(
+    mobileMiddleSection,
+    bannerRadius,
+  );
 
   return (
     <Layout>
@@ -481,21 +797,44 @@ function Home() {
       <BannerFontStyles />
 
       {/*
-        هیرو فقط از بنرهای پنل مدیریت ساخته می‌شود و در هر نما (موبایل/دسکتاپ)
-        تصویر همان نما نمایش داده می‌شود. در نبود بنر، هیچ بنر و هیچ تصویر
-        پیش‌فرضی نمایش داده نمی‌شود.
+        بالای صفحه دو بخش مستقل دارد:
+        - دسکتاپ: اسلایدر «هیرو» با بنرهای home_hero
+        - موبایل: بنر «بالای صفحه» با بنرهای home_mobile_top
+        هر بخش تصویر، تعداد، ارتفاع و گردی گوشهٔ خودش را دارد و در نبود بنر
+        هیچ بنر/تصویر پیش‌فرضی نمایش داده نمی‌شود.
       */}
-      {heroBanners.length > 0 && (
-        <section className="relative bg-cream">
-          <HeroBannerCarousel banners={desktopHeroBanners} view="desktop" />
-          <HeroBannerCarousel banners={mobileHeroBanners} view="mobile" />
+      {heroSection !== null && desktopHeroBanners.length > 0 && (
+        <section
+          className={`relative hidden pt-4 md:block md:pt-6 ${BANNER_SECTION_SURFACE_CLASS}`}
+        >
+          <HeroBannerCarousel
+            banners={desktopHeroBanners}
+            view="desktop"
+            section={heroSection}
+            radius={heroRadius}
+            animation={heroSection.animation}
+          />
+        </section>
+      )}
+
+      {mobileTopSection !== null && mobileTopVisibleBanners.length > 0 && (
+        <section
+          className={`relative pt-4 md:hidden ${BANNER_SECTION_SURFACE_CLASS}`}
+        >
+          <HeroBannerCarousel
+            banners={mobileTopVisibleBanners}
+            view="mobile"
+            section={mobileTopSection}
+            radius={mobileTopRadius}
+            animation="none"
+          />
         </section>
       )}
 
       {/* نوار بنرهای کوتاه (home_strip) - مستقل از وجود بنر هیرو */}
       {stripBanners.length > 0 && (
         <section
-          className={`bg-cream py-5 ${viewportVisibilityClass(
+          className={`py-5 ${BANNER_SECTION_SURFACE_CLASS} ${viewportVisibilityClass(
             stripHasDesktopImage,
             stripHasMobileImage,
           )}`}
@@ -515,10 +854,9 @@ function Home() {
                   <BannerLink
                     key={banner.id}
                     banner={banner}
+                    style={bannerRadiusStyle(bannerRadius)}
                     className={`
                       group relative flex min-w-[260px] flex-1 overflow-hidden
-                      rounded-2xl border border-brand-100 bg-white
-                      transition-colors hover:border-brand-300
                       ${bannerViewportClass(banner)}
                     `}
                   >
@@ -688,6 +1026,69 @@ function Home() {
           </div>
         </div>
       </section>
+
+      {/*
+        بخش بنرهای چندستونهٔ صفحهٔ اول (home_grid).
+        چیدمان (دو/سه/سه‌تایی نامتقارن/چهار بنر) و عنوان این بخش از پنل مدیریت
+        می‌آید؛ تعداد بنرهای نمایش‌داده‌شده با خود چیدمان تعیین می‌شود.
+        این بخش پایین‌تر از دسته‌بندی محصولات و بالای محصولات ویژه قرار می‌گیرد.
+      */}
+      {/*
+        وسط صفحه هم دو بخش مستقل دارد:
+        - دسکتاپ: ردیف بنرهای چندستونه (home_grid)
+        - موبایل: بنر «وسط صفحه» (home_mobile_middle)
+        هر دو با چیدمان/تعداد، ارتفاع و گردی گوشهٔ مستقل خودشان.
+      */}
+      {gridSection && desktopGridBanners.length > 0 && (
+        <section
+          className={`hidden pt-10 pb-10 md:block ${BANNER_SECTION_SURFACE_CLASS}`}
+        >
+          <div className="mx-auto max-w-7xl px-4 sm:px-6">
+            {(gridSection.title || gridSection.subtitle) && (
+              <div className="mb-4">
+                {gridSection.title && (
+                  <h2 className="text-lg font-black text-brand-900 sm:text-xl">
+                    {gridSection.title}
+                  </h2>
+                )}
+
+                {gridSection.subtitle && (
+                  <p className="mt-1 text-sm text-muted">
+                    {gridSection.subtitle}
+                  </p>
+                )}
+              </div>
+            )}
+
+            <BannerGrid
+              banners={desktopGridBanners}
+              layout={gridSection.layout}
+              viewport="desktop"
+              radius={gridRadius}
+              animation={gridSection.animation}
+              height={gridSection.height_desktop}
+              className="grid"
+            />
+          </div>
+        </section>
+      )}
+
+      {mobileMiddleSection !== null &&
+        mobileMiddleVisibleBanners.length > 0 && (
+          <section
+            className={`pt-8 pb-10 md:hidden ${BANNER_SECTION_SURFACE_CLASS}`}
+          >
+            <div className="mx-auto max-w-7xl px-4 sm:px-6">
+              <HeroBannerCarousel
+                banners={mobileMiddleVisibleBanners}
+                view="mobile"
+                section={mobileMiddleSection}
+                radius={mobileMiddleRadius}
+                animation="none"
+              />
+            </div>
+          </section>
+        )}
 
       {/* Featured Products */}
       <section className="bg-white py-12 sm:py-14">

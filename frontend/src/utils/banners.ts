@@ -14,7 +14,36 @@ import {
   type BannerTextScrim,
 } from "./bannerText";
 
-export type BannerPosition = "home_hero" | "home_strip" | "products_top";
+export type BannerPosition =
+  | "home_hero"
+  | "home_strip"
+  | "home_grid"
+  | "home_mobile_top"
+  | "home_mobile_middle"
+  | "products_top";
+
+/**
+ * بنرهای مخصوص موبایل.
+ *
+ * این دو بخش کاملاً از بنرهای دسکتاپ جدا هستند: تصویر، تعداد، ارتفاع و گردی
+ * گوشهٔ خودشان را دارند و فقط زیر ۷۶۸ پیکسل رندر می‌شوند. بنرهای دسکتاپ
+ * (هیرو و چندستونه) در موبایل نمایش داده نمی‌شوند.
+ */
+export const MOBILE_BANNER_POSITIONS = [
+  "home_mobile_top",
+  "home_mobile_middle",
+] as const;
+
+export type MobileBannerPosition = (typeof MOBILE_BANNER_POSITIONS)[number];
+
+/** موقعیت بنر مخصوص موبایل است؟ */
+export function isMobileBannerPosition(
+  position: string | null | undefined,
+): position is MobileBannerPosition {
+  return (
+    position === "home_mobile_top" || position === "home_mobile_middle"
+  );
+}
 
 export interface StorefrontBanner {
   id: number;

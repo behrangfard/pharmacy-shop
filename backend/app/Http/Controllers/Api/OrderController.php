@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Coupon;
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\ProductColor;
+use App\Models\ProductPackItem;
 use App\Models\ProductVariant;
 use App\Models\StoreSetting;
 use Illuminate\Database\QueryException;
@@ -35,19 +37,23 @@ class OrderController extends Controller
                 'exists:product_variants,id',
             ],
             'items.*.quantity' => ['required', 'integer', 'min:1'],
+            'items.*.color_name' => ['nullable', 'string', 'max:60'],
+            'items.*.pack_colors' => ['nullable', 'array', 'max:12'],
+            'items.*.pack_colors.*.name' => ['required', 'string', 'max:120'],
+            'items.*.pack_colors.*.color' => ['required', 'string', 'max:60'],
             'coupon_code' => ['nullable', 'string', 'max:60'],
         ]);
 
-        // جلوگیری از تکرار یک تنوع در چند ردیف سفارش
+        // جلوگیری از تکرار یک تنوع/رنگ در چند ردیف سفارش
         $uniqueItems = [];
 
         foreach ($validated['items'] as $item) {
-            $key = $item['product_id'].':'.($item['variant_id'] ?? 'null');
+            $key = $this->itemIdentity($item);
 
             if (isset($uniqueItems[$key])) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'یک تنوع محصول نباید در چند ردیف جداگانه ثبت شود.',
+                    'message' => 'یک محصول با تنوع و رنگ یکسان نباید در چند ردیف جداگانه ثبت شود.',
                 ], 422);
             }
 
@@ -152,6 +158,92 @@ class OrderController extends Controller
                         }
                     }
 
+                    /*
+                     * رنگ انتخاب‌شده: برای محصول ساده یک رنگ از پالت رنگ و
+                     * برای پک چندعددی، رنگ هر قطعه. انتخاب مشتری همراه با
+                     * سفارش ذخیره می‌شود تا تاریخچه دست‌نخورده بماند.
+                     */
+                    $palette = ProductColor::query()
+                        ->where('product_id', $product->id)
+                        ->where('is_active', true)
+                        ->orderBy('sort_order')
+                        ->orderBy('id')
+                        ->pluck('name')
+                        ->all();
+
+                    $packItems = ProductPackItem::query()
+                        ->where('product_id', $product->id)
+                        ->orderBy('sort_order')
+                        ->orderBy('id')
+                        ->get();
+
+                    $colorName = null;
+                    $packColors = [];
+
+                    if ($packItems->isNotEmpty()) {
+                        $submittedPackColors = collect($item['pack_colors'] ?? [])
+                            ->mapWithKeys(fn ($entry): array => [
+                                trim((string) ($entry['name'] ?? '')) => trim((string) ($entry['color'] ?? '')),
+                            ])
+                            ->all();
+
+                        foreach ($packItems as $packItem) {
+                            $allowedColors = $packItem->colorNames();
+
+                            // قطعه‌ای که رنگ مجاز ندارد، انتخاب رنگ هم ندارد.
+                            if ($allowedColors === []) {
+                                continue;
+                            }
+
+                            $chosenColor = $submittedPackColors[$packItem->name] ?? '';
+
+                            if ($chosenColor === '') {
+                                abort(
+                                    422,
+                                    "لطفاً رنگ «{$packItem->name}» را در پک {$product->name} انتخاب کنید."
+                                );
+                            }
+
+                            if (! in_array($chosenColor, $allowedColors, true)) {
+                                abort(
+                                    422,
+                                    "رنگ انتخاب‌شده برای «{$packItem->name}» در پک {$product->name} معتبر نیست."
+                                );
+                            }
+
+                            $packColors[] = [
+                                'name' => $packItem->name,
+                                'color' => $chosenColor,
+                            ];
+                        }
+                    } elseif ($palette !== []) {
+                        $submittedColor = trim((string) ($item['color_name'] ?? ''));
+
+                        if ($submittedColor === '') {
+                            abort(
+                                422,
+                                "لطفاً رنگ محصول {$product->name} را انتخاب کنید."
+                            );
+                        }
+
+                        if (! in_array($submittedColor, $palette, true)) {
+                            abort(
+                                422,
+                                "رنگ انتخاب‌شده برای محصول {$product->name} معتبر نیست."
+                            );
+                        }
+
+                        $colorName = $submittedColor;
+                    } elseif (
+                        trim((string) ($item['color_name'] ?? '')) !== ''
+                        || ! empty($item['pack_colors'])
+                    ) {
+                        abort(
+                            422,
+                            "محصول {$product->name} رنگ‌بندی ندارد؛ انتخاب رنگ برای آن معتبر نیست."
+                        );
+                    }
+
                     $originalUnitPrice = round(
                         (float) (
                             $variant && $variant->price !== null
@@ -203,6 +295,8 @@ class OrderController extends Controller
                         'variant_id' => $variant?->id,
                         'product_name' => $product->name,
                         'variant_name' => $variant?->name,
+                        'color_name' => $colorName,
+                        'pack_colors' => $packColors === [] ? null : $packColors,
                         'sku' => $variant?->sku ?? $product->sku,
                         'quantity' => $quantity,
                         'unit_price' => $finalUnitPrice,
@@ -708,6 +802,30 @@ class OrderController extends Controller
                 ? 'این سفارش قبلاً پرداخت شده است.'
                 : 'پرداخت آزمایشی با موفقیت انجام شد.',
             'data' => $result['order'],
+        ]);
+    }
+
+    /**
+     * شناسهٔ یکتای یک قلم سفارش.
+     *
+     * محصول یکسان با تنوع یا رنگ متفاوت، دو قلم مستقل است؛ اما تکرار دقیق
+     * همان ترکیب در دو ردیف پذیرفته نمی‌شود.
+     *
+     * @param  array<string, mixed>  $item
+     */
+    private function itemIdentity(array $item): string
+    {
+        $packSignature = collect($item['pack_colors'] ?? [])
+            ->map(fn ($entry): string => trim((string) ($entry['name'] ?? ''))
+                .'='.trim((string) ($entry['color'] ?? '')))
+            ->sort()
+            ->implode('|');
+
+        return implode(':', [
+            (string) ($item['product_id'] ?? ''),
+            (string) ($item['variant_id'] ?? 'null'),
+            trim((string) ($item['color_name'] ?? '')),
+            $packSignature,
         ]);
     }
 }

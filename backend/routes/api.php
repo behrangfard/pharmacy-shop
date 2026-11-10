@@ -11,15 +11,19 @@ use App\Http\Controllers\Api\AdminCustomerController;
 use App\Http\Controllers\Api\AdminController;
 use App\Http\Controllers\Api\AdminMessagingController;
 use App\Http\Controllers\Api\AdminOrderController;
+use App\Http\Controllers\Api\AdminPageController;
 use App\Http\Controllers\Api\AdminProductController;
 use App\Http\Controllers\Api\AdminProductImageController;
 use App\Http\Controllers\Api\AdminProductReviewController;
 use App\Http\Controllers\Api\AdminReportController;
 use App\Http\Controllers\Api\AdminReturnRequestController;
+use App\Http\Controllers\Api\AdminShippingController;
 use App\Http\Controllers\Api\AdminStoreSettingController;
 use App\Http\Controllers\Api\AdminSupportController;
 use App\Http\Controllers\Api\AdminTrustBadgeController;
 use App\Http\Controllers\Api\AdminUserController;
+use App\Http\Controllers\Api\AdminWishlistController;
+use App\Http\Controllers\Api\AddressController;
 use App\Http\Controllers\Api\AnnouncementBarController;
 use App\Http\Controllers\Api\ArticleController;
 use App\Http\Controllers\Api\AuthController;
@@ -29,6 +33,7 @@ use App\Http\Controllers\Api\BrandController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CouponController;
 use App\Http\Controllers\Api\OrderController;
+use App\Http\Controllers\Api\PageController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\ProductReviewController;
 use App\Http\Controllers\Api\ReturnRequestController;
@@ -83,6 +88,22 @@ Route::prefix('v1')->group(function () {
             [ReturnRequestController::class, 'store']
         );
 
+        // Customer Addresses (دفترچهٔ آدرس)
+        Route::get('/addresses', [AddressController::class, 'index']);
+        Route::post('/addresses', [AddressController::class, 'store']);
+
+        Route::put('/addresses/{address}', [AddressController::class, 'update']);
+
+        Route::patch(
+            '/addresses/{address}/default',
+            [AddressController::class, 'setDefault']
+        );
+
+        Route::delete(
+            '/addresses/{address}',
+            [AddressController::class, 'destroy']
+        );
+
         // Customer Wishlist (علاقه‌مندی‌ها)
         Route::get('/wishlist', [WishlistController::class, 'index']);
 
@@ -135,6 +156,30 @@ Route::prefix('v1')->group(function () {
                     Route::delete(
                         '/customers/{customerId}',
                         [AdminCustomerController::class, 'destroy']
+                    );
+                });
+
+            // Wishlist Analytics (آمار علاقه‌مندی‌های مشتریان)
+            Route::middleware('admin.permission:'.AdminRole::CUSTOMERS_MANAGE)
+                ->group(function () {
+                    Route::get(
+                        '/wishlist/overview',
+                        [AdminWishlistController::class, 'overview']
+                    );
+
+                    Route::get(
+                        '/wishlist/products',
+                        [AdminWishlistController::class, 'products']
+                    );
+
+                    Route::get(
+                        '/wishlist/customers',
+                        [AdminWishlistController::class, 'customers']
+                    );
+
+                    Route::get(
+                        '/wishlist/customers/{customerId}',
+                        [AdminWishlistController::class, 'customerItems']
                     );
                 });
 
@@ -257,6 +302,127 @@ Route::prefix('v1')->group(function () {
                     );
                 });
 
+            // Shipping & Delivery (ارسال و حمل‌ونقل)
+            Route::middleware('admin.permission:'.AdminRole::ORDERS_MANAGE)
+                ->group(function () {
+                    Route::get('/shipping', [AdminShippingController::class, 'overview']);
+
+                    Route::get(
+                        '/shipping/shipments',
+                        [AdminShippingController::class, 'shipments']
+                    );
+
+                    Route::post(
+                        '/shipping/shipments',
+                        [AdminShippingController::class, 'storeShipment']
+                    );
+
+                    Route::post(
+                        '/shipping/quote',
+                        [AdminShippingController::class, 'quote']
+                    );
+
+                    Route::get(
+                        '/shipping/shipments/{shipment}',
+                        [AdminShippingController::class, 'showShipment']
+                    );
+
+                    Route::put(
+                        '/shipping/shipments/{shipment}',
+                        [AdminShippingController::class, 'updateShipment']
+                    );
+
+                    Route::patch(
+                        '/shipping/shipments/{shipment}/status',
+                        [AdminShippingController::class, 'updateShipmentStatus']
+                    );
+
+                    Route::post(
+                        '/shipping/shipments/{shipment}/notify',
+                        [AdminShippingController::class, 'notifyShipment']
+                    );
+
+                    Route::delete(
+                        '/shipping/shipments/{shipment}',
+                        [AdminShippingController::class, 'destroyShipment']
+                    );
+
+                    // تاریخچهٔ ارسال‌ها
+                    Route::get(
+                        '/shipping/history',
+                        [AdminShippingController::class, 'history']
+                    );
+
+                    // روش‌های ارسال
+                    Route::get('/shipping/methods', [AdminShippingController::class, 'methods']);
+
+                    Route::post(
+                        '/shipping/methods',
+                        [AdminShippingController::class, 'storeMethod']
+                    );
+
+                    Route::put(
+                        '/shipping/methods/{method}',
+                        [AdminShippingController::class, 'updateMethod']
+                    );
+
+                    Route::patch(
+                        '/shipping/methods/{method}/status',
+                        [AdminShippingController::class, 'updateMethodStatus']
+                    );
+
+                    Route::delete(
+                        '/shipping/methods/{method}',
+                        [AdminShippingController::class, 'destroyMethod']
+                    );
+
+                    // مناطق ارسال
+                    Route::get('/shipping/zones', [AdminShippingController::class, 'zones']);
+
+                    Route::post(
+                        '/shipping/zones',
+                        [AdminShippingController::class, 'storeZone']
+                    );
+
+                    Route::put(
+                        '/shipping/zones/{zone}',
+                        [AdminShippingController::class, 'updateZone']
+                    );
+
+                    Route::patch(
+                        '/shipping/zones/{zone}/status',
+                        [AdminShippingController::class, 'updateZoneStatus']
+                    );
+
+                    Route::delete(
+                        '/shipping/zones/{zone}',
+                        [AdminShippingController::class, 'destroyZone']
+                    );
+
+                    // تعرفه و هزینهٔ ارسال
+                    Route::get('/shipping/rules', [AdminShippingController::class, 'rules']);
+
+                    Route::post(
+                        '/shipping/rules',
+                        [AdminShippingController::class, 'storeRule']
+                    );
+
+                    Route::put(
+                        '/shipping/rules/{rule}',
+                        [AdminShippingController::class, 'updateRule']
+                    );
+
+                    Route::patch(
+                        '/shipping/rules/{rule}/status',
+                        [AdminShippingController::class, 'updateRuleStatus']
+                    );
+
+                    Route::delete(
+                        '/shipping/rules/{rule}',
+                        [AdminShippingController::class, 'destroyRule']
+                    );
+                });
+
             // Return Requests (مرجوعی‌ها)
             Route::middleware('admin.permission:'.AdminRole::RETURNS_MANAGE)
                 ->group(function () {
@@ -334,6 +500,25 @@ Route::prefix('v1')->group(function () {
                         [AdminBannerController::class, 'uploadImage']
                     );
 
+                    // بخش‌های بنر (چیدمان بخش چندستونهٔ صفحهٔ اول)
+                    Route::get(
+                        '/banner-sections',
+                        [AdminBannerController::class, 'sections']
+                    );
+
+                    Route::put(
+                        '/banner-sections/{position}',
+                        [AdminBannerController::class, 'updateSection']
+                    );
+
+                    // ظاهر مشترک همهٔ بنرها (گردی گوشهٔ کادر بنر).
+                    Route::put(
+                        '/banner-appearance',
+                        [AdminBannerController::class, 'updateAppearance']
+                    );
+
+                    Route::put('/banners/order', [AdminBannerController::class, 'reorder']);
+
                     Route::put('/banners/{banner}', [AdminBannerController::class, 'update']);
 
                     Route::patch(
@@ -366,6 +551,24 @@ Route::prefix('v1')->group(function () {
                         '/banner-fonts/{bannerFont}',
                         [AdminBannerFontController::class, 'destroy']
                     );
+                });
+
+            // Pages (صفحات ثابت سایت)
+            Route::middleware('admin.permission:'.AdminRole::PAGES_MANAGE)
+                ->group(function () {
+                    Route::get('/pages', [AdminPageController::class, 'index']);
+                    Route::post('/pages', [AdminPageController::class, 'store']);
+
+                    Route::get('/pages/{page}', [AdminPageController::class, 'show']);
+
+                    Route::put('/pages/{page}', [AdminPageController::class, 'update']);
+
+                    Route::patch(
+                        '/pages/{page}/status',
+                        [AdminPageController::class, 'updateStatus']
+                    );
+
+                    Route::delete('/pages/{page}', [AdminPageController::class, 'destroy']);
                 });
 
             // Articles (مقالات فروشگاه)
@@ -434,6 +637,22 @@ Route::prefix('v1')->group(function () {
                     Route::post(
                         '/messaging/send',
                         [AdminMessagingController::class, 'send']
+                    );
+
+                    // تبریک تولد خودکار مشتریان
+                    Route::get(
+                        '/messaging/birthday',
+                        [AdminMessagingController::class, 'birthdaySettings']
+                    );
+
+                    Route::put(
+                        '/messaging/birthday',
+                        [AdminMessagingController::class, 'updateBirthdaySettings']
+                    );
+
+                    Route::post(
+                        '/messaging/birthday/send',
+                        [AdminMessagingController::class, 'sendBirthdayGreetings']
                     );
 
                     Route::delete(
@@ -597,6 +816,10 @@ Route::prefix('v1')->group(function () {
     // Public Articles (مقالات فروشگاه)
     Route::get('/articles', [ArticleController::class, 'index']);
     Route::get('/articles/{slug}', [ArticleController::class, 'show']);
+
+    // Public Pages (صفحات ثابت سایت: درباره ما، تماس با ما، قوانین و ...)
+    Route::get('/pages', [PageController::class, 'index']);
+    Route::get('/pages/{slug}', [PageController::class, 'show']);
 
     // Public Categories
     Route::get('/categories', [CategoryController::class, 'index']);

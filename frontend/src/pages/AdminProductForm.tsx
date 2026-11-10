@@ -80,6 +80,39 @@ interface ProductVariantForm {
   is_active: boolean;
 }
 
+interface ProductColorData {
+  id: number;
+  name: string;
+  hex: string | null;
+  image: string | null;
+  sort_order: number;
+  is_active: boolean;
+}
+
+/** ردیف فرم پالت رنگ محصول */
+interface ProductColorForm {
+  id?: number;
+  name: string;
+  hex: string;
+  image: string;
+  is_active: boolean;
+}
+
+interface ProductPackItemData {
+  id: number;
+  name: string;
+  quantity: number;
+  colors: string[] | null;
+}
+
+/** ردیف فرم اجزای پک چندعددی */
+interface ProductPackItemForm {
+  name: string;
+  quantity: string;
+  /** رنگ‌های مجاز این قطعه (از پالت رنگ محصول) */
+  colors: string[];
+}
+
 interface Product {
 
   id: number;
@@ -118,6 +151,9 @@ interface Product {
 
   is_taxable: boolean;
 
+  /** آیا این کالا ضمانت بازگشت دارد؟ (کالاهای بهداشتی: خیر) */
+  is_returnable?: boolean;
+
   meta_title: string | null;
 
   meta_description: string | null;
@@ -126,6 +162,12 @@ interface Product {
 
   /** تنوع‌های محصول؛ فقط در دریافت تک‌محصول از پنل برگردانده می‌شود. */
   variants?: ProductVariant[];
+
+  /** پالت رنگ محصول؛ مشتری یکی از آن‌ها را انتخاب می‌کند. */
+  colors?: ProductColorData[];
+
+  /** قطعات پک چندعددی؛ هر قطعه می‌تواند رنگ جداگانه داشته باشد. */
+  pack_items?: ProductPackItemData[];
 
   /** راهنمای سایز اختصاصی همین محصول */
   size_guide?: unknown;
@@ -169,6 +211,9 @@ interface ProductFormData {
   is_new: boolean;
 
   is_taxable: boolean;
+
+  /** آیا این کالا ضمانت بازگشت (مرجوعی) دارد؟ */
+  is_returnable: boolean;
 
   meta_title: string;
 
@@ -218,6 +263,8 @@ const emptyForm: ProductFormData = {
 
   is_taxable: false,
 
+  is_returnable: true,
+
   meta_title: "",
 
   meta_description: "",
@@ -226,8 +273,30 @@ const emptyForm: ProductFormData = {
 
 
 
-const fieldStyle = {
+/** رنگ‌های پرکاربرد پوشاک برای افزودن سریع به پالت رنگ محصول. */
+const COLOR_PRESETS: { name: string; hex: string }[] = [
+  { name: "مشکی", hex: "#111111" },
+  { name: "سفید", hex: "#ffffff" },
+  { name: "نود", hex: "#e4cdb8" },
+  { name: "بژ", hex: "#d9c7a7" },
+  { name: "کرم", hex: "#f2e8cf" },
+  { name: "خاکستری", hex: "#9ca3af" },
+  { name: "سرمه‌ای", hex: "#1e293b" },
+  { name: "آبی", hex: "#3b82f6" },
+  { name: "قرمز", hex: "#dc2626" },
+  { name: "زرشکی", hex: "#7f1d1d" },
+  { name: "صورتی", hex: "#f472b6" },
+  { name: "هلویی", hex: "#fbbf24" },
+  { name: "بنفش", hex: "#8b5cf6" },
+  { name: "سبز", hex: "#16a34a" },
+  { name: "قهوه‌ای", hex: "#78350f" },
+];
 
+/** کد رنگ معتبر برای نمایش سواچ. */
+const isValidHex = (value: string) =>
+  /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(value.trim());
+
+const fieldStyle = {
   width: "100%",
 
   boxSizing: "border-box" as const,
@@ -332,6 +401,13 @@ function readProduct(product: Product): ProductFormData {
 
     is_taxable: Boolean(product.is_taxable),
 
+    /* اگر پاسخ سرور این فیلد را نداشته باشد، پیش‌فرض «دارد» در نظر گرفته
+     * می‌شود تا با مقدار پیش‌فرض ستون در دیتابیس هم‌خوان باشد. */
+    is_returnable:
+      product.is_returnable === undefined
+        ? true
+        : Boolean(product.is_returnable),
+
     meta_title: product.meta_title ?? "",
 
     meta_description: product.meta_description ?? "",
@@ -402,6 +478,15 @@ function AdminProductForm() {
 
   const [images, setImages] = useState<ProductImage[]>([]);
   const [variants, setVariants] = useState<ProductVariantForm[]>([]);
+
+  /** پالت رنگ محصول (انتخاب رنگ توسط مشتری). */
+  const [colors, setColors] = useState<ProductColorForm[]>([]);
+
+  /** آیا این محصول یک پک چندعددی است؟ */
+  const [isPack, setIsPack] = useState(false);
+
+  /** قطعات پک چندعددی و رنگ‌های مجاز هر قطعه. */
+  const [packItems, setPackItems] = useState<ProductPackItemForm[]>([]);
 
   /** راهنمای سایز اختصاصی همین محصول (جدا از راهنمای سایز عمومی سایت) */
   const [sizeGuide, setSizeGuide] = useState<ProductSizeGuide>(emptyProductSizeGuide);
@@ -493,6 +578,32 @@ function AdminProductForm() {
               emptyProductSizeGuide(),
           );
 
+          // پالت رنگ و اجزای پک باید به فرم برگردند؛ بک‌اند فهرست ارسال‌نشده
+          // را جایگزین می‌کند، پس خالی‌ماندن آن‌ها یعنی حذف رنگ‌ها/قطعات.
+          setColors(
+            (productData.colors ?? []).map((color) => ({
+              id: color.id,
+              name: color.name,
+              hex: color.hex ?? "",
+              image: color.image ?? "",
+              is_active: color.is_active,
+            })),
+          );
+
+          const loadedPackItems = (productData.pack_items ?? []).map(
+            (item) => ({
+              name: item.name,
+              quantity: String(item.quantity ?? 1),
+              colors: (item.colors ?? []).filter(
+                (color): color is string => Boolean(color),
+              ),
+            }),
+          );
+
+          setIsPack(loadedPackItems.length > 0);
+
+          setPackItems(loadedPackItems);
+
           setImages(
 
             [...(productData.images ?? [])].sort(
@@ -526,6 +637,12 @@ function AdminProductForm() {
           setForm({ ...emptyForm });
 
           setVariants([]);
+
+          setColors([]);
+
+          setIsPack(false);
+
+          setPackItems([]);
 
           setImages([]);
 
@@ -635,8 +752,117 @@ function AdminProductForm() {
     );
   }
 
-  function getFieldError(key: string) {
+  /* ------------------------------------------------------------------ */
+  /* پالت رنگ محصول                                                     */
+  /* ------------------------------------------------------------------ */
 
+  function updateColor(index: number, patch: Partial<ProductColorForm>) {
+    setColors((current) =>
+      current.map((color, colorIndex) =>
+        colorIndex === index ? { ...color, ...patch } : color,
+      ),
+    );
+  }
+
+  /**
+   * افزودن رنگ جدید؛ اگر رنگ از فهرست پیشنهادی انتخاب شود نام و کد رنگ
+   * خودکار پر می‌شوند.
+   */
+  function addColor(preset?: { name: string; hex: string }) {
+    setColors((current) => {
+      if (
+        preset &&
+        current.some((color) => color.name.trim() === preset.name)
+      ) {
+        return current;
+      }
+
+      return [
+        ...current,
+        {
+          name: preset?.name ?? "",
+          hex: preset?.hex ?? "",
+          image: "",
+          is_active: true,
+        },
+      ];
+    });
+  }
+
+  function removeColor(index: number) {
+    const removed = colors[index];
+
+    setColors((current) =>
+      current.filter((_, colorIndex) => colorIndex !== index),
+    );
+
+    if (!removed) return;
+
+    // رنگ حذف‌شده از فهرست رنگ‌های مجاز قطعات پک هم برداشته می‌شود.
+    setPackItems((current) =>
+      current.map((item) => ({
+        ...item,
+        colors: item.colors.filter((color) => color !== removed.name),
+      })),
+    );
+  }
+
+  /* ------------------------------------------------------------------ */
+  /* اجزای پک چندعددی                                                   */
+  /* ------------------------------------------------------------------ */
+
+  function togglePackMode() {
+    setIsPack((current) => {
+      const next = !current;
+
+      if (next && packItems.length === 0) {
+        setPackItems([{ name: "", quantity: "1", colors: [] }]);
+      }
+
+      return next;
+    });
+  }
+
+  function addPackItem() {
+    setPackItems((current) => [
+      ...current,
+      { name: "", quantity: "1", colors: [] },
+    ]);
+  }
+
+  function updatePackItem(index: number, patch: Partial<ProductPackItemForm>) {
+    setPackItems((current) =>
+      current.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, ...patch } : item,
+      ),
+    );
+  }
+
+  function removePackItem(index: number) {
+    setPackItems((current) =>
+      current.filter((_, itemIndex) => itemIndex !== index),
+    );
+  }
+
+  /** افزودن/حذف یک رنگ از فهرست رنگ‌های مجاز یک قطعهٔ پک. */
+  function togglePackItemColor(index: number, colorName: string) {
+    setPackItems((current) =>
+      current.map((item, itemIndex) => {
+        if (itemIndex !== index) return item;
+
+        const hasColor = item.colors.includes(colorName);
+
+        return {
+          ...item,
+          colors: hasColor
+            ? item.colors.filter((color) => color !== colorName)
+            : [...item.colors, colorName],
+        };
+      }),
+    );
+  }
+
+  function getFieldError(key: string) {
     return fieldErrors[key]?.[0] ?? "";
 
   }
@@ -1056,6 +1282,65 @@ function AdminProductForm() {
       return;
     }
 
+    /* ---------------- اعتبارسنجی پالت رنگ ---------------- */
+
+    const colorNames = colors
+      .map((color) => color.name.trim())
+      .filter((name) => name !== "");
+
+    if (
+      new Set(colorNames.map((name) => name.toLowerCase())).size !==
+      colorNames.length
+    ) {
+      setError("نام رنگ‌ها نباید تکراری باشد.");
+      return;
+    }
+
+    const invalidHexColor = colors.find((color) => {
+      const value = color.hex.trim();
+
+      return value !== "" && !/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(value);
+    });
+
+    if (invalidHexColor) {
+      setError(
+        `کد رنگ «${invalidHexColor.name || "بدون نام"}» معتبر نیست؛ نمونهٔ درست: #111111`,
+      );
+      return;
+    }
+
+    /* ---------------- اعتبارسنجی اجزای پک ---------------- */
+
+    if (isPack) {
+      if (packItems.length === 0) {
+        setError("برای پک حداقل یک قطعه اضافه کنید یا حالت پک را خاموش کنید.");
+        return;
+      }
+
+      for (const [index, item] of packItems.entries()) {
+        if (!item.name.trim()) {
+          setError(`نام قطعهٔ شماره ${index + 1} در پک را وارد کنید.`);
+          return;
+        }
+
+        if (!Number.isInteger(Number(item.quantity)) || Number(item.quantity) < 1) {
+          setError(`تعداد قطعهٔ «${item.name}» باید عدد صحیح و بزرگ‌تر از صفر باشد.`);
+          return;
+        }
+
+        const unknownColor = item.colors.find(
+          (color) => !colorNames.includes(color),
+        );
+
+        if (unknownColor) {
+          setError(
+            `رنگ «${unknownColor}» در پالت رنگ محصول نیست؛ ابتدا آن را به فهرست رنگ‌ها اضافه کنید.`,
+          );
+          return;
+        }
+      }
+    }
+
     const variantsPayload = variants
       .filter((variant) => Boolean(variant.id) || variant.is_active)
       .map((variant) => ({
@@ -1070,8 +1355,32 @@ function AdminProductForm() {
       is_active: variant.is_active,
     }));
 
+    const colorsPayload = colors
+      .filter((color) => color.name.trim() !== "")
+      .map((color) => ({
+        ...(color.id ? { id: color.id } : {}),
+        name: color.name.trim(),
+        hex: color.hex.trim() || null,
+        image: color.image.trim() || null,
+        is_active: color.is_active,
+      }));
+
+    const packItemsPayload = isPack
+      ? packItems
+          .filter((item) => item.name.trim() !== "")
+          .map((item) => ({
+            name: item.name.trim(),
+            quantity: Number(item.quantity) || 1,
+            colors: item.colors,
+          }))
+      : [];
+
     const payload = {
       variants: variantsPayload,
+
+      colors: colorsPayload,
+
+      pack_items: packItemsPayload,
 
       category_id: Number(form.category_id),
 
@@ -1106,6 +1415,8 @@ function AdminProductForm() {
       is_new: form.is_new,
 
       is_taxable: form.is_taxable,
+
+      is_returnable: form.is_returnable,
 
       meta_title: form.meta_title.trim() || null,
 
@@ -1391,7 +1702,12 @@ function AdminProductForm() {
 
   function checkboxField(
 
-    key: "is_active" | "is_featured" | "is_new" | "is_taxable",
+    key:
+      | "is_active"
+      | "is_featured"
+      | "is_new"
+      | "is_taxable"
+      | "is_returnable",
 
     label: string,
 
@@ -2321,6 +2637,451 @@ function AdminProductForm() {
           )}
         </section>
 
+        {/* پالت رنگ محصول */}
+        <section style={sectionStyle}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: 12,
+              marginBottom: 10,
+            }}
+          >
+            <h2 style={{ margin: 0, fontSize: "17px" }}>رنگ‌های محصول</h2>
+            <button
+              type="button"
+              onClick={() => addColor()}
+              style={{
+                border: "1px solid #587b5b",
+                background: "#edf4e9",
+                color: "#385e3e",
+                borderRadius: 9,
+                padding: "9px 14px",
+                fontFamily: "inherit",
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              + افزودن رنگ
+            </button>
+          </div>
+
+          <p style={{ color: "#6b7280", fontSize: 13, lineHeight: 1.9, marginTop: 0 }}>
+            رنگ‌هایی که اینجا تعریف می‌شود در صفحهٔ محصول به شکل سواچ به مشتری
+            نشان داده می‌شود و او باید یکی را انتخاب کند. برای هر رنگ می‌توانید
+            تصویر اختصاصی بگذارید تا با انتخاب آن رنگ، تصویر گالری عوض شود.
+          </p>
+
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
+            <span style={{ fontSize: 12, color: "#6b7280", alignSelf: "center" }}>
+              افزودن سریع:
+            </span>
+
+            {COLOR_PRESETS.map((preset) => (
+              <button
+                key={preset.name}
+                type="button"
+                onClick={() => addColor(preset)}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  border: "1px solid #dce4d7",
+                  background: "#fffefa",
+                  borderRadius: 999,
+                  padding: "5px 10px",
+                  fontFamily: "inherit",
+                  fontSize: 12,
+                  cursor: "pointer",
+                  color: "#344b3a",
+                }}
+              >
+                <span
+                  style={{
+                    width: 12,
+                    height: 12,
+                    borderRadius: 999,
+                    background: preset.hex,
+                    border: "1px solid rgba(0,0,0,.15)",
+                  }}
+                />
+                {preset.name}
+              </button>
+            ))}
+          </div>
+
+          {colors.length === 0 ? (
+            <div
+              style={{
+                border: "1px dashed #d1d5db",
+                borderRadius: 10,
+                padding: 20,
+                color: "#6b7280",
+                textAlign: "center",
+                fontSize: 13,
+              }}
+            >
+              هنوز رنگی تعریف نشده است؛ در این حالت مشتری فقط تنوع یا محصول
+              ساده را می‌بیند.
+            </div>
+          ) : (
+            <div style={{ display: "grid", gap: 12 }}>
+              {colors.map((color, index) => (
+                <div
+                  key={color.id ?? `new-color-${index}`}
+                  style={{
+                    border: color.is_active
+                      ? "1px solid #dce4d7"
+                      : "1px solid #e5e7eb",
+                    background: color.is_active ? "#fffefa" : "#f9fafb",
+                    borderRadius: 12,
+                    padding: 14,
+                    opacity: color.is_active ? 1 : 0.72,
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: 10,
+                      marginBottom: 12,
+                    }}
+                  >
+                    <strong style={{ fontSize: 13, color: "#344b3a" }}>
+                      رنگ {index + 1}
+                      {color.id ? ` · شناسه ${color.id}` : " · جدید"}
+                    </strong>
+
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <label
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 6,
+                          fontSize: 12,
+                          color: "#374151",
+                        }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={color.is_active}
+                          onChange={(event) =>
+                            updateColor(index, {
+                              is_active: event.target.checked,
+                            })
+                          }
+                        />
+                        فعال
+                      </label>
+
+                      <button
+                        type="button"
+                        onClick={() => removeColor(index)}
+                        style={{
+                          border: "1px solid #fecaca",
+                          background: "#fef2f2",
+                          color: "#b91c1c",
+                          borderRadius: 8,
+                          padding: "7px 10px",
+                          fontFamily: "inherit",
+                          fontSize: 12,
+                          cursor: "pointer",
+                        }}
+                      >
+                        حذف
+                      </button>
+                    </div>
+                  </div>
+
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+                      gap: 12,
+                    }}
+                  >
+                    <div>
+                      <label style={labelStyle}>نام رنگ *</label>
+                      <input
+                        value={color.name}
+                        onChange={(event) =>
+                          updateColor(index, { name: event.target.value })
+                        }
+                        placeholder="مثلاً مشکی"
+                        style={fieldStyle}
+                        disabled={!color.is_active}
+                      />
+                    </div>
+
+                    <div>
+                      <label style={labelStyle}>کد رنگ</label>
+                      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                        <input
+                          type="color"
+                          value={isValidHex(color.hex) ? color.hex : "#111111"}
+                          onChange={(event) =>
+                            updateColor(index, { hex: event.target.value })
+                          }
+                          disabled={!color.is_active}
+                          style={{
+                            width: 44,
+                            height: 38,
+                            padding: 2,
+                            border: "1px solid #d1d5db",
+                            borderRadius: 8,
+                            background: "#fff",
+                            cursor: "pointer",
+                          }}
+                        />
+                        <input
+                          value={color.hex}
+                          onChange={(event) =>
+                            updateColor(index, { hex: event.target.value })
+                          }
+                          placeholder="#111111"
+                          style={{
+                            ...fieldStyle,
+                            direction: "ltr",
+                            textAlign: "right",
+                          }}
+                          disabled={!color.is_active}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label style={labelStyle}>تصویر این رنگ (اختیاری)</label>
+                      <input
+                        value={color.image}
+                        onChange={(event) =>
+                          updateColor(index, { image: event.target.value })
+                        }
+                        placeholder="مسیر یا آدرس تصویر"
+                        style={fieldStyle}
+                        disabled={!color.is_active}
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+        </section>
+
+        <section style={sectionStyle}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: 12,
+              marginBottom: 10,
+            }}
+          >
+            <h2 style={{ margin: 0, fontSize: "17px" }}>پک چندعددی</h2>
+
+            <label
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                fontSize: 13,
+                color: "#374151",
+                cursor: "pointer",
+              }}
+            >
+              <input
+                type="checkbox"
+                checked={isPack}
+                onChange={togglePackMode}
+              />
+              این محصول یک پک است
+            </label>
+          </div>
+
+          <p style={{ color: "#6b7280", fontSize: 13, lineHeight: 1.9, marginTop: 0 }}>
+            برای محصولاتی مثل «پک سه‌عددی شورت» این گزینه را فعال کنید و قطعات
+            پک را همراه با رنگ‌های مجاز هر قطعه تعریف کنید. مشتری در صفحهٔ محصول
+            برای هر قطعه رنگ انتخاب می‌کند و ترکیب انتخابی در سفارش ذخیره می‌شود.
+            رنگ‌های مجاز از فهرست «رنگ‌های محصول» بالا انتخاب می‌شوند.
+          </p>
+
+          {isPack && (
+            <>
+              <div style={{ display: "grid", gap: 12 }}>
+                {packItems.map((item, index) => (
+                  <div
+                    key={`pack-${index}`}
+                    style={{
+                      border: "1px solid #dce4d7",
+                      background: "#fffefa",
+                      borderRadius: 12,
+                      padding: 14,
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 10,
+                        marginBottom: 12,
+                      }}
+                    >
+                      <strong style={{ fontSize: 13, color: "#344b3a" }}>
+                        قطعهٔ {index + 1}
+                      </strong>
+
+                      <button
+                        type="button"
+                        onClick={() => removePackItem(index)}
+                        style={{
+                          border: "1px solid #fecaca",
+                          background: "#fef2f2",
+                          color: "#b91c1c",
+                          borderRadius: 8,
+                          padding: "7px 10px",
+                          fontFamily: "inherit",
+                          fontSize: 12,
+                          cursor: "pointer",
+                        }}
+                      >
+                        حذف قطعه
+                      </button>
+                    </div>
+
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns:
+                          "repeat(auto-fit, minmax(180px, 1fr))",
+                        gap: 12,
+                      }}
+                    >
+                      <div>
+                        <label style={labelStyle}>نام قطعه *</label>
+                        <input
+                          value={item.name}
+                          onChange={(event) =>
+                            updatePackItem(index, { name: event.target.value })
+                          }
+                          placeholder="مثلاً شورت اول"
+                          style={fieldStyle}
+                        />
+                      </div>
+
+                      <div>
+                        <label style={labelStyle}>تعداد در پک</label>
+                        <input
+                          type="number"
+                          min="1"
+                          step="1"
+                          value={item.quantity}
+                          onChange={(event) =>
+                            updatePackItem(index, {
+                              quantity: event.target.value,
+                            })
+                          }
+                          style={fieldStyle}
+                        />
+                      </div>
+                    </div>
+
+                    <div style={{ marginTop: 12 }}>
+                      <label style={labelStyle}>رنگ‌های مجاز این قطعه</label>
+
+                      {colors.filter((color) => color.name.trim() !== "")
+                        .length === 0 ? (
+                        <p
+                          style={{
+                            margin: 0,
+                            fontSize: 12,
+                            color: "#b45309",
+                          }}
+                        >
+                          ابتدا در بخش «رنگ‌های محصول» رنگ اضافه کنید تا بتوانید
+                          برای این قطعه رنگ انتخاب کنید.
+                        </p>
+                      ) : (
+                        <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                          {colors
+                            .filter((color) => color.name.trim() !== "")
+                            .map((color) => {
+                              const colorName = color.name.trim();
+                              const selected = item.colors.includes(colorName);
+
+                              return (
+                                <label
+                                  key={`${index}-${colorName}`}
+                                  style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: 6,
+                                    border: selected
+                                      ? "1px solid #587b5b"
+                                      : "1px solid #dce4d7",
+                                    background: selected ? "#edf4e9" : "#fff",
+                                    borderRadius: 999,
+                                    padding: "5px 10px",
+                                    fontSize: 12,
+                                    cursor: "pointer",
+                                    color: "#344b3a",
+                                  }}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={selected}
+                                    onChange={() =>
+                                      togglePackItemColor(index, colorName)
+                                    }
+                                  />
+                                  <span
+                                    style={{
+                                      width: 12,
+                                      height: 12,
+                                      borderRadius: 999,
+                                      background: isValidHex(color.hex)
+                                        ? color.hex
+                                        : "#e5e7eb",
+                                      border: "1px solid rgba(0,0,0,.15)",
+                                    }}
+                                  />
+                                  {colorName}
+                                </label>
+                              );
+                            })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                onClick={addPackItem}
+                style={{
+                  marginTop: 12,
+                  border: "1px solid #587b5b",
+                  background: "#edf4e9",
+                  color: "#385e3e",
+                  borderRadius: 9,
+                  padding: "9px 14px",
+                  fontFamily: "inherit",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                + افزودن قطعه
+              </button>
+            </>
+          )}
+        </section>
+
         <section style={sectionStyle}>
 
           <h2 style={{ margin: "0 0 18px", fontSize: "17px" }}>
@@ -2440,6 +3201,45 @@ function AdminProductForm() {
             {checkboxField("is_new", "محصول جدید باشد")}
 
             {checkboxField("is_taxable", "مشمول ارزش افزوده")}
+
+          </div>
+
+        </section>
+
+
+
+        <section style={sectionStyle}>
+
+          <h2 style={{ margin: "0 0 6px", fontSize: "17px" }}>
+
+            ضمانت بازگشت کالا
+
+          </h2>
+
+          <p
+            style={{
+              margin: "0 0 16px",
+              fontSize: "13px",
+              lineHeight: 1.9,
+              color: "#6b7280",
+            }}
+          >
+
+            کالاهای بهداشتی (مثل لباس زیر) مرجوعی ندارند؛ برای این محصولات این
+            گزینه را خاموش کنید تا نشان «ضمانت بازگشت» از صفحهٔ محصول حذف شود
+            و به‌جای آن پیام «این کالا امکان مرجوعی ندارد» نمایش داده شود.
+
+          </p>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))",
+              gap: "12px",
+            }}
+          >
+
+            {checkboxField("is_returnable", "ضمانت بازگشت کالا دارد")}
 
           </div>
 

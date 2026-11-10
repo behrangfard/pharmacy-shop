@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Product;
+use App\Models\ProductColor;
+use App\Models\ProductPackItem;
 use App\Models\ProductSizeGuide;
 use App\Models\ProductVariant;
 use Illuminate\Http\JsonResponse;
@@ -16,6 +18,12 @@ use Illuminate\Validation\ValidationException;
 
 class AdminProductController extends Controller
 {
+    /** حداکثر تعداد رنگ در پالت هر محصول. */
+    private const MAX_COLORS = 15;
+
+    /** حداکثر تعداد قطعهٔ پک برای هر محصول. */
+    private const MAX_PACK_ITEMS = 12;
+
     /**
      * List products.
      */
@@ -90,6 +98,8 @@ class AdminProductController extends Controller
             'images',
             'variants',
             'sizeGuide',
+            'colors',
+            'packItems',
         ]);
 
         return response()->json([
@@ -108,6 +118,14 @@ class AdminProductController extends Controller
         $variants = $validated['variants'] ?? [];
         unset($validated['variants']);
 
+        $hasColors = array_key_exists('colors', $validated);
+        $colors = $validated['colors'] ?? [];
+        unset($validated['colors']);
+
+        $hasPackItems = array_key_exists('pack_items', $validated);
+        $packItems = $validated['pack_items'] ?? [];
+        unset($validated['pack_items']);
+
         $hasSizeGuide = array_key_exists('size_guide', $validated);
         $sizeGuide = $validated['size_guide'] ?? null;
         unset($validated['size_guide']);
@@ -124,6 +142,10 @@ class AdminProductController extends Controller
         $product = DB::transaction(function () use (
             $validated,
             $variants,
+            $hasColors,
+            $colors,
+            $hasPackItems,
+            $packItems,
             $hasSizeGuide,
             $sizeGuide
         ) {
@@ -131,6 +153,14 @@ class AdminProductController extends Controller
 
             if ($variants !== []) {
                 $this->syncVariants($product, $variants);
+            }
+
+            if ($hasColors) {
+                $this->syncColors($product, $colors);
+            }
+
+            if ($hasPackItems) {
+                $this->syncPackItems($product, $packItems);
             }
 
             if ($hasSizeGuide) {
@@ -146,6 +176,8 @@ class AdminProductController extends Controller
             'images',
             'variants',
             'sizeGuide',
+            'colors',
+            'packItems',
         ]);
 
         return response()->json([
@@ -166,6 +198,16 @@ class AdminProductController extends Controller
         $variants = $validated['variants'] ?? [];
 
         unset($validated['variants']);
+
+        $hasColors = array_key_exists('colors', $validated);
+        $colors = $validated['colors'] ?? [];
+
+        unset($validated['colors']);
+
+        $hasPackItems = array_key_exists('pack_items', $validated);
+        $packItems = $validated['pack_items'] ?? [];
+
+        unset($validated['pack_items']);
 
         $hasSizeGuide = array_key_exists('size_guide', $validated);
         $sizeGuide = $validated['size_guide'] ?? null;
@@ -190,6 +232,10 @@ class AdminProductController extends Controller
             $validated,
             $variants,
             $hasVariants,
+            $hasColors,
+            $colors,
+            $hasPackItems,
+            $packItems,
             $hasSizeGuide,
             $sizeGuide
         ) {
@@ -204,6 +250,14 @@ class AdminProductController extends Controller
                 $this->syncVariants($lockedProduct, $variants);
             }
 
+            if ($hasColors) {
+                $this->syncColors($lockedProduct, $colors);
+            }
+
+            if ($hasPackItems) {
+                $this->syncPackItems($lockedProduct, $packItems);
+            }
+
             if ($hasSizeGuide) {
                 $this->saveSizeGuide($lockedProduct, $sizeGuide);
             }
@@ -215,6 +269,8 @@ class AdminProductController extends Controller
             'images',
             'variants',
             'sizeGuide',
+            'colors',
+            'packItems',
         ]);
 
         return response()->json([
@@ -413,6 +469,12 @@ class AdminProductController extends Controller
                 'boolean',
             ],
 
+            // آیا این کالا ضمانت بازگشت دارد؟ (کالاهای بهداشتی: خیر)
+            'is_returnable' => [
+                'sometimes',
+                'boolean',
+            ],
+
             'meta_title' => [
                 'nullable',
                 'string',
@@ -485,7 +547,109 @@ class AdminProductController extends Controller
                 'boolean',
             ],
 
+            ...$this->colorRules(),
+            ...$this->packItemRules(),
             ...$this->sizeGuideRules(),
+        ];
+    }
+
+    /**
+     * قواعد اعتبارسنجی پالت رنگ محصول.
+     *
+     * کلید colors اختیاری است؛ اگر ارسال نشود پالت فعلی دست‌نخورده می‌ماند
+     * و اگر آرایهٔ خالی ارسال شود همهٔ رنگ‌ها حذف می‌شوند.
+     *
+     * @return array<string, array<int, mixed>>
+     */
+    private function colorRules(): array
+    {
+        return [
+            'colors' => [
+                'sometimes',
+                'array',
+                'max:'.self::MAX_COLORS,
+            ],
+
+            'colors.*.id' => [
+                'nullable',
+                'integer',
+                'distinct',
+                'exists:product_colors,id',
+            ],
+
+            'colors.*.name' => [
+                'required',
+                'string',
+                'max:60',
+            ],
+
+            'colors.*.hex' => [
+                'nullable',
+                'string',
+                'regex:/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/',
+            ],
+
+            'colors.*.image' => [
+                'nullable',
+                'string',
+                'max:255',
+            ],
+
+            'colors.*.sort_order' => [
+                'nullable',
+                'integer',
+                'min:0',
+                'max:1000',
+            ],
+
+            'colors.*.is_active' => [
+                'sometimes',
+                'boolean',
+            ],
+        ];
+    }
+
+    /**
+     * قواعد اعتبارسنجی قطعات پک چندعددی.
+     *
+     * هر قطعه می‌تواند فهرستی از رنگ‌های مجاز داشته باشد؛ این رنگ‌ها باید
+     * از پالت رنگ همان محصول انتخاب شده باشند.
+     *
+     * @return array<string, array<int, mixed>>
+     */
+    private function packItemRules(): array
+    {
+        return [
+            'pack_items' => [
+                'sometimes',
+                'array',
+                'max:'.self::MAX_PACK_ITEMS,
+            ],
+
+            'pack_items.*.name' => [
+                'required',
+                'string',
+                'max:120',
+            ],
+
+            'pack_items.*.quantity' => [
+                'nullable',
+                'integer',
+                'min:1',
+                'max:100',
+            ],
+
+            'pack_items.*.colors' => [
+                'sometimes',
+                'array',
+                'max:'.self::MAX_COLORS,
+            ],
+
+            'pack_items.*.colors.*' => [
+                'nullable',
+                'string',
+                'max:60',
+            ],
         ];
     }
 
@@ -919,6 +1083,176 @@ class AdminProductController extends Controller
         $deactivateQuery->update([
             'is_active' => false,
         ]);
+    }
+
+    /**
+     * ذخیرهٔ پالت رنگ محصول.
+     *
+     * رنگ‌های ارسال‌شده به‌ترتیب به‌روزرسانی یا ایجاد می‌شوند و رنگ‌هایی که
+     * دیگر در فهرست نیستند حذف می‌شوند. حذف رنگ برای تاریخچهٔ سفارش‌ها
+     * مشکلی ایجاد نمی‌کند چون نام رنگ داخل خود سفارش ذخیره شده است.
+     *
+     * @param  array<int, array<string, mixed>>  $colors
+     */
+    private function syncColors(Product $product, array $colors): void
+    {
+        $keptIds = [];
+        $usedNames = [];
+        $position = 0;
+
+        foreach (array_values($colors) as $index => $colorData) {
+            $name = trim((string) ($colorData['name'] ?? ''));
+
+            // ردیف‌های خالی (که مدیر اضافه کرده و پر نکرده) نادیده گرفته می‌شوند.
+            if ($name === '') {
+                continue;
+            }
+
+            $nameKey = mb_strtolower($name, 'UTF-8');
+
+            if (isset($usedNames[$nameKey])) {
+                throw ValidationException::withMessages([
+                    "colors.$index.name" => [
+                        'نام رنگ‌ها نباید تکراری باشد.',
+                    ],
+                ]);
+            }
+
+            $usedNames[$nameKey] = true;
+
+            $data = [
+                'name' => $name,
+                'hex' => $this->normalizeHex($colorData['hex'] ?? null),
+                'image' => $this->nullIfBlank($colorData['image'] ?? null),
+                'sort_order' => isset($colorData['sort_order'])
+                    ? (int) $colorData['sort_order']
+                    : $position,
+                'is_active' => (bool) ($colorData['is_active'] ?? true),
+            ];
+
+            $position++;
+
+            $existing = null;
+
+            if (! empty($colorData['id'])) {
+                $existing = $product->colors()
+                    ->whereKey((int) $colorData['id'])
+                    ->first();
+            }
+
+            if ($existing) {
+                $existing->update($data);
+                $keptIds[] = (int) $existing->id;
+
+                continue;
+            }
+
+            $created = ProductColor::query()->create([
+                'product_id' => $product->id,
+                ...$data,
+            ]);
+
+            $keptIds[] = (int) $created->id;
+        }
+
+        $deleteQuery = ProductColor::query()->where('product_id', $product->id);
+
+        if ($keptIds !== []) {
+            $deleteQuery->whereNotIn('id', array_values(array_unique($keptIds)));
+        }
+
+        $deleteQuery->delete();
+
+        $product->unsetRelation('colors');
+    }
+
+    /**
+     * ذخیرهٔ قطعات پک چندعددی.
+     *
+     * قطعات در هر ذخیره بازسازی می‌شوند؛ ارجاعی به شناسهٔ آن‌ها در جای
+     * دیگری از سیستم وجود ندارد (رنگ‌های انتخابی داخل سفارش به شکل متن
+     * ذخیره می‌شوند).
+     *
+     * @param  array<int, array<string, mixed>>  $items
+     */
+    private function syncPackItems(Product $product, array $items): void
+    {
+        $palette = $product->colors()->pluck('name')->all();
+
+        ProductPackItem::query()->where('product_id', $product->id)->delete();
+
+        $position = 0;
+
+        foreach (array_values($items) as $index => $itemData) {
+            $name = trim((string) ($itemData['name'] ?? ''));
+
+            if ($name === '') {
+                continue;
+            }
+
+            $colorNames = collect($itemData['colors'] ?? [])
+                ->map(fn ($color): string => trim((string) $color))
+                ->filter()
+                ->unique()
+                ->values()
+                ->all();
+
+            foreach ($colorNames as $colorName) {
+                if (! in_array($colorName, $palette, true)) {
+                    throw ValidationException::withMessages([
+                        "pack_items.$index.colors" => [
+                            "رنگ «{$colorName}» در پالت رنگ این محصول نیست؛ ابتدا آن را به فهرست رنگ‌ها اضافه کنید.",
+                        ],
+                    ]);
+                }
+            }
+
+            ProductPackItem::query()->create([
+                'product_id' => $product->id,
+                'name' => $name,
+                'quantity' => max((int) ($itemData['quantity'] ?? 1), 1),
+                'colors' => $colorNames === [] ? null : $colorNames,
+                'sort_order' => $position,
+            ]);
+
+            $position++;
+        }
+
+        $product->unsetRelation('packItems');
+    }
+
+    /**
+     * یکسان‌سازی کد رنگ؛ مقدار خالی به null تبدیل می‌شود.
+     */
+    private function normalizeHex(?string $hex): ?string
+    {
+        $value = $this->nullIfBlank($hex);
+
+        if ($value === null) {
+            return null;
+        }
+
+        $value = strtolower($value);
+
+        if (! str_starts_with($value, '#')) {
+            $value = '#'.$value;
+        }
+
+        return $value;
+    }
+
+    /**
+     * رشتهٔ خالی (یا فقط فاصله) را به null تبدیل می‌کند.
+     */
+    private function nullIfBlank(mixed $value): ?string
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        $trimmed = trim((string) $value);
+
+        return $trimmed === '' ? null : $trimmed;
     }
 
     /**

@@ -15,10 +15,22 @@ import {
   CalendarDays,
   Layers,
   Ruler,
+  Heart,
+  Loader2,
+  Palette,
+  Check,
+  CreditCard,
+  Link2,
+  MessageCircle,
+  RotateCcw,
+  ShieldCheck,
+  Sparkles,
+  Truck,
 } from "lucide-react";
 
 import Layout from "../components/Layout";
 import Button from "../components/Button";
+import ProductCard from "../components/ProductCard";
 import SizeGuideModal from "../components/SizeGuide";
 import ProductSizeGuide from "../components/ProductSizeGuide";
 import { resolveSizeGuideTab, type SizeGuideTabId } from "../data/sizeGuide";
@@ -28,7 +40,10 @@ import {
 } from "../utils/productSizeGuide";
 import api from "../services/api";
 import { useCart } from "../context/CartContext";
+import { useWishlist } from "../context/WishlistContext";
+import type { WishlistProduct } from "../services/wishlist";
 import { calculateProductPrice } from "../utils/price";
+import { formatJalaliDateTime } from "../utils/jalali";
 import { usePageMeta } from "../hooks/usePageMeta";
 import { SITE_NAME, plainText, type PageMeta } from "../utils/seo";
 import {
@@ -56,6 +71,23 @@ interface ProductVariant {
   is_active: boolean;
 }
 
+interface ProductColor {
+  id: number;
+  name: string;
+  hex?: string | null;
+  image?: string | null;
+  sort_order?: number;
+  is_active?: boolean;
+}
+
+interface ProductPackItem {
+  id: number;
+  name: string;
+  quantity: number;
+  /** نام رنگ‌های مجاز این قطعه از پالت رنگ محصول. */
+  colors?: string[] | null;
+}
+
 interface Product {
   id: number;
   name: string;
@@ -70,6 +102,11 @@ interface Product {
   short_description?: string | null;
   description?: string | null;
   is_taxable?: boolean | number;
+  /**
+   * آیا این کالا ضمانت بازگشت دارد؟ کالاهای بهداشتی (مثل لباس زیر) این
+   * قابلیت را ندارند و پنل مدیریت این گزینه را برایشان خاموش می‌کند.
+   */
+  is_returnable?: boolean | number;
   average_rating?: number | string | null;
   reviews_count?: number;
   category?: {
@@ -84,6 +121,10 @@ interface Product {
   } | null;
   images?: ProductImage[];
   variants?: ProductVariant[];
+  /** پالت رنگ محصول؛ مشتری یکی از آن‌ها را انتخاب می‌کند. */
+  colors?: ProductColor[];
+  /** قطعات پک چندعددی؛ هر قطعه می‌تواند رنگ جداگانه داشته باشد. */
+  pack_items?: ProductPackItem[];
   /** راهنمای سایز اختصاصی همین محصول (از پنل مدیریت) */
   size_guide?: unknown;
 }
@@ -118,10 +159,51 @@ interface CustomerOrder {
   items?: CustomerOrderItem[];
 }
 
+/**
+ * نشان‌های اعتمادِ کنار جعبهٔ خرید (مثل فروشگاه‌های مرجع).
+ *
+ * متن‌ها ثابت و کوتاه‌اند و فقط نقش اطمینان‌بخشی دارند؛ آیکن هر مورد هم
+ * همان‌جای همین آرایه تعیین می‌شود تا چیدمان بالا شلوغ نشود.
+ */
+const TRUST_ITEMS = [
+  {
+    key: "authentic",
+    label: "ضمانت اصالت کالا",
+    hint: "تضمین اصل بودن",
+    icon: ShieldCheck,
+  },
+  {
+    key: "return",
+    label: "ضمانت بازگشت",
+    hint: "تا ۷ روز",
+    icon: RotateCcw,
+  },
+  {
+    key: "express",
+    label: "تحویل اکسپرس",
+    hint: "ارسال سریع",
+    icon: Truck,
+  },
+  {
+    key: "payment",
+    label: "پرداخت امن",
+    hint: "درگاه مطمئن",
+    icon: CreditCard,
+  },
+];
+
+/** حداکثر تعداد کارت در ردیف «محصولات مرتبط» پایین صفحه. */
+const RELATED_PRODUCTS_LIMIT = 5;
+
 function ProductDetail() {
   const { slug } = useParams<{ slug: string }>();
   const [searchParams] = useSearchParams();
   const { addToCart } = useCart();
+  const {
+    isWishlisted,
+    toggle: toggleWishlist,
+    count: wishlistCount,
+  } = useWishlist();
 
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
@@ -131,11 +213,24 @@ function ProductDetail() {
   const [selectedVariantId, setSelectedVariantId] = useState<number | null>(
     null,
   );
+  /** رنگ انتخاب‌شدهٔ محصول (نام رنگ از پالت). */
+  const [selectedColorName, setSelectedColorName] = useState("");
+  /** رنگ انتخاب‌شده برای هر قطعهٔ پک، کلید = شناسهٔ قطعه. */
+  const [selectedPackColors, setSelectedPackColors] = useState<
+    Record<number, string>
+  >({});
   const [addingToCart, setAddingToCart] = useState(false);
   const [addedToCart, setAddedToCart] = useState(false);
+  const [wishlistBusy, setWishlistBusy] = useState(false);
+  const [wishlistError, setWishlistError] = useState("");
   const [sizeGuideOpen, setSizeGuideOpen] = useState(
     () => searchParams.get("size-guide") === "1",
   );
+  /** بازخورد کوتاه «لینک کپی شد» در ردیف اشتراک‌گذاری گالری. */
+  const [shareCopied, setShareCopied] = useState(false);
+  /** محصولات مرتبط برای ردیف پایین صفحه. */
+  const [relatedProducts, setRelatedProducts] = useState<WishlistProduct[]>([]);
+  const [relatedLoading, setRelatedLoading] = useState(false);
 
   // Reviews
   const [reviews, setReviews] = useState<ProductReview[]>([]);
@@ -258,6 +353,31 @@ function ProductDetail() {
         );
 
         setSelectedVariantId(firstAvailableVariant?.id ?? null);
+
+        /*
+         * اگر محصول فقط یک رنگ داشته باشد همان انتخاب می‌شود؛ در غیر این
+         * صورت مشتری خودش رنگ را انتخاب می‌کند.
+         */
+        const selectableColors = (productData.colors ?? []).filter(
+          (color) => color.is_active !== false,
+        );
+
+        setSelectedColorName(
+          selectableColors.length === 1 ? selectableColors[0].name : "",
+        );
+
+        // برای پک، اگر هر قطعه فقط یک رنگ مجاز داشته باشد خودکار انتخاب می‌شود.
+        const initialPackColors: Record<number, string> = {};
+
+        for (const packItem of productData.pack_items ?? []) {
+          const allowed = (packItem.colors ?? []).filter(Boolean);
+
+          if (allowed.length === 1) {
+            initialPackColors[packItem.id] = allowed[0];
+          }
+        }
+
+        setSelectedPackColors(initialPackColors);
       })
       .catch((error) => {
         if (cancelled) return;
@@ -367,6 +487,79 @@ function ProductDetail() {
     };
   }, [slug, product?.id]);
 
+  /*
+   * محصولات مرتبط (ردیف پایین صفحه).
+   *
+   * اول از همان دستهٔ محصول درخواست می‌شود؛ اگر آن دسته محصول دیگری نداشت،
+   * جدیدترین محصولات فروشگاه آورده می‌شود تا ردیف هیچ‌وقت خالی نماند.
+   */
+  useEffect(() => {
+    if (!product) {
+      setRelatedProducts([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadRelated = async () => {
+      setRelatedLoading(true);
+
+      const fetchList = async (categorySlug?: string) => {
+        const params: Record<string, string | number> = {
+          per_page: 12,
+          sort: "latest",
+        };
+
+        if (categorySlug) {
+          params.category = categorySlug;
+        }
+
+        const response = await api.get("/products", { params });
+        const payload = response.data?.data;
+
+        return (
+          Array.isArray(payload?.data)
+            ? payload.data
+            : Array.isArray(payload)
+              ? payload
+              : []
+        ) as WishlistProduct[];
+      };
+
+      try {
+        const categorySlug = product.category?.slug;
+
+        let list = categorySlug ? await fetchList(categorySlug) : [];
+
+        const withoutCurrent = (items: WishlistProduct[]) =>
+          items.filter((item) => Number(item?.id) !== product.id);
+
+        if (withoutCurrent(list).length === 0) {
+          list = await fetchList();
+        }
+
+        if (cancelled) return;
+
+        setRelatedProducts(withoutCurrent(list).slice(0, RELATED_PRODUCTS_LIMIT));
+      } catch (error) {
+        if (cancelled) return;
+
+        console.error("Related products error:", error);
+        setRelatedProducts([]);
+      } finally {
+        if (!cancelled) {
+          setRelatedLoading(false);
+        }
+      }
+    };
+
+    void loadRelated();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [product?.id, product?.category?.slug]);
+
   // Active variants
   const activeVariants = (product?.variants ?? []).filter(
     (variant) => variant.is_active,
@@ -399,9 +592,63 @@ function ProductDetail() {
       ? findSizeGuideRow(productSizeGuide, selectedVariant.name)
       : null;
 
+  /* ---------------------------------------------------------------- */
+  /* رنگ محصول و اجزای پک                                              */
+  /* ---------------------------------------------------------------- */
+
+  /** پالت رنگ فعال محصول؛ مشتری یکی از این رنگ‌ها را انتخاب می‌کند. */
+  const activeColors = (product?.colors ?? []).filter(
+    (color) => color.is_active !== false,
+  );
+
+  const hasColors = activeColors.length > 0;
+
+  /** قطعات پک چندعددی (مثلاً پک سه‌عددی شورت). */
+  const packItems = product?.pack_items ?? [];
+
+  const hasPack = packItems.length > 0;
+
+  /** قطعاتی از پک که برای هرکدام باید رنگ انتخاب شود. */
+  const packItemsWithColors = packItems.filter(
+    (item) => (item.colors ?? []).filter(Boolean).length > 0,
+  );
+
+  const selectedColor =
+    activeColors.find((color) => color.name === selectedColorName) ?? null;
+
+  /** رنگ سواچ؛ اگر مدیر کد رنگ نداده باشد خاکستری روشن نمایش داده می‌شود. */
+  const colorSwatchValue = (color: ProductColor) =>
+    color.hex?.trim() || "#e5e7eb";
+
+  /**
+   * انتخاب رنگ کامل است؟
+   *
+   * برای محصول ساده، رنگ محصول و برای پک، رنگ همهٔ قطعاتی که رنگ مجاز
+   * دارند باید انتخاب شده باشد.
+   */
+  const colorsReady = hasPack
+    ? packItemsWithColors.every((item) => Boolean(selectedPackColors[item.id]))
+    : !hasColors || selectedColorName !== "";
+
+  /** رنگ‌های انتخابی قطعات پک برای ثبت در سبد خرید. */
+  const selectedPackColorList = packItemsWithColors.map((item) => ({
+    name: item.name,
+    color: selectedPackColors[item.id] ?? "",
+  }));
+
   const currentStock = hasVariants
     ? Number(selectedVariant?.stock ?? 0)
     : Number(product?.stock ?? 0);
+
+  /*
+   * شرط فعال بودن «افزودن به سبد خرید»: موجودی داشته باشد، اگر تنوع دارد
+   * یکی انتخاب شده باشد و اگر رنگ دارد رنگ‌ها (یا رنگ قطعات پک) انتخاب شده
+   * باشند. علاقه‌مندی به این شرط وابسته نیست و همیشه نمایش داده می‌شود.
+   */
+  const canAddToCart =
+    currentStock > 0 &&
+    (!hasVariants || Boolean(selectedVariant)) &&
+    colorsReady;
 
   const currentBasePrice =
     selectedVariant?.price != null
@@ -459,9 +706,82 @@ function ProductDetail() {
     return getStorageUrl(trimmedPath);
   };
 
-  // Variant image has priority; otherwise use the selected product image.
-  const displayedImagePath = selectedVariant?.image || selectedImage?.path;
+  /*
+   * ترتیب اولویت تصویر: تصویر رنگ انتخاب‌شده ← تصویر تنوع ← تصویر گالری.
+   * بنابراین با انتخاب رنگ، تصویر همان رنگ در گالری دیده می‌شود.
+   */
+  const displayedImagePath =
+    selectedColor?.image || selectedVariant?.image || selectedImage?.path;
   const imageUrl = getImageUrl(displayedImagePath);
+
+  /*
+   * ویژگی‌های کلیدی محصول برای بلوک «ویژگی‌های محصول» زیر عنوان.
+   *
+   * مشخصات فنی جداگانه‌ای برای محصول ثبت نمی‌شود؛ پس خلاصه‌ای از همان
+   * اطلاعات موجود (برند، دسته، رنگ‌ها، تنوع‌ها، پک، وزن و کد کالا) ساخته
+   * می‌شود تا خریدار بدون باز کردن توضیحات، تصویر کلی محصول را ببیند.
+   */
+  const highlightSpecs: { label: string; value: string }[] = [];
+
+  if (product) {
+    if (product.brand) {
+      highlightSpecs.push({ label: "برند", value: product.brand.name });
+    }
+
+    if (product.category) {
+      highlightSpecs.push({ label: "دسته‌بندی", value: product.category.name });
+    }
+
+    if (activeColors.length > 0) {
+      highlightSpecs.push({
+        label: "رنگ‌ها",
+        value: activeColors.map((color) => color.name).join("، "),
+      });
+    }
+
+    if (activeVariants.length > 0) {
+      highlightSpecs.push({
+        label: "تنوع‌ها",
+        value: activeVariants.map((variant) => variant.name).join("، "),
+      });
+    }
+
+    if (hasPack) {
+      highlightSpecs.push({
+        label: "پک",
+        value: `${packItems.length.toLocaleString("fa-IR")} قطعه`,
+      });
+    }
+
+    if (product.weight) {
+      highlightSpecs.push({ label: "وزن", value: product.weight });
+    }
+
+    highlightSpecs.push({
+      label: "کد کالا",
+      value: selectedVariant?.sku || product.sku,
+    });
+  }
+
+  /** آدرس همین صفحه برای ردیف اشتراک‌گذاری گالری. */
+  const productShareUrl =
+    typeof window === "undefined" ? "" : window.location.href;
+
+  const productShareText = product ? `${product.name} | ${SITE_NAME}` : "";
+
+  /** کپی لینک محصول در کلیپ‌بورد، همراه با بازخورد کوتاه. */
+  const handleCopyProductLink = async () => {
+    if (!productShareUrl) return;
+
+    try {
+      await navigator.clipboard.writeText(productShareUrl);
+      setShareCopied(true);
+
+      window.setTimeout(() => setShareCopied(false), 1800);
+    } catch {
+      setShareCopied(false);
+    }
+  };
 
   const handleSelectVariant = (variant: ProductVariant) => {
     if (!variant.is_active || Number(variant.stock) <= 0) return;
@@ -469,6 +789,19 @@ function ProductDetail() {
     setSelectedVariantId(variant.id);
     setQuantity(1);
     setSelectedImageIndex(0);
+    setAddedToCart(false);
+  };
+
+  /** انتخاب رنگ محصول از پالت رنگ. */
+  const handleSelectColor = (color: ProductColor) => {
+    setSelectedColorName(color.name);
+    setQuantity(1);
+    setAddedToCart(false);
+  };
+
+  /** انتخاب رنگ یکی از قطعات پک. */
+  const handleSelectPackColor = (packItemId: number, color: string) => {
+    setSelectedPackColors((current) => ({ ...current, [packItemId]: color }));
     setAddedToCart(false);
   };
 
@@ -495,6 +828,11 @@ function ProductDetail() {
       return;
     }
 
+    // رنگ (یا رنگ قطعات پک) باید انتخاب شده باشد.
+    if (!colorsReady) {
+      return;
+    }
+
     if (quantity > currentStock) {
       setQuantity(currentStock);
       return;
@@ -514,6 +852,11 @@ function ProductDetail() {
         thumbnail: imageUrl || undefined,
         stock: currentStock,
         is_taxable: Boolean(product.is_taxable),
+        // رنگ محصول ساده یا رنگ قطعات پک، همراه با قلم سبد خرید ذخیره می‌شود.
+        color_name: hasPack ? null : selectedColorName || null,
+        pack_colors: hasPack && selectedPackColorList.length > 0
+          ? selectedPackColorList
+          : null,
         ...(selectedVariant
           ? {
               variant_id: selectedVariant.id,
@@ -540,6 +883,71 @@ function ProductDetail() {
       }, 450);
     }
   };
+
+  /**
+   * افزودن/حذف محصول از علاقه‌مندی‌ها.
+   *
+   * برای مهمان در حافظهٔ مرورگر و برای کاربر وارد‌شده روی سرور ذخیره می‌شود؛
+   * هر دو حالت در WishlistContext مدیریت می‌شوند.
+   */
+  const handleToggleWishlist = async () => {
+    if (!product || wishlistBusy) return;
+
+    const wishlistProduct: WishlistProduct = {
+      id: product.id,
+      name: product.name,
+      slug: product.slug,
+      price: product.price,
+      compare_price: product.compare_price ?? null,
+      discount_percent: product.discount_percent ?? null,
+      short_description: product.short_description ?? null,
+      description: product.description ?? null,
+      stock: product.stock,
+      thumbnail: product.thumbnail ?? null,
+      is_taxable: product.is_taxable ?? null,
+      images: product.images,
+      variants: product.variants,
+      category: product.category ?? null,
+      brand: product.brand ?? null,
+    };
+
+    setWishlistBusy(true);
+    setWishlistError("");
+
+    try {
+      await toggleWishlist(wishlistProduct);
+    } catch {
+      setWishlistError(
+        "ثبت علاقه‌مندی انجام نشد. لطفاً یک‌بار دیگر تلاش کنید.",
+      );
+    } finally {
+      setWishlistBusy(false);
+    }
+  };
+
+  /** وضعیت فعلی این محصول در فهرست علاقه‌مندی‌ها. */
+  const wishlisted = product ? isWishlisted(product.id) : false;
+
+  /*
+   * ضمانت بازگشت کالا در پنل مدیریت برای هر محصول قابل خاموش‌کردن است
+   * (کالاهای بهداشتی مثل لباس زیر مرجوعی ندارند). اگر فیلد از سرور نیامده
+   * باشد، پیش‌فرض «دارد» است.
+   */
+  const isReturnable = !(
+    product?.is_returnable === false || product?.is_returnable === 0
+  );
+
+  /** نشان‌های اعتماد؛ برای کالای بدون مرجوعی، «ضمانت بازگشت» حذف می‌شود. */
+  const trustItems = isReturnable
+    ? TRUST_ITEMS
+    : TRUST_ITEMS.filter((item) => item.key !== "return");
+
+  /** محتوای آیکنی دکمهٔ علاقه‌مندی روی تصویر محصول. */
+  const wishlistIcon = wishlistBusy ? (
+    <Loader2 size={18} className="animate-spin" />
+  ) : (
+    <Heart size={18} fill={wishlisted ? "currentColor" : "none"} />
+  );
 
   // Only paid and delivered orders containing this product are eligible.
   const eligibleOrders = orders.filter((order) => {
@@ -623,15 +1031,11 @@ function ProductDetail() {
     </div>
   );
 
-  const formatReviewDate = (date?: string) => {
-    if (!date) return "";
-
-    const parsedDate = new Date(date);
-
-    if (Number.isNaN(parsedDate.getTime())) return "";
-
-    return parsedDate.toLocaleDateString("fa-IR");
-  };
+  /**
+   * تاریخ ثبت نظر با تقویم شمسی؛ مستقل از تقویم مرورگر و هم‌خوان با بقیهٔ
+   * تاریخ‌های فروشگاه که با formatJalaliDateTime نمایش داده می‌شوند.
+   */
+  const formatReviewDate = (date?: string) => formatJalaliDateTime(date);
 
   if (loading) {
     return (
@@ -680,300 +1084,357 @@ function ProductDetail() {
 
   return (
     <Layout>
-      <section className="max-w-7xl mx-auto px-6 py-10">
-        <div className="mb-6">
-          <Link
-            to="/products"
-            className="
-              inline-flex
-              items-center
-              gap-2
-              text-sm
-              text-muted
-              hover:text-brand-600
-              transition
-            "
-          >
-            <ArrowRight size={17} />
-            بازگشت به محصولات
+      {/* نوار مسیر صفحه؛ جای لینک «بازگشت به محصولات» را می‌گیرد. */}
+      <div className="border-b border-line bg-cream">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-1.5 px-4 py-3 text-xs text-muted sm:px-6">
+          <Link to="/" className="transition hover:text-brand-600">
+            خانه
           </Link>
-        </div>
 
+          <ChevronLeft size={14} className="text-line-strong" aria-hidden="true" />
+
+          <Link to="/products" className="transition hover:text-brand-600">
+            فروشگاه
+          </Link>
+
+          {product.category && (
+            <>
+              <ChevronLeft
+                size={14}
+                className="text-line-strong"
+                aria-hidden="true"
+              />
+
+              <Link
+                to={`/products?category=${product.category.slug}`}
+                className="transition hover:text-brand-600"
+              >
+                {product.category.name}
+              </Link>
+            </>
+          )}
+
+          <ChevronLeft size={14} className="text-line-strong" aria-hidden="true" />
+
+          <span className="line-clamp-1 font-bold text-ink-soft">
+            {product.name}
+          </span>
+        </div>
+      </div>
+
+      <section className="mx-auto max-w-7xl px-4 py-5 sm:px-6">
+        {/*
+          کارت اصلی محصول: گالری سمت راست و اطلاعات خرید سمت چپ، در یک ردیف.
+          هر دو ستون تا انتهای کارت کشیده می‌شوند تا بالا و پایینشان هم‌تراز
+          بماند و محتوای داخل کارت به اسکرول نیاز پیدا نکند.
+        */}
         <div
           className="
-            bg-white
-            rounded-3xl
-            border
-            border-line
-            overflow-hidden
+            grid grid-cols-1 gap-4 rounded-3xl border border-line bg-white
+            p-4 sm:p-5
+            lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)] lg:gap-6
           "
         >
-          <div className="grid grid-cols-1 lg:grid-cols-2">
-            {/* Images */}
-            <div className="min-w-0 p-6 lg:p-8">
-              <div
-                className="
-                  relative
-                  flex
-                  min-h-[420px]
-                  w-full
-                  items-center
-                  justify-center
-                  overflow-hidden
-                  rounded-2xl
-                  bg-cream
-                  p-6
-                  sm:p-8
-                "
-              >
-                {imageUrl ? (
-                  <img
-                    src={imageUrl}
-                    alt={selectedImage?.alt || product.name}
-                    className="
-                      block
-                      max-h-[420px]
-                      max-w-full
-                      object-contain
-                      transition
-                      duration-300
-                    "
-                  />
-                ) : (
-                  <div className="text-muted-soft">تصویر محصول</div>
-                )}
+          {/* گالری تصاویر */}
+          <div className="flex min-w-0 flex-col gap-3">
+            <div
+              className="
+                relative flex aspect-[4/3] w-full items-center justify-center
+                overflow-hidden rounded-2xl bg-cream p-4
+                sm:aspect-square sm:p-6
+              "
+            >
+              {imageUrl ? (
+                <img
+                  src={imageUrl}
+                  alt={selectedImage?.alt || product.name}
+                  className="block h-full w-full object-contain transition duration-300"
+                />
+              ) : (
+                <div className="text-muted-soft">تصویر محصول</div>
+              )}
 
-                {hasDiscount && (
-                  <span
-                    className="
-                      absolute
-                      right-4
-                      top-4
-                      rounded-full
-                      bg-discount
-                      px-4
-                      py-2
-                      font-bold
-                      text-white
-                    "
-                  >
-                    {discountPercent}% تخفیف
-                  </span>
-                )}
-
-                {galleryImages.length > 1 && (
-                  <>
-                    <button
-                      type="button"
-                      onClick={handlePreviousImage}
-                      className="
-                        absolute
-                        right-3
-                        top-1/2
-                        flex
-                        h-10
-                        w-10
-                        -translate-y-1/2
-                        items-center
-                        justify-center
-                        rounded-full
-                        bg-white
-                        text-ink-soft
-                        shadow-md
-                        transition-all
-                        duration-200
-                        hover:bg-brand-600
-                        hover:text-white
-                        active:scale-90
-                      "
-                      aria-label="تصویر قبلی"
-                    >
-                      <ChevronRight size={21} />
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={handleNextImage}
-                      className="
-                        absolute
-                        left-3
-                        top-1/2
-                        flex
-                        h-10
-                        w-10
-                        -translate-y-1/2
-                        items-center
-                        justify-center
-                        rounded-full
-                        bg-white
-                        text-ink-soft
-                        shadow-md
-                        transition-all
-                        duration-200
-                        hover:bg-brand-600
-                        hover:text-white
-                        active:scale-90
-                      "
-                      aria-label="تصویر بعدی"
-                    >
-                      <ChevronLeft size={21} />
-                    </button>
-                  </>
-                )}
-              </div>
-
-              {galleryImages.length > 0 && (
-                <div
-                  className="
-                    relative
-                    mt-5
-                    flex
-                    w-full
-                    min-w-0
-                    flex-nowrap
-                    items-center
-                    gap-3
-                    overflow-x-auto
-                    overflow-y-hidden
-                    px-1
-                    py-2
-                  "
-                >
-                  {galleryImages.map((image, index) => {
-                    const thumbnailUrl = getImageUrl(image.path);
-
-                    return (
-                      <button
-                        key={image.id || index}
-                        type="button"
-                        onClick={() => setSelectedImageIndex(index)}
-                        aria-label={`نمایش تصویر شماره ${index + 1}`}
-                        aria-pressed={selectedImageIndex === index}
-                        className={`
-                          relative
-                          box-border
-                          h-20
-                          w-20
-                          shrink-0
-                          overflow-hidden
-                          rounded-xl
-                          border-2
-                          bg-cream
-                          transition-all
-                          duration-200
-                          ${
-                            selectedImageIndex === index
-                              ? "scale-100 border-brand-600 ring-2 ring-brand-100"
-                              : "border-line hover:border-brand-300"
-                          }
-                        `}
-                      >
-                        {thumbnailUrl ? (
-                          <img
-                            src={thumbnailUrl}
-                            alt={image.alt || product.name}
-                            className="block h-full w-full object-contain p-2"
-                          />
-                        ) : (
-                          <div className="flex h-full w-full items-center justify-center text-muted-soft">
-                            <Package size={22} />
-                          </div>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
+              {hasDiscount && (
+                <span className="absolute right-3 top-3 rounded-full bg-discount px-2.5 py-1 text-[11px] font-bold text-white">
+                  {discountPercent}% تخفیف
+                </span>
               )}
 
               {galleryImages.length > 1 && (
-                <div className="mt-1 text-center text-xs text-muted-soft">
-                  {(selectedImageIndex + 1).toLocaleString("fa-IR")} از{" "}
-                  {galleryImages.length.toLocaleString("fa-IR")} تصویر
-                </div>
+                <>
+                  <button
+                    type="button"
+                    onClick={handlePreviousImage}
+                    aria-label="تصویر قبلی"
+                    className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white text-ink-soft shadow-md transition-all duration-200 hover:bg-brand-600 hover:text-white active:scale-90"
+                  >
+                    <ChevronRight size={19} />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleNextImage}
+                    aria-label="تصویر بعدی"
+                    className="absolute left-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white text-ink-soft shadow-md transition-all duration-200 hover:bg-brand-600 hover:text-white active:scale-90"
+                  >
+                    <ChevronLeft size={19} />
+                  </button>
+                </>
               )}
+
+              {/*
+                علاقه‌مندی و اشتراک‌گذاری روی خود تصویر می‌نشینند: در موبایل یک
+                ردیف افقی و از دسکتاپ یک ستون عمودی در گوشهٔ چپ بالا، تا نه
+                نشان تخفیف (راست بالا) و نه فلش‌های گالری (وسط) تداخل کنند.
+              */}
+              <div className="absolute left-3 top-3 z-10 flex flex-wrap items-center gap-1.5 sm:flex-col sm:items-start">
+                <button
+                  type="button"
+                  onClick={handleToggleWishlist}
+                  disabled={wishlistBusy}
+                  aria-pressed={wishlisted}
+                  aria-label={
+                    wishlisted
+                      ? "حذف از علاقه‌مندی‌ها"
+                      : "افزودن به علاقه‌مندی‌ها"
+                  }
+                  title={
+                    wishlisted
+                      ? "حذف از علاقه‌مندی‌ها"
+                      : "افزودن به علاقه‌مندی‌ها"
+                  }
+                  className={`
+                    inline-flex h-9 w-9 items-center justify-center rounded-full
+                    border shadow-sm backdrop-blur transition-all duration-150
+                    active:scale-90 disabled:cursor-wait disabled:opacity-60
+                    ${
+                      wishlisted
+                        ? "border-blush-400 bg-white text-blush-600"
+                        : "border-line bg-white/95 text-ink-soft hover:border-brand-300 hover:text-brand-600"
+                    }
+                  `}
+                >
+                  {wishlistIcon}
+                </button>
+
+                <div
+                  role="group"
+                  aria-label="اشتراک‌گذاری محصول"
+                  className="flex items-center gap-1.5 sm:flex-col"
+                >
+                  <button
+                    type="button"
+                    onClick={handleCopyProductLink}
+                    title={shareCopied ? "لینک کپی شد" : "کپی لینک محصول"}
+                    aria-label={shareCopied ? "لینک کپی شد" : "کپی لینک محصول"}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-line bg-white/95 text-muted shadow-sm backdrop-blur transition-all duration-150 hover:border-brand-300 hover:text-brand-600 active:scale-90"
+                  >
+                    {shareCopied ? <Check size={15} /> : <Link2 size={15} />}
+                  </button>
+
+                  <a
+                    href={`https://t.me/share/url?url=${encodeURIComponent(
+                      productShareUrl,
+                    )}&text=${encodeURIComponent(productShareText)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="اشتراک‌گذاری در تلگرام"
+                    aria-label="اشتراک‌گذاری در تلگرام"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-line bg-white/95 text-muted shadow-sm backdrop-blur transition-all duration-150 hover:border-brand-300 hover:text-brand-600 active:scale-90"
+                  >
+                    <Send size={15} />
+                  </a>
+
+                  <a
+                    href={`https://wa.me/?text=${encodeURIComponent(
+                      `${productShareText} ${productShareUrl}`,
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title="اشتراک‌گذاری در واتساپ"
+                    aria-label="اشتراک‌گذاری در واتساپ"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-line bg-white/95 text-muted shadow-sm backdrop-blur transition-all duration-150 hover:border-brand-300 hover:text-brand-600 active:scale-90"
+                  >
+                    <MessageCircle size={15} />
+                  </a>
+                </div>
+              </div>
             </div>
 
-            {/* Product Info */}
-            <div className="p-8 lg:p-12">
-              <div className="flex flex-wrap items-center gap-3 mb-5">
+            {/* بندانگشتی‌ها شبکه‌ای می‌چینند تا هیچ اسکرول افقی لازم نباشد. */}
+            {galleryImages.length > 1 && (
+              <div className="grid grid-cols-5 gap-2">
+                {galleryImages.map((image, index) => {
+                  const thumbnailUrl = getImageUrl(image.path);
+
+                  return (
+                    <button
+                      key={image.id || index}
+                      type="button"
+                      onClick={() => setSelectedImageIndex(index)}
+                      aria-label={`نمایش تصویر شماره ${index + 1}`}
+                      aria-pressed={selectedImageIndex === index}
+                      className={`
+                        relative aspect-square overflow-hidden rounded-xl border-2
+                        bg-cream p-1 transition-all duration-200
+                        ${
+                          selectedImageIndex === index
+                            ? "border-brand-600 ring-2 ring-brand-100"
+                            : "border-line hover:border-brand-300"
+                        }
+                      `}
+                    >
+                      {thumbnailUrl ? (
+                        <img
+                          src={thumbnailUrl}
+                          alt={image.alt || product.name}
+                          className="block h-full w-full object-contain"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-muted-soft">
+                          <Package size={18} />
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* خطای ثبت علاقه‌مندی، نزدیک به دکمهٔ قلب روی تصویر. */}
+            {wishlistError && (
+              <p role="alert" className="text-[11px] font-bold text-discount">
+                {wishlistError}
+              </p>
+            )}
+          </div>
+
+          {/* اطلاعات خرید */}
+          <div className="flex min-w-0 flex-col gap-3.5">
+              {/* برند، دسته‌بندی و موجودی */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                {product.brand && (
+                  <span className="rounded-lg bg-line px-2.5 py-1 text-[11.5px] font-bold text-muted">
+                    {product.brand.name}
+                  </span>
+                )}
+
                 {product.category && (
                   <Link
                     to={`/products?category=${product.category.slug}`}
-                    className="
-                      text-sm
-                      bg-brand-50
-                      text-brand-600
-                      px-3
-                      py-1.5
-                      rounded-lg
-                      font-medium
-                      transition
-                      hover:bg-brand-100
-                    "
+                    className="rounded-lg bg-brand-50 px-2.5 py-1 text-[11.5px] font-bold text-brand-600 transition hover:bg-brand-100"
                   >
                     {product.category.name}
                   </Link>
                 )}
 
-                {product.brand && (
-                  <span
-                    className="
-                      text-sm
-                      bg-line
-                      text-muted
-                      px-3
-                      py-1.5
-                      rounded-lg
-                    "
+                <span
+                  className={`rounded-lg px-2.5 py-1 text-[11.5px] font-bold ${
+                    currentStock > 0
+                      ? "bg-brand-50 text-stock-700"
+                      : "bg-blush-50 text-discount"
+                  }`}
+                >
+                  {currentStock > 0
+                    ? `${currentStock.toLocaleString("fa-IR")} عدد موجود`
+                    : "ناموجود"}
+                </span>
+              </div>
+
+              <div>
+                <h1 className="text-lg font-black leading-7 text-ink sm:text-xl lg:text-2xl lg:leading-9">
+                  {product.name}
+                </h1>
+
+                {product.short_description && (
+                  <p className="mt-1.5 line-clamp-2 text-xs leading-6 text-muted">
+                    {product.short_description}
+                  </p>
+                )}
+              </div>
+
+              {/* امتیاز، کد کالا و وزن در یک ردیف فشرده */}
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11.5px] text-muted-soft">
+                <span className="inline-flex items-center gap-1.5">
+                  {renderStars(Math.round(averageRating), 14)}
+
+                  <b className="font-bold text-ink-soft">
+                    {averageRating > 0
+                      ? averageRating.toLocaleString("fa-IR", {
+                          maximumFractionDigits: 1,
+                        })
+                      : "بدون امتیاز"}
+                  </b>
+
+                  <a
+                    href="#product-reviews"
+                    className="font-bold text-brand-600 transition hover:text-brand-700"
                   >
-                    {product.brand.name}
+                    ({reviewsCount.toLocaleString("fa-IR")} نظر)
+                  </a>
+                </span>
+
+                <span>
+                  کد کالا:{" "}
+                  <b className="font-bold text-ink-soft">
+                    {selectedVariant?.sku || product.sku}
+                  </b>
+                </span>
+
+                {product.weight && (
+                  <span>
+                    وزن: <b className="font-bold text-ink-soft">{product.weight}</b>
                   </span>
                 )}
               </div>
 
-              <h1
-                className="
-                  text-3xl
-                  lg:text-4xl
-                  font-black
-                  text-ink
-                  leading-relaxed
-                "
-              >
-                {product.name}
-              </h1>
+              {/* ویژگی‌های محصول؛ خلاصهٔ مشخصات در دو ستون */}
+              {highlightSpecs.length > 0 && (
+                <div className="rounded-2xl border border-line bg-cream px-3.5 py-3">
+                  <div className="mb-2 flex items-center gap-1.5 text-[11.5px] font-bold text-ink">
+                    <Sparkles
+                      size={14}
+                      className="text-brand-600"
+                      aria-hidden="true"
+                    />
+                    ویژگی‌های محصول
+                  </div>
 
-              {/* Rating summary */}
-              <div className="mt-4 flex flex-wrap items-center gap-3">
-                {renderStars(Math.round(averageRating))}
-                <span className="text-sm font-bold text-ink-soft">
-                  {averageRating > 0
-                    ? averageRating.toLocaleString("fa-IR", {
-                        maximumFractionDigits: 1,
-                      })
-                    : "بدون امتیاز"}
-                </span>
-                <a
-                  href="#product-reviews"
-                  className="text-sm text-brand-600 hover:text-brand-700 transition"
-                >
-                  ({reviewsCount.toLocaleString("fa-IR")} نظر)
-                </a>
-              </div>
+                  <ul className="grid grid-cols-1 gap-x-4 gap-y-1.5 sm:grid-cols-2">
+                    {highlightSpecs.map((spec) => (
+                      <li
+                        key={spec.label}
+                        className="flex min-w-0 items-center gap-1.5 text-[11.5px]"
+                      >
+                        <CheckCircle2
+                          size={13}
+                          className="shrink-0 text-brand-500"
+                          aria-hidden="true"
+                        />
 
-              {product.short_description && (
-                <p className="text-muted leading-8 mt-5">
-                  {product.short_description}
-                </p>
+                        <span className="shrink-0 text-muted-soft">
+                          {spec.label}:
+                        </span>
+
+                        <span
+                          className="truncate font-bold text-ink-soft"
+                          title={spec.value}
+                        >
+                          {spec.value}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               )}
 
-              {/* Product Variants */}
+              {/* انتخاب تنوع (سایز/مدل) */}
               {hasVariants && (
-                <div className="mt-7">
-                  <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-                      <Layers size={19} className="text-brand-600" />
-                      <h2 className="font-bold text-ink">
+                <div>
+                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5">
+                      <Layers size={15} className="text-brand-600" />
+                      <h2 className="text-[11.5px] font-bold text-ink">
                         انتخاب تنوع محصول
                       </h2>
                     </div>
@@ -1010,12 +1471,7 @@ function ProductDetail() {
                           onClick={() => handleSelectVariant(variant)}
                           aria-pressed={isSelected}
                           className={`
-                            rounded-xl
-                            border
-                            px-4
-                            py-3
-                            text-sm
-                            font-bold
+                            rounded-lg border px-3 py-2 text-xs font-bold
                             transition
                             ${
                               isSelected
@@ -1039,11 +1495,11 @@ function ProductDetail() {
                   </div>
 
                   {availableVariants.length === 0 ? (
-                    <p className="mt-3 text-sm text-discount">
+                    <p className="mt-2 text-[11.5px] text-discount">
                       تمام تنوع‌های این محصول در حال حاضر ناموجود هستند.
                     </p>
                   ) : !selectedVariant ? (
-                    <p className="mt-3 text-sm text-discount">
+                    <p className="mt-2 text-[11.5px] text-discount">
                       لطفاً یکی از تنوع‌های موجود را انتخاب کن.
                     </p>
                   ) : null}
@@ -1088,320 +1544,442 @@ function ProductDetail() {
                 </div>
               )}
 
-              {/* Price */}
-              <div
-                className="
-                  mt-8
-                  w-full
-                  flex
-                  flex-col
-                  items-start
-                  justify-start
-                  text-left
-                "
-                style={{
-                  direction: "ltr",
-                  textAlign: "left",
-                }}
-              >
-                {hasDiscount ? (
-                  <>
-                    <div
-                      className="
-                        w-full
-                        flex
-                        flex-row
-                        items-center
-                        justify-start
-                        gap-3
-                        mb-3
-                      "
-                    >
-                      <span
-                        className="
-                          inline-flex
-                          items-center
-                          bg-discount
-                          text-white
-                          px-3
-                          py-1.5
-                          rounded-lg
-                          text-sm
-                          font-bold
-                        "
-                      >
-                        {discountPercent}% تخفیف
+              {/* پالت رنگ محصول */}
+              {hasColors && !hasPack && (
+                <div>
+                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5">
+                      <Palette size={15} className="text-brand-600" />
+                      <h2 className="text-[11.5px] font-bold text-ink">
+                        انتخاب رنگ
+                      </h2>
+                    </div>
+
+                    {selectedColorName && (
+                      <span className="rounded-lg bg-brand-50 px-2 py-1 text-[11px] font-bold text-brand-700">
+                        رنگ انتخاب‌شده: {selectedColorName}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    {activeColors.map((color) => {
+                      const isSelected = selectedColorName === color.name;
+
+                      return (
+                        <button
+                          key={color.id}
+                          type="button"
+                          onClick={() => handleSelectColor(color)}
+                          aria-pressed={isSelected}
+                          title={color.name}
+                          className={`
+                            flex items-center gap-1.5 rounded-lg border
+                            px-2.5 py-1.5 text-xs font-bold transition
+                            ${
+                              isSelected
+                                ? "border-brand-700 bg-brand-75 text-brand-700 ring-2 ring-brand-700/10"
+                                : "border-line bg-white text-ink-soft hover:border-brand-400"
+                            }
+                          `}
+                        >
+                          <span
+                            aria-hidden="true"
+                            className="h-4 w-4 rounded-full border border-black/10 shadow-inner"
+                            style={{ backgroundColor: colorSwatchValue(color) }}
+                          />
+                          {color.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {!selectedColorName && (
+                    <p className="mt-2 text-[11.5px] text-discount">
+                      برای ادامه، رنگ موردنظرت را انتخاب کن.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* رنگ اجزای پک چندعددی */}
+              {hasPack && (
+                <div>
+                  <div className="mb-2 flex items-center gap-1.5">
+                    <Layers size={15} className="text-brand-600" />
+                    <h2 className="text-[11.5px] font-bold text-ink">
+                      انتخاب رنگ اجزای پک
+                    </h2>
+                  </div>
+
+                  <p className="mb-2 text-[11px] leading-6 text-muted-soft">
+                    این محصول یک پک چندعددی است؛ رنگ هر قطعه را جداگانه انتخاب
+                    کن.
+                  </p>
+
+                  <div className="space-y-2">
+                    {packItems.map((item) => {
+                      const allowed = (item.colors ?? []).filter(Boolean);
+                      const chosen = selectedPackColors[item.id] ?? "";
+
+                      return (
+                        <div
+                          key={item.id}
+                          className="rounded-xl border border-line bg-white p-3"
+                        >
+                          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                            <div className="text-xs font-bold text-ink">
+                              {item.name}
+                              {item.quantity > 1 && (
+                                <span className="mr-1 text-[11px] font-medium text-muted">
+                                  × {item.quantity.toLocaleString("fa-IR")}
+                                </span>
+                              )}
+                            </div>
+
+                            {chosen ? (
+                              <span className="text-[11px] font-bold text-brand-700">
+                                رنگ: {chosen}
+                              </span>
+                            ) : allowed.length > 0 ? (
+                              <span className="text-[11px] font-bold text-discount">
+                                انتخاب نشده
+                              </span>
+                            ) : (
+                              <span className="text-[11px] text-muted-soft">
+                                بدون انتخاب رنگ
+                              </span>
+                            )}
+                          </div>
+
+                          {allowed.length > 0 && (
+                            <div className="flex flex-wrap gap-2">
+                              {allowed.map((colorName) => {
+                                const color =
+                                  activeColors.find(
+                                    (entry) => entry.name === colorName,
+                                  ) ?? null;
+
+                                const isSelected = chosen === colorName;
+
+                                return (
+                                  <button
+                                    key={`${item.id}-${colorName}`}
+                                    type="button"
+                                    onClick={() =>
+                                      handleSelectPackColor(item.id, colorName)
+                                    }
+                                    aria-pressed={isSelected}
+                                    className={`
+                                      flex items-center gap-1.5 rounded-lg border
+                                      px-2.5 py-1.5 text-xs font-bold transition
+                                      ${
+                                        isSelected
+                                          ? "border-brand-700 bg-brand-75 text-brand-700"
+                                          : "border-line bg-white text-ink-soft hover:border-brand-400"
+                                      }
+                                    `}
+                                  >
+                                    <span
+                                      aria-hidden="true"
+                                      className="h-4 w-4 rounded-full border border-black/10"
+                                      style={{
+                                        backgroundColor: color
+                                          ? colorSwatchValue(color)
+                                          : "#e5e7eb",
+                                      }}
+                                    />
+                                    {colorName}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* جعبهٔ قیمت و خرید؛ همهٔ اقدام‌های خرید در یک بلوک هم‌تراز */}
+              <div className="mt-auto rounded-2xl border border-line bg-cream px-3.5 py-3">
+                <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-muted">
+                  <span className="inline-flex items-center gap-1.5">
+                    <ShieldCheck
+                      size={13}
+                      className="text-stock"
+                      aria-hidden="true"
+                    />
+                    گارانتی اصالت و سلامت فیزیکی کالا
+                  </span>
+
+                  {currentStock > 0 && (
+                    <span className="font-bold text-stock-700">
+                      {currentStock.toLocaleString("fa-IR")} عدد باقی مانده
+                    </span>
+                  )}
+                </div>
+
+                {/* کالای بدون مرجوعی (بهداشتی) صریح به خریدار اعلام می‌شود. */}
+                {!isReturnable && (
+                  <p className="mt-1.5 flex items-start gap-1.5 text-[11px] font-bold leading-5 text-discount">
+                    <RotateCcw
+                      size={13}
+                      className="mt-0.5 shrink-0"
+                      aria-hidden="true"
+                    />
+                    این کالا بهداشتی است و امکان مرجوعی ندارد.
+                  </p>
+                )}
+
+                <div className="mt-2 flex flex-wrap items-end gap-2" dir="ltr">
+                  <span className="text-2xl font-black leading-8 text-brand-600">
+                    {finalPrice.toLocaleString("fa-IR")}
+                    <span className="mr-1 text-xs font-bold text-muted">
+                      تومان
+                    </span>
+                  </span>
+
+                  {hasDiscount && (
+                    <>
+                      <span className="rounded-md bg-discount px-1.5 py-0.5 text-[11px] font-bold text-white">
+                        {discountPercent}%
                       </span>
 
-                      <span
-                        className="
-                          text-lg
-                          text-muted-soft
-                          line-through
-                          text-left
-                        "
-                      >
-                        {originalPrice.toLocaleString("fa-IR")} تومان
+                      <span className="text-sm text-muted-soft line-through">
+                        {originalPrice.toLocaleString("fa-IR")}
                       </span>
+                    </>
+                  )}
+                </div>
+
+                {hasDiscount && (
+                  <p className="mt-1 text-[11px] font-bold text-stock">
+                    {discountAmount.toLocaleString("fa-IR")} تومان صرفه‌جویی
+                  </p>
+                )}
+
+              {/* تعداد و افزودن به سبد در یک ردیف هم‌تراز */}
+              {canAddToCart && (
+                <div className="mt-3 flex items-stretch gap-2">
+                  <div className="flex items-stretch overflow-hidden rounded-xl border border-line bg-white">
+                    <button
+                      type="button"
+                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                      disabled={quantity <= 1}
+                      className="flex h-11 w-9 items-center justify-center text-lg transition-all duration-150 hover:bg-brand-75 hover:text-brand-700 active:scale-90 disabled:opacity-40"
+                    >
+                      −
+                    </button>
+
+                    <div className="flex w-10 select-none items-center justify-center text-sm font-bold">
+                      {quantity.toLocaleString("fa-IR")}
                     </div>
 
-                    <div
-                      className="
-                        w-full
-                        text-3xl
-                        font-black
-                        text-brand-600
-                        text-left
-                      "
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setQuantity(Math.min(currentStock, quantity + 1))
+                      }
+                      disabled={quantity >= currentStock}
+                      className="flex h-11 w-9 items-center justify-center text-lg transition-all duration-150 hover:bg-brand-75 hover:text-brand-700 active:scale-90 disabled:opacity-40"
                     >
-                      {finalPrice.toLocaleString("fa-IR")} تومان
-                    </div>
+                      +
+                    </button>
+                  </div>
 
-                    <div
-                      className="
-                        w-full
-                        text-stock
-                        text-sm
-                        font-medium
-                        mt-2
-                        text-left
-                      "
+                  <div className="min-w-0 flex-1">
+                    <Button
+                      type="button"
+                      onClick={handleAddToCart}
+                      loading={addingToCart}
+                      disabled={addingToCart}
+                      variant={addedToCart ? "success" : "primary"}
+                      size="md"
+                      fullWidth
+                      icon={
+                        addedToCart ? (
+                          <CheckCircle2 size={18} />
+                        ) : (
+                          <ShoppingCart size={18} />
+                        )
+                      }
                     >
-                      صرفه‌جویی {discountAmount.toLocaleString("fa-IR")} تومان
-                    </div>
-                  </>
-                ) : (
+                      {addedToCart
+                        ? "به سبد خرید اضافه شد"
+                        : "افزودن به سبد خرید"}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+                {currentStock <= 0 && (
+                  <div className="mt-3 rounded-xl bg-blush-50 px-3 py-2.5 text-center text-xs font-bold text-discount">
+                    {hasVariants &&
+                    availableVariants.length > 0 &&
+                    !selectedVariant
+                      ? "برای مشاهده موجودی، یک تنوع انتخاب کن."
+                      : "این محصول در حال حاضر موجود نیست."}
+                  </div>
+                )}
+
+                {/*
+                 * «افزودن به علاقه‌مندی» روی خود تصویر محصول است (حتی در حالت
+                 * ناموجود هم در دسترس می‌ماند)؛ اینجا فقط کارت «مشاهدهٔ فهرست
+                 * علاقه‌مندی‌ها» می‌آید: تأییدِ ذخیره‌شدن محصول به‌همراه دکمهٔ
+                 * پررنگ و شمارندهٔ تعداد، تا مسیر رفتن به فهرست علاقه‌مندی‌ها
+                 * واضح و قابل‌دیدن باشد.
+                 */}
+                {wishlisted && (
                   <div
+                    role="status"
+                    aria-live="polite"
+                    className="mt-3 rounded-xl border border-blush-200 bg-blush-50 p-2.5"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-blush-600 text-white shadow-sm">
+                        <Check size={13} strokeWidth={3} aria-hidden="true" />
+                      </span>
+
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-black text-blush-600">
+                          در فهرست علاقه‌مندی‌های شماست
+                        </p>
+
+                        <p className="truncate text-[10.5px] text-muted-soft">
+                          هر زمان بخواهید از فهرست علاقه‌مندی‌ها پیدایش می‌کنید
+                        </p>
+                      </div>
+                    </div>
+
+                    <Link
+                      to="/wishlist"
+                      className="
+                        mt-2 flex h-10 w-full items-center justify-center gap-2
+                        rounded-xl bg-blush-600 text-xs font-black text-white
+                        shadow-sm transition-all duration-200
+                        hover:shadow-md active:scale-[0.98]
+                        focus-visible:outline-none focus-visible:ring-2
+                        focus-visible:ring-blush-400 focus-visible:ring-offset-1
+                      "
+                    >
+                      <Heart size={15} fill="currentColor" aria-hidden="true" />
+
+                      <span className="whitespace-nowrap">
+                        مشاهدهٔ فهرست علاقه‌مندی‌ها
+                      </span>
+
+                      {wishlistCount > 0 && (
+                        <span className="rounded-full bg-white/25 px-1.5 py-px text-[10px] font-black leading-4">
+                          {wishlistCount.toLocaleString("fa-IR")}
+                        </span>
+                      )}
+                    </Link>
+                  </div>
+                )}
+
+                {/* اگر این محصول ذخیره نشده ولی فهرست خالی هم نیست، میان‌بر آرام
+                    به فهرست علاقه‌مندی‌ها نمایش داده می‌شود. */}
+                {!wishlisted && wishlistCount > 0 && (
+                  <Link
+                    to="/wishlist"
                     className="
-                      w-full
-                      text-3xl
-                      font-black
-                      text-brand-600
-                      text-left
+                      group mt-2 flex h-10 w-full items-center justify-center gap-2
+                      rounded-xl border border-line bg-white text-xs font-bold
+                      text-ink-soft shadow-sm transition-all duration-200
+                      hover:border-blush-200 hover:bg-blush-50 hover:text-blush-600
+                      hover:shadow-md active:scale-[0.98]
+                      focus-visible:outline-none focus-visible:ring-2
+                      focus-visible:ring-blush-400 focus-visible:ring-offset-1
                     "
                   >
-                    {originalPrice.toLocaleString("fa-IR")} تومان
-                  </div>
+                    <Heart size={15} className="shrink-0" aria-hidden="true" />
+
+                    مشاهدهٔ فهرست علاقه‌مندی‌ها
+
+                    <span
+                      className="
+                        rounded-full bg-blush-100 px-1.5 text-[10px] font-black
+                        leading-4 text-blush-600 transition-colors duration-200
+                        group-hover:bg-blush-200
+                      "
+                    >
+                      {wishlistCount.toLocaleString("fa-IR")}
+                    </span>
+
+                    <ChevronLeft
+                      size={14}
+                      className="shrink-0 transition-transform duration-200 group-hover:-translate-x-0.5"
+                      aria-hidden="true"
+                    />
+                  </Link>
                 )}
               </div>
 
-              {/* Product Status */}
+              {/* نشان‌های اعتماد */}
               <div
-                className="
-                  mt-8
-                  grid
-                  grid-cols-1
-                  sm:grid-cols-2
-                  gap-3
-                "
+                className={`grid grid-cols-2 gap-2 border-t border-line pt-3 ${
+                  trustItems.length >= 4 ? "sm:grid-cols-4" : "sm:grid-cols-3"
+                }`}
               >
-                <div
-                  className="
-                    flex
-                    items-center
-                    gap-3
-                    bg-cream
-                    rounded-xl
-                    p-4
-                  "
-                >
-                  <Package size={21} className="text-brand-600" />
+                {trustItems.map((item) => {
+                  const Icon = item.icon;
 
-                  <div>
-                    <div className="text-xs text-muted-soft">وضعیت موجودی</div>
+                  return (
+                    <div key={item.key} className="flex items-center gap-1.5">
+                      <Icon
+                        size={16}
+                        className="shrink-0 text-brand-600"
+                        aria-hidden="true"
+                      />
 
-                    <div className="font-bold text-ink-soft mt-1">
-                      {currentStock > 0
-                        ? `${currentStock.toLocaleString("fa-IR")} عدد موجود`
-                        : "ناموجود"}
-                    </div>
-                  </div>
-                </div>
+                      <div className="min-w-0">
+                        <div className="truncate text-[11px] font-bold text-ink-soft">
+                          {item.label}
+                        </div>
 
-                <div
-                  className="
-                    flex
-                    items-center
-                    gap-3
-                    bg-cream
-                    rounded-xl
-                    p-4
-                  "
-                >
-                  <CheckCircle2 size={21} className="text-stock" />
-
-                  <div>
-                    <div className="text-xs text-muted-soft">وضعیت محصول</div>
-
-                    <div className="font-bold text-ink-soft mt-1">
-                      محصول فعال
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Quantity + Cart */}
-              {currentStock > 0 && (!hasVariants || selectedVariant) && (
-                <div className="mt-8">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="
-                        flex
-                        items-center
-                        border
-                        border-line
-                        rounded-xl
-                        overflow-hidden
-                        bg-white
-                      "
-                    >
-                      <button
-                        type="button"
-                        onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                        disabled={quantity <= 1}
-                        className="
-                          w-11
-                          h-11
-                          flex
-                          items-center
-                          justify-center
-                          text-lg
-                          transition-all
-                          duration-150
-                          hover:bg-brand-75
-                          hover:text-brand-700
-                          active:scale-90
-                          disabled:opacity-40
-                        "
-                      >
-                        −
-                      </button>
-
-                      <div
-                        className="
-                          w-12
-                          text-center
-                          font-bold
-                          select-none
-                        "
-                      >
-                        {quantity.toLocaleString("fa-IR")}
+                        <div className="truncate text-[10.5px] text-muted-soft">
+                          {item.hint}
+                        </div>
                       </div>
-
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setQuantity(Math.min(currentStock, quantity + 1))
-                        }
-                        disabled={quantity >= currentStock}
-                        className="
-                          w-11
-                          h-11
-                          flex
-                          items-center
-                          justify-center
-                          text-lg
-                          transition-all
-                          duration-150
-                          hover:bg-brand-75
-                          hover:text-brand-700
-                          active:scale-90
-                          disabled:opacity-40
-                        "
-                      >
-                        +
-                      </button>
                     </div>
-
-                    <div className="flex-1">
-                      <Button
-                        type="button"
-                        onClick={handleAddToCart}
-                        loading={addingToCart}
-                        disabled={addingToCart}
-                        variant={addedToCart ? "success" : "primary"}
-                        size="lg"
-                        fullWidth
-                        icon={
-                          addedToCart ? (
-                            <CheckCircle2 size={20} />
-                          ) : (
-                            <ShoppingCart size={20} />
-                          )
-                        }
-                      >
-                        {addedToCart
-                          ? "به سبد خرید اضافه شد"
-                          : "افزودن به سبد خرید"}
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {currentStock <= 0 && (
-                <div
-                  className="
-                    mt-8
-                    rounded-xl
-                    bg-blush-50
-                    text-discount
-                    p-4
-                    text-center
-                    font-bold
-                  "
-                >
-                  {hasVariants &&
-                  availableVariants.length > 0 &&
-                  !selectedVariant
-                    ? "برای مشاهده موجودی، یک تنوع انتخاب کن."
-                    : "این محصول در حال حاضر موجود نیست."}
-                </div>
-              )}
-
-              <div className="mt-8 pt-6 border-t border-line">
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div className="flex items-center whitespace-nowrap">
-                    <span className="text-muted-soft">
-                      {selectedVariant ? "کد تنوع:" : "کد محصول:"}
-                    </span>
-
-                    <span className="font-bold text-ink-soft mr-2 whitespace-nowrap">
-                      {selectedVariant?.sku || product.sku}
-                    </span>
-                  </div>
-
-                  {product.weight && (
-                    <div>
-                      <span className="text-muted-soft">وزن:</span>
-
-                      <span className="font-bold text-ink-soft mr-2">
-                        {product.weight}
-                      </span>
-                    </div>
-                  )}
-                </div>
+                  );
+                })}
               </div>
             </div>
           </div>
-        </div>
 
         {/* Product Description */}
         {product.description && (
-          <div className="mt-8 bg-white rounded-3xl border border-line p-8">
-            <h2 className="text-2xl font-black text-ink mb-5">
-              توضیحات محصول
-            </h2>
+          <div className="mt-4 rounded-3xl border border-line bg-white p-5 sm:p-6">
+            <h2 className="mb-4 text-lg font-black text-ink">توضیحات محصول</h2>
 
-            <div
-              className="
-                text-muted
-                leading-9
-                whitespace-pre-line
-              "
-            >
+            <div className="whitespace-pre-line leading-8 text-muted">
               {product.description}
             </div>
+          </div>
+        )}
+
+        {/* مشخصات محصول؛ همان خلاصهٔ ویژگی‌ها در قالب جدول خوانا */}
+        {highlightSpecs.length > 0 && (
+          <div className="mt-4 rounded-3xl border border-line bg-white p-5 sm:p-6">
+            <h2 className="mb-3 text-lg font-black text-ink">مشخصات محصول</h2>
+
+            <dl className="grid grid-cols-1 gap-x-6 sm:grid-cols-2">
+              {highlightSpecs.map((spec) => (
+                <div
+                  key={`spec-${spec.label}`}
+                  className="flex items-start justify-between gap-3 border-b border-line-soft py-2.5 text-xs"
+                >
+                  <dt className="shrink-0 text-muted-soft">{spec.label}</dt>
+
+                  <dd className="min-w-0 break-words text-left font-bold text-ink-soft">
+                    {spec.value}
+                  </dd>
+                </div>
+              ))}
+            </dl>
           </div>
         )}
 
@@ -1746,6 +2324,56 @@ function ProductDetail() {
             )}
           </div>
         </section>
+
+        {/* محصولات مرتبط؛ ردیف آخر صفحه */}
+        {(relatedLoading || relatedProducts.length > 0) && (
+          <section className="mt-4 rounded-3xl border border-line bg-white p-4 sm:p-5">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Sparkles
+                  size={17}
+                  className="text-brand-600"
+                  aria-hidden="true"
+                />
+                <h2 className="text-base font-black text-ink sm:text-lg">
+                  محصولات مرتبط
+                </h2>
+              </div>
+
+              <Link
+                to={
+                  product.category
+                    ? `/products?category=${product.category.slug}`
+                    : "/products"
+                }
+                className="inline-flex items-center gap-1 text-xs font-bold text-brand-600 transition hover:text-brand-700"
+              >
+                مشاهده همه
+                <ChevronLeft size={14} />
+              </Link>
+            </div>
+
+            {relatedLoading ? (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                {Array.from({ length: RELATED_PRODUCTS_LIMIT }).map(
+                  (_, index) => (
+                    <div
+                      key={index}
+                      className="h-56 animate-pulse rounded-2xl bg-cream"
+                      aria-hidden="true"
+                    />
+                  ),
+                )}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+                {relatedProducts.map((item) => (
+                  <ProductCard key={item.id} product={item} />
+                ))}
+              </div>
+            )}
+          </section>
+        )}
       </section>
 
       <SizeGuideModal

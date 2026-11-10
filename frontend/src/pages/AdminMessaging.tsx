@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import {
   AlertCircle,
+  Cake,
+  CalendarClock,
   CheckCircle2,
   Info,
   Megaphone,
   MessageCircle,
+  PartyPopper,
   RefreshCw,
   Send,
   Smartphone,
@@ -80,6 +83,58 @@ type ApiErrorResponse = {
   errors?: Record<string, string[]>;
 };
 
+type BirthdaySettings = {
+  enabled: boolean;
+  channel: ChannelKey;
+  template: string;
+  send_time: string;
+};
+
+type BirthdayRecipient = {
+  id: number;
+  name: string;
+  mobile: string;
+  mobile_source: "profile" | "order" | null;
+  birth_date: string | null;
+  jalali_date: string;
+  jalali_label: string;
+  days_until: number;
+  opted_out: boolean;
+  status: MessageStatus | null;
+  sent_at: string | null;
+};
+
+type BirthdayOverview = {
+  settings: BirthdaySettings;
+  channels: { key: ChannelKey; label: string; available: boolean; enabled: boolean }[];
+  placeholders: string[];
+  default_template: string;
+  stats: {
+    customers: number;
+    reachable: number;
+    today: number;
+    today_sent: number;
+    upcoming: number;
+    sent_this_year: number;
+  };
+  today: BirthdayRecipient[];
+  upcoming: BirthdayRecipient[];
+  preview: string;
+  store_name: string;
+  jalali_today: string;
+};
+
+type BirthdaySendResult = {
+  jalali_label: string;
+  channel: ChannelKey;
+  total: number;
+  sent: number;
+  failed: number;
+  skipped: number;
+  results: { user_id: number; name: string; mobile: string; status: MessageStatus; error: string | null }[];
+  overview: BirthdayOverview;
+};
+
 const EMPTY_CHANNELS: MessagingChannel[] = [];
 
 const channelIcons = {
@@ -101,6 +156,105 @@ const statusMeta: Record<MessageStatus, { label: string; className: string }> = 
   failed: { label: "ناموفق", className: "msg-badge msg-badge-danger" },
   pending: { label: "در انتظار", className: "msg-badge msg-badge-muted" },
 };
+
+/**
+ * وضعیت نمایشی هر تولد: رکورد ارسال، انصراف مشتری یا نبود شماره.
+ */
+function birthdayStatusMeta(record: {
+  status: MessageStatus | null;
+  opted_out: boolean;
+  mobile: string;
+}) {
+  if (record.status) return statusMeta[record.status];
+  if (record.opted_out) {
+    return { label: "انصراف داده", className: "msg-badge msg-badge-muted" };
+  }
+  if (!record.mobile) {
+    return { label: "بدون شماره", className: "msg-badge msg-badge-danger" };
+  }
+
+  return { label: "در انتظار", className: "msg-badge msg-badge-muted" };
+}
+
+/**
+ * جدول مشترک تولدهای امروز و پیش‌رو.
+ */
+function BirthdayTable({
+  records,
+  emptyText,
+  showDays = false,
+}: {
+  records: BirthdayRecipient[];
+  emptyText: string;
+  showDays?: boolean;
+}) {
+  if (records.length === 0) {
+    return (
+      <div className="msg-empty">
+        <Info size={16} />
+        <span>{emptyText}</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="msg-table-wrap">
+      <table className="msg-table">
+        <thead>
+          <tr>
+            <th>مشتری</th>
+            <th>موبایل</th>
+            <th>تاریخ تولد</th>
+            <th>وضعیت</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {records.map((record) => {
+            const meta = birthdayStatusMeta(record);
+
+            return (
+              <tr key={record.id}>
+                <td>
+                  <span className="msg-bday-name">{record.name}</span>
+
+                  {record.opted_out && (
+                    <span className="msg-bday-note-inline">انصراف از دریافت</span>
+                  )}
+                </td>
+
+                <td dir="ltr" className="msg-recipient">
+                  {record.mobile || "—"}
+
+                  {record.mobile_source === "order" && (
+                    <span className="msg-bday-source">از سفارش</span>
+                  )}
+                </td>
+
+                <td className="msg-time">
+                  {record.jalali_label}
+
+                  {showDays && (
+                    <>
+                      {" "}
+                      — {formatNumber(record.days_until)} روز دیگر
+                    </>
+                  )}
+                </td>
+
+                <td>
+                  <span className={meta.className}>{meta.label}</span>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+
 
 const numberFormatter = new Intl.NumberFormat("fa-IR");
 
@@ -173,6 +327,15 @@ function AdminMessaging() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+
+  const [birthday, setBirthday] = useState<BirthdayOverview | null>(null);
+  const [birthdayForm, setBirthdayForm] = useState<BirthdaySettings | null>(null);
+  const [birthdayLoading, setBirthdayLoading] = useState(true);
+  const [birthdaySaving, setBirthdaySaving] = useState(false);
+  const [birthdaySending, setBirthdaySending] = useState(false);
+  const [birthdayError, setBirthdayError] = useState("");
+  const [birthdayMessage, setBirthdayMessage] = useState("");
+  const [birthdayResult, setBirthdayResult] = useState<BirthdaySendResult | null>(null);
 
   const channels = settings?.channels ?? EMPTY_CHANNELS;
 
@@ -250,6 +413,108 @@ function AdminMessaging() {
     void loadHistory();
   }, [loadHistory]);
 
+  const applyBirthdayOverview = useCallback((overview: BirthdayOverview) => {
+    setBirthday(overview);
+    setBirthdayForm(overview.settings);
+  }, []);
+
+  const loadBirthday = useCallback(async () => {
+    setBirthdayLoading(true);
+
+    try {
+      const response = await adminApi.get("/admin/messaging/birthday");
+      applyBirthdayOverview(response.data.data as BirthdayOverview);
+      setBirthdayError("");
+    } catch (error) {
+      setBirthdayError(
+        getApiErrorMessage(error, "دریافت وضعیت تبریک تولد ناموفق بود."),
+      );
+    } finally {
+      setBirthdayLoading(false);
+    }
+  }, [applyBirthdayOverview]);
+
+  useEffect(() => {
+    void loadBirthday();
+  }, [loadBirthday]);
+
+  const handleBirthdaySave = async (event: FormEvent) => {
+    event.preventDefault();
+
+    if (!birthdayForm || birthdaySaving) return;
+
+    setBirthdayError("");
+    setBirthdayMessage("");
+
+    if (birthdayForm.template.trim().length < 10) {
+      setBirthdayError("متن تبریک باید حداقل ۱۰ نویسه باشد.");
+      return;
+    }
+
+    setBirthdaySaving(true);
+
+    try {
+      const response = await adminApi.put("/admin/messaging/birthday", {
+        enabled: birthdayForm.enabled,
+        channel: birthdayForm.channel,
+        template: birthdayForm.template.trim(),
+        send_time: birthdayForm.send_time,
+      });
+
+      applyBirthdayOverview(response.data.data as BirthdayOverview);
+      setBirthdayMessage(
+        response.data.message || "تنظیمات تبریک تولد ذخیره شد.",
+      );
+    } catch (error) {
+      setBirthdayError(
+        getApiErrorMessage(error, "ذخیرهٔ تنظیمات تبریک تولد ناموفق بود."),
+      );
+    } finally {
+      setBirthdaySaving(false);
+    }
+  };
+
+  const handleBirthdaySend = async (force: boolean) => {
+    if (birthdaySending) return;
+
+    if (
+      force &&
+      !window.confirm(
+        "ارسال دوباره به همهٔ مشتریانِ امروز — حتی کسانی که قبلاً پیام گرفته‌اند. ادامه می‌دهید؟",
+      )
+    ) {
+      return;
+    }
+
+    setBirthdayError("");
+    setBirthdayMessage("");
+    setBirthdayResult(null);
+    setBirthdaySending(true);
+
+    try {
+      const response = await adminApi.post("/admin/messaging/birthday/send", {
+        force,
+      });
+
+      const data = response.data.data as BirthdaySendResult;
+
+      setBirthdayResult(data);
+      applyBirthdayOverview(data.overview);
+      setBirthdayMessage(response.data.message || "");
+
+      if (data.sent > 0) {
+        void loadHistory();
+        void loadSettings();
+      }
+    } catch (error) {
+      setBirthdayError(
+        getApiErrorMessage(error, "ارسال تبریک تولد ناموفق بود."),
+      );
+    } finally {
+      setBirthdaySending(false);
+    }
+  };
+
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
 
@@ -314,6 +579,36 @@ function AdminMessaging() {
   };
 
   const isAvailable = Boolean(selectedChannel?.available);
+
+  const birthdayPreview = useMemo(() => {
+    if (!birthdayForm) return "";
+
+    const sampleName = birthday?.today[0]?.name ?? "سارا محمدی";
+    const firstName = sampleName.trim().split(/\s+/)[0] ?? sampleName;
+
+    return birthdayForm.template
+      .replaceAll("{name}", sampleName)
+      .replaceAll("{first_name}", firstName)
+      .replaceAll("{store}", birthday?.store_name ?? "فروشگاه")
+      .replaceAll("{date}", birthday?.jalali_today ?? "");
+  }, [birthdayForm, birthday]);
+
+  const birthdayChannelAvailable = useMemo(() => {
+    if (!birthday?.channels || !birthdayForm) return false;
+
+    return Boolean(
+      birthday.channels.find((channel) => channel.key === birthdayForm.channel)
+        ?.available,
+    );
+  }, [birthday, birthdayForm]);
+
+  const insertBirthdayPlaceholder = (placeholder: string) => {
+    setBirthdayForm((current) =>
+      current
+        ? { ...current, template: `${current.template}${placeholder}`.slice(0, 1000) }
+        : current,
+    );
+  };
 
   return (
     <div className="msg-page">
@@ -610,6 +905,319 @@ function AdminMessaging() {
           </div>
 
         </form>
+      </section>
+
+      <section className="msg-card msg-birthday">
+        <div className="msg-card-head">
+          <div>
+            <h2 className="msg-bday-title">
+              <Cake size={18} />
+              تبریک تولد خودکار
+            </h2>
+            <p>
+              در روز تولد شمسی هر مشتری، پیام تبریک به‌صورت خودکار ارسال می‌شود. تاریخ تولد
+              هنگام ثبت‌نام یا از بخش «حساب کاربری» ثبت می‌شود و مشتری می‌تواند از دریافت آن
+              انصراف دهد.
+            </p>
+          </div>
+
+          {birthdayForm && (
+            <label className="msg-switch">
+              <input
+                type="checkbox"
+                checked={birthdayForm.enabled}
+                onChange={(event) =>
+                  setBirthdayForm({
+                    ...birthdayForm,
+                    enabled: event.target.checked,
+                  })
+                }
+                aria-label="فعال بودن تبریک تولد خودکار"
+              />
+              <span className="msg-switch-track" aria-hidden="true">
+                <span />
+              </span>
+              <span className="msg-switch-text">
+                {birthdayForm.enabled ? "فعال" : "غیرفعال"}
+              </span>
+            </label>
+          )}
+        </div>
+
+        {birthdayError && (
+          <div className="msg-alert msg-alert-error" role="alert">
+            <AlertCircle size={16} />
+            <span>{birthdayError}</span>
+          </div>
+        )}
+
+        {birthdayMessage && (
+          <div className="msg-alert msg-alert-success" role="status">
+            <CheckCircle2 size={16} />
+            <span>{birthdayMessage}</span>
+          </div>
+        )}
+
+        {birthdayLoading && !birthdayForm ? (
+          <div className="msg-table-skeleton">
+            {[0, 1, 2].map((index) => (
+              <div key={index} className="msg-skeleton-row" />
+            ))}
+          </div>
+        ) : birthday && birthdayForm ? (
+          <>
+            <div className="msg-bday-stats">
+              <div className="msg-stat">
+                <span>مشتری با تاریخ تولد</span>
+                <strong>{formatNumber(birthday.stats.customers)}</strong>
+              </div>
+              <div className="msg-stat">
+                <span>قابل ارسال</span>
+                <strong>{formatNumber(birthday.stats.reachable)}</strong>
+              </div>
+              <div className="msg-stat">
+                <span>تولد امروز</span>
+                <strong>{formatNumber(birthday.stats.today)}</strong>
+              </div>
+              <div className="msg-stat">
+                <span>ارسال‌شدهٔ امسال</span>
+                <strong>{formatNumber(birthday.stats.sent_this_year)}</strong>
+              </div>
+            </div>
+
+            <form className="msg-form msg-bday-form" onSubmit={handleBirthdaySave}>
+              <div className="msg-bday-row">
+                <label className="msg-field">
+                  <span className="msg-label">کانال ارسال</span>
+
+                  <select
+                    className="msg-input msg-select"
+                    value={birthdayForm.channel}
+                    onChange={(event) =>
+                      setBirthdayForm({
+                        ...birthdayForm,
+                        channel: event.target.value as ChannelKey,
+                      })
+                    }
+                  >
+                    {birthday.channels.map((channel) => (
+                      <option
+                        key={channel.key}
+                        value={channel.key}
+                        disabled={!channel.available}
+                      >
+                        {channel.label}
+                        {channel.available ? "" : " — تنظیم نشده"}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className="msg-field">
+                  <span className="msg-label">ساعت ارسال</span>
+
+                  <input
+                    type="time"
+                    className="msg-input msg-time-input"
+                    dir="ltr"
+                    value={birthdayForm.send_time}
+                    onChange={(event) =>
+                      setBirthdayForm({
+                        ...birthdayForm,
+                        send_time: event.target.value,
+                      })
+                    }
+                    required
+                  />
+
+                  <span className="msg-hint">
+                    زمان‌بندی هر ۱۵ دقیقه بررسی می‌شود؛ پیام در اولین بررسیِ بعد از این ساعت
+                    ارسال می‌شود.
+                  </span>
+                </label>
+              </div>
+
+              {!birthdayChannelAvailable && (
+                <div className="msg-alert msg-alert-warning">
+                  <Info size={16} />
+                  <span>
+                    کانال انتخاب‌شده هنوز در <code>backend/.env</code> تنظیم نشده است؛ تا آن
+                    زمان ارسال خودکار انجام نمی‌شود.
+                  </span>
+                </div>
+              )}
+
+              <label className="msg-field">
+                <span className="msg-label">متن پیام تبریک</span>
+
+                <textarea
+                  className="msg-input msg-textarea"
+                  rows={5}
+                  maxLength={1000}
+                  value={birthdayForm.template}
+                  onChange={(event) =>
+                    setBirthdayForm({
+                      ...birthdayForm,
+                      template: event.target.value,
+                    })
+                  }
+                  placeholder="{name} عزیز، زادروزت مبارک!"
+                />
+
+                <span className="msg-hint">
+                  متغیرها به‌صورت خودکار با اطلاعات هر مشتری جایگزین می‌شوند؛ برای افزودن،
+                  روی آن‌ها کلیک کنید.
+                </span>
+              </label>
+
+              <div className="msg-bday-chips">
+                {birthday.placeholders.map((placeholder) => (
+                  <button
+                    key={placeholder}
+                    type="button"
+                    className="msg-ghost-button"
+                    onClick={() => insertBirthdayPlaceholder(placeholder)}
+                  >
+                    {placeholder}
+                  </button>
+                ))}
+
+                {birthday.default_template &&
+                  birthdayForm.template !== birthday.default_template && (
+                    <button
+                      type="button"
+                      className="msg-ghost-button msg-bday-reset"
+                      onClick={() =>
+                        setBirthdayForm({
+                          ...birthdayForm,
+                          template: birthday.default_template,
+                        })
+                      }
+                      title="بازگرداندن متن پیش‌فرض فروشگاه"
+                    >
+                      متن پیش‌فرض
+                    </button>
+                  )}
+              </div>
+
+              <div className="msg-bday-preview">
+                <span className="msg-label">پیش‌نمایش</span>
+                <p>{birthdayPreview}</p>
+                <span className="msg-hint">
+                  {formatNumber(birthdayPreview.length)} نویسه
+                  {birthdayForm.channel === "sms" && (
+                    <>
+                      {" "}
+                      —{" "}
+                      {formatNumber(
+                        Math.max(1, Math.ceil(birthdayPreview.length / 70)),
+                      )}{" "}
+                      بخش پیامک
+                    </>
+                  )}
+                </span>
+              </div>
+
+              <div className="msg-actions">
+                <button
+                  type="submit"
+                  className="msg-primary-button"
+                  disabled={birthdaySaving}
+                >
+                  {birthdaySaving ? (
+                    <RefreshCw size={16} className="msg-spin" />
+                  ) : (
+                    <CheckCircle2 size={16} />
+                  )}
+                  {birthdaySaving ? "در حال ذخیره..." : "ذخیرهٔ تنظیمات"}
+                </button>
+
+                <button
+                  type="button"
+                  className="msg-ghost-button"
+                  onClick={() => void handleBirthdaySend(false)}
+                  disabled={birthdaySending || !birthdayChannelAvailable}
+                >
+                  {birthdaySending ? (
+                    <RefreshCw size={15} className="msg-spin" />
+                  ) : (
+                    <Send size={15} />
+                  )}
+                  ارسال تبریک امروز
+                </button>
+
+                {birthday.stats.today > 0 && (
+                  <button
+                    type="button"
+                    className="msg-ghost-button"
+                    onClick={() => void handleBirthdaySend(true)}
+                    disabled={birthdaySending || !birthdayChannelAvailable}
+                    title="ارسال دوباره به همهٔ تولدهای امروز، حتی ارسال‌شده‌ها"
+                  >
+                    ارسال دوباره
+                  </button>
+                )}
+              </div>
+            </form>
+
+            {birthdayResult && birthdayResult.results.length > 0 && (
+              <ul className="msg-result-list msg-bday-result">
+                {birthdayResult.results.map((item) => (
+                  <li key={item.user_id}>
+                    <span>
+                      {item.name} — <span dir="ltr">{item.mobile}</span>
+                    </span>
+                    <span
+                      className={
+                        item.status === "sent" ? "msg-result-ok" : "msg-result-error"
+                      }
+                    >
+                      {item.error ??
+                        (item.status === "sent" ? "ارسال شد" : "ناموفق")}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <div className="msg-bday-lists">
+              <div className="msg-bday-block">
+                <h3>
+                  <PartyPopper size={16} />
+                  تولدهای امروز ({formatNumber(birthday.stats.today)})
+                </h3>
+
+                <BirthdayTable
+                  records={birthday.today}
+                  emptyText="امروز تولدی ثبت نشده است."
+                />
+              </div>
+
+              <div className="msg-bday-block">
+                <h3>
+                  <CalendarClock size={16} />
+                  تولدهای ۷ روز آینده ({formatNumber(birthday.stats.upcoming)})
+                </h3>
+
+                <BirthdayTable
+                  records={birthday.upcoming}
+                  emptyText="در هفتهٔ آینده تولدی ثبت نشده است."
+                  showDays
+                />
+              </div>
+            </div>
+
+            <p className="msg-bday-note">
+              برای ارسال خودکار، کرون سرور باید هر دقیقه فرمان{" "}
+              <code>php artisan schedule:run</code> را اجرا کند.
+            </p>
+          </>
+        ) : (
+          <div className="msg-empty">
+            <Info size={18} />
+            <span>اطلاعات تبریک تولد در دسترس نیست.</span>
+          </div>
+        )}
       </section>
 
       <section className="msg-card msg-history">
@@ -1313,9 +1921,174 @@ const msgStyles = `
   color: #6d8070;
 }
 
+/* ---------- Birthday greetings ---------- */
+.msg-bday-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #3f6144;
+}
+
+.msg-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #4f7754;
+}
+
+.msg-switch input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.msg-switch-track {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 42px;
+  height: 23px;
+  padding: 2px;
+  border-radius: 999px;
+  background: #d8e2d3;
+  transition: background 0.18s ease;
+}
+
+.msg-switch-track > span {
+  width: 19px;
+  height: 19px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(47, 74, 51, 0.28);
+  transition: transform 0.18s ease;
+}
+
+.msg-switch input:checked + .msg-switch-track { background: #4f7754; }
+
+.msg-switch input:checked + .msg-switch-track > span { transform: translateX(-19px); }
+
+.msg-switch input:focus-visible + .msg-switch-track {
+  box-shadow: 0 0 0 3px rgba(79, 119, 84, 0.25);
+}
+
+.msg-switch-text { min-width: 46px; }
+
+.msg-bday-stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.msg-bday-form { gap: 14px; }
+
+.msg-bday-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 12px;
+}
+
+.msg-time-input { max-width: 160px; }
+
+.msg-bday-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.msg-bday-chips .msg-ghost-button {
+  padding: 5px 10px;
+  font-family: "Vazirmatn", monospace;
+  direction: ltr;
+  font-size: 12px;
+}
+
+.msg-bday-chips .msg-bday-reset {
+  border-style: dashed;
+  color: #5c6f61;
+  font-family: inherit;
+  direction: rtl;
+}
+
+.msg-bday-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 13px 15px;
+  border: 1px dashed #cfe0c7;
+  border-radius: 14px;
+  background: #f7fbF4;
+}
+
+.msg-bday-preview p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 2;
+  color: #35493a;
+  white-space: pre-wrap;
+}
+
+.msg-bday-lists {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.msg-bday-block h3 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 9px;
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #43564a;
+}
+
+.msg-bday-name { font-weight: 700; color: #33463a; }
+
+.msg-bday-note-inline {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  color: #a53f34;
+}
+
+.msg-bday-source {
+  display: block;
+  margin-top: 2px;
+  font-family: inherit;
+  font-size: 10.5px;
+  color: #8a9c8b;
+}
+
+.msg-bday-result { margin-top: 2px; }
+
+.msg-result-ok { color: #2f6b3a; }
+
+.msg-bday-note {
+  margin: 16px 0 0;
+  font-size: 12px;
+  line-height: 1.9;
+  color: #8a9c8b;
+}
+
+.msg-bday-note code {
+  padding: 1px 5px;
+  border-radius: 6px;
+  background: #eef4ea;
+  font-size: 11.5px;
+}
+
 /* ---------- Responsive ---------- */
 @media (max-width: 1024px) {
   .msg-channels { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .msg-bday-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 @media (max-width: 720px) {
@@ -1326,6 +2099,9 @@ const msgStyles = `
   .msg-search, .msg-select { width: 100%; }
   .msg-filters { width: 100%; }
   .msg-body-preview, .msg-error-text { max-width: 180px; }
+  .msg-bday-row { grid-template-columns: minmax(0, 1fr); }
+  .msg-time-input { max-width: 100%; }
+  .msg-switch { width: 100%; }
 }
 
 `;

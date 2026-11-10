@@ -69,4 +69,12 @@ class Order extends Model
     {
         return $this->hasOne(ReturnRequest::class);
     }
+
+    /**
+     * مرسوله‌های این سفارش (یک سفارش می‌تواند چند بسته داشته باشد).
+     */
+    public function shipments(): HasMany
+    {
+        return $this->hasMany(Shipment::class);
+    }
 }

@@ -12,6 +12,7 @@ export const ADMIN_PERMISSIONS = {
   categories: "categories.manage",
   brands: "brands.manage",
   banners: "banners.manage",
+  pages: "pages.manage",
   articles: "articles.manage",
   reviews: "reviews.manage",
   orders: "orders.manage",

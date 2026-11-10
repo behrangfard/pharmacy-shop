@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 
 import { Link, useNavigate } from "react-router-dom";
 
@@ -14,6 +14,8 @@ import {
   Lock,
   ChevronLeft,
   CalendarDays,
+  Cake,
+  Phone,
   CreditCard,
   XCircle,
   CheckCircle2,
@@ -23,12 +25,15 @@ import {
 } from "lucide-react";
 
 import Layout from "../components/Layout";
+import AddressBookSection from "../components/AddressBookSection";
+import JalaliDatePicker from "../components/JalaliDatePicker";
 import { usePrivatePageMeta } from "../hooks/usePageMeta";
 import { useAuth } from "../context/AuthContext";
 import { useCart } from "../context/CartContext";
 import api from "../services/api";
 import { STORAGE_KEYS } from "../utils/storageKeys";
 import { getStorageUrl } from "../utils/images";
+import { formatJalaliShort, toEnglishDigits, todayJalali } from "../utils/jalali";
 
 type ProductImage = {
   id: number;
@@ -98,11 +103,24 @@ function Account() {
 
   const [profileEmail, setProfileEmail] = useState("");
 
+  const [profileMobile, setProfileMobile] = useState("");
+
+  const [profileBirthDate, setProfileBirthDate] = useState("");
+
+  const [profileOptOut, setProfileOptOut] = useState(false);
+
   const [profileLoading, setProfileLoading] = useState(false);
 
   const [profileMessage, setProfileMessage] = useState("");
 
   const [profileError, setProfileError] = useState("");
+
+  // سال‌های قابل انتخاب برای تاریخ تولد: ۱۰۰ سال قبل تا سال جاری شمسی
+  const birthYearRange = useMemo(() => {
+    const currentYear = todayJalali().jy;
+
+    return { minYear: currentYear - 100, maxYear: currentYear };
+  }, []);
 
   const [currentPassword, setCurrentPassword] = useState("");
 
@@ -123,6 +141,9 @@ function Account() {
 
     setProfileName(user.name);
     setProfileEmail(user.email);
+    setProfileMobile(user.phone ?? "");
+    setProfileBirthDate(user.birth_date ? user.birth_date.slice(0, 10) : "");
+    setProfileOptOut(Boolean(user.birthday_greeting_opt_out));
   }, [user]);
 
   useEffect(() => {
@@ -190,14 +211,25 @@ function Account() {
   const handleProfileSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    setProfileLoading(true);
     setProfileMessage("");
     setProfileError("");
+
+    const normalizedMobile = toEnglishDigits(profileMobile).replace(/\D/g, "");
+
+    if (normalizedMobile && !/^09\d{9}$/.test(normalizedMobile)) {
+      setProfileError("شمارهٔ موبایل باید با ۰۹ شروع شود و ۱۱ رقم باشد.");
+      return;
+    }
+
+    setProfileLoading(true);
 
     try {
       const response = await api.put("/auth/profile", {
         name: profileName,
         email: profileEmail,
+        phone: normalizedMobile || null,
+        birth_date: profileBirthDate ? profileBirthDate.slice(0, 10) : null,
+        birthday_greeting_opt_out: profileOptOut,
       });
 
       const updatedUser = response.data?.user;
@@ -546,6 +578,38 @@ function Account() {
                       <p className="font-bold mt-1">{user.email}</p>
                     </div>
                   </div>
+
+                  {user.phone && (
+                    <div className="flex items-center gap-4">
+                      <div className="w-11 h-11 rounded-xl bg-cream flex items-center justify-center">
+                        <Phone size={20} />
+                      </div>
+
+                      <div>
+                        <p className="text-xs text-muted-soft">شمارهٔ موبایل</p>
+
+                        <p className="font-bold mt-1" dir="ltr">
+                          {user.phone}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {user.birth_date && (
+                    <div className="flex items-center gap-4">
+                      <div className="w-11 h-11 rounded-xl bg-cream flex items-center justify-center">
+                        <Cake size={20} />
+                      </div>
+
+                      <div>
+                        <p className="text-xs text-muted-soft">تاریخ تولد</p>
+
+                        <p className="font-bold mt-1">
+                          {formatJalaliShort(user.birth_date)}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <form onSubmit={handleProfileSubmit} className="mt-7 space-y-5">
@@ -577,6 +641,64 @@ function Account() {
                       className="w-full rounded-xl border border-line px-4 py-3 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
                     />
                   </div>
+
+                  <div>
+                    <label className="block text-sm font-bold mb-2">
+                      شمارهٔ موبایل{" "}
+                      <span className="text-xs font-normal text-muted-soft">
+                        (اختیاری)
+                      </span>
+                    </label>
+
+                    <input
+                      type="tel"
+                      inputMode="numeric"
+                      value={profileMobile}
+                      onChange={(event) => setProfileMobile(event.target.value)}
+                      placeholder="09121234567"
+                      autoComplete="tel"
+                      dir="ltr"
+                      className="w-full rounded-xl border border-line px-4 py-3 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="flex items-center gap-2 text-sm font-bold mb-2">
+                      <Cake size={16} className="text-brand-600" />
+                      تاریخ تولد{" "}
+                      <span className="text-xs font-normal text-muted-soft">
+                        (اختیاری)
+                      </span>
+                    </label>
+
+                    <JalaliDatePicker
+                      value={profileBirthDate}
+                      onChange={setProfileBirthDate}
+                      withTime={false}
+                      minYear={birthYearRange.minYear}
+                      maxYear={birthYearRange.maxYear}
+                      placeholder="انتخاب تاریخ تولد"
+                    />
+
+                    <p className="mt-1.5 text-xs text-muted-soft">
+                      برای دریافت تخفیفات و جشنواره‌های مخصوص روز تولد شما.
+                    </p>
+                  </div>
+
+                  <label className="flex items-start gap-3 rounded-xl border border-line px-4 py-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={!profileOptOut}
+                      onChange={(event) =>
+                        setProfileOptOut(!event.target.checked)
+                      }
+                      className="mt-1 h-4 w-4 accent-brand-600"
+                    />
+
+                    <span className="text-sm text-ink-soft">
+                      می‌خواهم تخفیفات و جشنواره‌های مخصوص روز تولد را دریافت کنم.
+                    </span>
+                  </label>
 
                   <div className="flex flex-col sm:flex-row gap-3 pt-2">
                     <button
@@ -624,6 +746,8 @@ function Account() {
                 </button>
               )}
             </div>
+
+            <AddressBookSection />
 
             <div className="bg-white rounded-3xl border border-line shadow-sm p-5 sm:p-7">
               <div className="flex items-center gap-3 mb-6">
@@ -804,6 +928,21 @@ function Account() {
                     const finalAmount = Number(order.total ?? 0);
 
                     const shippingCost = Number(order.shipping_cost ?? 0);
+
+                    /*
+                     * سفارش پرداخت‌نشده (و لغو‌نشده) می‌تواند مرحلهٔ پرداخت را
+                     * ادامه دهد؛ همان شرطی که سرور در pay() بررسی می‌کند.
+                     */
+                    const canContinuePayment =
+                      order.payment_status === "unpaid" &&
+                      !["cancelled", "canceled"].includes(order.status);
+
+                    // لغو سفارش فقط تا پیش از ارسال و برای سفارش پرداخت‌نشده.
+                    const canCancelOrder =
+                      order.payment_status !== "paid" &&
+                      !["shipped", "delivered", "cancelled", "canceled"].includes(
+                        order.status,
+                      );
 
                     return (
                       <div
@@ -1017,13 +1156,27 @@ function Account() {
                             />
                           </div>
                         </Link>
-                        {order.payment_status !== "paid" &&
-                          !["shipped", "delivered", "cancelled", "canceled"].includes(order.status) && (
-                            <div className="flex justify-end border-t border-line bg-white px-5 py-3">
+                        {(canContinuePayment || canCancelOrder) && (
+                          <div className="flex flex-wrap items-center justify-end gap-2 border-t border-line bg-white px-5 py-3">
+                            {canContinuePayment && (
+                              <Link
+                                to={`/payment/${encodeURIComponent(order.order_number)}`}
+                                className="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-4 py-2 text-sm font-black text-white shadow-sm transition hover:bg-brand-700 hover:shadow-md active:scale-[0.99]"
+                              >
+                                <CreditCard size={16} />
+                                ادامه خرید
+                              </Link>
+                            )}
+
+                            {canCancelOrder && (
                               <button
                                 type="button"
-                                onClick={() => handleCancelOrder(order.order_number)}
-                                disabled={cancellingOrderNumber === order.order_number}
+                                onClick={() =>
+                                  handleCancelOrder(order.order_number)
+                                }
+                                disabled={
+                                  cancellingOrderNumber === order.order_number
+                                }
                                 className="inline-flex items-center gap-2 rounded-xl border border-blush-200 px-4 py-2 text-sm font-bold text-discount transition hover:bg-blush-50 disabled:cursor-not-allowed disabled:opacity-60"
                               >
                                 {cancellingOrderNumber === order.order_number ? (
@@ -1035,9 +1188,9 @@ function Account() {
                                   ? "در حال لغو..."
                                   : "لغو سفارش"}
                               </button>
-                            </div>
-                          )}
-
+                            )}
+                          </div>
+                        )}
 
                       </div>
                     );

@@ -14,6 +14,13 @@ import { STORAGE_KEYS } from "../utils/storageKeys";
 
 const CART_STORAGE_KEY = STORAGE_KEYS.cart;
 
+export interface CartPackColor {
+  /** نام قطعهٔ پک */
+  name: string;
+  /** رنگ انتخاب‌شده برای همان قطعه */
+  color: string;
+}
+
 export interface CartItem {
   // شناسه اصلی محصول؛ برای ثبت سفارش استفاده می‌شود.
   id: number;
@@ -23,6 +30,13 @@ export interface CartItem {
   // شناسه تنوع انتخاب‌شده؛ برای محصولات بدون تنوع null است.
   variant_id?: number | null;
   variant_name?: string | null;
+
+  // رنگ انتخاب‌شدهٔ محصول؛ برای محصولات بدون رنگ null است.
+  color_name?: string | null;
+
+  // رنگ هر قطعهٔ پک چندعددی.
+  pack_colors?: CartPackColor[] | null;
+
   sku?: string | null;
 
   price: number;
@@ -57,8 +71,23 @@ interface CartProviderProps {
   children: ReactNode;
 }
 
-function getCartKey(productId: number, variantId?: number | null) {
-  return `${productId}:${variantId ?? "null"}`;
+function getCartKey(
+  productId: number,
+  variantId?: number | null,
+  colorName?: string | null,
+  packColors?: CartPackColor[] | null,
+) {
+  /*
+   * هر ترکیب محصول + تنوع + رنگ یک ردیف مستقل است؛ بنابراین مشتری می‌تواند
+   * دو رنگ از یک محصول را جداگانه در سبد داشته باشد.
+   */
+  const colorPart = (colorName ?? "").trim();
+  const packPart = (packColors ?? [])
+    .map((entry) => `${entry.name}=${entry.color}`)
+    .sort()
+    .join("|");
+
+  return `${productId}:${variantId ?? "null"}:${colorPart}:${packPart}`;
 }
 
 function readStoredCart(): CartItem[] {
@@ -89,10 +118,19 @@ function readStoredCart(): CartItem[] {
         ...item,
         variant_id: item.variant_id ?? null,
         variant_name: item.variant_name ?? null,
+        color_name: item.color_name ?? null,
+        pack_colors: Array.isArray(item.pack_colors) ? item.pack_colors : null,
         sku: item.sku ?? null,
         stock: Number(item.stock ?? 0),
         is_taxable: item.is_taxable ?? true,
-        cartKey: item.cartKey || getCartKey(item.id, item.variant_id ?? null),
+        cartKey:
+          item.cartKey ||
+          getCartKey(
+            item.id,
+            item.variant_id ?? null,
+            item.color_name ?? null,
+            item.pack_colors ?? null,
+          ),
       }));
   } catch {
     return [];
@@ -114,7 +152,9 @@ function CartProvider({ children }: CartProviderProps) {
   // افزودن یک واحد از محصول یا تنوع انتخاب‌شده
   const addToCart = useCallback((product: AddToCartItem) => {
     const variantId = product.variant_id ?? null;
-    const cartKey = getCartKey(product.id, variantId);
+    const colorName = (product.color_name ?? "").trim() || null;
+    const packColors = product.pack_colors ?? null;
+    const cartKey = getCartKey(product.id, variantId, colorName, packColors);
 
     setItems((currentItems) => {
       const existingItem = currentItems.find(
@@ -146,6 +186,8 @@ function CartProvider({ children }: CartProviderProps) {
           ...product,
           variant_id: variantId,
           variant_name: product.variant_name ?? null,
+          color_name: colorName,
+          pack_colors: packColors,
           sku: product.sku ?? null,
           quantity: 1,
           cartKey,

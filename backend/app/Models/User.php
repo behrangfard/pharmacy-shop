@@ -12,7 +12,16 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
-#[Fillable(['name', 'email', 'password', 'role', 'admin_role'])]
+#[Fillable([
+    'name',
+    'email',
+    'phone',
+    'birth_date',
+    'birthday_greeting_opt_out',
+    'password',
+    'role',
+    'admin_role',
+])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -27,6 +36,30 @@ class User extends Authenticatable
     public function reviews(): HasMany
     {
         return $this->hasMany(ProductReview::class);
+    }
+
+    /**
+     * تبریک‌های تولد ارسال‌شده برای این مشتری (یکی در هر سال شمسی).
+     */
+    public function birthdayGreetings(): HasMany
+    {
+        return $this->hasMany(BirthdayGreeting::class);
+    }
+
+    /**
+     * محصولات علاقه‌مندی («لیست آرزو») این مشتری.
+     */
+    public function wishlistItems(): HasMany
+    {
+        return $this->hasMany(WishlistItem::class);
+    }
+
+    /**
+     * آدرس‌های ذخیره‌شدهٔ این مشتری (دفترچهٔ آدرس).
+     */
+    public function addresses(): HasMany
+    {
+        return $this->hasMany(Address::class);
     }
 
     public function isAdmin(): bool
@@ -82,6 +115,8 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'birth_date' => 'date:Y-m-d',
+            'birthday_greeting_opt_out' => 'boolean',
             'password' => 'hashed',
         ];
     }

@@ -23,12 +23,16 @@ export const STORAGE_KEYS = {
   storefrontAnnouncementBar: "behrang-shop-storefront-announcement-bar",
   /** کش نشان‌های اعتماد و مجوزهای فوتر (اینماد، ساماندهی و ...). */
   storefrontTrustBadges: "behrang-shop-storefront-trust-badges",
+  /** کش فهرست صفحات ثابت سایت (درباره ما، قوانین و ...) برای لینک‌های فوتر. */
+  storefrontPages: "behrang-shop-storefront-pages",
   /** توکن گفتگوی پشتیبانی مهمان (چت فروشگاه). */
   supportConversation: "behrang-shop-support-conversation",
   /** آخرین پیام دیده‌شدهٔ گفتگوی پشتیبانی (برای نشانگر پیام جدید). */
   supportLastSeen: "behrang-shop-support-last-seen",
   /** چیدمان شخصی‌سازی‌شدهٔ منوی سایدبار پنل مدیریت (ترتیب + پین). */
   adminSidebar: "behrang-shop-admin-sidebar",
+  /** تم انتخاب‌شدهٔ فروشگاه برای پیش‌نمایش پالت رنگ (sage/ocean). */
+  storefrontTheme: "behrang-shop-storefront-theme",
 } as const;
 
 const LEGACY_STORAGE_KEYS: Record<string, string> = {

@@ -1,3 +1,5 @@
+import { formatJalaliDateTime } from "./jalali";
+
 /**
  * پیام خطای خوانا از پاسخ خطای API (اعتبارسنجی لاراول یا پیام سرور).
  */
@@ -62,20 +64,17 @@ export const formatAdminNumber = (value: number | string | undefined) =>
 export const formatAdminPrice = (value: number | string | undefined) =>
   `${formatAdminNumber(value)} تومان`;
 
+/**
+ * تاریخ شمسی برای نمایش در پنل مدیریت؛ مثلاً «۱۲ مرداد ۱۴۰۳» یا با ساعت
+ * «۱۲ مرداد ۱۴۰۳، ساعت ۱۴:۳۰».
+ *
+ * پیش‌تر از `Intl.DateTimeFormat("fa-IR")` استفاده می‌شد که خروجی‌اش به دادهٔ
+ * تقویم فارسی در مرورگر/سیستم وابسته است و روی بعضی دستگاه‌ها تاریخ میلادی
+ * نشان می‌داد. حالا تبدیل با تقویم شمسی داخلی پروژه انجام می‌شود و زمان‌های
+ * ISO سرور (UTC) هم به وقت محلی تبدیل می‌شوند.
+ */
 export const formatAdminDate = (
   value: string | null | undefined,
   withTime = false,
-) => {
-  if (!value) return "—";
+) => formatJalaliDateTime(value, { withTime }) || "—";
 
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) return "—";
-
-  return new Intl.DateTimeFormat("fa-IR", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    ...(withTime ? { hour: "2-digit", minute: "2-digit" } : {}),
-  }).format(date);
-};

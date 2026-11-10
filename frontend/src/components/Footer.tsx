@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ArrowLeft,
   Heart,
@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 
 import { useStoreSettings } from "../hooks/useStoreSettings";
+import { useSitePages } from "../hooks/useSitePages";
 import { useTrustBadges } from "../hooks/useTrustBadges";
 import type { TrustBadge } from "../services/trustBadges";
 import { getStorageUrl } from "../utils/images";
@@ -82,6 +83,13 @@ function TrustBadgeTile({ badge }: { badge: TrustBadge }) {
 function Footer() {
   const settings = useStoreSettings();
   const trustBadges = useTrustBadges();
+  const sitePages = useSitePages();
+
+  /** فقط صفحه‌هایی که مدیر «نمایش در فوتر» را برایشان روشن کرده است. */
+  const footerPages = useMemo(
+    () => sitePages.filter((page) => page.show_in_footer),
+    [sitePages],
+  );
 
   /** ناحیهٔ نشان‌ها در حالت توسعه حتی وقتی نشانی ثبت نشده دیده می‌شود. */
   const showTrustArea = trustBadges.length > 0 || import.meta.env.DEV;
@@ -186,6 +194,21 @@ function Footer() {
                   className="opacity-0 transition-all group-hover:translate-x-[-3px] group-hover:opacity-100"
                 />
               </Link>
+
+              {/* صفحه‌های ثابت سایت که مدیر برایشان «نمایش در فوتر» را فعال کرده است. */}
+              {footerPages.map((page) => (
+                <Link
+                  key={page.id}
+                  to={`/pages/${page.slug}`}
+                  className="group flex items-center justify-between gap-2 transition-colors hover:text-brand-600"
+                >
+                  <span>{page.title}</span>
+                  <ArrowLeft
+                    size={15}
+                    className="opacity-0 transition-all group-hover:translate-x-[-3px] group-hover:opacity-100"
+                  />
+                </Link>
+              ))}
             </div>
           </div>
 

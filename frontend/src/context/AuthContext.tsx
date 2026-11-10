@@ -21,6 +21,12 @@ export interface AuthUser {
   id: number;
   name: string;
   email: string;
+  /** شمارهٔ موبایل ثبت‌شده در پروفایل (اختیاری). */
+  phone?: string | null;
+  /** تاریخ تولد میلادی با قالب YYYY-MM-DD (اختیاری). */
+  birth_date?: string | null;
+  /** مشتری دریافت پیامک تبریک تولد را غیرفعال کرده است. */
+  birthday_greeting_opt_out?: boolean;
   role: UserRole;
   /** نقش مدیریتی؛ فقط برای کاربرانی که role === "admin" است. */
   admin_role?: AdminRole | null;

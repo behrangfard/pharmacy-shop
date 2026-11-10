@@ -15,7 +15,6 @@ import {
 
 import Layout from "../components/Layout";
 import { usePrivatePageMeta } from "../hooks/usePageMeta";
-import { useCart } from "../context/CartContext";
 import api from "../services/api";
 
 type OrderData = {
@@ -36,7 +35,6 @@ function Payment() {
 
   const { orderNumber } = useParams();
   const navigate = useNavigate();
-  const { clearCart } = useCart();
 
   const [order, setOrder] = useState<OrderData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -123,7 +121,12 @@ function Payment() {
 
     try {
       await api.post(`/orders/${orderNumber}/pay`);
-      clearCart();
+
+      /*
+       * سبد خرید فقط در مرحلهٔ ثبت سفارش (Checkout) خالی می‌شود. اگر کاربر
+       * بعداً پرداخت یک سفارش قدیمی را از «سفارش‌های من» ادامه دهد، نباید
+       * سبد خرید فعلی‌اش پاک شود.
+       */
       navigate(`/account/orders/${orderNumber}`);
     } catch (error: any) {
       console.error("Payment error:", error);
