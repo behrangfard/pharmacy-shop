@@ -1,0 +1,62 @@
+{
+  "id": "/",
+  "name": "بهرنگ شاپ | فروشگاه آنلاین لباس زیر و پوشاک زنانه",
+  "short_name": "بهرنگ شاپ",
+  "description": "خرید آنلاین لباس زیر زنانه، ست، سوتین، شورت و لباس خواب از بهرنگ شاپ؛ ارسال سریع به سراسر ایران، تضمین اصالت کالا و پشتیبانی واقعی.",
+  "lang": "fa-IR",
+  "dir": "rtl",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#faf9f4",
+  "theme_color": "#4f7754",
+  "categories": ["shopping", "lifestyle"],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "فروشگاه",
+      "short_name": "فروشگاه",
+      "description": "مشاهدهٔ همهٔ محصولات",
+      "url": "/products",
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
+    },
+    {
+      "name": "سبد خرید",
+      "short_name": "سبد",
+      "description": "مشاهدهٔ سبد خرید",
+      "url": "/cart"
+    },
+    {
+      "name": "علاقه‌مندی‌ها",
+      "short_name": "علاقه‌مندی",
+      "description": "محصولات ذخیره‌شده",
+      "url": "/wishlist"
+    }
+  ]
+}

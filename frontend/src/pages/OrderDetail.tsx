@@ -9,9 +9,11 @@ import {
   CreditCard,
   MapPin,
   Package,
+  Printer,
   Receipt,
   RotateCcw,
   Truck,
+  Wallet,
   XCircle,
 } from "lucide-react";
 
@@ -62,6 +64,8 @@ type Order = {
   total: string | number;
   status: string;
   payment_status: string;
+  payment_method?: string | null;
+  paid_at?: string | null;
   recipient_name: string;
   phone: string;
   address: string;
@@ -304,12 +308,16 @@ export default function OrderDetail() {
 
   const isPaid = order.payment_status === "paid";
 
+  const isCod = order.payment_method === "cod";
+
   /*
    * سفارشی که پرداختش انجام نشده و لغو هم نشده باید بتواند مرحلهٔ پرداخت را
-   * ادامه دهد؛ این همان شرطی است که سرور در pay() بررسی می‌کند.
+   * ادامه دهد؛ این همان شرطی است که سرور در pay() بررسی می‌کند. سفارش
+   * «پرداخت در محل» مرحلهٔ پرداخت آنلاین ندارد.
    */
   const isOutstandingPayment =
     order.payment_status === "unpaid" &&
+    !isCod &&
     !["cancelled", "canceled"].includes(order.status);
 
   return (
@@ -548,6 +556,13 @@ export default function OrderDetail() {
                     </p>
                   </div>
                 )}
+
+                <div className="rounded-xl bg-cream p-4">
+                  <p className="mb-1 text-xs text-muted">روش پرداخت</p>
+                  <p className="font-bold text-ink">
+                    {isCod ? "پرداخت در محل" : "پرداخت آنلاین"}
+                  </p>
+                </div>
 
                 {order.tracking_code && (
                   <div className="rounded-xl border border-brand-200 bg-brand-50 p-4">
@@ -801,11 +816,37 @@ export default function OrderDetail() {
                   <p className="mt-1 text-sm leading-6 text-muted">
                     {isPaid
                       ? "پرداخت این سفارش با موفقیت ثبت شده است."
-                      : "وضعیت پرداخت این سفارش هنوز پرداخت‌شده نیست."}
+                      : isCod
+                        ? "این سفارش با روش «پرداخت در محل» ثبت شده است؛ مبلغ هنگام تحویل دریافت می‌شود."
+                        : "وضعیت پرداخت این سفارش هنوز پرداخت‌شده نیست."}
                   </p>
                 </div>
               </div>
             </div>
+
+            {isCod && !isPaid && !isCancelled && (
+              <div className="mt-5 flex items-start gap-2 rounded-xl border border-gold-100 bg-gold-50 p-4 text-xs leading-6 text-gold">
+                <Wallet size={17} className="mt-0.5 shrink-0" />
+
+                <span>
+                  این سفارش «پرداخت در محل» است؛ مبلغ را هنگام تحویل به مأمور
+                  ارسال بپردازید.
+                </span>
+              </div>
+            )}
+
+            {/*
+             * فاکتور/رسید چاپی: صفحهٔ مستقل و بدون هدر سایت باز می‌شود تا
+             * خروجی چاپ تمیز باشد؛ در پنجرهٔ چاپ می‌توان با «Save as PDF»
+             * نسخهٔ PDF هم گرفت.
+             */}
+            <Link
+              to={`/account/orders/${encodeURIComponent(order.order_number)}/invoice`}
+              className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl border border-line px-4 py-2.5 text-xs font-bold text-ink-soft transition hover:border-brand-200 hover:bg-brand-50 hover:text-brand-700"
+            >
+              <Printer size={16} />
+              فاکتور / رسید چاپی (PDF)
+            </Link>
 
             {/*
              * وقتی سفارش هنوز پرداخت نشده، «ادامه خرید» کاربر را به مرحلهٔ

@@ -11,6 +11,7 @@ import {
   ChevronLeft,
   ShieldCheck,
   Truck,
+  Wallet,
   AlertCircle,
   Check,
   MapPinned,
@@ -30,6 +31,7 @@ import {
 } from "../services/addresses";
 import { useStoreSettings } from "../hooks/useStoreSettings";
 import { toEnglishDigits } from "../utils/jalali";
+import { STORAGE_KEYS } from "../utils/storageKeys";
 
 const CHECKOUT_KEY_STORAGE = "checkout_idempotency_key";
 const CHECKOUT_FINGERPRINT_STORAGE = "checkout_fingerprint";
@@ -44,12 +46,15 @@ type CheckoutItem = {
   pack_colors?: { name: string; color: string }[];
 };
 
+type PaymentMethodValue = "online" | "cod";
+
 type CheckoutPayload = {
   recipient_name: string;
   phone: string;
   address: string;
   postal_code: string;
   notes: null;
+  payment_method: PaymentMethodValue;
   coupon_code?: string | null;
   items: CheckoutItem[];
 };
@@ -82,6 +87,10 @@ function Checkout() {
   const [city, setCity] = useState("");
   const [address, setAddress] = useState("");
   const [postalCode, setPostalCode] = useState("");
+
+  // روش پرداخت: پیش‌فرض همان پرداخت آنلاین است.
+  const [paymentMethod, setPaymentMethod] =
+    useState<PaymentMethodValue>("online");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -135,6 +144,13 @@ function Checkout() {
 
     nameInitialized.current = true;
   }, [authLoading, user]);
+
+  // سفارش مهمان تنها با «پرداخت در محل» ثبت می‌شود؛ روش پرداخت را هم‌گام کن.
+  useEffect(() => {
+    if (!authLoading && !user && paymentMethod !== "cod") {
+      setPaymentMethod("cod");
+    }
+  }, [authLoading, user, paymentMethod]);
 
   // پر کردن فرم با آدرس انتخاب‌شده از دفترچهٔ آدرس مشتری.
   function applySavedAddress(address: SavedAddress) {
@@ -247,6 +263,8 @@ function Checkout() {
       const response = await api.post("/coupons/check", {
         code,
         subtotal: Math.max(0, Number(cartTotal ?? 0)),
+        // مهمان با شمارهٔ تماسش سنجیده می‌شود؛ برای کاربر، توکن مبناست.
+        phone: phone.trim() || undefined,
       });
 
       const data = response.data?.data;
@@ -348,6 +366,20 @@ function Checkout() {
     return Math.max(0, netSubtotal + shippingCost + taxAmount);
   }, [netSubtotal, shippingCost, taxAmount]);
 
+  /*
+   * سقف سفارش «پرداخت در محل» از تنظیمات سرور می‌آید. اگر مبلغ سبد از آن
+   * بیشتر شود، گزینهٔ COD غیرفعال و علتش نمایش داده می‌شود تا مشتری در مرحلهٔ
+   * ثبت به خطای 422 نخورد. اعتبارسنجی نهایی همیشه سمت سرور است.
+   */
+  const codMaxTotal = Math.max(0, Number(storeSettings.cod_max_total) || 0);
+  const codLimitExceeded = codMaxTotal > 0 && finalTotal > codMaxTotal;
+
+  useEffect(() => {
+    if (codLimitExceeded && user && paymentMethod === "cod") {
+      setPaymentMethod("online");
+    }
+  }, [codLimitExceeded, paymentMethod, user]);
+
   // مرتب‌سازی قطعی اقلام برای اینکه ترتیب سبد خرید
   // باعث تولید کلید Idempotency متفاوت نشود.
   const getCheckoutFingerprint = (payload: CheckoutPayload) => {
@@ -361,6 +393,7 @@ function Checkout() {
 
     return JSON.stringify({
       userId: user?.id ?? null,
+      payment_method: payload.payment_method,
       recipient_name: payload.recipient_name,
       phone: payload.phone,
       address: payload.address,
@@ -398,16 +431,34 @@ function Checkout() {
     return newKey;
   };
 
+  // شناسهٔ پایدار مرورگر برای Idempotency سفارش مهمان.
+  const getOrCreateGuestToken = () => {
+    const stored = localStorage.getItem(STORAGE_KEYS.guestToken);
+    const uuidPattern =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+    if (stored && uuidPattern.test(stored)) {
+      return stored;
+    }
+
+    if (!globalThis.crypto?.randomUUID) {
+      throw new Error(
+        "مرورگر شما از ساخت شناسهٔ امن درخواست پشتیبانی نمی‌کند.",
+      );
+    }
+
+    const created = globalThis.crypto.randomUUID();
+
+    localStorage.setItem(STORAGE_KEYS.guestToken, created);
+
+    return created;
+  };
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (authLoading) {
       setError("لطفاً تا بررسی وضعیت حساب کاربری صبر کنید.");
-      return;
-    }
-
-    if (!user) {
-      setError("برای ادامه خرید ابتدا وارد حساب کاربری خود شوید.");
       return;
     }
 
@@ -532,16 +583,25 @@ function Checkout() {
         postal_code: postalCode.trim(),
         notes: null,
         coupon_code: coupon?.code ?? null,
+        // سفارش مهمان فقط «پرداخت در محل» است (سرور هم همین را می‌پذیرد).
+        payment_method: user ? paymentMethod : "cod",
         items: orderItems,
       };
 
       const fingerprint = getCheckoutFingerprint(payload);
       const idempotencyKey = getIdempotencyKey(fingerprint);
 
+      const requestHeaders: Record<string, string> = {
+        "Idempotency-Key": idempotencyKey,
+      };
+
+      // سفارش مهمان با شناسهٔ پایدار مرورگر یکتا می‌شود.
+      if (!user) {
+        requestHeaders["X-Guest-Token"] = getOrCreateGuestToken();
+      }
+
       const response = await api.post("/orders", payload, {
-        headers: {
-          "Idempotency-Key": idempotencyKey,
-        },
+        headers: requestHeaders,
       });
 
       const order =
@@ -590,7 +650,41 @@ function Checkout() {
 
       idempotencyKeyRef.current = null;
 
-      navigate(`/payment/${encodeURIComponent(orderNumber)}`);
+      /*
+       * سفارش پرداخت در محل مرحلهٔ درگاه ندارد و مستقیم به جزئیات سفارش
+       * می‌رود؛ سفارش آنلاین مثل قبل به صفحهٔ پرداخت هدایت می‌شود.
+       */
+      /*
+       * سفارش مهمان به صفحهٔ رهگیری عمومی می‌رود و شماره تماس فقط در
+       * state مرورگر (نه آدرس صفحه) قرار می‌گیرد تا فرم خودکار پر شود.
+       */
+      if (!user) {
+        // کد پیگیری مهمان فقط یک‌بار در همین پاسخ برمی‌گردد؛ در صفحهٔ
+        // رهگیری نمایش داده می‌شود تا مشتری آن را ذخیره کند.
+        const guestAccessCode = order?.guest_access_code;
+
+        navigate(
+          `/track-order?order=${encodeURIComponent(orderNumber)}&registered=1`,
+          {
+            replace: true,
+            state: {
+              phone: phone.trim(),
+              accessCode:
+                typeof guestAccessCode === "string" && guestAccessCode
+                  ? guestAccessCode
+                  : undefined,
+            },
+          },
+        );
+
+        return;
+      }
+
+      navigate(
+        paymentMethod === "cod"
+          ? `/account/orders/${encodeURIComponent(orderNumber)}`
+          : `/payment/${encodeURIComponent(orderNumber)}`,
+      );
     } catch (error: any) {
       console.error("Checkout error:", error);
 
@@ -703,38 +797,38 @@ function Checkout() {
         {!authLoading && !user && (
           <section
             role="status"
-            className="mb-6 rounded-2xl border border-gold-100 bg-gold-50 p-5 sm:p-6"
+            className="mb-6 rounded-2xl border border-brand-100 bg-brand-50 p-5 sm:p-6"
           >
             <div className="flex items-start gap-3">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gold-100 text-gold">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-100 text-brand-600">
                 <User size={22} />
               </div>
 
               <div className="min-w-0 flex-1">
                 <h2 className="text-base font-black text-ink">
-                  برای ادامه خرید وارد حساب شوید
+                  سفارش مهمان — بدون نیاز به ثبت‌نام
                 </h2>
 
                 <p className="mt-2 text-sm leading-7 text-muted">
-                  برای ثبت و پیگیری سفارش، وارد حساب کاربری خود شوید یا یک حساب
-                  جدید ایجاد کنید. پس از ورود می‌توانید به همین صفحه برگردید.
+                  می‌توانید همین حالا سفارش خود را ثبت کنید و با «شماره سفارش +
+                  شماره تماس» وضعیت آن را در صفحهٔ رهگیری ببینید. برای پرداخت
+                  آنلاین و ذخیرهٔ آدرس‌ها وارد حساب کاربری شوید.
                 </p>
 
                 <div className="mt-4 flex flex-wrap gap-3">
                   <Link
                     to="/login"
                     state={{ from: "/checkout" }}
-                    className="inline-flex items-center justify-center rounded-xl bg-brand-500 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-brand-700"
+                    className="inline-flex items-center justify-center rounded-xl border border-brand-250 bg-white px-5 py-2.5 text-sm font-bold text-brand-700 transition hover:bg-brand-75"
                   >
-                    ورود به حساب
+                    ورود به حساب (اختیاری)
                   </Link>
 
                   <Link
-                    to="/register"
-                    state={{ from: "/checkout" }}
-                    className="inline-flex items-center justify-center rounded-xl border border-brand-250 bg-white px-5 py-2.5 text-sm font-bold text-brand-700 transition hover:bg-brand-75"
+                    to="/track-order"
+                    className="inline-flex items-center justify-center rounded-xl px-5 py-2.5 text-sm font-bold text-brand-600 transition hover:text-brand-700"
                   >
-                    ایجاد حساب کاربری
+                    رهگیری سفارش
                   </Link>
                 </div>
               </div>
@@ -1110,17 +1204,19 @@ function Checkout() {
                       />
                     )}
 
-                    <label className="flex items-center gap-2 text-xs font-bold text-ink-soft">
-                      <input
-                        type="checkbox"
-                        checked={saveAddressToBook}
-                        onChange={(event) =>
-                          setSaveAddressToBook(event.target.checked)
-                        }
-                        className="h-4 w-4 rounded border-line accent-brand-600"
-                      />
-                      این آدرس را برای سفارش‌های بعدی ذخیره کن
-                    </label>
+                    {user && (
+                      <label className="flex items-center gap-2 text-xs font-bold text-ink-soft">
+                        <input
+                          type="checkbox"
+                          checked={saveAddressToBook}
+                          onChange={(event) =>
+                            setSaveAddressToBook(event.target.checked)
+                          }
+                          className="h-4 w-4 rounded border-line accent-brand-600"
+                        />
+                        این آدرس را برای سفارش‌های بعدی ذخیره کن
+                      </label>
+                    )}
                   </div>
                 )}
               </div>
@@ -1181,7 +1277,134 @@ function Checkout() {
                     {storeSettings.shipping_note}
                   </p>
                 )}
+
+                <Link
+                  to="/shipping-info"
+                  className="mt-2 inline-block text-xs font-bold text-brand-600 transition-colors hover:text-brand-700"
+                >
+                  روش‌های ارسال و اطلاعات ارسال
+                </Link>
               </div>
+            </section>
+
+            <section className="rounded-3xl border border-line bg-white p-5 shadow-sm sm:p-7">
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-50 text-stock">
+                  <Wallet size={24} />
+                </div>
+
+                <div>
+                  <h2 className="text-xl font-black text-ink">روش پرداخت</h2>
+
+                  <p className="mt-1 text-sm text-muted">
+                    شیوهٔ پرداخت سفارش را انتخاب کنید
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                {(
+                  [
+                    {
+                      value: "online",
+                      title: "پرداخت آنلاین",
+                      description: "پرداخت امن با کارت بانکی از طریق درگاه",
+                      icon: <CreditCard size={20} />,
+                    },
+                    {
+                      value: "cod",
+                      title: "پرداخت در محل",
+                      description: "پرداخت وجه هنگام تحویل سفارش",
+                      icon: <Wallet size={20} />,
+                    },
+                  ] as const
+                ).map((option) => {
+                  const isSelected = paymentMethod === option.value;
+
+                  // پرداخت آنلاین فقط برای کاربر واردشده فعال است.
+                  const disabledOnline = !user && option.value === "online";
+
+                  // COD برای مبالغ بالاتر از سقف تنظیم‌شده پذیرفته نمی‌شود.
+                  const disabledByCodCap =
+                    option.value === "cod" && codLimitExceeded;
+
+                  const isDisabled = disabledOnline || disabledByCodCap;
+
+                  return (
+                    <label
+                      key={option.value}
+                      className={`flex items-start gap-3 rounded-2xl border p-4 transition ${
+                        isDisabled
+                          ? "cursor-not-allowed border-line bg-cream opacity-60"
+                          : "cursor-pointer bg-white hover:border-brand-300"
+                      } ${
+                        isSelected && !isDisabled
+                          ? "border-brand-500 bg-brand-50 ring-2 ring-brand-100"
+                          : ""
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="payment_method"
+                        value={option.value}
+                        checked={isSelected}
+                        disabled={isDisabled}
+                        onChange={() => setPaymentMethod(option.value)}
+                        className="mt-1 h-4 w-4 shrink-0 accent-brand-600"
+                      />
+
+                      <span
+                        className={`mt-0.5 shrink-0 ${
+                          isSelected ? "text-brand-600" : "text-muted"
+                        }`}
+                      >
+                        {option.icon}
+                      </span>
+
+                      <span className="min-w-0">
+                        <span className="block font-black text-ink">
+                          {option.title}
+                        </span>
+
+                        <span className="mt-1 block text-xs leading-6 text-muted">
+                          {option.description}
+                        </span>
+
+                        {disabledOnline && (
+                          <span className="mt-1 block text-[11px] font-bold leading-5 text-gold">
+                            برای پرداخت آنلاین وارد حساب کاربری شوید.
+                          </span>
+                        )}
+
+                        {disabledByCodCap && (
+                          <span className="mt-1 block text-[11px] font-bold leading-5 text-discount">
+                            سقف سفارش پرداخت در محل{" "}
+                            {formatPrice(codMaxTotal)} تومان است و مبلغ این سبد
+                            بیشتر است.{" "}
+                            {user
+                              ? "پرداخت آنلاین را انتخاب کنید."
+                              : "برای ثبت سفارش وارد حساب کاربری شوید."}
+                          </span>
+                        )}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+
+              {paymentMethod === "cod" && !codLimitExceeded && (
+                <p className="mt-4 rounded-xl border border-brand-100 bg-brand-50 p-4 text-xs leading-6 text-brand-700">
+                  مبلغ سفارش را هنگام تحویل به مأمور ارسال بپردازید. پس از
+                  تحویل، پرداخت شما در سیستم ثبت می‌شود.
+                </p>
+              )}
+
+              {!authLoading && !user && (
+                <p className="mt-4 rounded-xl border border-gold-100 bg-gold-50 p-4 text-xs leading-6 text-gold">
+                  سفارش مهمان بدون نیاز به ثبت‌نام و فقط با «پرداخت در محل»
+                  ثبت می‌شود. برای پرداخت آنلاین، وارد حساب کاربری شوید.
+                </p>
+              )}
             </section>
           </div>
 
@@ -1323,6 +1546,13 @@ function Checkout() {
                 </div>
               </div>
 
+              {paymentMethod === "cod" && (
+                <p className="mt-4 rounded-xl bg-gold-50 px-3 py-2 text-center text-xs font-bold leading-6 text-gold">
+                  مبلغ سفارش هنگام تحویل دریافت می‌شود؛ نیازی به پرداخت آنلاین
+                  نیست.
+                </p>
+              )}
+
               {authLoading ? (
                 <button
                   type="button"
@@ -1332,25 +1562,6 @@ function Checkout() {
                   <Loader2 size={19} className="animate-spin" />
                   در حال بررسی حساب...
                 </button>
-              ) : !user ? (
-                <div className="mt-6 space-y-3">
-                  <Link
-                    to="/login"
-                    state={{ from: "/checkout" }}
-                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand-500 py-3.5 font-black text-white transition-colors hover:bg-brand-700"
-                  >
-                    <User size={19} />
-                    ورود و ادامه خرید
-                  </Link>
-
-                  <Link
-                    to="/register"
-                    state={{ from: "/checkout" }}
-                    className="inline-flex w-full items-center justify-center rounded-xl border border-brand-250 bg-white py-3 font-bold text-brand-700 transition-colors hover:bg-brand-75"
-                  >
-                    ایجاد حساب کاربری
-                  </Link>
-                </div>
               ) : (
                 <button
                   type="submit"
@@ -1369,8 +1580,14 @@ function Checkout() {
                     </>
                   ) : (
                     <>
-                      <CreditCard size={19} />
-                      ادامه و پرداخت
+                      {paymentMethod === "cod" ? (
+                        <Wallet size={19} />
+                      ) : (
+                        <CreditCard size={19} />
+                      )}
+                      {paymentMethod === "cod"
+                        ? "ثبت سفارش (پرداخت در محل)"
+                        : "ادامه و پرداخت"}
                     </>
                   )}
                 </button>

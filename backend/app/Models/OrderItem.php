@@ -21,12 +21,14 @@ class OrderItem extends Model
         'sku',
         'quantity',
         'unit_price',
+        'cost_price',
         'total_price',
     ];
 
     protected $casts = [
         'quantity' => 'integer',
         'unit_price' => 'decimal:2',
+        'cost_price' => 'decimal:2',
         'total_price' => 'decimal:2',
         'pack_colors' => 'array',
     ];

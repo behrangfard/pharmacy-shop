@@ -4,15 +4,29 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Models\OutboundMessage;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Services\Messaging\OrderStatusMessenger;
+use App\Services\Notifications\AdminNotificationService;
+use App\Services\Orders\OrderCouponService;
+use App\Support\PaymentMethod;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
+use Throwable;
 
 class AdminOrderController extends Controller
 {
+    public function __construct(
+        private readonly OrderStatusMessenger $orderStatusMessenger,
+        private readonly AdminNotificationService $notifications,
+        private readonly OrderCouponService $coupons
+    ) {
+    }
+
     /**
      * نمایش فهرست سفارش‌ها برای مدیر
      */
@@ -186,6 +200,7 @@ class AdminOrderController extends Controller
 
             if ($currentStatus === $newStatus) {
                 return [
+                    'previous_status' => $currentStatus,
                     'order' => $order->fresh()->load([
                         'items.product.images',
                         'items.variant',
@@ -225,6 +240,11 @@ class AdminOrderController extends Controller
                     true
                 )
                 && $order->payment_status !== 'paid'
+                /*
+                 * سفارش پرداخت در محل بدون پرداخت اولیه ارسال و تحویل
+                 * می‌شود؛ وجه هنگام تحویل دریافت و بعداً ثبت می‌شود.
+                 */
+                && $order->payment_method !== PaymentMethod::COD
             ) {
                 return [
                     'error' => 'برای انتخاب این وضعیت، سفارش باید پرداخت شده باشد.',
@@ -335,6 +355,9 @@ class AdminOrderController extends Controller
                 $order->stock_restored_at = now();
                 $order->status = 'cancelled';
                 $order->save();
+
+                // لغو توسط مدیر هم سهمیهٔ کوپن را آزاد می‌کند.
+                $this->coupons->release($order);
             } else {
                 $order->status = $newStatus;
 
@@ -354,6 +377,109 @@ class AdminOrderController extends Controller
             }
 
             return [
+                'previous_status' => $currentStatus,
+                'order' => $order->fresh()->load([
+                    'items.product.images',
+                    'items.variant',
+                    'user',
+                ]),
+            ];
+        }, 3);
+
+        if (isset($result['error'])) {
+            return response()->json([
+                'success' => false,
+                'message' => $result['error'],
+            ], $result['status']);
+        }
+
+        /** @var Order $order */
+        $order = $result['order'];
+
+        $sms = $this->notifyStatusChange(
+            $order,
+            (string) ($result['previous_status'] ?? ''),
+            $request->user()?->id
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => 'وضعیت سفارش با موفقیت به‌روزرسانی شد.',
+            'data' => $order,
+            'sms' => $this->presentSmsResult($sms),
+        ]);
+    }
+
+    /**
+     * ثبت دریافت وجه سفارش «پرداخت در محل».
+     *
+     * فقط سفارش‌های COD اجازهٔ تغییر دستی وضعیت پرداخت را دارند؛ پرداخت
+     * آنلاین باید از درگاه تأیید شود و دستکاری دستی آن مجاز نیست.
+     */
+    public function updatePaymentStatus(
+        Request $request,
+        string $orderNumber
+    ): JsonResponse {
+        $validated = $request->validate([
+            'payment_status' => [
+                'required',
+                'string',
+                Rule::in(['paid', 'unpaid']),
+            ],
+        ]);
+
+        $result = DB::transaction(function () use ($orderNumber, $validated) {
+            $order = Order::query()
+                ->where('order_number', $orderNumber)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $order) {
+                return [
+                    'error' => 'سفارش موردنظر پیدا نشد.',
+                    'status' => 404,
+                ];
+            }
+
+            if ($order->payment_method !== PaymentMethod::COD) {
+                return [
+                    'error' => 'تغییر دستی وضعیت پرداخت فقط برای سفارش‌های «پرداخت در محل» مجاز است.',
+                    'status' => 422,
+                ];
+            }
+
+            if (in_array($order->status, ['cancelled', 'canceled'], true)) {
+                return [
+                    'error' => 'سفارش لغوشده قابل تسویه نیست.',
+                    'status' => 422,
+                ];
+            }
+
+            if ($order->payment_status === 'refunded') {
+                return [
+                    'error' => 'سفارش بازپرداخت‌شده قابل تغییر وضعیت پرداخت نیست.',
+                    'status' => 422,
+                ];
+            }
+
+            if ($order->payment_status === $validated['payment_status']) {
+                return [
+                    'order' => $order->load([
+                        'items.product.images',
+                        'items.variant',
+                        'user',
+                    ]),
+                    'unchanged' => true,
+                ];
+            }
+
+            $order->payment_status = $validated['payment_status'];
+            $order->paid_at = $validated['payment_status'] === 'paid'
+                ? now()
+                : null;
+            $order->save();
+
+            return [
                 'order' => $order->fresh()->load([
                     'items.product.images',
                     'items.variant',
@@ -371,7 +497,11 @@ class AdminOrderController extends Controller
 
         return response()->json([
             'success' => true,
-            'message' => 'وضعیت سفارش با موفقیت به‌روزرسانی شد.',
+            'message' => ! empty($result['unchanged'])
+                ? 'وضعیت پرداخت این سفارش قبلاً همین مقدار بود.'
+                : ($validated['payment_status'] === 'paid'
+                    ? 'دریافت وجه سفارش ثبت شد.'
+                    : 'وضعیت پرداخت سفارش به «پرداخت‌نشده» بازگشت.'),
             'data' => $result['order'],
         ]);
     }
@@ -415,6 +545,8 @@ class AdminOrderController extends Controller
             $order->tracking_code = $validated['tracking_code'];
         }
 
+        $previousStatus = (string) $order->status;
+
         if (! empty($validated['mark_shipped'])) {
             if ($order->status !== 'delivered') {
                 $order->status = 'shipped';
@@ -425,14 +557,73 @@ class AdminOrderController extends Controller
 
         $order->save();
 
+        $order = $order->fresh()->load([
+            'items.product.images',
+            'items.variant',
+            'user',
+        ]);
+
+        $sms = $this->notifyStatusChange($order, $previousStatus, $request->user()?->id);
+
         return response()->json([
             'success' => true,
             'message' => 'اطلاعات ارسال سفارش ذخیره شد.',
-            'data' => $order->fresh()->load([
-                'items.product.images',
-                'items.variant',
-                'user',
-            ]),
+            'data' => $order,
+            'sms' => $this->presentSmsResult($sms),
         ]);
+    }
+
+    /**
+     * اطلاع‌رسانی تغییر وضعیت: پیامک خودکار به مشتری + اعلان زنگولهٔ پنل.
+     *
+     * اگر وضعیت واقعاً تغییر نکرده باشد، هیچ پیامی ارسال و هیچ اعلانی ثبت
+     * نمی‌شود.
+     */
+    private function notifyStatusChange(
+        Order $order,
+        string $previousStatus,
+        ?int $adminId
+    ): ?OutboundMessage {
+        if ($previousStatus === '' || $previousStatus === (string) $order->status) {
+            return null;
+        }
+
+        try {
+            $sms = $this->orderStatusMessenger->sendFor(
+                $order,
+                (string) $order->status,
+                $adminId
+            );
+
+            $this->notifications->orderStatusChanged($order, $previousStatus, $sms);
+        } catch (Throwable $exception) {
+            // تغییر وضعیت انجام شده است؛ فقط اطلاع‌رسانی رد می‌شود.
+            Log::warning('اطلاع‌رسانی تغییر وضعیت سفارش ناموفق بود.', [
+                'order_number' => $order->order_number,
+                'error' => $exception->getMessage(),
+            ]);
+
+            return null;
+        }
+
+        return $sms;
+    }
+
+    /**
+     * خلاصهٔ نتیجهٔ ارسال پیامک برای نمایش در پنل.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function presentSmsResult(?OutboundMessage $sms): ?array
+    {
+        if ($sms === null) {
+            return null;
+        }
+
+        return [
+            'status' => $sms->status,
+            'recipient' => $sms->recipient,
+            'error' => $sms->error,
+        ];
     }
 }

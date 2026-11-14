@@ -145,35 +145,40 @@ function CategoryMenu() {
               );
             })}
 
-            <Link
-              to="/size-guide"
-              className="
-                inline-flex items-center gap-1.5 rounded-xl border
-                border-plum-200 bg-plum-50 px-3.5 py-2.5
-                text-sm font-bold text-plum-600 transition-colors
-                hover:bg-plum-100 hover:text-plum-700
-                focus-visible:outline-none
-                focus-visible:ring-2 focus-visible:ring-plum-300
-              "
-            >
-              <Ruler size={16} aria-hidden="true" />
-              راهنمای انتخاب سایز
-            </Link>
+            {/* این گروه با ms-auto به انتهای خط (سمت چپ نوار) هل داده
+                می‌شود؛ در RTL فضای میان دسته‌بندی‌ها و این گروه خودکار پر
+                می‌شود. shrink-0 مانع شکستن گروه بین دو خط می‌شود. */}
+            <div className="ms-auto flex shrink-0 items-center gap-3">
+              <Link
+                to="/size-guide"
+                className="
+                  inline-flex items-center gap-1.5 rounded-xl border
+                  border-plum-200 bg-plum-50 px-3.5 py-2.5
+                  text-sm font-bold text-plum-600 transition-colors
+                  hover:bg-plum-100 hover:text-plum-700
+                  focus-visible:outline-none
+                  focus-visible:ring-2 focus-visible:ring-plum-300
+                "
+              >
+                <Ruler size={16} aria-hidden="true" />
+                راهنمای انتخاب سایز
+              </Link>
 
-            <Link
-              to="/articles"
-              className="
-                inline-flex items-center gap-1.5 rounded-xl border
-                border-brand-250 bg-brand-50 px-3.5 py-2.5
-                text-sm font-bold text-brand-600 transition-colors
-                hover:bg-brand-100 hover:text-brand-700
-                focus-visible:outline-none
-                focus-visible:ring-2 focus-visible:ring-brand-400
-              "
-            >
-              <BookOpen size={16} aria-hidden="true" />
-              مقالات و راهنما
-            </Link>
+              <Link
+                to="/articles"
+                className="
+                  inline-flex items-center gap-1.5 rounded-xl border
+                  border-brand-250 bg-brand-50 px-3.5 py-2.5
+                  text-sm font-bold text-brand-600 transition-colors
+                  hover:bg-brand-100 hover:text-brand-700
+                  focus-visible:outline-none
+                  focus-visible:ring-2 focus-visible:ring-brand-400
+                "
+              >
+                <BookOpen size={16} aria-hidden="true" />
+                مقالات و راهنما
+              </Link>
+            </div>
           </div>
 
           {/* Mobile navigation button */}
@@ -288,33 +293,42 @@ function CategoryMenu() {
               );
             })}
 
-            <Link
-              to="/size-guide"
-              onClick={closeMenu}
-              className="
-                mt-2 flex items-center gap-2 rounded-xl
-                bg-plum-50 px-3 py-3 text-sm font-bold
-                text-plum-600 transition-colors
-                hover:bg-plum-100 hover:text-plum-700
-              "
-            >
-              <Ruler size={17} aria-hidden="true" />
-              راهنمای انتخاب سایز
-            </Link>
+            {/* دو لینک راهنما در موبایل هم مثل دسکتاپ یک گروهاند و به سمت
+                چپ پنل چیده می‌شوند تا از بلوک‌های تمام‌عرض دسته‌بندی‌ها جدا
+                باشند و انتهای منو شلوغ نشود. */}
+            <div className="mt-3 flex flex-wrap items-center justify-end gap-2">
+              <Link
+                to="/size-guide"
+                onClick={closeMenu}
+                className="
+                  inline-flex items-center gap-2 rounded-xl
+                  bg-plum-50 px-3 py-2.5 text-sm font-bold
+                  text-plum-600 transition-colors
+                  hover:bg-plum-100 hover:text-plum-700
+                  focus-visible:outline-none
+                  focus-visible:ring-2 focus-visible:ring-plum-300
+                "
+              >
+                <Ruler size={16} aria-hidden="true" />
+                راهنمای انتخاب سایز
+              </Link>
 
-            <Link
-              to="/articles"
-              onClick={closeMenu}
-              className="
-                mt-2 flex items-center gap-2 rounded-xl
-                bg-brand-50 px-3 py-3 text-sm font-bold
-                text-brand-600 transition-colors
-                hover:bg-brand-100 hover:text-brand-700
-              "
-            >
-              <BookOpen size={17} aria-hidden="true" />
-              مقالات و راهنما
-            </Link>
+              <Link
+                to="/articles"
+                onClick={closeMenu}
+                className="
+                  inline-flex items-center gap-2 rounded-xl
+                  bg-brand-50 px-3 py-2.5 text-sm font-bold
+                  text-brand-600 transition-colors
+                  hover:bg-brand-100 hover:text-brand-700
+                  focus-visible:outline-none
+                  focus-visible:ring-2 focus-visible:ring-brand-400
+                "
+              >
+                <BookOpen size={16} aria-hidden="true" />
+                مقالات و راهنما
+              </Link>
+            </div>
           </div>
         )}
       </div>

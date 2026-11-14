@@ -11,6 +11,7 @@ import {
   Clock3,
   ChevronLeft,
   ReceiptText,
+  Wallet,
 } from "lucide-react";
 
 import Layout from "../components/Layout";
@@ -27,6 +28,7 @@ type OrderData = {
   tax_amount?: string | number;
   total: string | number;
   payment_status: string;
+  payment_method?: string | null;
   status: string;
 };
 
@@ -113,6 +115,11 @@ function Payment() {
 
   const handlePayment = async () => {
     if (!orderNumber || paying || !order) {
+      return;
+    }
+
+    // سفارش پرداخت در محل از این صفحه پرداخت نمی‌شود.
+    if (order.payment_method === "cod") {
       return;
     }
 
@@ -209,6 +216,9 @@ function Payment() {
 
   const alreadyPaid = order.payment_status === "paid";
 
+  // سفارش پرداخت در محل از این صفحه پرداخت نمی‌شود.
+  const isCod = order.payment_method === "cod";
+
   return (
     <Layout>
       <main className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
@@ -295,6 +305,32 @@ function Payment() {
                     <ChevronLeft size={18} />
                   </button>
                 </div>
+              ) : isCod ? (
+                <div className="mt-7 rounded-2xl bg-gold-50 border border-gold-100 p-6 text-center">
+                  <div className="w-14 h-14 mx-auto rounded-2xl bg-white text-gold flex items-center justify-center">
+                    <Wallet size={30} />
+                  </div>
+
+                  <h2 className="text-xl font-black text-ink mt-4">
+                    این سفارش پرداخت در محل است
+                  </h2>
+
+                  <p className="text-sm text-muted mt-2 leading-6">
+                    مبلغ سفارش را هنگام تحویل به مأمور ارسال بپردازید؛ نیازی به
+                    پرداخت آنلاین نیست.
+                  </p>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      navigate(`/account/orders/${order.order_number}`)
+                    }
+                    className="mt-5 inline-flex items-center justify-center gap-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white px-6 py-3 font-bold transition"
+                  >
+                    مشاهده جزئیات سفارش
+                    <ChevronLeft size={18} />
+                  </button>
+                </div>
               ) : (
                 <div className="mt-7">
                   <div className="rounded-2xl bg-brand-50 border border-brand-100 p-5">
@@ -359,22 +395,33 @@ function Payment() {
                 <div>
                   <h2 className="text-lg font-black">اطلاعات پرداخت</h2>
                   <p className="text-sm text-muted mt-1">
-                    پرداخت امن سفارش از طریق درگاه
+                    {isCod
+                      ? "پرداخت هنگام تحویل سفارش"
+                      : "پرداخت امن سفارش از طریق درگاه"}
                   </p>
                 </div>
               </div>
 
               <div className="space-y-3 text-sm text-muted leading-7">
-                <p>
-                  پس از انتخاب گزینه پرداخت، سفارش شما به‌عنوان پرداخت‌شده ثبت
-                  خواهد شد.
-                </p>
+                {isCod ? (
+                  <p>
+                    مبلغ سفارش هنگام تحویل توسط مأمور ارسال دریافت می‌شود و
+                    پس از آن در سیستم ثبت می‌گردد.
+                  </p>
+                ) : (
+                  <p>
+                    پس از انتخاب گزینه پرداخت، سفارش شما به‌عنوان پرداخت‌شده ثبت
+                    خواهد شد.
+                  </p>
+                )}
                 <p>اطلاعات سفارش شما در حساب کاربری قابل مشاهده خواهد بود.</p>
               </div>
 
               <div className="mt-5 flex items-center gap-2 text-xs text-muted-soft">
                 <ShieldCheck size={16} />
-                پرداخت امن و ثبت اطلاعات سفارش
+                {isCod
+                  ? "ثبت اطلاعات سفارش با روش پرداخت در محل"
+                  : "پرداخت امن و ثبت اطلاعات سفارش"}
               </div>
             </section>
           </div>
@@ -448,7 +495,7 @@ function Payment() {
                 </div>
               </div>
 
-              {!alreadyPaid && (
+              {!alreadyPaid && !isCod && (
                 <button
                   type="button"
                   onClick={handlePayment}

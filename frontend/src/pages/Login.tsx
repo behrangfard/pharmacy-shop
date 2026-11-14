@@ -146,6 +146,15 @@ function Login() {
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-soft"
                 />
               </div>
+
+              <div className="mt-2 text-left">
+                <Link
+                  to="/forgot-password"
+                  className="text-xs font-bold text-brand-600 transition hover:text-brand-700"
+                >
+                  رمز عبور را فراموش کرده‌اید؟
+                </Link>
+              </div>
             </div>
 
             <button

@@ -1,31 +1,29 @@
-import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Search, ShoppingCart, User, LogOut, Heart } from "lucide-react";
+import { ShoppingCart, User, LogOut, Heart } from "lucide-react";
 
+import HeaderSearch from "./HeaderSearch";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 import { useWishlist } from "../context/WishlistContext";
+import { useHeaderFooter } from "../hooks/useHeaderFooter";
 
 function Header() {
   const navigate = useNavigate();
-  const [search, setSearch] = useState("");
+
+  const {
+    header_logo_text: logoText,
+    header_tagline: tagline,
+    header_show_search: showSearch,
+    header_cta_enabled: ctaEnabled,
+    header_cta_label: ctaLabel,
+    header_cta_url: ctaUrl,
+    header_cta_new_tab: ctaNewTab,
+  } = useHeaderFooter();
 
   const { cartCount } = useCart();
   const { user, logout } = useAuth();
   const { count: wishlistCount } = useWishlist();
 
-  const handleSearch = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-
-    const query = search.trim();
-
-    if (query === "") {
-      navigate("/products");
-      return;
-    }
-
-    navigate(`/products?search=${encodeURIComponent(query)}`);
-  };
 
   const handleLogin = () => {
     navigate("/login");
@@ -43,26 +41,35 @@ function Header() {
       <div className="mx-auto max-w-7xl px-3 py-3 sm:px-6 sm:py-4">
         <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-6">
           {/* Logo */}
-          <div className="order-1 flex w-full items-center justify-between sm:w-auto">
-            <Link
-              to="/"
-              className="
-                whitespace-nowrap text-2xl font-black
-                tracking-tight text-brand-600
-                transition-colors hover:text-brand-700
-              "
-            >
-              بهرنگ شاپ
-            </Link>
+          <div className="order-1 flex w-full min-w-0 items-center justify-between gap-2 sm:w-auto">
+            <div className="flex min-w-0 items-center gap-3">
+              <Link
+                to="/"
+                className="
+                  truncate whitespace-nowrap text-xl font-black
+                  tracking-tight text-brand-600
+                  transition-colors hover:text-brand-700 sm:text-2xl
+                "
+              >
+                {logoText}
+              </Link>
+
+              {/* شعار کوتاه کنار لوگو؛ فقط در صفحه‌های بزرگ تا شلوغ نشود */}
+              {tagline && (
+                <span className="hidden text-xs font-medium leading-5 text-muted lg:block">
+                  {tagline}
+                </span>
+              )}
+            </div>
 
             {/* Mobile actions */}
-            <div className="flex items-center gap-4 sm:hidden">
+            <div className="flex shrink-0 items-center gap-2.5 sm:hidden">
               {user ? (
                 <>
                   <Link
                     to="/account"
                     aria-label="حساب کاربری"
-                    className="text-ink-soft transition-colors hover:text-plum-500"
+                    className="flex shrink-0 items-center justify-center text-ink-soft transition-colors hover:text-plum-500"
                   >
                     <User size={22} />
                   </Link>
@@ -71,7 +78,7 @@ function Header() {
                     type="button"
                     onClick={handleLogout}
                     aria-label="خروج"
-                    className="text-muted transition-colors hover:text-discount"
+                    className="flex shrink-0 items-center justify-center text-muted transition-colors hover:text-discount"
                   >
                     <LogOut size={19} />
                   </button>
@@ -81,7 +88,7 @@ function Header() {
                   type="button"
                   onClick={handleLogin}
                   aria-label="ورود"
-                  className="text-ink-soft transition-colors hover:text-plum-500"
+                  className="flex shrink-0 items-center justify-center text-ink-soft transition-colors hover:text-plum-500"
                 >
                   <User size={22} />
                 </button>
@@ -89,13 +96,13 @@ function Header() {
 
               <Link
                 to="/wishlist"
-                className="relative flex items-center justify-center text-blush-400 transition-colors hover:text-plum-500"
+                className="relative flex shrink-0 items-center justify-center text-blush-400 transition-colors hover:text-plum-500"
                 aria-label="علاقه‌مندی‌ها"
               >
                 <Heart size={23} />
 
                 {wishlistCount > 0 && (
-                  <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-blush-100 px-1 text-xs font-bold text-blush-600">
+                  <span className="absolute end-0 top-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-blush-100 px-1 text-[10px] font-bold leading-none text-blush-600 ring-2 ring-white">
                     {wishlistCount.toLocaleString("fa-IR")}
                   </span>
                 )}
@@ -103,13 +110,13 @@ function Header() {
 
               <Link
                 to="/cart"
-                className="relative flex items-center justify-center text-brand-600 transition-colors hover:text-plum-500"
+                className="relative flex shrink-0 items-center justify-center text-brand-600 transition-colors hover:text-plum-500"
                 aria-label="سبد خرید"
               >
                 <ShoppingCart size={25} />
 
                 {cartCount > 0 && (
-                  <span className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-plum-200 px-1 text-xs font-bold text-plum-700">
+                  <span className="absolute end-0 top-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-plum-200 px-1 text-[10px] font-bold leading-none text-plum-700 ring-2 ring-white">
                     {cartCount.toLocaleString("fa-IR")}
                   </span>
                 )}
@@ -118,47 +125,40 @@ function Header() {
           </div>
 
           {/* Search */}
-          <form
-            onSubmit={handleSearch}
-            role="search"
-            className="order-3 w-full sm:order-2 sm:w-auto sm:max-w-xl sm:flex-1"
-          >
-            <div className="relative">
-              <input
-                type="search"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                placeholder="جستجوی محصول، برند یا دسته‌بندی..."
-                aria-label="جستجوی محصولات"
-                className="
-                  w-full rounded-2xl border border-line-soft
-                  bg-cream py-3 pl-4 pr-12
-                  text-sm text-ink
-                  outline-none transition-all
-                  placeholder:text-muted-soft
-                  focus:border-brand-400
-                  focus:bg-white
-                  focus:ring-4 focus:ring-brand-500/10
-                "
-              />
-
-              <button
-                type="submit"
-                aria-label="جستجو"
-                className="
-                  absolute right-0 top-0 flex h-full w-12
-                  items-center justify-center
-                  text-brand-500 transition-colors
-                  hover:text-brand-600
-                "
-              >
-                <Search size={21} />
-              </button>
-            </div>
-          </form>
+          {showSearch && (
+            <HeaderSearch className="order-3 w-full sm:order-2 sm:w-auto sm:max-w-xl sm:flex-1" />
+          )}
 
           {/* Desktop actions */}
           <div className="order-3 hidden items-center gap-5 sm:flex">
+            {/* دکمهٔ اقدام (CTA) اختیاری از پنل؛ فقط در صفحه‌های بزرگ */}
+            {ctaEnabled && ctaLabel && (
+              ctaUrl.startsWith("/") ? (
+                <Link
+                  to={ctaUrl}
+                  className="
+                    hidden whitespace-nowrap rounded-xl bg-plum-100
+                    px-3.5 py-2.5 text-sm font-bold text-plum-600
+                    transition-colors hover:bg-plum-200 lg:inline-flex
+                  "
+                >
+                  {ctaLabel}
+                </Link>
+              ) : (
+                <a
+                  href={ctaUrl || "#"}
+                  target={ctaNewTab ? "_blank" : undefined}
+                  rel={ctaNewTab ? "noopener noreferrer" : undefined}
+                  className="
+                    hidden whitespace-nowrap rounded-xl bg-plum-100
+                    px-3.5 py-2.5 text-sm font-bold text-plum-600
+                    transition-colors hover:bg-plum-200 lg:inline-flex
+                  "
+                >
+                  {ctaLabel}
+                </a>
+              )
+            )}
             {user ? (
               <div className="flex items-center gap-3">
                 <Link

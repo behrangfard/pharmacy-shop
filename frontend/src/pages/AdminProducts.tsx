@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Upload } from "lucide-react";
+import AdminProductImportDialog from "../components/AdminProductImportDialog";
 import { adminApi } from "../services/api";
 import { calculateProductPrice } from "../utils/price";
 import { getStorageUrl } from "../utils/images";
@@ -140,6 +142,7 @@ function AdminProducts() {
   const [busyId, setBusyId] = useState<number | null>(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [importOpen, setImportOpen] = useState(false);
   const [failedImages, setFailedImages] = useState<number[]>([]);
 
   const requestIdRef = useRef(0);
@@ -572,6 +575,20 @@ function AdminProducts() {
             }}
           >
             {loading ? "در حال دریافت..." : "به‌روزرسانی"}
+          </button>
+
+          <button
+            type="button"
+            className="products-button"
+            onClick={() => setImportOpen(true)}
+            style={{
+              ...buttonStyle,
+              background: colors.cream,
+              color: colors.greenDark,
+            }}
+          >
+            <Upload size={15} aria-hidden="true" />
+            ورود از اکسل
           </button>
 
           <Link
@@ -1369,6 +1386,16 @@ function AdminProducts() {
           </button>
         </div>
       </footer>
+
+      <AdminProductImportDialog
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onImported={(message) => {
+          setImportOpen(false);
+          setNotice(message);
+          void loadProducts();
+        }}
+      />
     </div>
   );
 }

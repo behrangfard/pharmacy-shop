@@ -3,10 +3,13 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\MessagingContact;
 use App\Models\Order;
 use App\Models\OutboundMessage;
 use App\Services\Messaging\BirthdayGreetingService;
 use App\Services\Messaging\MessagingManager;
+use App\Services\Messaging\OrderStatusMessenger;
+use App\Support\OrderStatus;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -15,7 +18,8 @@ class AdminMessagingController extends Controller
 {
     public function __construct(
         private readonly MessagingManager $messaging,
-        private readonly BirthdayGreetingService $birthday
+        private readonly BirthdayGreetingService $birthday,
+        private readonly OrderStatusMessenger $orderStatus
     ) {
     }
 
@@ -30,7 +34,23 @@ class AdminMessagingController extends Controller
                 'channels' => $this->messaging->channelsStatus(),
                 'audiences' => [
                     'order_phones' => $this->orderPhonesCount(),
+                    'contacts' => MessagingContact::query()
+                        ->where('is_active', true)
+                        ->count(),
                 ],
+                'contact_groups' => MessagingContact::query()
+                    ->where('is_active', true)
+                    ->whereNotNull('group_name')
+                    ->where('group_name', '!=', '')
+                    ->selectRaw('group_name, COUNT(*) as total')
+                    ->groupBy('group_name')
+                    ->orderBy('group_name')
+                    ->get()
+                    ->map(static fn ($row) => [
+                        'name' => $row->group_name,
+                        'count' => (int) $row->total,
+                    ])
+                    ->values(),
                 'stats' => [
                     'total' => OutboundMessage::query()->count(),
                     'sent' => OutboundMessage::query()
@@ -99,7 +119,8 @@ class AdminMessagingController extends Controller
         $validated = $request->validate([
             'channel' => ['required', Rule::in(OutboundMessage::CHANNELS)],
             'body' => ['required', 'string', 'min:1', 'max:3000'],
-            'audience' => ['nullable', Rule::in(['custom', 'order_phones', 'default'])],
+            'audience' => ['nullable', Rule::in(['custom', 'order_phones', 'default', 'contacts'])],
+            'group' => ['nullable', 'string', 'max:255'],
             'recipients' => ['nullable', 'array', "max:{$limit}"],
             'recipients.*' => ['nullable', 'string', 'max:191'],
             'as_template' => ['nullable', 'boolean'],
@@ -123,7 +144,8 @@ class AdminMessagingController extends Controller
             $channel,
             $validated['audience'] ?? 'custom',
             $validated['recipients'] ?? [],
-            $limit
+            $limit,
+            $validated['group'] ?? null
         );
 
         if ($recipients->isEmpty()) {
@@ -171,6 +193,38 @@ class AdminMessagingController extends Controller
                 'total' => $recipients->count(),
                 'results' => $results,
             ],
+        ]);
+    }
+
+    /**
+     * تنظیمات «پیامک خودکار تغییر وضعیت سفارش».
+     */
+    public function orderStatusSettings()
+    {
+        return response()->json([
+            'success' => true,
+            'data' => $this->orderStatus->overview(),
+        ]);
+    }
+
+    /**
+     * ذخیرهٔ تنظیمات پیامک خودکار وضعیت سفارش.
+     */
+    public function updateOrderStatusSettings(Request $request)
+    {
+        $validated = $request->validate([
+            'enabled' => ['required', 'boolean'],
+            'statuses' => ['present', 'array'],
+            'statuses.*' => ['string', Rule::in(OrderStatus::ALL)],
+            'template' => ['required', 'string', 'min:10', 'max:600'],
+        ]);
+
+        $this->orderStatus->updateSettings($validated);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تنظیمات پیامک وضعیت سفارش ذخیره شد.',
+            'data' => $this->orderStatus->overview(),
         ]);
     }
 
@@ -267,7 +321,8 @@ class AdminMessagingController extends Controller
         string $channel,
         string $audience,
         array $customRecipients,
-        int $limit
+        int $limit,
+        ?string $group = null
     ) {
         $recipients = match ($audience) {
             'order_phones' => Order::query()
@@ -275,6 +330,16 @@ class AdminMessagingController extends Controller
                 ->where('phone', '!=', '')
                 ->distinct()
                 ->orderBy('phone')
+                ->limit($limit)
+                ->pluck('phone')
+                ->all(),
+            'contacts' => MessagingContact::query()
+                ->where('is_active', true)
+                ->when(
+                    trim((string) $group) !== '',
+                    fn ($query) => $query->where('group_name', trim((string) $group))
+                )
+                ->orderBy('id')
                 ->limit($limit)
                 ->pluck('phone')
                 ->all(),

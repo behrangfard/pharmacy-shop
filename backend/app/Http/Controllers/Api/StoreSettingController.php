@@ -38,6 +38,13 @@ class StoreSettingController extends Controller
                     $settings['free_shipping_enabled']
                 ),
                 'free_shipping_threshold' => (float) $settings['free_shipping_threshold'],
+
+                /*
+                 * سقف مبلغ سفارش «پرداخت در محل» (تومان؛ صفر = بدون سقف).
+                 * چک‌اوت برای غیرفعال‌کردن گزینهٔ COD و نمایش علت از این عدد
+                 * استفاده می‌کند؛ اعتبارسنجی نهایی سمت سرور انجام می‌شود.
+                 */
+                'cod_max_total' => max(0, (int) config('payment.cod_max_total', 0)),
             ],
         ]);
     }

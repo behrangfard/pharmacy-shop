@@ -7,6 +7,7 @@ use App\Models\SupportConversation;
 use App\Models\SupportMessage;
 use App\Models\User;
 use App\Services\Messaging\MessagingManager;
+use App\Services\Notifications\AdminNotificationService;
 use App\Support\SupportChannels;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -22,8 +23,10 @@ use Throwable;
  */
 class SupportManager
 {
-    public function __construct(private readonly MessagingManager $messaging)
-    {
+    public function __construct(
+        private readonly MessagingManager $messaging,
+        private readonly AdminNotificationService $notifications
+    ) {
     }
 
     /**
@@ -92,6 +95,13 @@ class SupportManager
         $conversation->user_unread_count = 0;
 
         $this->touch($conversation, $body);
+
+        // اعلان زنگولهٔ پنل؛ خطای اعلان نباید ثبت پیام کاربر را متوقف کند.
+        try {
+            $this->notifications->supportMessage($conversation, $message);
+        } catch (Throwable) {
+            // پیام کاربر ذخیره شده است.
+        }
 
         return $message;
     }

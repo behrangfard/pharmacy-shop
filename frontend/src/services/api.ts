@@ -1,12 +1,9 @@
 import axios from "axios";
 
+import { API_BASE_URL } from "../utils/apiOrigin";
 import { STORAGE_KEYS } from "../utils/storageKeys";
 
-const API_BASE_URL =
-  (import.meta.env.VITE_API_URL as string | undefined)?.trim() ||
-  "http://127.0.0.1:8000/api/v1";
-
-const baseURL = API_BASE_URL.replace(/\/+$/, "");
+const baseURL = API_BASE_URL;
 
 const api = axios.create({
   baseURL,
@@ -25,11 +22,23 @@ const adminApi = axios.create({
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem(STORAGE_KEYS.token);
+    const guestToken = localStorage.getItem(STORAGE_KEYS.guestToken);
+    const requestUrl = typeof config.url === "string" ? config.url : "";
+    // شناسهٔ مهمان فقط برای مسیرهای سفارش فرستاده می‌شود، نه همهٔ APIها.
+    const isOrderRequest = /(^|\/)orders(\/|$)/.test(requestUrl);
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+      // سفارش مهمان فقط با شناسهٔ مرورگر دیده می‌شود؛ توکن کاربر اولویت دارد.
+      delete config.headers["X-Guest-Token"];
     } else {
       delete config.headers.Authorization;
+
+      if (guestToken && isOrderRequest) {
+        config.headers["X-Guest-Token"] = guestToken;
+      } else {
+        delete config.headers["X-Guest-Token"];
+      }
     }
 
     return config;

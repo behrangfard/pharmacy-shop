@@ -20,6 +20,8 @@ import BannerImage from "../components/BannerImage";
 import BannerTextLayers from "../components/BannerTextLayers";
 import Layout from "../components/Layout";
 import LatestArticles from "../components/LatestArticles";
+import RecentlyViewed from "../components/RecentlyViewed";
+import StoryStrip from "../components/StoryStrip";
 import { ButtonLink } from "../components/Button";
 import ProductCard from "../components/ProductCard";
 import { api } from "../services/api";
@@ -37,6 +39,7 @@ import {
   type StorefrontBanner,
 } from "../utils/banners";
 import { usePageMeta } from "../hooks/usePageMeta";
+import { useRecentlyViewed } from "../hooks/useRecentlyViewed";
 import {
   BANNER_GRID_IMAGE_CLASS,
   BANNER_SECTION_SURFACE_CLASS,
@@ -303,8 +306,10 @@ function HeroBannerCarousel({
           return (
             <div
               key={banner.id}
-              className={`col-start-1 row-start-1 relative transition-opacity duration-700 ease-out ${
-                isActive ? "opacity-100" : "pointer-events-none opacity-0"
+              className={`col-start-1 row-start-1 relative min-w-0 transition-[opacity,visibility] duration-700 ease-out ${
+                isActive
+                  ? "opacity-100"
+                  : "pointer-events-none invisible opacity-0"
               }`}
               aria-hidden={!isActive}
             >
@@ -589,6 +594,7 @@ function BannerGrid({
 }
 
 function Home() {
+  const recentlyViewed = useRecentlyViewed();
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
   const [newestProducts, setNewestProducts] = useState<Product[]>([]);
   const [featuredError, setFeaturedError] = useState("");
@@ -905,64 +911,67 @@ function Home() {
       <section className="border-b border-line bg-white">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="flex items-center gap-4 rounded-2xl border border-line bg-cream p-4 transition hover:border-brand-300 hover:bg-brand-50">
+            <div className="flex min-w-0 items-center gap-4 rounded-2xl border border-line bg-cream p-4 transition hover:border-brand-300 hover:bg-brand-50">
               <div className="shrink-0 rounded-xl bg-brand-100 p-3 text-brand-550">
                 <Truck size={25} />
               </div>
-              <div>
-                <h3 className="font-black text-brand-900">ارسال سریع</h3>
-                <p className="mt-1 text-sm text-muted">
+              <div className="min-w-0">
+                <h3 className="break-words font-black text-brand-900">ارسال سریع</h3>
+                <p className="mt-1 break-words text-sm text-muted">
                   ارسال سریع سفارش‌ها
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-4 rounded-2xl border border-line bg-cream p-4 transition hover:border-brand-300 hover:bg-brand-50">
+            <div className="flex min-w-0 items-center gap-4 rounded-2xl border border-line bg-cream p-4 transition hover:border-brand-300 hover:bg-brand-50">
               <div className="shrink-0 rounded-xl bg-brand-100 p-3 text-brand-550">
                 <ShieldCheck size={25} />
               </div>
-              <div>
-                <h3 className="font-black text-brand-900">تضمین کیفیت</h3>
-                <p className="mt-1 text-sm text-muted">محصولات باکیفیت</p>
+              <div className="min-w-0">
+                <h3 className="break-words font-black text-brand-900">تضمین کیفیت</h3>
+                <p className="mt-1 break-words text-sm text-muted">محصولات باکیفیت</p>
               </div>
             </div>
 
-            <div className="flex items-center gap-4 rounded-2xl border border-line bg-cream p-4 transition hover:border-plum-200 hover:bg-plum-50">
+            <div className="flex min-w-0 items-center gap-4 rounded-2xl border border-line bg-cream p-4 transition hover:border-plum-200 hover:bg-plum-50">
               <div className="shrink-0 rounded-xl bg-plum-100 p-3 text-plum-500">
                 <Headphones size={25} />
               </div>
-              <div>
-                <h3 className="font-black text-brand-900">پشتیبانی</h3>
-                <p className="mt-1 text-sm text-muted">
+              <div className="min-w-0">
+                <h3 className="break-words font-black text-brand-900">پشتیبانی</h3>
+                <p className="mt-1 break-words text-sm text-muted">
                   پاسخگویی و پشتیبانی
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-4 rounded-2xl border border-line bg-cream p-4 transition hover:border-plum-200 hover:bg-plum-50">
+            <div className="flex min-w-0 items-center gap-4 rounded-2xl border border-line bg-cream p-4 transition hover:border-plum-200 hover:bg-plum-50">
               <div className="shrink-0 rounded-xl bg-plum-100 p-3 text-plum-500">
                 <RotateCcw size={25} />
               </div>
-              <div>
-                <h3 className="font-black text-brand-900">ضمانت بازگشت</h3>
-                <p className="mt-1 text-sm text-muted">خرید با خیال راحت</p>
+              <div className="min-w-0">
+                <h3 className="break-words font-black text-brand-900">ضمانت بازگشت</h3>
+                <p className="mt-1 break-words text-sm text-muted">خرید با خیال راحت</p>
               </div>
             </div>
           </div>
         </div>
       </section>
 
+      {/* Stories (استوری‌ها؛ بالای دسته‌بندی‌ها) */}
+      <StoryStrip />
+
       {/* Categories */}
       <section className="bg-cream py-12 sm:py-14">
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
-          <div className="mb-8 flex items-center justify-between gap-3">
-            <div>
+          <div className="mb-8 flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
               <div className="mb-2 flex items-center gap-2 text-sm font-bold text-plum-500">
                 <Sparkles size={16} />
                 استایل زنانه
               </div>
 
-              <h2 className="text-2xl font-black text-brand-900 sm:text-3xl">
+              <h2 className="break-words text-2xl font-black text-brand-900 sm:text-3xl">
                 دسته‌بندی محصولات
               </h2>
             </div>
@@ -1093,13 +1102,13 @@ function Home() {
       {/* Featured Products */}
       <section className="bg-white py-12 sm:py-14">
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
-          <div className="mb-8 flex items-center justify-between gap-3">
-            <div>
+          <div className="mb-8 flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
               <div className="mb-2 flex items-center gap-2 text-sm font-bold text-plum-500">
                 <Sparkles size={16} />
                 پیشنهادهای منتخب
               </div>
-              <h2 className="text-2xl font-black text-brand-900 sm:text-3xl">
+              <h2 className="break-words text-2xl font-black text-brand-900 sm:text-3xl">
                 محصولات ویژه
               </h2>
             </div>
@@ -1143,13 +1152,13 @@ function Home() {
       {/* Newest Products */}
       <section className="bg-cream py-12 sm:py-14">
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
-          <div className="mb-8 flex items-center justify-between gap-3">
-            <div>
+          <div className="mb-8 flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
               <div className="mb-2 flex items-center gap-2 text-sm font-bold text-plum-500">
                 <Sparkles size={16} />
                 تازه‌واردها
               </div>
-              <h2 className="text-2xl font-black text-brand-900 sm:text-3xl">
+              <h2 className="break-words text-2xl font-black text-brand-900 sm:text-3xl">
                 جدیدترین محصولات
               </h2>
             </div>
@@ -1189,6 +1198,18 @@ function Home() {
           </div>
         </div>
       </section>
+
+      {/* بازدیدهای اخیر؛ فقط وقتی کاربر قبلاً محصولی دیده باشد */}
+      {recentlyViewed.items.length > 0 && (
+        <section className="bg-cream-deep py-10 sm:py-12">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6">
+            <RecentlyViewed
+              limit={8}
+              className="rounded-3xl border border-line bg-white/70 p-4 sm:p-5"
+            />
+          </div>
+        </section>
+      )}
 
       {/* تازه‌ترین مقالات (از پنل مدیریت) */}
       <LatestArticles />

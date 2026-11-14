@@ -23,6 +23,25 @@ type SortKey =
 
 type SortDirection = "asc" | "desc";
 
+/** نتیجهٔ ارسال پیامک خودکار تغییر وضعیت که سرور برمی‌گرداند. */
+type StatusSmsResult = {
+  status?: "sent" | "failed" | "pending";
+  error?: string | null;
+};
+
+/** متن قابل نمایش نتیجهٔ پیامک؛ رشتهٔ خالی یعنی پیامکی ارسال نشده است. */
+function smsNoticeText(sms: StatusSmsResult | null | undefined): string {
+  if (!sms) return "";
+
+  if (sms.status === "sent") {
+    return "پیامک اطلاع‌رسانی برای مشتری ارسال شد.";
+  }
+
+  return sms.error
+    ? `ارسال پیامک ناموفق بود: ${sms.error}`
+    : "ارسال پیامک اطلاع‌رسانی ناموفق بود.";
+}
+
 interface OrderItem {
   id: number;
 
@@ -101,6 +120,10 @@ interface Order {
   status: OrderStatus;
 
   payment_status: PaymentStatus;
+
+  payment_method?: "online" | "cod" | null;
+
+  paid_at?: string | null;
 
   shipping_method?: string | null;
 
@@ -181,6 +204,12 @@ const paymentLabels: Record<PaymentStatus, string> = {
   failed: "ناموفق",
 
   refunded: "بازپرداخت‌شده",
+};
+
+const paymentMethodLabels: Record<string, string> = {
+  online: "پرداخت آنلاین",
+
+  cod: "پرداخت در محل",
 };
 
 const statusColors: Record<OrderStatus, { color: string; background: string }> =
@@ -403,6 +432,8 @@ function AdminOrders() {
   const [detailLoading, setDetailLoading] = useState(false);
 
   const [updatingStatus, setUpdatingStatus] = useState(false);
+
+  const [updatingPayment, setUpdatingPayment] = useState(false);
 
   const [newStatus, setNewStatus] = useState<OrderStatus>("pending");
 
@@ -633,7 +664,8 @@ function AdminOrders() {
 
     if (
       ["processing", "shipped", "delivered"].includes(newStatus) &&
-      selectedOrder.payment_status !== "paid"
+      selectedOrder.payment_status !== "paid" &&
+      selectedOrder.payment_method !== "cod"
     ) {
       setNotice("برای این وضعیت، سفارش باید پرداخت‌شده باشد.");
 
@@ -661,13 +693,52 @@ function AdminOrders() {
 
       setNewStatus(updatedOrder.status);
 
-      setNotice(response.data.message || "وضعیت سفارش به‌روزرسانی شد.");
+      setNotice(
+        [
+          response.data.message || "وضعیت سفارش به‌روزرسانی شد.",
+          smsNoticeText(response.data?.sms as StatusSmsResult | null),
+        ]
+          .filter(Boolean)
+          .join(" "),
+      );
 
       await loadOrders();
     } catch (requestError) {
       setNotice(getErrorMessage(requestError, "تغییر وضعیت سفارش ناموفق بود."));
     } finally {
       setUpdatingStatus(false);
+    }
+  };
+
+  const recordCodPayment = async () => {
+    if (!selectedOrder || updatingPayment) return;
+
+    if (selectedOrder.payment_method !== "cod") return;
+
+    try {
+      setUpdatingPayment(true);
+
+      setNotice("");
+
+      const response = await adminApi.patch(
+        `/admin/orders/${encodeURIComponent(
+          selectedOrder.order_number,
+        )}/payment`,
+
+        { payment_status: "paid" },
+      );
+
+      const updatedOrder: Order = response.data.data;
+
+      setSelectedOrder(updatedOrder);
+
+      setNotice(response.data.message || "دریافت وجه سفارش ثبت شد.");
+
+      await loadOrders();
+    } catch (requestError) {
+      setNotice(getErrorMessage(requestError, "ثبت دریافت وجه ناموفق بود."));
+    } finally {
+      setUpdatingPayment(false);
     }
   };
 
@@ -1695,6 +1766,20 @@ function AdminOrders() {
                       <div style={{ marginTop: 7 }}>
                         {renderPaymentBadge(order.payment_status)}
                       </div>
+
+                      <div
+                        style={{
+                          marginTop: 5,
+                          color: colors.muted,
+                          fontSize: 12,
+                        }}
+                      >
+                        {
+                          paymentMethodLabels[
+                            order.payment_method ?? "online"
+                          ]
+                        }
+                      </div>
                     </div>
 
                     <div>
@@ -1895,7 +1980,52 @@ function AdminOrders() {
                 label="وضعیت پرداخت"
                 value={paymentLabels[selectedOrder.payment_status]}
               />
+
+              <InfoBox
+                label="روش پرداخت"
+                value={
+                  paymentMethodLabels[selectedOrder.payment_method ?? "online"]
+                }
+              />
             </div>
+
+            {selectedOrder.payment_method === "cod" &&
+              selectedOrder.payment_status !== "paid" &&
+              selectedOrder.status !== "cancelled" && (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    flexWrap: "wrap",
+                    gap: 12,
+                    marginTop: 12,
+                    border: "1px solid #eadfce",
+                    background: "#fbf1e2",
+                    borderRadius: 12,
+                    padding: 13,
+                  }}
+                >
+                  <span
+                    style={{ color: "#8a652f", fontSize: 13, fontWeight: 700 }}
+                  >
+                    این سفارش «پرداخت در محل» است؛ پس از دریافت وجه، پرداخت را
+                    ثبت کنید.
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={() => void recordCodPayment()}
+                    disabled={updatingPayment}
+                    style={{
+                      ...primaryButtonStyle,
+                      opacity: updatingPayment ? 0.55 : 1,
+                    }}
+                  >
+                    {updatingPayment ? "در حال ثبت..." : "ثبت دریافت وجه"}
+                  </button>
+                </div>
+              )}
 
             <InfoBox
               label="نشانی"
@@ -2106,7 +2236,8 @@ function AdminOrders() {
                   >
                     <option value="pending">در انتظار</option>
 
-                    {selectedOrder.payment_status === "paid" && (
+                    {(selectedOrder.payment_status === "paid" ||
+                      selectedOrder.payment_method === "cod") && (
                       <>
                         <option value="processing">در حال پردازش</option>
 
@@ -2249,6 +2380,17 @@ function AdminOrders() {
                       ? "پرداخت‌شده"
                       : "پرداخت‌نشده"}
                   </span>
+                  {selectedOrder.paid_at && (
+                    <span>تاریخ پرداخت: {formatDate(selectedOrder.paid_at)}</span>
+                  )}
+                  <span>
+                    روش پرداخت:{" "}
+                    {
+                      paymentMethodLabels[
+                        selectedOrder.payment_method ?? "online"
+                      ]
+                    }
+                  </span>
                 </div>
 
                 <div className="invoice-print-meta">
@@ -2262,6 +2404,7 @@ function AdminOrders() {
                     <tr>
                       <th>#</th>
                       <th>کالا</th>
+                      <th>کد کالا</th>
                       <th>تعداد</th>
                       <th>قیمت واحد</th>
                       <th>جمع</th>
@@ -2282,6 +2425,9 @@ function AdminOrders() {
                                 .map((entry) => `${entry.name}: ${entry.color}`)
                                 .join(" · ")}`
                             : ""}
+                        </td>
+                        <td dir="ltr">
+                          {item.sku || item.variant?.sku || "—"}
                         </td>
                         <td>{item.quantity}</td>
                         <td>{formatPrice(item.unit_price)}</td>

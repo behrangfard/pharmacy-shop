@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Services\Messaging\Support\PhoneNumber;
+use App\Support\OrderStatus;
 use Illuminate\Database\Eloquent\Model;
 
 class Coupon extends Model
@@ -17,6 +19,7 @@ class Coupon extends Model
         'min_order_total',
         'max_discount',
         'usage_limit',
+        'per_user_limit',
         'used_count',
         'starts_at',
         'expires_at',
@@ -28,6 +31,7 @@ class Coupon extends Model
         'min_order_total' => 'decimal:2',
         'max_discount' => 'decimal:2',
         'usage_limit' => 'integer',
+        'per_user_limit' => 'integer',
         'used_count' => 'integer',
         'starts_at' => 'datetime',
         'expires_at' => 'datetime',
@@ -80,6 +84,85 @@ class Coupon extends Model
         }
 
         return null;
+    }
+
+    /**
+     * دلیل رسیدن کاربر به سقف استفادهٔ شخصی (یا null اگر مجاز باشد).
+     *
+     * سفارش‌های لغوشده و مستردشده شمرده نمی‌شوند تا اگر مشتری سفارشش را لغو
+     * کرد، سهمیهٔ او آزاد شود. این بررسی فقط مبنای «نمایش/اعتبارسنجی» است؛
+     * تصمیم نهایی داخل تراکنش ثبت سفارش گرفته می‌شود.
+     */
+    public function perUserUsageError(?int $userId): ?string
+    {
+        // برای مهمان user_id وجود ندارد؛ محدودیت شمارهٔ تماس را ببینید.
+        if ($this->per_user_limit === null || $userId === null) {
+            return null;
+        }
+
+        $used = Order::query()
+            ->where('user_id', $userId)
+            ->where('coupon_code', $this->code)
+            ->whereNotIn('status', [OrderStatus::CANCELLED, 'refunded'])
+            ->count();
+
+        return $this->perUserLimitExceededError($used, 'کاربر');
+    }
+
+    /**
+     * دلیل رسیدن یک شمارهٔ تماس به سقف استفادهٔ شخصی (یا null اگر مجاز باشد).
+     *
+     * سفارش مهمان حساب کاربری ندارد؛ برای جلوگیری از استفادهٔ بی‌نهایت همان
+     * کد، سهمیه به شمارهٔ تماس سفارش بسته می‌شود. مقایسه روی شکل نرمال‌شده
+     * انجام می‌شود (ارقام لاتین، بدون فاصله/خط تیره) تا «۰۹۱۲…» و «0912…» دو
+     * هویت جدا حساب نشوند.
+     */
+    public function perPhoneUsageError(?string $phone): ?string
+    {
+        if ($this->per_user_limit === null) {
+            return null;
+        }
+
+        $normalizedPhone = PhoneNumber::normalize($phone);
+
+        if ($normalizedPhone === '') {
+            return null;
+        }
+
+        /*
+         * شماره‌ها ممکن است با ارقام فارسی یا قالب متفاوت ذخیره شده باشند؛
+         * مقایسهٔ نهایی در PHP و روی شکل نرمال‌شده انجام می‌شود تا «۰۹۱۲…» و
+         * «0912…» یک هویت حساب شوند.
+         */
+        $used = Order::query()
+            ->whereNull('user_id')
+            ->where('coupon_code', $this->code)
+            ->whereNotIn('status', [OrderStatus::CANCELLED, 'refunded'])
+            ->whereNotNull('phone')
+            ->pluck('phone')
+            ->filter(
+                fn ($stored): bool => PhoneNumber::normalize((string) $stored)
+                    === $normalizedPhone
+            )
+            ->count();
+
+        return $this->perUserLimitExceededError($used, 'شماره تماس');
+    }
+
+    /**
+     * پیام خطای رسیدن به سقف شخصی با توجه به تعداد مجاز.
+     */
+    private function perUserLimitExceededError(int $used, string $subject): ?string
+    {
+        if ($used < (int) $this->per_user_limit) {
+            return null;
+        }
+
+        return (int) $this->per_user_limit === 1
+            ? "این کد تخفیف برای هر {$subject} فقط یک بار قابل استفاده است."
+            : "این کد تخفیف برای هر {$subject} حداکثر "
+                .number_format((int) $this->per_user_limit)
+                .' بار قابل استفاده است.';
     }
 
     /**

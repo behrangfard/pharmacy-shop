@@ -20,6 +20,7 @@ export const ADMIN_PERMISSIONS = {
   coupons: "coupons.manage",
   customers: "customers.manage",
   messaging: "messaging.manage",
+  accounting: "accounting.manage",
   reports: "reports.view",
   settings: "settings.manage",
   admins: "admins.manage",

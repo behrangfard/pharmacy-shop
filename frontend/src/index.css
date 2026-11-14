@@ -8,6 +8,23 @@
 @import "@fontsource/vazirmatn/900.css";
 
 /* ==================================================
+   نشانگر ماوس روی دکمه‌ها
+
+   Tailwind v4 برخلاف نسخهٔ ۳ دیگر برای دکمه‌ها `cursor: pointer` نمی‌گذارد؛
+   به همین دلیل دکمه‌های بدون کلاس مشخص (مثل ردیف «پشتیبانی» فوتر) هنگام
+   بردن ماوس، نشانگر دست نمی‌گرفتند. این قاعده فقط دکمه‌های فعال را شامل
+   می‌شود و کلاس‌های صریح مثل `cursor-default` همچنان اولویت دارند.
+================================================== */
+
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
+}
+
+
+/* ==================================================
    توکن‌های طراحی فروشگاه (Tailwind v4)
 
    تا امروز رنگ‌ها به‌صورت هگز پراکنده داخل کلاس‌ها نوشته می‌شدند
@@ -107,6 +124,38 @@ html,
 body,
 #root {
   min-height: 100%;
+}
+
+/*
+  جلوگیری از سرریز افقی در عرض‌های خیلی باریک (۳۲۰px و متن‌های بلندتر).
+  «clip» برخلاف «hidden» رفتار اسکرول را تغییر نمی‌دهد و position: sticky
+  هدر را نمی‌شکند.
+*/
+html,
+body {
+  overflow-x: clip;
+}
+
+/*
+  آفست اسکرول برای رد شدن از پشتهٔ چسبان (نوار اطلاع‌رسانی + هدر).
+  مقدار پیش‌فرض محافظه‌کارانه است؛ Layout.tsx ارتفاع واقعی همان پشته را با
+  ResizeObserver اندازه می‌گیرد و همین متغیر را به‌روزرسانی می‌کند.
+*/
+:root {
+  --sticky-header-offset: 132px;
+}
+
+html {
+  scroll-padding-top: var(--sticky-header-offset);
+}
+
+/*
+  هیچ عنصر فوکوس‌شده‌ای نباید زیر هدر چسبان پنهان بماند (WCAG 2.4.11
+  Focus Not Obscured). با scroll-margin هنگام فوکوس باکیبورد، مرورگر
+  عنصر را پایین‌تر از هدر اسکرول می‌کند.
+*/
+:focus-visible {
+  scroll-margin-top: var(--sticky-header-offset);
 }
 
 body {
@@ -3770,6 +3819,14 @@ body {
   align-items: flex-start;
   gap: 12px;
   font-family: inherit;
+  /* ظرف شناور هرگز نباید کلیک/فوکوس محتوای زیر خودش را بدزدد؛ فقط
+     دکمهٔ اجرا و پنل باز تعامل‌پذیر می‌مانند. */
+  pointer-events: none;
+}
+
+.support-launcher,
+.support-panel {
+  pointer-events: auto;
 }
 
 .support-launcher {
@@ -4850,7 +4907,16 @@ body {
 }
 
 .admin-sidebar .admin-nav-row[draggable="true"] {
+  cursor: pointer;
+}
+
+/* فقط در حالت «چیدمان» ردیف‌ها برای جابه‌جایی کشیده می‌شوند */
+.admin-sidebar .admin-nav.is-editing .admin-nav-row[draggable="true"] {
   cursor: grab;
+}
+
+.admin-sidebar .admin-nav.is-editing .admin-nav-row[draggable="true"]:active {
+  cursor: grabbing;
 }
 
 .admin-sidebar .admin-nav-row.is-dragging {
@@ -4919,15 +4985,6 @@ body {
   background: rgba(99, 102, 241, 0.32) !important;
 }
 
-.admin-sidebar .admin-nav-grip {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 13px;
-  color: #6f7392 !important;
-  cursor: grab;
-}
-
 .admin-sidebar .admin-nav-pin-mark {
   display: inline-flex;
   flex: 0 0 15px;
@@ -4958,6 +5015,66 @@ body {
 .admin-sidebar .admin-nav-group-pinned .admin-nav-heading-icon {
   color: #c7d2fe !important;
   background: rgba(99, 102, 241, 0.22);
+}
+
+/* ==================================================
+   سرتیتر گروه + جابه‌جایی گروه‌های منو با ماوس
+================================================== */
+.admin-sidebar .admin-nav-group-head {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  /* کشیدن عنوان نباید متن صفحه را انتخاب کند */
+  user-select: none;
+}
+
+.admin-sidebar .admin-nav-group-head .admin-nav-heading {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.admin-sidebar .admin-nav-group-actions {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  flex: 0 0 auto;
+}
+
+.admin-sidebar .admin-nav-group-actions .admin-nav-action {
+  background: transparent !important;
+}
+
+/* هنگام کشیدن عنوان یک گروه، بقیهٔ گروه‌ها محو می‌شوند تا مقصد روشن باشد */
+.admin-sidebar .admin-nav-group.is-group-dragging {
+  opacity: 0.55;
+}
+
+/*
+ * خط نشانگر محل رها کردن گروه بدون افزودن هیچ عنصری به منو کشیده می‌شود؛
+ * پس ظاهر سایدبار (فاصله‌ها و ارتفاع ردیف‌ها) هیچ تغییری نمی‌کند.
+ */
+.admin-sidebar .admin-nav-group {
+  position: relative;
+}
+
+.admin-sidebar .admin-nav-group.is-drop-before::before,
+.admin-sidebar .admin-nav-group.is-drop-after::after {
+  content: "";
+  position: absolute;
+  inset-inline: 6px;
+  height: 2px;
+  background: #818cf8;
+  border-radius: 2px;
+  box-shadow: 0 0 9px rgba(129, 140, 248, 0.6);
+  pointer-events: none;
+}
+
+.admin-sidebar .admin-nav-group.is-drop-before::before {
+  top: -2px;
+}
+
+.admin-sidebar .admin-nav-group.is-drop-after::after {
+  bottom: -2px;
 }
 
 .admin-sidebar .admin-nav-empty {
@@ -6132,5 +6249,173 @@ html[data-theme="ocean"] .admin-categories-page {
   position: relative;
   z-index: 0;
   isolation: isolate;
+}
+
+/* =========================================================
+   جست‌وجوی لحظه‌ای · نمایش سریع · بازدیدهای اخیر · PWA
+   ========================================================= */
+
+/* ریل افقی (بازدیدهای اخیر): نوار اسکرول مزاحم حذف می‌شود */
+.rail-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.rail-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+/* مودال نمایش سریع */
+@keyframes quickview-backdrop-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes quickview-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.quickview-backdrop {
+  animation: quickview-backdrop-in 0.18s ease-out both;
+}
+
+.quickview-panel {
+  animation: quickview-panel-in 0.26s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* کارت پیشنهاد نصب اپلیکیشن (بالای دکمهٔ تم، پایین-چپ) */
+.pwa-install {
+  position: fixed;
+  left: 16px;
+  bottom: 76px;
+  z-index: 65;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  max-width: 372px;
+  padding: 12px 14px;
+  border: 1px solid var(--color-line-strong);
+  border-radius: 18px;
+  background: #ffffff;
+  box-shadow: 0 18px 40px rgba(40, 59, 45, 0.18);
+  animation: quickview-panel-in 0.3s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.pwa-install-icon {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(40, 59, 45, 0.18);
+}
+
+.pwa-install-text {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.pwa-install-text strong {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--color-ink);
+}
+
+.pwa-install-text span {
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--color-muted);
+}
+
+.pwa-install-action {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 5px;
+  padding: 9px 14px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--color-brand-500);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.pwa-install-action:hover {
+  background: var(--color-brand-600);
+}
+
+.pwa-install-action:active {
+  transform: scale(0.97);
+}
+
+.pwa-install-action:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}
+
+.pwa-install-close {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--color-muted-soft);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.pwa-install-close:hover {
+  background: var(--color-blush-50);
+  color: var(--color-discount);
+}
+
+@media (max-width: 640px) {
+  .pwa-install {
+    left: 12px;
+    right: 12px;
+    bottom: 64px;
+    max-width: none;
+    gap: 10px;
+    padding: 10px 12px;
+  }
+
+  .pwa-install-text span {
+    display: none;
+  }
+
+  .pwa-install-icon {
+    width: 38px;
+    height: 38px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quickview-backdrop,
+  .quickview-panel,
+  .pwa-install {
+    animation: none;
+  }
 }
 

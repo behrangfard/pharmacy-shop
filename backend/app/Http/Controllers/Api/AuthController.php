@@ -7,10 +7,17 @@ use App\Models\User;
 use App\Services\Messaging\Support\PhoneNumber;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
+    /** حداکثر تلاش ناموفق ورود پیش از قفل موقت حساب. */
+    private const MAX_LOGIN_ATTEMPTS = 5;
+
+    /** مدت قفل حساب پس از تلاش‌های ناموفق (ثانیه). */
+    private const LOGIN_LOCKOUT_SECONDS = 900;
     public function register(Request $request)
     {
         if ($request->filled('phone')) {
@@ -51,6 +58,16 @@ class AuthController extends Controller
             'password' => ['required', 'string'],
         ]);
 
+        $throttleKey = $this->loginThrottleKey($request);
+
+        if (RateLimiter::tooManyAttempts($throttleKey, self::MAX_LOGIN_ATTEMPTS)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'تعداد تلاش‌های ناموفق زیاد است. لطفاً ۱۵ دقیقه بعد دوباره تلاش کنید.',
+                'retry_after' => RateLimiter::availableIn($throttleKey),
+            ], 429);
+        }
+
         $user = User::where('email', $validated['email'])->first();
 
         if (
@@ -60,10 +77,14 @@ class AuthController extends Controller
                 $user->password
             )
         ) {
+            RateLimiter::hit($throttleKey, self::LOGIN_LOCKOUT_SECONDS);
+
             throw ValidationException::withMessages([
                 'email' => ['ایمیل یا رمز عبور صحیح نیست.'],
             ]);
         }
+
+        RateLimiter::clear($throttleKey);
 
         $token = $user->createToken('behrang-shop')->plainTextToken;
 
@@ -72,6 +93,14 @@ class AuthController extends Controller
             'user' => $this->presentUser($user),
             'token' => $token,
         ]);
+    }
+
+    /**
+     * کلید شمارش تلاش‌های ناموفق ورود (ایمیل + IP).
+     */
+    private function loginThrottleKey(Request $request): string
+    {
+        return 'login:'.Str::lower((string) $request->input('email')).'|'.$request->ip();
     }
 
     public function me(Request $request)

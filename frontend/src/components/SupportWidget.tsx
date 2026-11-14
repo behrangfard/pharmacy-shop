@@ -36,6 +36,7 @@ import {
   type SupportConfig,
   type SupportConversationPayload,
 } from "../services/support";
+import { SUPPORT_CHAT_OPEN_EVENT } from "../utils/supportChat";
 
 type SupportView = "home" | "form" | "chat";
 
@@ -221,6 +222,29 @@ function SupportWidget() {
 
     setHasNewMessage(false);
   }, []);
+
+  /*
+   * باز شدن چت از بیرون ویجت (مثلاً ردیف «پشتیبانی» در فوتر یا هر لینک
+   * دیگری که requestSupportChat را صدا می‌زند). همان منطق openPanel تکرار
+   * می‌شود تا رفتار یکسان بماند.
+   */
+  useEffect(() => {
+    const handleOpenRequest = () => {
+      setOpen(true);
+      setError("");
+
+      if (conversation && conversation.status !== "closed") {
+        setView("chat");
+        markSeen(conversation);
+      }
+    };
+
+    window.addEventListener(SUPPORT_CHAT_OPEN_EVENT, handleOpenRequest);
+
+    return () => {
+      window.removeEventListener(SUPPORT_CHAT_OPEN_EVENT, handleOpenRequest);
+    };
+  }, [conversation, markSeen]);
 
   const openPanel = () => {
     setOpen(true);

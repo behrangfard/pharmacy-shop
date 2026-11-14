@@ -10,13 +10,28 @@ use App\Models\ProductColor;
 use App\Models\ProductPackItem;
 use App\Models\ProductVariant;
 use App\Models\StoreSetting;
+use App\Services\Notifications\AdminNotificationService;
+use App\Services\Orders\OrderCouponService;
+use App\Services\Orders\OrderStockService;
+use App\Support\GuestAccessCode;
+use App\Support\OrderStatus;
+use App\Support\PaymentMethod;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
+use Throwable;
 
 class OrderController extends Controller
 {
+    public function __construct(
+        private readonly AdminNotificationService $notifications,
+        private readonly OrderStockService $stock,
+        private readonly OrderCouponService $coupons
+    ) {
+    }
+
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -42,7 +57,14 @@ class OrderController extends Controller
             'items.*.pack_colors.*.name' => ['required', 'string', 'max:120'],
             'items.*.pack_colors.*.color' => ['required', 'string', 'max:60'],
             'coupon_code' => ['nullable', 'string', 'max:60'],
+            'payment_method' => [
+                'nullable',
+                'string',
+                Rule::in(PaymentMethod::ALL),
+            ],
         ]);
+
+        $paymentMethod = $validated['payment_method'] ?? PaymentMethod::ONLINE;
 
         // جلوگیری از تکرار یک تنوع/رنگ در چند ردیف سفارش
         $uniqueItems = [];
@@ -60,7 +82,41 @@ class OrderController extends Controller
             $uniqueItems[$key] = true;
         }
 
-        $user = $request->user();
+        /*
+         * اگر توکن Sanctum همراه درخواست باشد، سفارش به حساب کاربر وصل
+         * می‌شود؛ در غیر این صورت سفارش «مهمان» است. سفارش مهمان فقط با
+         * «پرداخت در محل» ثبت می‌شود تا پرداخت و پیگیری آن قابل مدیریت بماند.
+         */
+        $user = $request->user('sanctum');
+        $guestToken = null;
+
+        if ($user === null) {
+            $guestToken = $request->header('X-Guest-Token');
+
+            if (! is_string($guestToken) || ! Str::isUuid($guestToken)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'شناسهٔ مرورگر برای ثبت سفارش مهمان معتبر نیست.',
+                ], 422);
+            }
+
+            if ($paymentMethod !== PaymentMethod::COD) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'سفارش مهمان فقط با روش «پرداخت در محل» ثبت می‌شود. برای پرداخت آنلاین وارد حساب کاربری شوید.',
+                ], 422);
+            }
+        }
+
+        /*
+         * کد پیگیری مهمان: اگر localStorage مرورگر پاک شود، مشتری با
+         * «شماره سفارش + این کد» دوباره به فاکتور و لغو سفارش خودش می‌رسد.
+         * کد فقط در پاسخ ثبت سفارش (و تکرار Idempotency) برگردانده می‌شود.
+         */
+        $guestAccessCode = $guestToken !== null
+            ? $this->newGuestAccessCode()
+            : null;
+
         $idempotencyKey = $request->header('Idempotency-Key');
 
         if (! is_string($idempotencyKey) || ! Str::isUuid($idempotencyKey)) {
@@ -70,11 +126,11 @@ class OrderController extends Controller
             ], 422);
         }
 
-        $existingOrder = Order::query()
-            ->where('user_id', $user->id)
-            ->where('idempotency_key', $idempotencyKey)
-            ->with('items.product.images', 'items.variant')
-            ->first();
+        $existingOrder = $this->findIdempotentOrder(
+            $user?->id,
+            $guestToken,
+            $idempotencyKey
+        );
 
         if ($existingOrder) {
             return $this->respondWithExistingOrder(
@@ -87,7 +143,10 @@ class OrderController extends Controller
             $order = DB::transaction(function () use (
                 $validated,
                 $user,
-                $idempotencyKey
+                $guestToken,
+                $guestAccessCode,
+                $idempotencyKey,
+                $paymentMethod
             ) {
                 $subtotal = 0;
                 $discount = 0;
@@ -300,6 +359,9 @@ class OrderController extends Controller
                         'sku' => $variant?->sku ?? $product->sku,
                         'quantity' => $quantity,
                         'unit_price' => $finalUnitPrice,
+                        'cost_price' => $product->cost_price !== null
+                            ? (float) $product->cost_price
+                            : null,
                         'total_price' => $totalPrice,
                     ];
 
@@ -352,6 +414,21 @@ class OrderController extends Controller
                         abort(422, $couponError);
                     }
 
+                    /*
+                     * سقف استفادهٔ هر مشتری: برای کاربر با user_id و برای مهمان
+                     * با شمارهٔ تماس سفارش سنجیده می‌شود. سفارش‌های لغوشده در
+                     * شمارش نمی‌آیند (Coupon::perUserUsageError/perPhoneUsageError).
+                     */
+                    $perUserError = $user !== null
+                        ? $appliedCoupon->perUserUsageError((int) $user->id)
+                        : $appliedCoupon->perPhoneUsageError(
+                            (string) $validated['phone']
+                        );
+
+                    if ($perUserError !== null) {
+                        abort(422, $perUserError);
+                    }
+
                     $couponDiscount = $appliedCoupon->calculateDiscount($couponSubtotal);
 
                     if ($couponDiscount <= 0) {
@@ -400,6 +477,27 @@ class OrderController extends Controller
                     2
                 );
 
+                /*
+                 * سقف سفارش «پرداخت در محل»: چون هیچ پرداخت اولیه‌ای انجام
+                 * نمی‌شود، مبلغ نهایی بیش از حد مجاز پذیرفته نیست. مقدار صفر
+                 * در config یعنی بدون سقف. این بررسی داخل تراکنش است، پس با
+                 * رد شدن سفارش، موجودی و سهمیهٔ کوپن هم برمی‌گردد.
+                 */
+                $codMaxTotal = (float) config('payment.cod_max_total', 0);
+
+                if (
+                    $paymentMethod === PaymentMethod::COD
+                    && $codMaxTotal > 0
+                    && $total > $codMaxTotal
+                ) {
+                    abort(
+                        422,
+                        'سقف مبلغ سفارش «پرداخت در محل» '
+                        .number_format($codMaxTotal)
+                        .' تومان است؛ برای مبالغ بیشتر از پرداخت آنلاین استفاده کنید.'
+                    );
+                }
+
                 do {
                     $orderNumber = 'ORD-'
                         .now()->format('Ymd')
@@ -410,7 +508,9 @@ class OrderController extends Controller
                 );
 
                 $order = Order::create([
-                    'user_id' => $user->id,
+                    'user_id' => $user?->id,
+                    'guest_token' => $guestToken,
+                    'guest_access_code' => $guestAccessCode,
                     'idempotency_key' => $idempotencyKey,
                     'order_number' => $orderNumber,
                     'subtotal' => $subtotal,
@@ -421,8 +521,11 @@ class OrderController extends Controller
                     'tax_percent' => $vatPercent,
                     'tax_amount' => $taxAmount,
                     'total' => $total,
-                    'status' => 'pending',
+                    'status' => $paymentMethod === PaymentMethod::COD
+                        ? OrderStatus::PROCESSING
+                        : OrderStatus::PENDING,
                     'payment_status' => 'unpaid',
+                    'payment_method' => $paymentMethod,
                     'recipient_name' => $validated['recipient_name'],
                     'phone' => $validated['phone'],
                     'address' => $validated['address'],
@@ -441,11 +544,11 @@ class OrderController extends Controller
                 );
             }, 3);
         } catch (QueryException $e) {
-            $existingOrder = Order::query()
-                ->where('user_id', $user->id)
-                ->where('idempotency_key', $idempotencyKey)
-                ->with('items.product.images', 'items.variant')
-                ->first();
+            $existingOrder = $this->findIdempotentOrder(
+                $user?->id,
+                $guestToken,
+                $idempotencyKey
+            );
 
             if ($existingOrder) {
                 return $this->respondWithExistingOrder(
@@ -457,10 +560,20 @@ class OrderController extends Controller
             throw $e;
         }
 
+        // اعلان زنگولهٔ پنل برای سفارش تازه ثبت‌شده (خطای اعلان هرگز ثبت سفارش
+        // را خراب نمی‌کند).
+        try {
+            $this->notifications->orderPlaced($order);
+        } catch (Throwable) {
+            // بی‌صدا رد می‌شویم؛ سفارش ثبت شده است.
+        }
+
         return response()->json([
             'success' => true,
-            'message' => 'سفارش با موفقیت ایجاد شد و آماده پرداخت است.',
-            'data' => $order,
+            'message' => $paymentMethod === PaymentMethod::COD
+                ? 'سفارش شما با روش پرداخت در محل ثبت شد؛ مبلغ را هنگام تحویل بپردازید.'
+                : 'سفارش با موفقیت ایجاد شد و آماده پرداخت است.',
+            'data' => $order->makeVisible('guest_access_code'),
         ], 201);
     }
 
@@ -496,7 +609,13 @@ class OrderController extends Controller
             && ($order->postal_code ?? null)
                 === ($validated['postal_code'] ?? null)
             && ($order->notes ?? null)
-                === ($validated['notes'] ?? null);
+                === ($validated['notes'] ?? null)
+            /*
+             * تغییر روش پرداخت با همان کلید Idempotency، سفارش متفاوتی است
+             * و نباید سفارش قبلی را برگرداند.
+             */
+            && ($order->payment_method ?? PaymentMethod::ONLINE)
+                === ($validated['payment_method'] ?? PaymentMethod::ONLINE);
 
         if (! $sameDetails) {
             return false;
@@ -526,6 +645,47 @@ class OrderController extends Controller
         return $requestedItems === $existingItems;
     }
 
+    /**
+     * یافتن سفارش قبلی با همان کلید Idempotency.
+     *
+     * برای کاربر ثبت‌شده مالکیت با user_id و برای مهمان با guest_token
+     * سنجیده می‌شود؛ مهمان دیگری با همان کلید تصادفی به سفارش دست نمی‌یابد.
+     */
+    private function findIdempotentOrder(
+        ?int $userId,
+        ?string $guestToken,
+        string $idempotencyKey
+    ): ?Order {
+        return Order::query()
+            ->when(
+                $userId !== null,
+                fn ($query) => $query->where('user_id', $userId),
+                fn ($query) => $query
+                    ->whereNull('user_id')
+                    ->where('guest_token', $guestToken)
+            )
+            ->where('idempotency_key', $idempotencyKey)
+            ->with('items.product.images', 'items.variant')
+            ->first();
+    }
+
+    /**
+     * کد پیگیری یکتا برای سفارش مهمان.
+     *
+     * تکرار کد بعید است، اما چون ستون unique است پیش از ذخیره بررسی می‌کنیم
+     * تا خطای دیتابیس رخ ندهد.
+     */
+    private function newGuestAccessCode(): string
+    {
+        do {
+            $code = GuestAccessCode::generate();
+        } while (
+            Order::query()->where('guest_access_code', $code)->exists()
+        );
+
+        return $code;
+    }
+
     private function respondWithExistingOrder(
         Order $order,
         array $validated
@@ -540,7 +700,7 @@ class OrderController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'این درخواست قبلاً ثبت شده است.',
-            'data' => $order,
+            'data' => $order->makeVisible('guest_access_code'),
         ], 200);
     }
 
@@ -558,17 +718,29 @@ class OrderController extends Controller
         ]);
     }
 
+    /**
+     * جزئیات سفارش برای صاحب سفارش.
+     *
+     * مالکیت با توکن Sanctum (کاربر) یا هدر X-Guest-Token (سفارش مهمان)
+     * سنجیده می‌شود؛ مهمان فقط سفارش خودش را می‌بیند و همین پاسخ مبنای
+     * صفحهٔ فاکتور است.
+     */
     public function show(Request $request, string $orderNumber)
     {
-        $order = Order::query()
-            ->where('user_id', $request->user()->id)
-            ->where('order_number', $orderNumber)
-            ->with(
-                'items.product.images',
-                'items.variant',
-                'returnRequest'
-            )
-            ->first();
+        if (! $this->hasCustomerIdentity($request)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'برای مشاهدهٔ این سفارش باید وارد حساب کاربری شوید یا شناسهٔ مرورگر مهمان ارسال شود.',
+            ], 401);
+        }
+
+        $order = $this->findOwnedOrder($request, $orderNumber);
+
+        $order?->load(
+            'items.product.images',
+            'items.variant',
+            'returnRequest'
+        );
 
         if (! $order) {
             return response()->json([
@@ -583,16 +755,23 @@ class OrderController extends Controller
         ]);
     }
 
+    /**
+     * لغو سفارش توسط مشتری (کاربر یا مهمان با X-Guest-Token).
+     *
+     * قواعد قبلی دست‌نخورده است: فقط سفارش پرداخت‌نشده، لغونشده و
+     * ارسال‌نشده؛ بازگردانی موجودی همچنان از OrderStockService انجام می‌شود.
+     */
     public function cancel(Request $request, string $orderNumber)
     {
-        $user = $request->user();
+        if (! $this->hasCustomerIdentity($request)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'برای لغو سفارش باید وارد حساب کاربری شوید یا شناسهٔ مرورگر مهمان ارسال شود.',
+            ], 401);
+        }
 
-        $result = DB::transaction(function () use ($user, $orderNumber) {
-            $order = Order::query()
-                ->where('user_id', $user->id)
-                ->where('order_number', $orderNumber)
-                ->lockForUpdate()
-                ->first();
+        $result = DB::transaction(function () use ($request, $orderNumber) {
+            $order = $this->findOwnedOrder($request, $orderNumber, true);
 
             if (! $order) {
                 return [
@@ -629,37 +808,16 @@ class OrderController extends Controller
                 ];
             }
 
-            $items = $order->items()->get();
-
-            foreach ($items as $item) {
-                if ($item->variant_id !== null) {
-                    $variant = ProductVariant::query()
-                        ->whereKey($item->variant_id)
-                        ->lockForUpdate()
-                        ->first();
-
-                    if ($variant) {
-                        $variant->increment('stock', $item->quantity);
-
-                        continue;
-                    }
-                }
-
-                if ($item->product_id !== null && $item->variant_id === null) {
-                    $product = Product::query()
-                        ->whereKey($item->product_id)
-                        ->lockForUpdate()
-                        ->first();
-
-                    if ($product) {
-                        $product->increment('stock', $item->quantity);
-                    }
-                }
-            }
+            $this->stock->restore($order);
 
             $order->status = 'cancelled';
-            $order->stock_restored_at = now();
             $order->save();
+
+            /*
+             * تخفیف کوپن با لغو سفارش مصرف‌شده نمی‌ماند؛ همان تراکنش سهمیهٔ
+             * کوپن را آزاد می‌کند تا سقف کل زودتر از واقعیت پر نشود.
+             */
+            $this->coupons->release($order);
 
             return [
                 'order' => $order->fresh()->load(
@@ -760,6 +918,17 @@ class OrderController extends Controller
                 ];
             }
 
+            /*
+             * سفارش پرداخت در محل از درگاه آنلاین پرداخت نمی‌شود؛ وجه هنگام
+             * تحویل دریافت و توسط مدیر ثبت می‌شود.
+             */
+            if ($order->payment_method === PaymentMethod::COD) {
+                return [
+                    'error' => 'این سفارش با روش «پرداخت در محل» ثبت شده است و پرداخت آنلاین برای آن امکان‌پذیر نیست.',
+                    'status' => 422,
+                ];
+            }
+
             if ($order->payment_status === 'paid') {
                 return [
                     'order' => $order->load(
@@ -778,6 +947,7 @@ class OrderController extends Controller
             }
 
             $order->payment_status = 'paid';
+            $order->paid_at = now();
             $order->status = 'processing';
             $order->save();
 
@@ -803,6 +973,61 @@ class OrderController extends Controller
                 : 'پرداخت آزمایشی با موفقیت انجام شد.',
             'data' => $result['order'],
         ]);
+    }
+
+    /**
+     * شناسهٔ معتبر مرورگر مهمان از هدر؛ در صورت نبود/نامعتبر بودن null.
+     */
+    private function guestTokenFrom(Request $request): ?string
+    {
+        $guestToken = $request->header('X-Guest-Token');
+
+        return is_string($guestToken) && Str::isUuid($guestToken)
+            ? $guestToken
+            : null;
+    }
+
+    /**
+     * آیا درخواست هویت مشتری دارد؟ (توکن Sanctum یا شناسهٔ مهمان)
+     */
+    private function hasCustomerIdentity(Request $request): bool
+    {
+        return $request->user('sanctum') !== null
+            || $this->guestTokenFrom($request) !== null;
+    }
+
+    /**
+     * یافتن سفارش متعلق به همان کاربر یا همان مرورگر مهمان.
+     *
+     * برای کاربر با user_id و برای مهمان با (user_id = NULL و guest_token)
+     * فیلتر می‌شود تا هیچ سفارشی بین هویت‌ها جابه‌جا نشود.
+     */
+    private function findOwnedOrder(
+        Request $request,
+        string $orderNumber,
+        bool $lock = false
+    ): ?Order {
+        $user = $request->user('sanctum');
+
+        $query = Order::query()->where('order_number', $orderNumber);
+
+        if ($user !== null) {
+            $query->where('user_id', $user->id);
+        } else {
+            $guestToken = $this->guestTokenFrom($request);
+
+            if ($guestToken === null) {
+                return null;
+            }
+
+            $query->whereNull('user_id')->where('guest_token', $guestToken);
+        }
+
+        if ($lock) {
+            $query->lockForUpdate();
+        }
+
+        return $query->first();
     }
 
     /**

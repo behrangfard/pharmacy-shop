@@ -17,6 +17,7 @@ class CouponController extends Controller
         $validated = $request->validate([
             'code' => ['required', 'string', 'max:60'],
             'subtotal' => ['required', 'numeric', 'min:0'],
+            'phone' => ['nullable', 'string', 'max:30'],
         ]);
 
         $coupon = Coupon::findUsable($validated['code']);
@@ -36,6 +37,29 @@ class CouponController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => $error,
+            ], 422);
+        }
+
+        /*
+         * مسیر «بررسی کد» عمومی است؛ اگر کاربر توکن داشته باشد سقف استفادهٔ
+         * شخصی و اگر مهمان باشد سقف شمارهٔ تماس همان‌جا اعلام می‌شود تا پیام
+         * خطا قبل از ثبت سفارش دیده شود. تصمیم نهایی و قابل اتکا در ثبت سفارش
+         * (OrderController) گرفته می‌شود.
+         */
+        try {
+            $user = auth('sanctum')->user();
+        } catch (\Throwable) {
+            $user = null;
+        }
+
+        $perUserError = $user !== null
+            ? $coupon->perUserUsageError($user->id)
+            : $coupon->perPhoneUsageError($validated['phone'] ?? null);
+
+        if ($perUserError !== null) {
+            return response()->json([
+                'success' => false,
+                'message' => $perUserError,
             ], 422);
         }
 

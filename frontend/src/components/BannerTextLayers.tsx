@@ -155,7 +155,7 @@ function BannerTextLayers({
           layer.tag,
           {
             key: layer.id,
-            className: `absolute whitespace-pre-line ${
+            className: `absolute max-w-full whitespace-pre-line break-words ${
               interactive
                 ? "cursor-move select-none rounded-sm outline-2 outline-offset-2 outline-dashed"
                 : ""

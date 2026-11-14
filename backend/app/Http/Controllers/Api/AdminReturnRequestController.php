@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\ReturnRequest;
+use App\Services\Orders\OrderCouponService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -11,6 +12,11 @@ use Illuminate\Validation\Rule;
 
 class AdminReturnRequestController extends Controller
 {
+    public function __construct(
+        private readonly OrderCouponService $coupons
+    ) {
+    }
+
     public function index(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -91,8 +97,18 @@ class AdminReturnRequestController extends Controller
                     $returnRequest->refund_amount = $order->total;
                 }
 
+                /*
+                 * بازپرداخت یعنی تخفیف کوپن هم برگشته است؛ سهمیه فقط یک‌بار
+                 * آزاد می‌شود (اگر سفارش قبلاً refunded باشد دوباره کم نمی‌کنیم).
+                 */
+                $alreadyRefunded = $order->payment_status === 'refunded';
+
                 $order->payment_status = 'refunded';
                 $order->save();
+
+                if (! $alreadyRefunded) {
+                    $this->coupons->release($order);
+                }
             }
 
             $returnRequest->save();

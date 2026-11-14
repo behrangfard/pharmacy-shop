@@ -1,24 +1,34 @@
 <?php
 
+use App\Http\Controllers\Api\AdminAccountingController;
 use App\Http\Controllers\Api\AdminAnnouncementBarController;
 use App\Http\Controllers\Api\AdminArticleController;
 use App\Http\Controllers\Api\AdminBannerController;
 use App\Http\Controllers\Api\AdminBannerFontController;
 use App\Http\Controllers\Api\AdminBrandController;
 use App\Http\Controllers\Api\AdminCategoryController;
+use App\Http\Controllers\Api\AdminChequeController;
 use App\Http\Controllers\Api\AdminCouponController;
 use App\Http\Controllers\Api\AdminCustomerController;
+use App\Http\Controllers\Api\AdminExpenseController;
 use App\Http\Controllers\Api\AdminController;
+use App\Http\Controllers\Api\AdminMessagingContactController;
 use App\Http\Controllers\Api\AdminMessagingController;
+use App\Http\Controllers\Api\AdminNotificationController;
 use App\Http\Controllers\Api\AdminOrderController;
 use App\Http\Controllers\Api\AdminPageController;
 use App\Http\Controllers\Api\AdminProductController;
 use App\Http\Controllers\Api\AdminProductImageController;
+use App\Http\Controllers\Api\AdminProductImportController;
+use App\Http\Controllers\Api\AdminPurchaseInvoiceController;
 use App\Http\Controllers\Api\AdminProductReviewController;
+use App\Http\Controllers\Api\AdminPopupController;
 use App\Http\Controllers\Api\AdminReportController;
 use App\Http\Controllers\Api\AdminReturnRequestController;
 use App\Http\Controllers\Api\AdminShippingController;
 use App\Http\Controllers\Api\AdminStoreSettingController;
+use App\Http\Controllers\Api\AdminStoryController;
+use App\Http\Controllers\Api\AdminSupplierController;
 use App\Http\Controllers\Api\AdminSupportController;
 use App\Http\Controllers\Api\AdminTrustBadgeController;
 use App\Http\Controllers\Api\AdminUserController;
@@ -32,12 +42,18 @@ use App\Http\Controllers\Api\BannerFontController;
 use App\Http\Controllers\Api\BrandController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CouponController;
+use App\Http\Controllers\Api\HeaderFooterController;
 use App\Http\Controllers\Api\OrderController;
+use App\Http\Controllers\Api\OrderTrackingController;
 use App\Http\Controllers\Api\PageController;
+use App\Http\Controllers\Api\PasswordResetController;
+use App\Http\Controllers\Api\PopupController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\ProductReviewController;
 use App\Http\Controllers\Api\ReturnRequestController;
+use App\Http\Controllers\Api\ShippingInfoController;
 use App\Http\Controllers\Api\StoreSettingController;
+use App\Http\Controllers\Api\StoryController;
 use App\Http\Controllers\Api\SupportController;
 use App\Http\Controllers\Api\SupportWebhookController;
 use App\Http\Controllers\Api\TrustBadgeController;
@@ -48,8 +64,54 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('v1')->group(function () {
 
     // Authentication
-    Route::post('/auth/register', [AuthController::class, 'register']);
-    Route::post('/auth/login', [AuthController::class, 'login']);
+    Route::post('/auth/register', [AuthController::class, 'register'])
+        ->middleware('throttle:auth');
+    Route::post('/auth/login', [AuthController::class, 'login'])
+        ->middleware('throttle:auth');
+
+    // Password Reset (بازیابی رمز عبور فراموش‌شده)
+    Route::post(
+        '/auth/forgot-password',
+        [PasswordResetController::class, 'forgotPassword']
+    )->middleware('throttle:auth');
+
+    Route::post(
+        '/auth/reset-password',
+        [PasswordResetController::class, 'resetPassword']
+    )->middleware('throttle:auth');
+
+    /*
+    |--------------------------------------------------------------------------
+    | Guest Checkout & Public Tracking (سفارش مهمان و رهگیری عمومی)
+    |--------------------------------------------------------------------------
+    | ثبت سفارش با توکن Sanctum (در صورت وجود) کاربر را می‌شناسد؛ بدون توکن،
+    | سفارش «مهمان» است و با هدر X-Guest-Token یکتا می‌شود. رهگیری فقط با
+    | شماره سفارش + شماره تماس کار می‌کند.
+    */
+    Route::post('/orders', [OrderController::class, 'store'])
+        ->middleware('throttle:orders');
+
+    Route::post('/orders/track', [OrderTrackingController::class, 'track'])
+        ->middleware('throttle:10,1');
+
+    /*
+     * بازیابی دسترسی مهمان در مرورگر جدید با «شماره سفارش + کد پیگیری»
+     * (همان throttle رهگیری عمومی).
+     */
+    Route::post('/orders/recover', [OrderTrackingController::class, 'recoverAccess'])
+        ->middleware('throttle:10,1');
+
+    /*
+     * مشاهده و لغو سفارش برای کاربر (Bearer) و مهمان (X-Guest-Token) باز است؛
+     * مالکیت داخل OrderController سنجیده می‌شود و بدون هویت، 401 برمی‌گردد.
+     */
+    Route::get('/orders/{orderNumber}', [OrderController::class, 'show'])
+        ->middleware('throttle:60,1');
+
+    Route::post(
+        '/orders/{orderNumber}/cancel',
+        [OrderController::class, 'cancel']
+    )->middleware('throttle:orders');
 
     // Authenticated Routes
     Route::middleware('auth:sanctum')->group(function () {
@@ -61,14 +123,7 @@ Route::prefix('v1')->group(function () {
         Route::post('/auth/logout', [AuthController::class, 'logout']);
 
         // Customer Orders
-        Route::post('/orders', [OrderController::class, 'store']);
         Route::get('/orders', [OrderController::class, 'index']);
-        Route::get('/orders/{orderNumber}', [OrderController::class, 'show']);
-
-        Route::post(
-            '/orders/{orderNumber}/cancel',
-            [OrderController::class, 'cancel']
-        );
 
         Route::delete(
             '/orders/{orderNumber}',
@@ -130,6 +185,24 @@ Route::prefix('v1')->group(function () {
         */
 
         Route::middleware('admin')->prefix('admin')->group(function () {
+
+            // Notification Bell (اعلان‌های پنل مدیریت)
+            // زنگوله برای همهٔ مدیران فعال است؛ هر مدیر با هر سطح دسترسی
+            // می‌تواند اعلان‌ها را ببیند و خوانده‌شده علامت بزند.
+            Route::get(
+                '/notifications',
+                [AdminNotificationController::class, 'index']
+            );
+
+            Route::post(
+                '/notifications/read-all',
+                [AdminNotificationController::class, 'markAllRead']
+            );
+
+            Route::post(
+                '/notifications/{notification}/read',
+                [AdminNotificationController::class, 'markRead']
+            );
 
             // Dashboard (نمای کلی)
             Route::middleware('admin.permission:'.AdminRole::DASHBOARD_VIEW)
@@ -232,6 +305,17 @@ Route::prefix('v1')->group(function () {
                     Route::get('/products', [AdminProductController::class, 'index']);
                     Route::post('/products', [AdminProductController::class, 'store']);
 
+                    // ورود گروهی محصولات از فایل اکسل/CSV
+                    Route::get(
+                        '/products/import/template',
+                        [AdminProductImportController::class, 'template']
+                    );
+
+                    Route::post(
+                        '/products/import',
+                        [AdminProductImportController::class, 'import']
+                    );
+
                     // تصویر راهنمای سایز اختصاصی محصول (مستقل از شناسهٔ محصول)
                     Route::post(
                         '/products/size-guide-image',
@@ -295,6 +379,12 @@ Route::prefix('v1')->group(function () {
                         [AdminOrderController::class, 'updateStatus']
                     );
 
+                    // ثبت دریافت وجه سفارش «پرداخت در محل»
+                    Route::patch(
+                        '/orders/{orderNumber}/payment',
+                        [AdminOrderController::class, 'updatePaymentStatus']
+                    );
+
                     // Shipping Info (اطلاعات ارسال و کد رهگیری)
                     Route::patch(
                         '/orders/{orderNumber}/shipping',
@@ -351,6 +441,14 @@ Route::prefix('v1')->group(function () {
                     Route::get(
                         '/shipping/history',
                         [AdminShippingController::class, 'history']
+                    );
+
+                    // صفحهٔ «روش‌های ارسال و اطلاعات ارسال» (محتوای سایت)
+                    Route::get('/shipping/page', [AdminShippingController::class, 'page']);
+
+                    Route::put(
+                        '/shipping/page',
+                        [AdminShippingController::class, 'updatePage']
                     );
 
                     // روش‌های ارسال
@@ -551,6 +649,48 @@ Route::prefix('v1')->group(function () {
                         '/banner-fonts/{bannerFont}',
                         [AdminBannerFontController::class, 'destroy']
                     );
+
+                    // Stories (استوری‌های صفحهٔ اول؛ دایره‌های بالای دسته‌بندی‌ها)
+                    Route::get('/stories', [AdminStoryController::class, 'index']);
+                    Route::post('/stories', [AdminStoryController::class, 'store']);
+
+                    Route::post(
+                        '/stories/image',
+                        [AdminStoryController::class, 'uploadImage']
+                    );
+
+                    Route::put('/stories/{story}', [AdminStoryController::class, 'update']);
+
+                    Route::patch(
+                        '/stories/{story}/status',
+                        [AdminStoryController::class, 'updateStatus']
+                    );
+
+                    Route::delete(
+                        '/stories/{story}',
+                        [AdminStoryController::class, 'destroy']
+                    );
+
+                    // Popups (پاپ‌آپ‌های تبلیغاتی سایت)
+                    Route::get('/popups', [AdminPopupController::class, 'index']);
+                    Route::post('/popups', [AdminPopupController::class, 'store']);
+
+                    Route::post(
+                        '/popups/image',
+                        [AdminPopupController::class, 'uploadImage']
+                    );
+
+                    Route::put('/popups/{popup}', [AdminPopupController::class, 'update']);
+
+                    Route::patch(
+                        '/popups/{popup}/status',
+                        [AdminPopupController::class, 'updateStatus']
+                    );
+
+                    Route::delete(
+                        '/popups/{popup}',
+                        [AdminPopupController::class, 'destroy']
+                    );
                 });
 
             // Pages (صفحات ثابت سایت)
@@ -655,9 +795,61 @@ Route::prefix('v1')->group(function () {
                         [AdminMessagingController::class, 'sendBirthdayGreetings']
                     );
 
+                    // پیامک خودکار تغییر وضعیت سفارش
+                    Route::get(
+                        '/messaging/order-status',
+                        [AdminMessagingController::class, 'orderStatusSettings']
+                    );
+
+                    Route::put(
+                        '/messaging/order-status',
+                        [AdminMessagingController::class, 'updateOrderStatusSettings']
+                    );
+
                     Route::delete(
                         '/messaging/{messageId}',
                         [AdminMessagingController::class, 'destroy']
+                    );
+
+                    // دفترچهٔ مخاطبین (ورود شماره‌ها از اکسل/ورد)
+                    Route::get(
+                        '/messaging/contacts',
+                        [AdminMessagingContactController::class, 'index']
+                    );
+
+                    Route::get(
+                        '/messaging/contacts/groups',
+                        [AdminMessagingContactController::class, 'groups']
+                    );
+
+                    Route::get(
+                        '/messaging/contacts/template',
+                        [AdminMessagingContactController::class, 'template']
+                    );
+
+                    Route::post(
+                        '/messaging/contacts/import',
+                        [AdminMessagingContactController::class, 'import']
+                    );
+
+                    Route::post(
+                        '/messaging/contacts',
+                        [AdminMessagingContactController::class, 'store']
+                    );
+
+                    Route::delete(
+                        '/messaging/contacts/bulk',
+                        [AdminMessagingContactController::class, 'bulkDestroy']
+                    );
+
+                    Route::patch(
+                        '/messaging/contacts/{contact}',
+                        [AdminMessagingContactController::class, 'update']
+                    );
+
+                    Route::delete(
+                        '/messaging/contacts/{contact}',
+                        [AdminMessagingContactController::class, 'destroy']
                     );
                 });
 
@@ -690,11 +882,98 @@ Route::prefix('v1')->group(function () {
                     );
                 });
 
+            // Accounting (حسابداری فروشگاه: خرید، هزینه، چک و سود)
+            Route::middleware('admin.permission:'.AdminRole::ACCOUNTING_MANAGE)
+                ->prefix('accounting')
+                ->group(function () {
+                    Route::get('/overview', [AdminAccountingController::class, 'overview']);
+                    Route::get('/report', [AdminAccountingController::class, 'report']);
+
+                    // تأمین‌کنندگان
+                    Route::get('/suppliers', [AdminSupplierController::class, 'index']);
+                    Route::post('/suppliers', [AdminSupplierController::class, 'store']);
+
+                    Route::put(
+                        '/suppliers/{supplier}',
+                        [AdminSupplierController::class, 'update']
+                    );
+
+                    Route::delete(
+                        '/suppliers/{supplier}',
+                        [AdminSupplierController::class, 'destroy']
+                    );
+
+                    // جست‌وجوی محصول برای اقلام فاکتور
+                    Route::get('/products', [AdminPurchaseInvoiceController::class, 'products']);
+
+                    // فاکتورهای خرید
+                    Route::get(
+                        '/purchase-invoices',
+                        [AdminPurchaseInvoiceController::class, 'index']
+                    );
+
+                    Route::post(
+                        '/purchase-invoices',
+                        [AdminPurchaseInvoiceController::class, 'store']
+                    );
+
+                    Route::get(
+                        '/purchase-invoices/{purchaseInvoice}',
+                        [AdminPurchaseInvoiceController::class, 'show']
+                    );
+
+                    Route::put(
+                        '/purchase-invoices/{purchaseInvoice}',
+                        [AdminPurchaseInvoiceController::class, 'update']
+                    );
+
+                    Route::patch(
+                        '/purchase-invoices/{purchaseInvoice}/payment',
+                        [AdminPurchaseInvoiceController::class, 'payment']
+                    );
+
+                    Route::delete(
+                        '/purchase-invoices/{purchaseInvoice}',
+                        [AdminPurchaseInvoiceController::class, 'destroy']
+                    );
+
+                    // هزینه‌ها
+                    Route::get('/expenses', [AdminExpenseController::class, 'index']);
+                    Route::post('/expenses', [AdminExpenseController::class, 'store']);
+
+                    Route::put('/expenses/{expense}', [AdminExpenseController::class, 'update']);
+                    Route::delete('/expenses/{expense}', [AdminExpenseController::class, 'destroy']);
+
+                    // چک‌ها
+                    Route::get('/cheques', [AdminChequeController::class, 'index']);
+                    Route::post('/cheques', [AdminChequeController::class, 'store']);
+
+                    Route::put('/cheques/{cheque}', [AdminChequeController::class, 'update']);
+
+                    Route::patch(
+                        '/cheques/{cheque}/status',
+                        [AdminChequeController::class, 'status']
+                    );
+
+                    Route::delete('/cheques/{cheque}', [AdminChequeController::class, 'destroy']);
+                });
+
             // Store Settings (تنظیمات فروشگاه)
             Route::middleware('admin.permission:'.AdminRole::SETTINGS_MANAGE)
                 ->group(function () {
                     Route::get('/settings', [AdminStoreSettingController::class, 'index']);
                     Route::put('/settings', [AdminStoreSettingController::class, 'update']);
+
+                    // Header & Footer (هدر و فوتر سایت)
+                    Route::get(
+                        '/header-footer',
+                        [HeaderFooterController::class, 'show']
+                    );
+
+                    Route::put(
+                        '/header-footer',
+                        [HeaderFooterController::class, 'update']
+                    );
 
                     // Trust Badges (اینماد و مجوزهای فوتر)
                     Route::get(
@@ -788,6 +1067,9 @@ Route::prefix('v1')->group(function () {
     // Public Store Settings
     Route::get('/store-settings', [StoreSettingController::class, 'index']);
 
+    // Public Header & Footer (متن‌ها و لینک‌های هدر/فوتر)
+    Route::get('/header-footer', [HeaderFooterController::class, 'show']);
+
     Route::get(
         '/store-settings/tax',
         [StoreSettingController::class, 'tax']
@@ -795,6 +1077,12 @@ Route::prefix('v1')->group(function () {
 
     // Public Trust Badges (اینماد و مجوزهای فوتر)
     Route::get('/trust-badges', [TrustBadgeController::class, 'index']);
+
+    // Public Stories (استوری‌های صفحهٔ اول؛ دایره‌های بالای دسته‌بندی‌ها)
+    Route::get('/stories', [StoryController::class, 'index']);
+
+    // Public Popups (پاپ‌آپ‌های فعالِ داخل بازهٔ زمانی)
+    Route::get('/popups', [PopupController::class, 'index']);
 
     // Public Coupon Validation
     Route::post('/coupons/check', [CouponController::class, 'check']);
@@ -820,6 +1108,9 @@ Route::prefix('v1')->group(function () {
     // Public Pages (صفحات ثابت سایت: درباره ما، تماس با ما، قوانین و ...)
     Route::get('/pages', [PageController::class, 'index']);
     Route::get('/pages/{slug}', [PageController::class, 'show']);
+
+    // Public Shipping Info (روش‌های ارسال و اطلاعات ارسال)
+    Route::get('/shipping-info', [ShippingInfoController::class, 'show']);
 
     // Public Categories
     Route::get('/categories', [CategoryController::class, 'index']);

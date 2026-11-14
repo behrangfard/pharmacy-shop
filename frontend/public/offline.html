@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#4f7754" />
+    <meta name="robots" content="noindex" />
+    <title>اتصال اینترنت قطع است | بهرنگ شاپ</title>
+
+    <style>
+      :root {
+        --brand-600: #4f7754;
+        --brand-500: #648767;
+        --brand-100: #e8efe2;
+        --cream: #faf9f4;
+        --ink: #283b2d;
+        --muted: #5b655c;
+        --line: #e8eee5;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+        background: radial-gradient(circle at 20% 10%, #eef2e7 0%, var(--cream) 55%);
+        color: var(--ink);
+        font-family: Vazirmatn, Tahoma, Arial, sans-serif;
+      }
+
+      .card {
+        width: 100%;
+        max-width: 460px;
+        padding: 32px 26px;
+        text-align: center;
+        background: #ffffff;
+        border: 1px solid var(--line);
+        border-radius: 28px;
+        box-shadow: 0 24px 60px rgba(40, 59, 45, 0.12);
+      }
+
+      .mark {
+        width: 72px;
+        height: 72px;
+        margin: 0 auto 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 24px;
+        background: var(--brand-100);
+        color: var(--brand-600);
+      }
+
+      h1 {
+        margin: 0 0 10px;
+        font-size: 22px;
+        font-weight: 900;
+      }
+
+      p {
+        margin: 0 0 22px;
+        font-size: 14px;
+        line-height: 2;
+        color: var(--muted);
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        justify-content: center;
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        padding: 12px 20px;
+        border-radius: 14px;
+        font-size: 14px;
+        font-weight: 700;
+        text-decoration: none;
+        border: 1px solid transparent;
+        cursor: pointer;
+        transition: background 0.15s ease, transform 0.15s ease;
+      }
+
+      .btn-primary {
+        background: var(--brand-500);
+        color: #ffffff;
+      }
+
+      .btn-primary:hover {
+        background: var(--brand-600);
+      }
+
+      .btn-ghost {
+        background: #ffffff;
+        border-color: var(--line);
+        color: var(--muted);
+      }
+
+      .btn:active {
+        transform: scale(0.98);
+      }
+
+      .hint {
+        margin-top: 20px;
+        font-size: 12px;
+        color: #6b7268;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        body {
+          background: #20291f;
+        }
+
+        .card {
+          background: #283528;
+          border-color: #3a4a3a;
+          color: #f3f6f0;
+        }
+
+        p,
+        .hint {
+          color: #c3cdc0;
+        }
+
+        .btn-ghost {
+          background: #2f3d2f;
+          border-color: #445644;
+          color: #e4ece1;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <main class="card">
+      <div class="mark" aria-hidden="true">
+        <svg
+          width="34"
+          height="34"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.8"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <path d="M2 8.82a15 15 0 0 1 20 0" />
+          <path d="M5 12.859a10 10 0 0 1 14 0" />
+          <path d="M8.5 16.429a5 5 0 0 1 7 0" />
+          <line x1="12" y1="20" x2="12.01" y2="20" />
+        </svg>
+      </div>
+
+      <h1>اتصال اینترنت قطع است</h1>
+
+      <p>
+        در حال حاضر به شبکه دسترسی نداریم؛ محصولاتی که قبلاً دیده‌اید در حافظهٔ
+        مرورگر باقی مانده‌اند. پس از وصل شدن اینترنت، صفحه را دوباره بارگذاری
+        کنید.
+      </p>
+
+      <div class="actions">
+        <button class="btn btn-primary" type="button" onclick="window.location.reload()">
+          تلاش دوباره
+        </button>
+
+        <a class="btn btn-ghost" href="/products">مشاهدهٔ فروشگاه</a>
+      </div>
+
+      <p class="hint">بهرنگ شاپ · ارسال سریع به سراسر ایران</p>
+    </main>
+  </body>
+</html>

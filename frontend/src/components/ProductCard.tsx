@@ -1,8 +1,9 @@
 import { useState } from "react";
 import type { MouseEvent } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Heart, Sparkles, Tag } from "lucide-react";
+import { ArrowLeft, Eye, Heart, Sparkles, Tag } from "lucide-react";
 
+import QuickViewModal from "./QuickViewModal";
 import { useWishlist } from "../context/WishlistContext";
 import type { WishlistProduct } from "../services/wishlist";
 import { getStorageUrl } from "../utils/images";
@@ -455,65 +456,74 @@ function HomePrice({ product }: { product: WishlistProduct }) {
 }
 
 /**
- * کارت شبکهٔ صفحهٔ محصولات؛ تمام کارت یک لینک است و دکمهٔ علاقه‌مندی
- * جلوگیری از ناوبری می‌کند.
+ * کارت شبکهٔ صفحهٔ محصولات؛ تمام کارت یک لینک است و دکمه‌های علاقه‌مندی و
+ * نمایش سریع با جلوگیری از ناوبری، عمل خودشان را انجام می‌دهند.
  */
 function GridCard({
   product,
   className = "",
   showWishlistButton,
-}: Props & { showWishlistButton: boolean }) {
+  onQuickView,
+}: Props & { showWishlistButton: boolean; onQuickView: () => void }) {
   const imageUrl = productCardImageUrl(product);
   const hoverImageUrl = productCardHoverImageUrl(product);
   const sizeChips = productCardSizeChips(product);
 
   return (
-    <Link
-      to={`/product/${product.slug}`}
+    /*
+      دکمه‌های علاقه‌مندی و نمایش سریع «خواهر» لینک کارت‌اند، نه داخل آن؛
+      قرار دادن button داخل a (HTML نامعتبر) هم فوکوس را خراب می‌کرد و هم
+      در تست‌های دسترس‌پذیری به‌عنوان هم‌پوشانی گزارش می‌شد.
+    */
+    <article
       className={`
-        group flex h-full flex-col overflow-hidden rounded-2xl border
+        group relative flex h-full flex-col rounded-2xl border
         border-line bg-white shadow-sm transition-all duration-300
         hover:-translate-y-1 hover:border-brand-300 hover:shadow-lg
         sm:rounded-card ${className}
       `}
     >
-      <div className="flex h-full flex-1 flex-col p-2 sm:p-3">
-        <div className="relative shrink-0">
-          {/* نسبت ثابت ۴:۵ → ارتفاع کارت هنگام لود تصویر نمی‌پرد */}
-          <div className="group/image relative aspect-[4/5] w-full overflow-hidden rounded-2xl bg-cream-deep transition-colors duration-300 group-hover:bg-brand-50">
-            <CardMedia
-              product={product}
-              primaryUrl={imageUrl}
-              secondaryUrl={hoverImageUrl}
-              imageClassName="absolute inset-0 h-full w-full object-contain p-3 transition-[opacity,transform] duration-500 ease-out group-hover/image:scale-[1.03] motion-reduce:transition-none sm:p-4"
-            />
+      <Link
+        to={`/product/${product.slug}`}
+        aria-label={`مشاهده ${product.name}`}
+        className="
+          flex h-full flex-col overflow-hidden rounded-2xl
+          focus-visible:outline-none focus-visible:ring-2
+          focus-visible:ring-brand-400 sm:rounded-card
+        "
+      >
+        <div className="flex h-full flex-1 flex-col p-2 sm:p-3">
+          <div className="relative shrink-0">
+            {/* نسبت ثابت ۴:۵ → ارتفاع کارت هنگام لود تصویر نمی‌پرد */}
+            <div className="group/image relative aspect-[4/5] w-full overflow-hidden rounded-2xl bg-cream-deep transition-colors duration-300 group-hover:bg-brand-50">
+              <CardMedia
+                product={product}
+                primaryUrl={imageUrl}
+                secondaryUrl={hoverImageUrl}
+                imageClassName="absolute inset-0 h-full w-full object-contain p-3 transition-[opacity,transform] duration-500 ease-out group-hover/image:scale-[1.03] motion-reduce:transition-none sm:p-4"
+              />
 
-            {Number(product.discount_percent ?? 0) > 0 && (
-              <div className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-lg bg-discount px-2 py-1 text-[10px] font-black text-white shadow-sm sm:right-3 sm:top-3 sm:gap-1.5 sm:px-3 sm:py-1.5 sm:text-xs">
-                <Tag size={12} />
-                {Number(product.discount_percent)}٪ تخفیف
-              </div>
-            )}
+              {Number(product.discount_percent ?? 0) > 0 && (
+                <div className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-lg bg-discount px-2 py-1 text-[10px] font-black text-white shadow-sm sm:right-3 sm:top-3 sm:gap-1.5 sm:px-3 sm:py-1.5 sm:text-xs">
+                  <Tag size={12} />
+                  {Number(product.discount_percent)}٪ تخفیف
+                </div>
+              )}
 
-            {product.stock <= 0 && (
-              <div className="absolute inset-0 flex items-center justify-center bg-white/60 backdrop-blur-[1px]">
-                <span className="rounded-xl bg-ink px-3 py-2 text-xs font-bold text-white sm:px-4 sm:text-sm">
-                  ناموجود
-                </span>
-              </div>
-            )}
+              {product.stock <= 0 && (
+                <div className="absolute inset-0 flex items-center justify-center bg-white/60 backdrop-blur-[1px]">
+                  <span className="rounded-xl bg-ink px-3 py-2 text-xs font-bold text-white sm:px-4 sm:text-sm">
+                    ناموجود
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
 
-          {showWishlistButton && (
-            <WishlistButton
-              product={product}
-              className="absolute left-2 top-2 h-8 w-8 sm:left-3 sm:top-3 sm:h-9 sm:w-9"
-            />
-          )}
-        </div>
-
         <div className="flex flex-1 flex-col px-1 pt-3">
-          <div className="mb-1 h-4">
+          {/* ارتفاع‌ها «min-h» هستند تا با فاصله‌گذاری بزرگ‌تر متن
+              (WCAG 1.4.12) متن روی بلوک بعدی نیفتد. */}
+          <div className="mb-1 min-h-4">
             {product.category?.name && (
               <div className="line-clamp-1 text-[10px] font-bold text-brand-600 sm:text-xs">
                 {product.category.name}
@@ -521,11 +531,11 @@ function GridCard({
             )}
           </div>
 
-          <h3 className="line-clamp-2 h-10 overflow-hidden text-sm font-black leading-5 text-ink transition-colors group-hover:text-brand-700 sm:h-12 sm:text-base sm:leading-6">
+          <h3 className="line-clamp-2 min-h-10 text-sm font-black leading-5 text-ink transition-colors group-hover:text-brand-700 sm:min-h-12 sm:text-base sm:leading-6">
             {product.name}
           </h3>
 
-          <div className="mt-1 h-8 overflow-hidden sm:h-10">
+          <div className="mt-1 min-h-8 sm:min-h-10">
             {product.short_description && (
               <p className="line-clamp-2 text-[10px] leading-4 text-muted sm:text-xs sm:leading-5">
                 {product.short_description}
@@ -534,15 +544,15 @@ function GridCard({
           </div>
 
           {/* سایزهای موجود؛ ارتفاع رزرو شده تا کارت‌های بدون سایز هم‌تراز بمانند */}
-          <div className="mt-1 flex h-5 shrink-0 items-center sm:h-6">
+          <div className="mt-1 flex min-h-5 shrink-0 items-center sm:min-h-6">
             <SizeChips chips={sizeChips.chips} extra={sizeChips.extra} />
           </div>
 
-          <div className="h-[68px] shrink-0 pt-1 sm:h-[76px]">
+          <div className="min-h-[68px] shrink-0 pt-1 sm:min-h-[76px]">
             <GridPrice product={product} />
           </div>
 
-          <div className="mt-2 flex h-5 shrink-0 items-center justify-between gap-1 text-[10px] sm:text-xs">
+          <div className="mt-2 flex min-h-5 shrink-0 flex-wrap items-center justify-between gap-1 text-[10px] sm:text-xs">
             {product.stock > 0 ? (
               <>
                 <span className="font-bold text-stock">
@@ -558,7 +568,7 @@ function GridCard({
           </div>
 
           <div className="mt-auto pt-2">
-            <div className="group/button flex h-9 items-center justify-between gap-2 rounded-xl bg-brand-100 px-2 py-2 transition-colors hover:bg-brand-600 sm:h-10 sm:px-3">
+            <div className="group/button flex min-h-9 items-center justify-between gap-2 rounded-xl bg-brand-100 px-2 py-2 transition-colors hover:bg-brand-600 sm:min-h-10 sm:px-3">
               <span className="text-xs font-bold text-brand-700 transition-colors group-hover/button:text-white sm:text-sm">
                 مشاهده محصول
               </span>
@@ -570,7 +580,26 @@ function GridCard({
           </div>
         </div>
       </div>
-    </Link>
+      </Link>
+
+      {showWishlistButton && (
+        <WishlistButton
+          product={product}
+          className="absolute left-4 top-4 z-10 h-8 w-8 sm:left-6 sm:top-6 sm:h-9 sm:w-9"
+        />
+      )}
+
+      {/* نمایش سریع: مودال بدون ترک صفحهٔ فهرست */}
+      <button
+        type="button"
+        onClick={onQuickView}
+        aria-label={`نمایش سریع ${product.name}`}
+        title="نمایش سریع"
+        className="absolute left-4 top-14 z-10 flex h-8 w-8 items-center justify-center rounded-xl border border-white bg-white/90 text-muted-soft backdrop-blur-sm transition-all hover:border-brand-300 hover:text-brand-600 sm:left-6 sm:top-[68px] sm:h-9 sm:w-9"
+      >
+        <Eye size={16} />
+      </button>
+    </article>
   );
 }
 
@@ -578,7 +607,12 @@ function GridCard({
  * کارت ریل‌های صفحهٔ اصلی؛ شبیه نسخهٔ قبلی صفحهٔ اصلی ولی با قلب
  * علاقه‌مندی مشترک.
  */
-function HomeCard({ product, className = "", showWishlistButton }: Props & { showWishlistButton: boolean }) {
+function HomeCard({
+  product,
+  className = "",
+  showWishlistButton,
+  onQuickView,
+}: Props & { showWishlistButton: boolean; onQuickView: () => void }) {
   const imageUrl = productCardImageUrl(product);
   const hoverImageUrl = productCardHoverImageUrl(product);
   const sizeChips = productCardSizeChips(product);
@@ -595,34 +629,47 @@ function HomeCard({ product, className = "", showWishlistButton }: Props & { sho
         sm:p-5 ${className}
       `}
     >
-      <Link
-        to={`/product/${product.slug}`}
-        className="relative block"
-        aria-label={`مشاهده ${product.name}`}
-      >
-        <div
-          className="
-            group/image relative mb-5 aspect-[4/5] w-full shrink-0
-            overflow-hidden rounded-2xl bg-cream-deep
-            transition-colors duration-300
-            group-hover:bg-brand-50
-          "
+      <div className="relative">
+        <Link
+          to={`/product/${product.slug}`}
+          className="block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400"
+          aria-label={`مشاهده ${product.name}`}
         >
-          <CardMedia
-            product={product}
-            primaryUrl={imageUrl}
-            secondaryUrl={hoverImageUrl}
-            imageClassName="absolute inset-0 h-full w-full object-contain p-4 transition-[opacity,transform] duration-500 ease-out group-hover/image:scale-[1.03] motion-reduce:transition-none"
-          />
-        </div>
+          <div
+            className="
+              group/image relative mb-5 aspect-[4/5] w-full shrink-0
+              overflow-hidden rounded-2xl bg-cream-deep
+              transition-colors duration-300
+              group-hover:bg-brand-50
+            "
+          >
+            <CardMedia
+              product={product}
+              primaryUrl={imageUrl}
+              secondaryUrl={hoverImageUrl}
+              imageClassName="absolute inset-0 h-full w-full object-contain p-4 transition-[opacity,transform] duration-500 ease-out group-hover/image:scale-[1.03] motion-reduce:transition-none"
+            />
+          </div>
+        </Link>
 
+        {/* دکمه‌ها بیرون از لینک‌اند تا button داخل a (HTML نامعتبر) نداشته باشیم */}
         {showWishlistButton && (
           <WishlistButton
             product={product}
-            className="absolute left-2 top-2 h-9 w-9"
+            className="absolute left-2 top-2 z-10 h-9 w-9"
           />
         )}
-      </Link>
+
+        <button
+          type="button"
+          onClick={onQuickView}
+          aria-label={`نمایش سریع ${product.name}`}
+          title="نمایش سریع"
+          className="absolute left-2 top-14 z-10 flex h-9 w-9 items-center justify-center rounded-xl border border-white bg-white/90 text-muted-soft backdrop-blur-sm transition-all hover:border-brand-300 hover:text-brand-600"
+        >
+          <Eye size={17} />
+        </button>
+      </div>
 
       <div className="mb-2 flex items-center gap-2">
         <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2.5 py-1 text-xs font-bold text-brand-600">
@@ -648,7 +695,7 @@ function HomeCard({ product, className = "", showWishlistButton }: Props & { sho
         {product.short_description || "\u00a0"}
       </p>
 
-      <div className="mt-2 flex h-6 shrink-0 items-center">
+      <div className="mt-2 flex min-h-6 shrink-0 items-center">
         <SizeChips chips={sizeChips.chips} extra={sizeChips.extra} />
       </div>
 
@@ -680,6 +727,9 @@ function HomeCard({ product, className = "", showWishlistButton }: Props & { sho
 
 /**
  * کارت محصول مشترک فروشگاه؛ تنها نقطهٔ رندر کارت محصول در سایت.
+ *
+ * دکمهٔ «نمایش سریع» مودالی را باز می‌کند که همین‌جا مدیریت می‌شود تا هر
+ * کارت مستقلاً و بدون context اضافه کار کند.
  */
 export default function ProductCard({
   product,
@@ -687,22 +737,33 @@ export default function ProductCard({
   className = "",
   showWishlistButton = true,
 }: Props) {
-  if (variant === "home") {
-    return (
-      <HomeCard
-        product={product}
-        className={className}
-        showWishlistButton={showWishlistButton}
-      />
-    );
-  }
+  const [quickViewOpen, setQuickViewOpen] = useState(false);
 
   return (
-    <GridCard
-      product={product}
-      className={className}
-      showWishlistButton={showWishlistButton}
-    />
+    <>
+      {variant === "home" ? (
+        <HomeCard
+          product={product}
+          className={className}
+          showWishlistButton={showWishlistButton}
+          onQuickView={() => setQuickViewOpen(true)}
+        />
+      ) : (
+        <GridCard
+          product={product}
+          className={className}
+          showWishlistButton={showWishlistButton}
+          onQuickView={() => setQuickViewOpen(true)}
+        />
+      )}
+
+      {quickViewOpen && (
+        <QuickViewModal
+          product={product}
+          onClose={() => setQuickViewOpen(false)}
+        />
+      )}
+    </>
   );
 }
 

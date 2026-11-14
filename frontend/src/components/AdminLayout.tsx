@@ -14,49 +14,38 @@ import {
 } from "react-router-dom";
 import {
   LayoutDashboard,
-  Package,
-  Tags,
   ShoppingCart,
   Store,
   LogOut,
   X,
   ShieldCheck,
   Search,
-  Bell,
   ChevronLeft,
   ChevronDown,
   CalendarDays,
   Command,
-  Users,
-  MessageSquare,
-  Megaphone,
-  Headset,
   Pencil,
-  Settings,
-  TicketPercent,
   RotateCcw,
-  Newspaper,
   TrendingUp,
-  Truck,
-  BadgeCheck,
+  Calculator,
   ArrowUp,
   ArrowDown,
   Check,
-  GripVertical,
   Pin,
   PinOff,
   SlidersHorizontal,
   Type,
-  Heart,
-  LayoutTemplate,
 } from "lucide-react";
 import { useAdminAuth } from "../context/AdminAuthContext";
+import AdminNotificationBell from "./AdminNotificationBell";
 import { usePageMeta } from "../hooks/usePageMeta";
 import { NO_INDEX_ROBOTS, SITE_NAME } from "../utils/seo";
 import {
   ADMIN_PERMISSIONS,
   hasAdminPermission,
 } from "../utils/adminPermissions";
+import { ADMIN_NAV_ITEMS } from "../utils/adminNavItems";
+import { DASHBOARD_SHORTCUT_MIME } from "../utils/adminDashboardLayout";
 import {
   ADMIN_SIDEBAR_DENSITIES,
   ADMIN_SIDEBAR_DENSITY_LABELS,
@@ -87,6 +76,7 @@ const adminSidebarSections: AdminSidebarSection[] = [
   { id: "store", label: "فروشگاه", icon: Store },
   { id: "orders", label: "سفارشات", icon: ShoppingCart },
   { id: "reports", label: "گزارشات", icon: TrendingUp },
+  { id: "finance", label: "مالی و حسابداری", icon: Calculator },
 ];
 
 function AdminLayout() {
@@ -101,162 +91,12 @@ function AdminLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
   const location = useLocation();
   const navigate = useNavigate();
 
-  const navItems = [
-    {
-      to: "/admin",
-      permission: ADMIN_PERMISSIONS.dashboard,
-      label: "نمای کلی",
-      end: true,
-      icon: LayoutDashboard,
-      keywords: "داشبورد آمار فروش گزارش",
-    },
-    {
-      to: "/admin/products",
-      permission: ADMIN_PERMISSIONS.products,
-      label: "محصولات",
-      icon: Package,
-      keywords: "کالا موجودی قیمت افزودن محصول",
-    },
-    {
-      to: "/admin/categories",
-      permission: ADMIN_PERMISSIONS.categories,
-      label: "دسته‌بندی‌ها",
-      icon: Tags,
-      keywords: "گروه دسته بندی",
-    },
-    {
-      to: "/admin/brands",
-      permission: ADMIN_PERMISSIONS.brands,
-      label: "برندها",
-      icon: Tags,
-      keywords: "برند سازنده لوگو تولیدکننده",
-    },
-    {
-      to: "/admin/orders",
-      permission: ADMIN_PERMISSIONS.orders,
-      label: "سفارش‌ها",
-      icon: ShoppingCart,
-      keywords: "خرید پرداخت ارسال سفارش",
-    },
-    {
-      to: "/admin/shipping",
-      permission: ADMIN_PERMISSIONS.orders,
-      label: "ارسال و حمل‌ونقل",
-      icon: Truck,
-      keywords:
-        "ارسال مرسوله پست تیپاکس باربری هزینه ارسال منطقه تعرفه کد رهگیری بسته‌بندی",
-    },
-    {
-      to: "/admin/returns",
-      permission: ADMIN_PERMISSIONS.returns,
-      label: "مرجوعی‌ها",
-      icon: RotateCcw,
-      keywords: "مرجوعی بازگشت کالا بازپرداخت شکایت",
-    },
-    {
-      to: "/admin/coupons",
-      permission: ADMIN_PERMISSIONS.coupons,
-      label: "کدهای تخفیف",
-      icon: TicketPercent,
-      keywords: "کوپن تخفیف کد درصد مبلغ بازاریابی",
-    },
-    {
-      to: "/admin/content",
-      permission: ADMIN_PERMISSIONS.banners,
-      label: "مدیریت محتوا",
-      icon: LayoutTemplate,
-      keywords:
-        "محتوا بنر اسلایدر تصویر تبلیغات صفحه اول صفحات سایت درباره ما تماس با ما قوانین",
-    },
-    {
-      to: "/admin/announcement-bar",
-      permission: ADMIN_PERMISSIONS.banners,
-      label: "نوار اطلاع‌رسانی",
-      icon: Megaphone,
-      keywords:
-        "نوار اطلاع رسانی تیکر تخفیف تبلیغات بالای هدر متن متحرک تصویر متحرک ویدیو",
-    },
-    {
-      to: "/admin/trust-badges",
-      permission: ADMIN_PERMISSIONS.settings,
-      label: "نمادها و مجوزها",
-      icon: BadgeCheck,
-      keywords:
-        "اینماد نماد اعتماد مجوز ساماندهی نشان اعتماد الکترونیکی فوتر نمادها",
-    },
-    {
-      to: "/admin/articles",
-      permission: ADMIN_PERMISSIONS.articles,
-      label: "مقالات",
-      icon: Newspaper,
-      keywords: "مقاله وبلاگ محتوا پست نوشتن انتشار بلاگ",
-    },
-    {
-      to: "/admin/reviews",
-      permission: ADMIN_PERMISSIONS.reviews,
-      label: "نظرات محصولات",
-      icon: MessageSquare,
-      keywords: "نظر دیدگاه امتیاز ستاره بررسی تأیید رد پاسخ مشتری",
-    },
-    {
-      to: "/admin/customers",
-      permission: ADMIN_PERMISSIONS.customers,
-      label: "مشتریان",
-      icon: Users,
-      keywords: "مشتری کاربران اعضا سابقه خرید اطلاعات مشتری",
-    },
-    {
-      to: "/admin/wishlist",
-      permission: ADMIN_PERMISSIONS.customers,
-      label: "علاقه‌مندی‌ها",
-      icon: Heart,
-      keywords:
-        "علاقه مندی لیست آرزو ویش لیست wishlist محصولات ذخیره شده سلیقه مشتری آمار علاقه‌مندی",
-    },
-    {
-      to: "/admin/support",
-      permission: ADMIN_PERMISSIONS.messaging,
-      label: "پشتیبانی",
-      icon: Headset,
-      keywords: "پشتیبانی چت گفتگو صندوق تیکت تلگرام واتساپ بله",
-    },
-    {
-      to: "/admin/messaging",
-      permission: ADMIN_PERMISSIONS.messaging,
-      label: "پیام‌رسانی",
-      icon: Megaphone,
-      keywords:
-        "پیامک sms تلگرام واتساپ واتس آپ بله ارسال پیام اطلاع رسانی پیام رسان مشتریان",
-    },
-    {
-      to: "/admin/admins",
-      permission: ADMIN_PERMISSIONS.admins,
-      label: "مدیران",
-      icon: ShieldCheck,
-      keywords: "مدیر ادمین حساب کاربری رمز عبور افزودن مدیر ویرایش حساب",
-    },
-    {
-      to: "/admin/reports",
-      permission: ADMIN_PERMISSIONS.reports,
-      label: "گزارش فروش",
-      icon: TrendingUp,
-      keywords: "گزارش فروش درآمد آمار پرفروش موجودی کم تحلیل",
-    },
-    {
-      to: "/admin/settings",
-      permission: ADMIN_PERMISSIONS.settings,
-      label: "تنظیمات فروشگاه",
-      icon: Settings,
-      keywords:
-        "تنظیمات هزینه ارسال مالیات تماس شبکه اجتماعی فوتر مرجوعی ارسال رایگان",
-    },
-  ];
+  const navItems = ADMIN_NAV_ITEMS;
 
   /* فقط بخش‌هایی که نقش مدیر به آن‌ها دسترسی دارد در منو و جست‌وجو می‌آیند. */
   const visibleNavItems = useMemo(
@@ -272,6 +112,31 @@ function AdminLayout() {
   );
   const [layoutEditing, setLayoutEditing] = useState(false);
   const [draggingPath, setDraggingPath] = useState<string | null>(null);
+  /** مسیر آیتم در حال کشیدن؛ برای تصمیم‌گیری همگام در drop (بدون تأخیر state). */
+  const draggingPathRef = useRef<string | null>(null);
+
+  /*
+   * جابه‌جایی گروه‌های منو با کشیدن عنوان خودِ گروه (ماوس/لمس).
+   *
+   * برای اینکه ظاهر منو ساده بماند، هیچ دستهٔ اضافه‌ای کنار عنوان‌ها نیست؛
+   * گرفتن و کشیدن روی همان نوشتهٔ عنوان کافی است. تا وقتی نشانگر ۴ پیکسل
+   * جابه‌جا نشود، حرکت «کشیدن» محسوب نمی‌شود و کلیک قبلی (باز/بسته کردن
+   * گروه) دست‌نخورده می‌ماند.
+   */
+  const [draggingGroup, setDraggingGroup] = useState<AdminSidebarGroupId | null>(
+    null,
+  );
+  /** گروهی که گروه کشیده‌شده بالای آن رها می‌شود (null یعنی انتهای فهرست). */
+  const [groupDropBefore, setGroupDropBefore] =
+    useState<AdminSidebarGroupId | null>(null);
+  const groupDragRef = useRef<{
+    groupId: AdminSidebarGroupId;
+    pointerId: number;
+    startY: number;
+    active: boolean;
+  } | null>(null);
+  /** بعد از یک کشیدن واقعی، کلیک پایانی نباید گروه را باز/بسته کند. */
+  const suppressGroupClickRef = useRef(false);
   const [dropTarget, setDropTarget] = useState<{
     containerId: AdminSidebarContainerId;
     index: number;
@@ -297,18 +162,20 @@ function AdminLayout() {
 
   const layoutSections = useMemo(
     () =>
-      ADMIN_SIDEBAR_GROUP_IDS.map((groupId) => {
-        const meta = adminSidebarSections.find(
-          (section) => section.id === groupId,
-        );
+      sidebarLayout.groupOrder
+        .map((groupId) => {
+          const meta = adminSidebarSections.find(
+            (section) => section.id === groupId,
+          );
 
-        return {
-          id: groupId,
-          label: meta?.label ?? groupId,
-          icon: meta?.icon ?? LayoutDashboard,
-          items: resolveNavItems(sidebarLayout.groups[groupId]),
-        };
-      }).filter((section) => section.items.length > 0 || layoutEditing),
+          return {
+            id: groupId,
+            label: meta?.label ?? groupId,
+            icon: meta?.icon ?? LayoutDashboard,
+            items: resolveNavItems(sidebarLayout.groups[groupId]),
+          };
+        })
+        .filter((section) => section.items.length > 0 || layoutEditing),
     [layoutEditing, sidebarLayout, visibleNavItems],
   );
 
@@ -395,12 +262,16 @@ function AdminLayout() {
       return;
     }
 
-    const groups: Record<AdminSidebarGroupId, string[]> = {
-      general: sidebarLayout.groups.general.filter((item) => item !== path),
-      store: sidebarLayout.groups.store.filter((item) => item !== path),
-      orders: sidebarLayout.groups.orders.filter((item) => item !== path),
-      reports: sidebarLayout.groups.reports.filter((item) => item !== path),
-    };
+    const groups = ADMIN_SIDEBAR_GROUP_IDS.reduce(
+      (acc, groupId) => {
+        acc[groupId] = sidebarLayout.groups[groupId].filter(
+          (item) => item !== path,
+        );
+
+        return acc;
+      },
+      {} as Record<AdminSidebarGroupId, string[]>,
+    );
     const pinned = sidebarLayout.pinned.filter((item) => item !== path);
 
     if (targetContainerId === ADMIN_SIDEBAR_PINNED_GROUP_ID) {
@@ -508,6 +379,166 @@ function AdminLayout() {
     persistSidebarLayout(normalizeAdminSidebarLayout(null, allNavPaths));
   };
 
+  /** جابه‌جایی یک گروه منو به جای مشخص (کشیدن با ماوس یا دکمه‌های ↑ ↓). */
+  const moveGroupTo = (groupId: AdminSidebarGroupId, index: number) => {
+    const groupOrder = sidebarLayout.groupOrder.filter((id) => id !== groupId);
+    const target = Math.max(0, Math.min(index, groupOrder.length));
+
+    groupOrder.splice(target, 0, groupId);
+
+    persistSidebarLayout({ ...sidebarLayout, groupOrder });
+  };
+
+  /** جابه‌جایی یک پله‌ای گروه (برای لمس و موبایل). */
+  const moveGroupByOffset = (groupId: AdminSidebarGroupId, offset: number) => {
+    const from = sidebarLayout.groupOrder.indexOf(groupId);
+    const to = from + offset;
+
+    if (from < 0 || to < 0 || to >= sidebarLayout.groupOrder.length) {
+      return;
+    }
+
+    const groupOrder = [...sidebarLayout.groupOrder];
+
+    groupOrder.splice(from, 1);
+    groupOrder.splice(to, 0, groupId);
+
+    persistSidebarLayout({ ...sidebarLayout, groupOrder });
+  };
+
+  /**
+   * شروع کشیدن یک گروه با گرفتن عنوان خودِ گروه (بدون دستهٔ اضافه).
+   * تا قبل از عبور از آستانهٔ ۴ پیکسل هیچ چیز تغییر نمی‌کند تا کلیک
+   * باز/بسته کردن گروه از بین نرود.
+   */
+  const handleGroupPointerDown = (
+    event: ReactPointerEvent<HTMLElement>,
+    groupId: AdminSidebarGroupId,
+  ) => {
+    if (event.pointerType === "mouse" && event.button !== 0) {
+      return;
+    }
+
+    suppressGroupClickRef.current = false;
+    groupDragRef.current = {
+      groupId,
+      pointerId: event.pointerId,
+      startY: event.clientY,
+      active: false,
+    };
+  };
+
+  /*
+   * تا وقتی روی عنوان گروهی نگه داشته شده، مکان اشاره‌گر بررسی می‌شود؛
+   * با رها کردن، گروه همان‌جا جابه‌جا می‌شود.
+   */
+  useEffect(() => {
+    /** گروهی که اشاره‌گر بالای نیمهٔ بالایی آن است (یعنی گروه کشیده‌شده بالای آن می‌نشیند). */
+    const findDropBefore = (
+      clientY: number,
+      draggedId: AdminSidebarGroupId,
+    ): AdminSidebarGroupId | null => {
+      const heads = Array.from(
+        document.querySelectorAll<HTMLElement>("[data-admin-group-head]"),
+      ).filter((element) => element.dataset.adminGroupHead !== draggedId);
+
+      for (const head of heads) {
+        const rect = head.getBoundingClientRect();
+
+        if (clientY < rect.top + rect.height / 2) {
+          return (head.dataset.adminGroupHead ??
+            null) as AdminSidebarGroupId | null;
+        }
+      }
+
+      return null;
+    };
+
+    const clearDrag = () => {
+      groupDragRef.current = null;
+      setDraggingGroup(null);
+      setGroupDropBefore(null);
+    };
+
+    const handlePointerMove = (event: PointerEvent) => {
+      const drag = groupDragRef.current;
+
+      if (!drag || event.pointerId !== drag.pointerId) {
+        return;
+      }
+
+      /* اگر دکمهٔ ماوس رها شده باشد (مثلاً رها کردن بیرون از پنجره) لغو می‌شود */
+      if (event.pointerType === "mouse" && event.buttons === 0) {
+        clearDrag();
+
+        return;
+      }
+
+      /* حرکت‌های خیلی کوچک (کلیک ساده روی عنوان) نادیده گرفته می‌شوند */
+      if (!drag.active) {
+        if (Math.abs(event.clientY - drag.startY) < 4) {
+          return;
+        }
+
+        drag.active = true;
+        suppressGroupClickRef.current = true;
+        setDraggingGroup(drag.groupId);
+      }
+
+      setGroupDropBefore(findDropBefore(event.clientY, drag.groupId));
+    };
+
+    const handlePointerUp = (event: PointerEvent) => {
+      const drag = groupDragRef.current;
+
+      if (!drag || event.pointerId !== drag.pointerId) {
+        return;
+      }
+
+      groupDragRef.current = null;
+
+      /* اگر فقط کلیک شده باشد (بدون کشیدن)، ترتیب تغییر نمی‌کند. */
+      if (!drag.active) {
+        return;
+      }
+
+      const dropBefore = findDropBefore(event.clientY, drag.groupId);
+      const remaining = sidebarLayout.groupOrder.filter(
+        (id) => id !== drag.groupId,
+      );
+      const target = dropBefore
+        ? remaining.indexOf(dropBefore)
+        : remaining.length;
+
+      setDraggingGroup(null);
+      setGroupDropBefore(null);
+
+      moveGroupTo(drag.groupId, target < 0 ? remaining.length : target);
+    };
+
+    const handlePointerCancel = () => {
+      clearDrag();
+    };
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && groupDragRef.current?.active) {
+        clearDrag();
+      }
+    };
+
+    window.addEventListener("pointermove", handlePointerMove);
+    window.addEventListener("pointerup", handlePointerUp);
+    window.addEventListener("pointercancel", handlePointerCancel);
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("pointerup", handlePointerUp);
+      window.removeEventListener("pointercancel", handlePointerCancel);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [sidebarLayout]);
+
   /** بستن/باز کردن گروه‌ها (dropdown)؛ وضعیت برای همین مدیر ذخیره می‌شود. */
   const toggleGroupCollapsed = (containerId: AdminSidebarContainerId) => {
     const collapsed = sidebarLayout.collapsed.includes(containerId)
@@ -545,10 +576,31 @@ function AdminLayout() {
       : location.pathname === item.to ||
         location.pathname.startsWith(`${item.to}/`);
 
-  const handleNavDragStart = (event: DragEvent<HTMLElement>, path: string) => {
-    event.dataTransfer.effectAllowed = "move";
-    event.dataTransfer.setData("text/plain", path);
-    setDraggingPath(path);
+  const handleNavDragStart = (
+    event: DragEvent<HTMLElement>,
+    item: (typeof visibleNavItems)[number],
+  ) => {
+    /*
+     * هر ردیف منو را می‌توان با گرفتن خودِ نوشته‌اش کشید:
+     * - رها کردن داخل سایدبار ⇒ جابه‌جایی آیتم در منو
+     * - رها کردن روی «نمای کلی» ⇒ ساخت میان‌بر همان بخش
+     * برای همین هر دو اثر move و copy مجاز اعلام می‌شود.
+     */
+    event.dataTransfer.effectAllowed = "copyMove";
+    event.dataTransfer.setData("text/plain", item.to);
+    event.dataTransfer.setData(
+      DASHBOARD_SHORTCUT_MIME,
+      JSON.stringify({ path: item.to, label: item.label }),
+    );
+    /* لینک داخل ردیف نباید آدرس صفحه را جای دادهٔ منو بگذارد */
+    event.dataTransfer.clearData("text/uri-list");
+
+    groupDragRef.current = null;
+    setDraggingGroup(null);
+    setGroupDropBefore(null);
+    draggingPathRef.current = item.to;
+    setDraggingPath(item.to);
+    setDropTarget(null);
   };
 
   const handleNavDragOver = (
@@ -556,7 +608,7 @@ function AdminLayout() {
     containerId: AdminSidebarContainerId,
     index: number,
   ) => {
-    if (!draggingPath) {
+    if (!draggingPathRef.current || draggingGroup) {
       return;
     }
 
@@ -574,9 +626,13 @@ function AdminLayout() {
     containerId: AdminSidebarContainerId,
     index: number,
   ) => {
+    if (draggingGroup) {
+      return;
+    }
+
     event.preventDefault();
 
-    const path = event.dataTransfer.getData("text/plain") || draggingPath;
+    const path = draggingPathRef.current;
     const targetIndex =
       dropTarget && dropTarget.containerId === containerId
         ? dropTarget.index
@@ -586,11 +642,13 @@ function AdminLayout() {
       moveNavItem(path, containerId, targetIndex);
     }
 
+    draggingPathRef.current = null;
     setDraggingPath(null);
     setDropTarget(null);
   };
 
   const handleNavDragEnd = () => {
+    draggingPathRef.current = null;
     setDraggingPath(null);
     setDropTarget(null);
   };
@@ -601,7 +659,11 @@ function AdminLayout() {
 
   const toggleLayoutEditing = () => {
     setLayoutEditing((editing) => !editing);
+    draggingPathRef.current = null;
     setDraggingPath(null);
+    groupDragRef.current = null;
+    setDraggingGroup(null);
+    setGroupDropBefore(null);
     setDropTarget(null);
   };
 
@@ -637,7 +699,6 @@ function AdminLayout() {
 
       if (event.key === "Escape") {
         setSearchOpen(false);
-        setNotificationsOpen(false);
       }
     };
 
@@ -696,14 +757,23 @@ function AdminLayout() {
 
         <div
           className={`admin-nav-row ${draggingPath === item.to ? "is-dragging" : ""}`}
-          draggable={layoutEditing}
-          onDragStart={(event) => handleNavDragStart(event, item.to)}
+          draggable
+          onDragStart={(event) => handleNavDragStart(event, item)}
           onDragEnd={handleNavDragEnd}
           onDragOver={(event) => {
+            /* هنگام کشیدن گروه (pointer) اجازه می‌دهیم رویداد به گروه برسد */
+            if (!draggingPathRef.current) {
+              return;
+            }
+
             event.stopPropagation();
             handleNavDragOver(event, containerId, index);
           }}
           onDrop={(event) => {
+            if (!draggingPathRef.current) {
+              return;
+            }
+
             event.stopPropagation();
             handleNavDrop(event, containerId, index);
           }}
@@ -771,10 +841,6 @@ function AdminLayout() {
               >
                 {isPinned ? <PinOff size={13} /> : <Pin size={13} />}
               </button>
-
-              <span className="admin-nav-grip" aria-hidden="true">
-                <GripVertical size={13} />
-              </span>
             </div>
           ) : (
             isPinned && (
@@ -997,13 +1063,38 @@ function AdminLayout() {
           font-size: 13px;
           text-align: center;
         }
+        .admin-notification-anchor {
+          position: relative;
+          display: inline-flex;
+        }
+        .admin-notification-badge {
+          position: absolute;
+          top: -5px;
+          inset-inline-end: -5px;
+          min-width: 17px;
+          height: 17px;
+          padding: 0 4px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          color: #fff;
+          background: #d1453b;
+          border: 2px solid #fff;
+          border-radius: 999px;
+          font-size: 9px;
+          font-weight: 800;
+          line-height: 1;
+        }
         .admin-notification-popover {
           position: absolute;
           z-index: 100;
           top: calc(100% + 10px);
           left: 0;
-          width: min(290px, calc(100vw - 40px));
-          padding: 16px;
+          width: min(340px, calc(100vw - 40px));
+          max-height: min(460px, 72vh);
+          display: flex;
+          flex-direction: column;
+          overflow: hidden;
           color: #526153;
           background: #fff;
           border: 1px solid #e8eee5;
@@ -1012,11 +1103,151 @@ function AdminLayout() {
           font-size: 12px;
           line-height: 1.9;
         }
+        .admin-notification-head {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+          padding: 12px 14px;
+          border-bottom: 1px solid #eef2ec;
+        }
         .admin-notification-title {
-          margin-bottom: 6px;
           color: #263a29;
           font-size: 13px;
           font-weight: 800;
+        }
+        .admin-notification-mark-all {
+          display: inline-flex;
+          align-items: center;
+          gap: 5px;
+          padding: 5px 9px;
+          color: #4d7551;
+          background: #f1f6ee;
+          border: 1px solid #dde8d7;
+          border-radius: 9px;
+          font: inherit;
+          font-size: 11px;
+          font-weight: 700;
+          cursor: pointer;
+        }
+        .admin-notification-mark-all:disabled {
+          opacity: 0.55;
+          cursor: not-allowed;
+        }
+        .admin-notification-list {
+          flex: 1;
+          margin: 0;
+          padding: 0;
+          overflow-y: auto;
+          list-style: none;
+        }
+        .admin-notification-item {
+          display: flex;
+          align-items: flex-start;
+          gap: 10px;
+          width: 100%;
+          padding: 11px 14px;
+          color: #4d5c4f;
+          background: #fff;
+          border: 0;
+          border-bottom: 1px solid #f2f5f0;
+          cursor: pointer;
+          text-align: right;
+          font: inherit;
+          font-size: 12px;
+        }
+        .admin-notification-item:last-child {
+          border-bottom: 0;
+        }
+        .admin-notification-item:hover {
+          background: #f7faf5;
+        }
+        .admin-notification-item.is-unread {
+          background: #f3f8ef;
+        }
+        .admin-notification-item:disabled {
+          opacity: 0.65;
+          cursor: progress;
+        }
+        .admin-notification-icon {
+          flex: 0 0 auto;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          width: 30px;
+          height: 30px;
+          margin-top: 2px;
+          color: #507b53;
+          background: #eaf2e5;
+          border-radius: 10px;
+        }
+        .admin-notification-icon.is-order {
+          color: #1f6f4a;
+          background: #e3f3e9;
+        }
+        .admin-notification-icon.is-order_status {
+          color: #2f6a8f;
+          background: #e5f0f7;
+        }
+        .admin-notification-icon.is-support {
+          color: #8a6a1f;
+          background: #f8f1dc;
+        }
+        .admin-notification-icon.is-return {
+          color: #8f4a3a;
+          background: #f8ebe6;
+        }
+        .admin-notification-copy {
+          display: flex;
+          flex-direction: column;
+          gap: 1px;
+          min-width: 0;
+        }
+        .admin-notification-item-title {
+          color: #2b3d2e;
+          font-size: 12px;
+          font-weight: 800;
+          line-height: 1.7;
+        }
+        .admin-notification-body {
+          color: #667566;
+          font-size: 11px;
+          line-height: 1.75;
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+        }
+        .admin-notification-time {
+          color: #93a093;
+          font-size: 10px;
+        }
+        .admin-notification-dot {
+          flex: 0 0 auto;
+          width: 7px;
+          height: 7px;
+          margin-top: 8px;
+          margin-inline-start: auto;
+          background: #4d8b52;
+          border-radius: 999px;
+        }
+        .admin-notification-state {
+          padding: 22px 16px;
+          color: #829084;
+          font-size: 12px;
+          text-align: center;
+        }
+        .admin-notification-state.is-error {
+          color: #b42318;
+          background: #fdf3f2;
+        }
+        .admin-notification-spin {
+          animation: admin-notification-spin 0.9s linear infinite;
+        }
+        @keyframes admin-notification-spin {
+          to {
+            transform: rotate(360deg);
+          }
         }
         @media (max-width: 900px) {
           .admin-topbar {
@@ -1254,9 +1485,10 @@ function AdminLayout() {
 
           {layoutEditing && (
             <p className="admin-nav-tools-hint">
-              آیتم‌ها را بکشید یا با ↑ ↓ جابه‌جا کنید؛ با پین هم به «دسترسی
-              سریع» می‌آیند. برای خلوت شدن منو روی عنوان هر گروه بزنید تا بسته
-              شود.
+              برای جابه‌جایی، خودِ نوشتهٔ هر بخش یا عنوان هر گروه را بگیرید و
+              بکشید (یا از ↑ ↓ استفاده کنید)؛ با پین هم بخش‌ها به «دسترسی
+              سریع» می‌آیند. با کلیک روی عنوان هر گروه هم می‌توانید آن را
+              ببندید.
             </p>
           )}
 
@@ -1342,54 +1574,113 @@ function AdminLayout() {
             </div>
           )}
 
-          {layoutSections.map((section) => {
+          {layoutSections.map((section, sectionIndex) => {
             const SectionIcon = section.icon;
 
             return (
-              <div
-                className={`admin-nav-group ${
-                  isGroupCollapsed(section.id) ? "is-collapsed" : ""
-                } ${
-                  dropTarget?.containerId === section.id ? "is-drop-active" : ""
-                }`}
-                key={section.id}
-                onDragOver={(event) =>
-                  handleNavDragOver(event, section.id, section.items.length)
-                }
-                onDrop={(event) =>
-                  handleNavDrop(event, section.id, section.items.length)
-                }
-              >
-                <button
-                  type="button"
-                  className="admin-nav-heading admin-nav-heading-toggle"
-                  onClick={() => toggleGroupCollapsed(section.id)}
-                  aria-expanded={!isGroupCollapsed(section.id)}
-                  aria-controls={`admin-nav-panel-${section.id}`}
-                  title={`باز و بسته کردن ${section.label}`}
+              <Fragment key={section.id}>
+                <div
+                  className={`admin-nav-group ${
+                    isGroupCollapsed(section.id) ? "is-collapsed" : ""
+                  } ${
+                    dropTarget?.containerId === section.id
+                      ? "is-drop-active"
+                      : ""
+                  } ${draggingGroup === section.id ? "is-group-dragging" : ""} ${
+                    draggingGroup && groupDropBefore === section.id
+                      ? "is-drop-before"
+                      : ""
+                  } ${
+                    draggingGroup &&
+                    groupDropBefore === null &&
+                    sectionIndex === layoutSections.length - 1
+                      ? "is-drop-after"
+                      : ""
+                  }`}
+                  key={section.id}
+                  onDragOver={(event) =>
+                    handleNavDragOver(event, section.id, section.items.length)
+                  }
+                  onDrop={(event) =>
+                    handleNavDrop(event, section.id, section.items.length)
+                  }
                 >
-                  <span className="admin-nav-heading-icon">
-                    <SectionIcon size={13} strokeWidth={2.1} />
-                  </span>
-                  <span className="admin-nav-heading-text">{section.label}</span>
+                <div
+                  className="admin-nav-group-head"
+                  data-admin-group-head={section.id}
+                >
+                  <button
+                    type="button"
+                    className="admin-nav-heading admin-nav-heading-toggle"
+                    onPointerDown={(event) =>
+                      handleGroupPointerDown(event, section.id)
+                    }
+                    onClick={() => {
+                      /* بعد از کشیدن عنوان، کلیک پایانی گروه را نبندد */
+                      if (suppressGroupClickRef.current) {
+                        suppressGroupClickRef.current = false;
 
-                  {isGroupCollapsed(section.id) &&
-                    section.items.some(isNavItemActive) && (
-                      <span
-                        className="admin-nav-heading-active-dot"
-                        title="صفحهٔ فعلی در این بخش است"
-                      />
-                    )}
+                        return;
+                      }
 
-                  <span
-                    className={`admin-nav-heading-chevron ${
-                      isGroupCollapsed(section.id) ? "is-collapsed" : ""
-                    }`}
-                    aria-hidden="true"
+                      toggleGroupCollapsed(section.id);
+                    }}
+                    aria-expanded={!isGroupCollapsed(section.id)}
+                    aria-controls={`admin-nav-panel-${section.id}`}
+                    title={`کشیدن برای جابه‌جایی، کلیک برای بستن ${section.label}`}
                   >
-                    <ChevronDown size={13} strokeWidth={2.4} />
-                  </span>
-                </button>
+                    <span className="admin-nav-heading-icon">
+                      <SectionIcon size={13} strokeWidth={2.1} />
+                    </span>
+                    <span className="admin-nav-heading-text">
+                      {section.label}
+                    </span>
+
+                    {isGroupCollapsed(section.id) &&
+                      section.items.some(isNavItemActive) && (
+                        <span
+                          className="admin-nav-heading-active-dot"
+                          title="صفحهٔ فعلی در این بخش است"
+                        />
+                      )}
+
+                    <span
+                      className={`admin-nav-heading-chevron ${
+                        isGroupCollapsed(section.id) ? "is-collapsed" : ""
+                      }`}
+                      aria-hidden="true"
+                    >
+                      <ChevronDown size={13} strokeWidth={2.4} />
+                    </span>
+                  </button>
+
+                  {/* در حالت «چیدمان» دکمه‌های ↑ ↓ برای جابه‌جایی گروه */}
+                  {layoutEditing && (
+                    <div className="admin-nav-group-actions">
+                      <button
+                        type="button"
+                        className="admin-nav-action"
+                        onClick={() => moveGroupByOffset(section.id, -1)}
+                        disabled={sectionIndex === 0}
+                        title="انتقال گروه به بالا"
+                        aria-label={`انتقال گروه ${section.label} به بالا`}
+                      >
+                        <ArrowUp size={13} />
+                      </button>
+
+                      <button
+                        type="button"
+                        className="admin-nav-action"
+                        onClick={() => moveGroupByOffset(section.id, 1)}
+                        disabled={sectionIndex === layoutSections.length - 1}
+                        title="انتقال گروه به پایین"
+                        aria-label={`انتقال گروه ${section.label} به پایین`}
+                      >
+                        <ArrowDown size={13} />
+                      </button>
+                    </div>
+                  )}
+                </div>
 
                 {!isGroupCollapsed(section.id) && (
                   <div
@@ -1406,7 +1697,8 @@ function AdminLayout() {
                     )}
                   </div>
                 )}
-              </div>
+                </div>
+              </Fragment>
             );
           })}
         </nav>
@@ -1499,24 +1791,7 @@ function AdminLayout() {
                 </span>
               </button>
 
-              <div style={{ position: "relative" }}>
-                <button
-                  type="button"
-                  className="admin-topbar-icon-button"
-                  onClick={() => setNotificationsOpen((open) => !open)}
-                  aria-label="اعلان‌ها"
-                  aria-expanded={notificationsOpen}
-                >
-                  <Bell size={18} />
-                </button>
-
-                {notificationsOpen && (
-                  <div className="admin-notification-popover" role="status">
-                    <div className="admin-notification-title">اعلان‌ها</div>
-                    فعلاً اعلان جدیدی برای نمایش وجود ندارد.
-                  </div>
-                )}
-              </div>
+              <AdminNotificationBell />
             </div>
 
             <div className="admin-topbar-date">

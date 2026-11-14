@@ -1,6 +1,6 @@
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import {
-  FileText,
+  Eye,
   Loader2,
   Pencil,
   Plus,
@@ -8,6 +8,10 @@ import {
   Search,
   Trash2,
 } from "lucide-react";
+
+import PagePreviewDialog, {
+  type PagePreviewData,
+} from "./PagePreviewDialog";
 
 import {
   createPage,
@@ -100,6 +104,12 @@ function AdminPagesPanel() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState<PageForm>(initialForm);
 
+  /** پنجرهٔ پیش‌نمایش صفحه (متن کامل از API یا متن ذخیره‌نشدهٔ فرم). */
+  const [preview, setPreview] = useState<{
+    data: PagePreviewData | null;
+    loading: boolean;
+  } | null>(null);
+
   const formRef = useRef<HTMLDivElement>(null);
 
   const loadPages = useCallback(async () => {
@@ -181,6 +191,44 @@ function AdminPagesPanel() {
     } finally {
       setLoadingEditor(false);
     }
+  }
+
+  /** پیش‌نمایش یک صفحه از فهرست؛ متن کامل از API گرفته می‌شود. */
+  async function openPreview(target: AdminPage) {
+    setError("");
+    setPreview({ data: null, loading: true });
+
+    try {
+      const detail = await fetchAdminPage(target.id);
+
+      setPreview({
+        data: {
+          title: detail.title,
+          slug: detail.slug,
+          excerpt: detail.excerpt,
+          content: detail.content,
+          isPublished: detail.is_published,
+        },
+        loading: false,
+      });
+    } catch (err) {
+      setPreview(null);
+      setError(getAdminErrorMessage(err));
+    }
+  }
+
+  /** پیش‌نمایش متن فعلی فرم، حتی پیش از ذخیره. */
+  function previewForm() {
+    setPreview({
+      data: {
+        title: form.title,
+        slug: form.slug,
+        excerpt: form.excerpt,
+        content: form.content,
+        isPublished: form.is_published,
+      },
+      loading: false,
+    });
   }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -394,14 +442,29 @@ function AdminPagesPanel() {
               </p>
             </div>
 
-            <button
-              type="button"
-              className="admin-btn admin-btn-sm"
-              onClick={resetForm}
-              disabled={saving}
-            >
-              بستن
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                className="admin-btn admin-btn-sm"
+                onClick={previewForm}
+                disabled={loadingEditor}
+                title="دیدن خروجی نهایی صفحه با متن فعلی فرم"
+              >
+                <span className="inline-flex items-center gap-1.5">
+                  <Eye size={13} aria-hidden="true" />
+                  پیش‌نمایش
+                </span>
+              </button>
+
+              <button
+                type="button"
+                className="admin-btn admin-btn-sm"
+                onClick={resetForm}
+                disabled={saving}
+              >
+                بستن
+              </button>
+            </div>
           </div>
 
           {loadingEditor ? (
@@ -671,17 +734,16 @@ function AdminPagesPanel() {
                             ویرایش
                           </button>
 
-                          {item.is_published && (
-                            <a
-                              href={`/pages/${encodeURIComponent(item.slug)}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="admin-btn admin-btn-sm"
-                            >
-                              <FileText size={13} aria-hidden="true" />
-                              مشاهده
-                            </a>
-                          )}
+                          <button
+                            type="button"
+                            className="admin-btn admin-btn-sm"
+                            onClick={() => void openPreview(item)}
+                            disabled={loadingEditor || busy}
+                            title="پیش‌نمایش صفحه پیش از انتشار"
+                          >
+                            <Eye size={13} aria-hidden="true" />
+                            پیش‌نمایش
+                          </button>
 
                           <button
                             type="button"
@@ -731,6 +793,15 @@ function AdminPagesPanel() {
           </div>
         )}
       </div>
+
+      {/* پنجرهٔ پیش‌نمایش صفحه (از فهرست یا از فرم) */}
+      {preview && (
+        <PagePreviewDialog
+          page={preview.data}
+          loading={preview.loading}
+          onClose={() => setPreview(null)}
+        />
+      )}
     </div>
   );
 }

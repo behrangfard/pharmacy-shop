@@ -14,6 +14,7 @@ export const ADMIN_SIDEBAR_GROUP_IDS = [
   "store",
   "orders",
   "reports",
+  "finance",
 ] as const;
 
 export type AdminSidebarGroupId = (typeof ADMIN_SIDEBAR_GROUP_IDS)[number];
@@ -69,6 +70,8 @@ export const ADMIN_SIDEBAR_DEFAULT_GROUPS: Record<
     "/admin/brands",
     "/admin/content",
     "/admin/announcement-bar",
+    "/admin/stories",
+    "/admin/popups",
     "/admin/articles",
     "/admin/reviews",
   ],
@@ -87,11 +90,15 @@ export const ADMIN_SIDEBAR_DEFAULT_GROUPS: Record<
     "/admin/admins",
     "/admin/settings",
     "/admin/trust-badges",
+    "/admin/header-footer",
   ],
+  finance: ["/admin/accounting"],
 };
 
 export type AdminSidebarLayout = {
   version: number;
+  /** ترتیب نمایش گروه‌ها در منو (قابل جابه‌جایی با ماوس). */
+  groupOrder: AdminSidebarGroupId[];
   /** آیتم‌های پین‌شده به ترتیب نمایش در «دسترسی سریع». */
   pinned: string[];
   /** گروه‌هایی که جمع‌شده (dropdown بسته) هستند. */
@@ -124,6 +131,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 export function createDefaultAdminSidebarLayout(): AdminSidebarLayout {
   return {
     version: 1,
+    groupOrder: [...ADMIN_SIDEBAR_GROUP_IDS],
     pinned: [],
     collapsed: [],
     width: ADMIN_SIDEBAR_WIDTH_DEFAULT,
@@ -133,6 +141,7 @@ export function createDefaultAdminSidebarLayout(): AdminSidebarLayout {
       store: [...ADMIN_SIDEBAR_DEFAULT_GROUPS.store],
       orders: [...ADMIN_SIDEBAR_DEFAULT_GROUPS.orders],
       reports: [...ADMIN_SIDEBAR_DEFAULT_GROUPS.reports],
+      finance: [...ADMIN_SIDEBAR_DEFAULT_GROUPS.finance],
     },
   };
 }
@@ -162,11 +171,12 @@ export function normalizeAdminSidebarLayout(
 
   const layout: AdminSidebarLayout = {
     version: 1,
+    groupOrder: [...ADMIN_SIDEBAR_GROUP_IDS],
     pinned: [],
     collapsed: [],
     width: ADMIN_SIDEBAR_WIDTH_DEFAULT,
     density: "normal",
-    groups: { general: [], store: [], orders: [], reports: [] },
+    groups: { general: [], store: [], orders: [], reports: [], finance: [] },
   };
 
   const storedGroups =
@@ -199,6 +209,19 @@ export function normalizeAdminSidebarLayout(
       used.add(path);
       layout.groups[groupId].push(path);
     });
+  });
+
+  /*
+   * ایمنی: اگر آیتمی از منو در گروه‌های پیش‌فرض جا افتاده باشد، به‌جای ناپدید
+   * شدن کامل از سایدبار، در گروه پیش‌فرض خودش (یا «عمومی») نمایش داده می‌شود.
+   */
+  knownPaths.forEach((path) => {
+    if (used.has(path)) {
+      return;
+    }
+
+    used.add(path);
+    layout.groups[defaultSidebarGroupOf(path)].push(path);
   });
 
   const rawPinned = isRecord(stored) && Array.isArray(stored.pinned) ? stored.pinned : [];
@@ -246,6 +269,33 @@ export function normalizeAdminSidebarLayout(
     (ADMIN_SIDEBAR_DENSITIES as readonly string[]).includes(storedDensity)
       ? (storedDensity as AdminSidebarDensity)
       : "normal";
+
+  /* ترتیب گروه‌ها؛ گروه‌های جدید (یا حذف‌شده از چیدمان) به انتها اضافه می‌شوند */
+  const rawGroupOrder =
+    isRecord(stored) && Array.isArray(stored.groupOrder)
+      ? stored.groupOrder
+      : [];
+  const groupOrder: AdminSidebarGroupId[] = [];
+
+  rawGroupOrder.forEach((value) => {
+    if (
+      typeof value !== "string" ||
+      !(ADMIN_SIDEBAR_GROUP_IDS as readonly string[]).includes(value) ||
+      groupOrder.includes(value as AdminSidebarGroupId)
+    ) {
+      return;
+    }
+
+    groupOrder.push(value as AdminSidebarGroupId);
+  });
+
+  ADMIN_SIDEBAR_GROUP_IDS.forEach((groupId) => {
+    if (!groupOrder.includes(groupId)) {
+      groupOrder.push(groupId);
+    }
+  });
+
+  layout.groupOrder = groupOrder;
 
   return layout;
 }

@@ -20,6 +20,7 @@ class Product extends Model
         'short_description',
         'description',
         'price',
+        'cost_price',
         'compare_price',
         'discount_percent',
         'stock',
@@ -38,6 +39,7 @@ class Product extends Model
 
     protected $casts = [
         'price' => 'decimal:2',
+        'cost_price' => 'decimal:2',
         'compare_price' => 'decimal:2',
         'discount_percent' => 'decimal:2',
         'weight' => 'decimal:2',

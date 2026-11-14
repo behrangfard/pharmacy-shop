@@ -36,7 +36,7 @@ interface ButtonLinkProps extends LinkProps {
 }
 
 const baseClasses =
-  "inline-flex flex-row items-center justify-center gap-2 rounded-xl font-bold transition-all duration-200 select-none whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[0.98]";
+  "inline-flex max-w-full flex-row items-center justify-center gap-2 rounded-xl text-center font-bold transition-all duration-200 select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 active:scale-[0.98]";
 
 const variantClasses = {
   primary:
@@ -116,7 +116,7 @@ export default function Button({
         )
       )}
 
-      <span className="inline-flex flex-row items-center gap-2 whitespace-nowrap">
+      <span className="inline-flex min-w-0 flex-row flex-wrap items-center justify-center gap-2 break-words">
         {children}
       </span>
     </button>
@@ -143,7 +143,7 @@ export function ButtonLink({
         ${className}
       `}
     >
-      <span className="inline-flex flex-row items-center gap-2 whitespace-nowrap">
+      <span className="inline-flex min-w-0 flex-row flex-wrap items-center justify-center gap-2 break-words">
         {children}
       </span>
 

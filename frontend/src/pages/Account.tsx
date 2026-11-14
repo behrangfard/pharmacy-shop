@@ -71,6 +71,7 @@ type Order = {
   total: string | number;
   status: string;
   payment_status: string;
+  payment_method?: string | null;
   recipient_name: string;
   phone: string;
   address: string;
@@ -932,9 +933,11 @@ function Account() {
                     /*
                      * سفارش پرداخت‌نشده (و لغو‌نشده) می‌تواند مرحلهٔ پرداخت را
                      * ادامه دهد؛ همان شرطی که سرور در pay() بررسی می‌کند.
+                     * سفارش «پرداخت در محل» مرحلهٔ پرداخت آنلاین ندارد.
                      */
                     const canContinuePayment =
                       order.payment_status === "unpaid" &&
+                      order.payment_method !== "cod" &&
                       !["cancelled", "canceled"].includes(order.status);
 
                     // لغو سفارش فقط تا پیش از ارسال و برای سفارش پرداخت‌نشده.
@@ -1140,6 +1143,12 @@ function Account() {
 
                                 <p className="font-bold text-ink mt-1">
                                   {getPaymentStatus(order.payment_status)}
+                                </p>
+
+                                <p className="text-[11px] text-muted-soft mt-1">
+                                  {order.payment_method === "cod"
+                                    ? "پرداخت در محل"
+                                    : "پرداخت آنلاین"}
                                 </p>
                               </div>
                             </div>

@@ -2,10 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
-  Check,
   ChevronDown,
   Filter,
-  Loader2,
   Search,
   SlidersHorizontal,
   Tag,
@@ -15,6 +13,9 @@ import {
 import Layout from "../components/Layout";
 import BannerImage from "../components/BannerImage";
 import ProductCard from "../components/ProductCard";
+import ProductFilterPanel, {
+  type FilterFlagKey,
+} from "../components/ProductFilterPanel";
 import { api } from "../services/api";
 import { fetchBrands, getCachedBrands, type StorefrontBrand } from "../services/brands";
 import { fetchCategories, getCachedCategories } from "../services/categories";
@@ -939,6 +940,62 @@ function Products() {
     sort !== "newest" ||
     activeFilterCount > 0;
 
+  /** یکی از چهار کلید «ویژگی‌ها» را روشن/خاموش می‌کند. */
+  const toggleFilterFlag = (key: FilterFlagKey) => {
+    if (key === "inStock") {
+      setInStockOnly((value) => !value);
+    } else if (key === "discount") {
+      setDiscountOnly((value) => !value);
+    } else if (key === "isNew") {
+      setNewOnly((value) => !value);
+    } else {
+      setFeaturedOnly((value) => !value);
+    }
+  };
+
+  /*
+   * پراپ‌های مشترک پنل فیلتر؛ سایدبار دسکتاپ و کشوی موبایل هر دو همین پنل
+   * را رندر می‌کنند تا چیدمان و فاصله‌ها دقیقاً یکسان بماند.
+   */
+  const filterPanelProps = {
+    categories,
+    categoriesLoading,
+    selectedCategory,
+    onSelectCategory: setSelectedCategory,
+    brands: brandOptions,
+    brandsLoading,
+    selectedBrands,
+    onToggleBrand: toggleBrand,
+    onClearBrands: () => setSelectedBrands([]),
+    sizes: sizeOptions,
+    selectedSizes,
+    onToggleSize: toggleSize,
+    priceMinBound: facets?.price.min ?? null,
+    priceMaxBound: facets?.price.max ?? null,
+    minPriceDraft,
+    maxPriceDraft,
+    onChangeMinPriceDraft: setMinPriceDraft,
+    onChangeMaxPriceDraft: setMaxPriceDraft,
+    onApplyPriceRange: applyPriceRange,
+    priceError,
+    pricePresets,
+    activeMinPrice: minPrice,
+    activeMaxPrice: maxPrice,
+    flags: {
+      inStock: inStockOnly,
+      discount: discountOnly,
+      isNew: newOnly,
+      featured: featuredOnly,
+    },
+    onToggleFlag: toggleFilterFlag,
+    sort,
+    sortOptions: SORT_OPTIONS,
+    onSortChange: setSort,
+    hasFilters,
+    onClearFilters: clearFilters,
+    resultCount: totalProducts,
+  };
+
   return (
     <Layout>
       <main className="min-h-screen bg-cream">
@@ -993,368 +1050,33 @@ function Products() {
         <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
           <div className="flex flex-col gap-6 lg:flex-row">
             <aside className="hidden w-64 flex-shrink-0 lg:block">
-              <div className="sticky top-6 max-h-[calc(100vh-3rem)] overflow-y-auto rounded-3xl border border-line bg-white p-5 shadow-sm">
-                <div className="flex items-center gap-3 border-b border-line pb-5">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-100 text-brand-550">
-                    <SlidersHorizontal size={19} />
+              <div className="sticky top-6 max-h-[calc(100vh-3rem)] overflow-y-auto overscroll-contain rounded-2xl border border-line bg-white p-3.5 shadow-sm">
+                <div className="mb-3 flex items-center gap-2 border-b border-line pb-3">
+                  <div className="flex h-8 w-8 flex-none items-center justify-center rounded-lg bg-brand-100 text-brand-550">
+                    <SlidersHorizontal size={16} />
                   </div>
 
-                  <div>
-                    <h2 className="font-black">فیلتر محصولات</h2>
-                    <p className="mt-1 text-xs text-muted-soft">انتخاب سریع</p>
-                  </div>
-                </div>
-
-                <div className="pt-5">
-                  <div className="mb-3 flex items-center justify-between">
-                    <h3 className="text-sm font-black">دسته‌بندی</h3>
-
-                    {selectedCategory && (
-                      <button
-                        type="button"
-                        onClick={() => setSelectedCategory("")}
-                        className="text-xs font-bold text-brand-550 hover:text-brand-700"
-                      >
-                        حذف
-                      </button>
-                    )}
-                  </div>
-
-                  {categoriesLoading ? (
-                    <div className="flex items-center justify-center py-5">
-                      <Loader2
-                        size={20}
-                        className="animate-spin text-brand-550"
-                      />
-                    </div>
-                  ) : (
-                    <div className="space-y-1.5">
-                      <button
-                        type="button"
-                        onClick={() => setSelectedCategory("")}
-                        className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-right text-sm font-bold transition ${
-                          !selectedCategory
-                            ? "bg-brand-100 text-brand-700"
-                            : "text-muted hover:bg-brand-100 hover:text-brand-700"
-                        }`}
-                      >
-                        <span>همه محصولات</span>
-                      </button>
-
-                      {categories.map((category) => (
-                        <button
-                          key={category.id}
-                          type="button"
-                          onClick={() => setSelectedCategory(category.slug)}
-                          className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-right text-sm font-bold transition ${
-                            selectedCategory === category.slug
-                              ? "bg-brand-100 text-brand-700"
-                              : "text-muted hover:bg-brand-100 hover:text-brand-700"
-                          }`}
-                        >
-                          <span>{category.name}</span>
-
-                          {category.products_count !== undefined && (
-                            <span className="text-xs text-muted-soft">
-                              {category.products_count.toLocaleString("fa-IR")}
-                            </span>
-                          )}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                <div className="mt-6 border-t border-line pt-5">
-                  <div className="mb-3 flex items-center justify-between">
-                    <h3 className="text-sm font-black">برند</h3>
-
-                    {selectedBrands.length > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => setSelectedBrands([])}
-                        className="text-xs font-bold text-brand-550 hover:text-brand-700"
-                      >
-                        حذف
-                      </button>
-                    )}
-                  </div>
-
-                  {brandsLoading ? (
-                    <div className="flex items-center justify-center py-5">
-                      <Loader2
-                        size={20}
-                        className="animate-spin text-brand-550"
-                      />
-                    </div>
-                  ) : brandOptions.length === 0 ? (
-                    <p className="text-xs leading-6 text-muted-soft">
-                      برندی برای نمایش نیست.
+                  <div className="min-w-0 flex-1">
+                    <h2 className="text-sm font-black leading-5">
+                      فیلتر محصولات
+                    </h2>
+                    <p className="text-[10px] text-muted-soft">
+                      انتخاب سریع و دقیق
                     </p>
-                  ) : (
-                    <div className="max-h-52 space-y-1 overflow-y-auto pl-1">
-                      {brandOptions.map((brand) => {
-                        const checked = selectedBrands.includes(brand.slug);
-
-                        return (
-                          <button
-                            key={brand.id}
-                            type="button"
-                            onClick={() => toggleBrand(brand.slug)}
-                            aria-pressed={checked}
-                            className="flex w-full items-center justify-between gap-2 rounded-xl px-2 py-2 text-right transition hover:bg-brand-50"
-                          >
-                            <span className="flex items-center gap-2">
-                              <span
-                                className={`flex h-5 w-5 items-center justify-center rounded-md border transition ${
-                                  checked
-                                    ? "border-brand-500 bg-brand-500 text-white"
-                                    : "border-line-strong bg-white text-transparent"
-                                }`}
-                              >
-                                <Check size={13} strokeWidth={3} />
-                              </span>
-
-                              <span
-                                className={`text-sm ${
-                                  checked
-                                    ? "font-bold text-brand-700"
-                                    : "font-medium text-muted"
-                                }`}
-                              >
-                                {brand.name}
-                              </span>
-                            </span>
-
-                            {brand.products_count !== undefined && (
-                              <span className="text-xs text-muted-soft">
-                                {brand.products_count.toLocaleString("fa-IR")}
-                              </span>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-
-                <div className="mt-6 border-t border-line pt-5">
-                  <h3 className="mb-3 text-sm font-black">سایز</h3>
-
-                  {sizeOptions.length === 0 ? (
-                    <p className="text-xs leading-6 text-muted-soft">
-                      {facets === null
-                        ? "در حال بارگذاری…"
-                        : "سایزی برای نمایش نیست."}
-                    </p>
-                  ) : (
-                    <div className="flex flex-wrap gap-2">
-                      {sizeOptions.map((size) => {
-                        const checked = selectedSizes.includes(size.value);
-
-                        return (
-                          <button
-                            key={size.value}
-                            type="button"
-                            onClick={() => toggleSize(size.value)}
-                            aria-pressed={checked}
-                            title={`${size.count.toLocaleString("fa-IR")} محصول`}
-                            className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-bold transition ${
-                              checked
-                                ? "bg-brand-500 text-white"
-                                : "bg-cream text-muted hover:bg-brand-100 hover:text-brand-700"
-                            }`}
-                          >
-                            {size.value}
-                            <span
-                              className={`text-[10px] ${
-                                checked ? "text-white/70" : "text-muted-soft"
-                              }`}
-                            >
-                              {size.count.toLocaleString("fa-IR")}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-
-                <div className="mt-6 border-t border-line pt-5">
-                  <h3 className="mb-3 text-sm font-black">
-                    محدودهٔ قیمت (تومان)
-                  </h3>
-
-                  <p className="mb-3 text-xs text-muted-soft">
-                    {facets?.price.min != null && facets.price.max != null
-                      ? `بازهٔ فعلی: ${formatFilterPrice(
-                          String(facets.price.min),
-                        )} تا ${formatFilterPrice(
-                          String(facets.price.max),
-                        )} تومان`
-                      : "برای محدودکردن نتایج، بازه را وارد کنید."}
-                  </p>
-
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={minPriceDraft}
-                      onChange={(event) => setMinPriceDraft(event.target.value)}
-                      onBlur={() => applyPriceRange()}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter") {
-                          applyPriceRange();
-                        }
-                      }}
-                      placeholder="از"
-                      aria-label="کمترین قیمت"
-                      className="w-full rounded-xl border border-line bg-cream px-3 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:bg-white"
-                    />
-
-                    <span className="text-line-strong">—</span>
-
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      value={maxPriceDraft}
-                      onChange={(event) => setMaxPriceDraft(event.target.value)}
-                      onBlur={() => applyPriceRange()}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter") {
-                          applyPriceRange();
-                        }
-                      }}
-                      placeholder="تا"
-                      aria-label="بیشترین قیمت"
-                      className="w-full rounded-xl border border-line bg-cream px-3 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:bg-white"
-                    />
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => applyPriceRange()}
-                    className="mt-2 w-full rounded-xl bg-brand-100 py-2.5 text-xs font-bold text-brand-700 transition hover:bg-brand-250"
-                  >
-                    اعمال قیمت
-                  </button>
-
-                  {priceError && (
-                    <p className="mt-2 text-xs font-bold text-gold">
-                      {priceError}
-                    </p>
-                  )}
-
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {pricePresets.map((preset) => {
-                      const active =
-                        minPrice === preset.min && maxPrice === preset.max;
-
-                      return (
-                        <button
-                          key={preset.label}
-                          type="button"
-                          onClick={() =>
-                            applyPriceRange(preset.min, preset.max)
-                          }
-                          className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${
-                            active
-                              ? "bg-brand-500 text-white"
-                              : "bg-cream text-muted hover:bg-brand-100 hover:text-brand-700"
-                          }`}
-                        >
-                          {preset.label}
-                        </button>
-                      );
-                    })}
                   </div>
                 </div>
 
-                <div className="mt-6 border-t border-line pt-5">
-                  <h3 className="mb-3 text-sm font-black">سایر فیلترها</h3>
-
-                  <div className="space-y-2">
-                    {[
-                      {
-                        label: "فقط کالاهای موجود",
-                        active: inStockOnly,
-                        onClick: () => setInStockOnly((value) => !value),
-                      },
-                      {
-                        label: "فقط کالاهای تخفیف‌دار",
-                        active: discountOnly,
-                        onClick: () => setDiscountOnly((value) => !value),
-                      },
-                      {
-                        label: "فقط کالاهای جدید",
-                        active: newOnly,
-                        onClick: () => setNewOnly((value) => !value),
-                      },
-                      {
-                        label: "فقط پیشنهادهای ویژه",
-                        active: featuredOnly,
-                        onClick: () => setFeaturedOnly((value) => !value),
-                      },
-                    ].map((option) => (
-                      <button
-                        key={option.label}
-                        type="button"
-                        onClick={option.onClick}
-                        aria-pressed={option.active}
-                        className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-right text-sm font-bold transition ${
-                          option.active
-                            ? "bg-brand-500 text-white"
-                            : "bg-cream text-muted hover:bg-brand-100 hover:text-brand-700"
-                        }`}
-                      >
-                        {option.label}
-
-                        {option.active && <Check size={16} strokeWidth={3} />}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="mt-6 border-t border-line pt-5">
-                  <h3 className="mb-3 text-sm font-black">مرتب‌سازی</h3>
-
-                  <div className="space-y-1.5">
-                    {SORT_OPTIONS.map(([value, label]) => (
-                      <button
-                        key={value}
-                        type="button"
-                        onClick={() => setSort(value)}
-                        className={`w-full rounded-xl px-3 py-2.5 text-right text-sm font-bold transition ${
-                          sort === value
-                            ? "bg-brand-500 text-white"
-                            : "text-muted hover:bg-brand-100 hover:text-brand-700"
-                        }`}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {hasFilters && (
-                  <button
-                    type="button"
-                    onClick={clearFilters}
-                    className="mt-6 w-full rounded-xl bg-blush-50 py-3 text-sm font-bold text-discount transition hover:bg-blush-100"
-                  >
-                    پاک کردن همه فیلترها
-                  </button>
-                )}
+                <ProductFilterPanel {...filterPanelProps} />
               </div>
             </aside>
 
             <div className="min-w-0 flex-1">
-              <div className="mb-6 rounded-3xl border border-line bg-white p-4 shadow-sm sm:p-5">
-                <div className="flex flex-col gap-3 sm:flex-row">
+              <div className="mb-5 rounded-2xl border border-line bg-white p-3 shadow-sm sm:p-4">
+                <div className="flex flex-col gap-2 sm:flex-row">
                   <div className="relative flex-1">
                     <Search
-                      size={19}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-soft"
+                      size={18}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-muted-soft"
                     />
 
                     <input
@@ -1362,16 +1084,16 @@ function Products() {
                       value={search}
                       onChange={(event) => setSearch(event.target.value)}
                       placeholder="جستجوی محصول..."
-                      className="w-full rounded-xl border border-line bg-cream py-3.5 pl-10 pr-11 text-sm outline-none transition focus:border-brand-500 focus:bg-white focus:ring-4 focus:ring-brand-100"
+                      className="h-11 w-full rounded-xl border border-line bg-cream pl-9 pr-10 text-[13px] outline-none transition focus:border-brand-500 focus:bg-white focus:ring-4 focus:ring-brand-100"
                     />
 
                     {search && (
                       <button
                         type="button"
                         onClick={() => setSearch("")}
-                        className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-soft transition hover:text-brand-550"
+                        className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-soft transition hover:text-brand-550"
                       >
-                        <X size={17} />
+                        <X size={16} />
                       </button>
                     )}
                   </div>
@@ -1379,9 +1101,9 @@ function Products() {
                   <button
                     type="button"
                     onClick={() => setMobileFiltersOpen((value) => !value)}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-brand-500 px-5 py-3.5 text-sm font-bold text-white transition hover:bg-brand-700 lg:hidden"
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-brand-500 px-4 text-[13px] font-bold text-white transition hover:bg-brand-700 lg:hidden"
                   >
-                    <Filter size={18} />
+                    <Filter size={17} />
                     فیلتر و مرتب‌سازی
                     {activeFilterCount > 0 && (
                       <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-white px-1.5 text-[11px] font-black text-brand-700">
@@ -1390,269 +1112,33 @@ function Products() {
                     )}
                   </button>
 
-                  <div className="relative hidden min-w-[190px] sm:block">
+                  <div className="relative hidden min-w-[175px] sm:block">
                     <select
                       value={sort}
                       onChange={(event) => setSort(event.target.value)}
-                      className="w-full appearance-none rounded-xl border border-line bg-white px-4 py-3.5 pl-10 text-sm font-bold outline-none transition focus:border-brand-500"
+                      aria-label="مرتب‌سازی محصولات"
+                      className="h-11 w-full appearance-none rounded-xl border border-line bg-white px-3 pl-9 text-[13px] font-bold outline-none transition focus:border-brand-500"
                     >
-                      <option value="newest">جدیدترین</option>
-                      <option value="popular">پرفروش‌ترین</option>
-                      <option value="price-low">ارزان‌ترین</option>
-                      <option value="price-high">گران‌ترین</option>
-                      <option value="discount">بیشترین تخفیف</option>
+                      {SORT_OPTIONS.map(([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
                     </select>
 
                     <ChevronDown
-                      size={17}
+                      size={16}
                       className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-soft"
                     />
                   </div>
                 </div>
 
                 {mobileFiltersOpen && (
-                  <div className="mt-4 border-t border-line pt-4 lg:hidden">
-                    <div className="mb-4">
-                      <h3 className="mb-3 text-sm font-black">دسته‌بندی</h3>
-
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          type="button"
-                          onClick={() => setSelectedCategory("")}
-                          className={`rounded-xl px-3 py-2 text-xs font-bold transition ${
-                            !selectedCategory
-                              ? "bg-brand-500 text-white"
-                              : "bg-cream text-muted hover:bg-brand-100 hover:text-brand-700"
-                          }`}
-                        >
-                          همه
-                        </button>
-
-                        {categories.map((category) => (
-                          <button
-                            key={category.id}
-                            type="button"
-                            onClick={() => setSelectedCategory(category.slug)}
-                            className={`rounded-xl px-3 py-2 text-xs font-bold transition ${
-                              selectedCategory === category.slug
-                                ? "bg-brand-500 text-white"
-                                : "bg-cream text-muted hover:bg-brand-100 hover:text-brand-700"
-                            }`}
-                          >
-                            {category.name}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="mb-4">
-                      <h3 className="mb-3 text-sm font-black">برند</h3>
-
-                      {brandsLoading ? (
-                        <div className="flex items-center justify-center py-3">
-                          <Loader2
-                            size={18}
-                            className="animate-spin text-brand-550"
-                          />
-                        </div>
-                      ) : (
-                        <div className="flex flex-wrap gap-2">
-                          {brandOptions.map((brand) => {
-                            const checked = selectedBrands.includes(brand.slug);
-
-                            return (
-                              <button
-                                key={brand.id}
-                                type="button"
-                                onClick={() => toggleBrand(brand.slug)}
-                                aria-pressed={checked}
-                                className={`rounded-xl px-3 py-2 text-xs font-bold transition ${
-                                  checked
-                                    ? "bg-brand-500 text-white"
-                                    : "bg-cream text-muted hover:bg-brand-100 hover:text-brand-700"
-                                }`}
-                              >
-                                {brand.name}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="mb-4">
-                      <h3 className="mb-3 text-sm font-black">سایز</h3>
-
-                      {sizeOptions.length === 0 ? (
-                        <p className="text-xs leading-6 text-muted-soft">
-                          {facets === null
-                            ? "در حال بارگذاری…"
-                            : "سایزی برای نمایش نیست."}
-                        </p>
-                      ) : (
-                        <div className="flex flex-wrap gap-2">
-                          {sizeOptions.map((size) => {
-                            const checked = selectedSizes.includes(size.value);
-
-                            return (
-                              <button
-                                key={size.value}
-                                type="button"
-                                onClick={() => toggleSize(size.value)}
-                                aria-pressed={checked}
-                                className={`rounded-xl px-3 py-2 text-xs font-bold transition ${
-                                  checked
-                                    ? "bg-brand-500 text-white"
-                                    : "bg-cream text-muted hover:bg-brand-100 hover:text-brand-700"
-                                }`}
-                              >
-                                {size.value}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="mb-4">
-                      <h3 className="mb-3 text-sm font-black">
-                        محدودهٔ قیمت (تومان)
-                      </h3>
-
-                      <p className="mb-3 text-xs text-muted-soft">
-                        {facets?.price.min != null && facets.price.max != null
-                          ? `بازهٔ فعلی: ${formatFilterPrice(
-                              String(facets.price.min),
-                            )} تا ${formatFilterPrice(
-                              String(facets.price.max),
-                            )} تومان`
-                          : "برای محدودکردن نتایج، بازه را وارد کنید."}
-                      </p>
-
-                      <div className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          value={minPriceDraft}
-                          onChange={(event) =>
-                            setMinPriceDraft(event.target.value)
-                          }
-                          onBlur={() => applyPriceRange()}
-                          placeholder="از"
-                          aria-label="کمترین قیمت"
-                          className="w-full rounded-xl border border-line bg-cream px-3 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:bg-white"
-                        />
-
-                        <span className="text-line-strong">—</span>
-
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          value={maxPriceDraft}
-                          onChange={(event) =>
-                            setMaxPriceDraft(event.target.value)
-                          }
-                          onBlur={() => applyPriceRange()}
-                          placeholder="تا"
-                          aria-label="بیشترین قیمت"
-                          className="w-full rounded-xl border border-line bg-cream px-3 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:bg-white"
-                        />
-                      </div>
-
-                      {priceError && (
-                        <p className="mt-2 text-xs font-bold text-gold">
-                          {priceError}
-                        </p>
-                      )}
-
-                      <div className="mt-3 flex flex-wrap gap-2">
-                        {pricePresets.map((preset) => {
-                          const active =
-                            minPrice === preset.min && maxPrice === preset.max;
-
-                          return (
-                            <button
-                              key={preset.label}
-                              type="button"
-                              onClick={() =>
-                                applyPriceRange(preset.min, preset.max)
-                              }
-                              className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${
-                                active
-                                  ? "bg-brand-500 text-white"
-                                  : "bg-cream text-muted hover:bg-brand-100 hover:text-brand-700"
-                              }`}
-                            >
-                              {preset.label}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    <div className="mb-4">
-                      <h3 className="mb-3 text-sm font-black">سایر فیلترها</h3>
-
-                      <div className="grid grid-cols-2 gap-2">
-                        {[
-                          {
-                            label: "فقط موجود",
-                            active: inStockOnly,
-                            onClick: () => setInStockOnly((value) => !value),
-                          },
-                          {
-                            label: "فقط تخفیف‌دار",
-                            active: discountOnly,
-                            onClick: () => setDiscountOnly((value) => !value),
-                          },
-                          {
-                            label: "فقط جدید",
-                            active: newOnly,
-                            onClick: () => setNewOnly((value) => !value),
-                          },
-                          {
-                            label: "پیشنهاد ویژه",
-                            active: featuredOnly,
-                            onClick: () => setFeaturedOnly((value) => !value),
-                          },
-                        ].map((option) => (
-                          <button
-                            key={option.label}
-                            type="button"
-                            onClick={option.onClick}
-                            aria-pressed={option.active}
-                            className={`rounded-xl px-3 py-2.5 text-xs font-bold transition ${
-                              option.active
-                                ? "bg-brand-500 text-white"
-                                : "bg-cream text-muted hover:bg-brand-100 hover:text-brand-700"
-                            }`}
-                          >
-                            {option.label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-
-                    <div>
-                      <h3 className="mb-3 text-sm font-black">مرتب‌سازی</h3>
-
-                      <div className="grid grid-cols-2 gap-2">
-                        {SORT_OPTIONS.map(([value, label]) => (
-                          <button
-                            key={value}
-                            type="button"
-                            onClick={() => setSort(value)}
-                            className={`rounded-xl px-3 py-2.5 text-xs font-bold transition ${
-                              sort === value
-                                ? "bg-brand-500 text-white"
-                                : "bg-cream text-muted hover:bg-brand-100 hover:text-brand-700"
-                            }`}
-                          >
-                            {label}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
+                  <div className="mt-3 border-t border-line pt-3 lg:hidden">
+                    <ProductFilterPanel
+                      {...filterPanelProps}
+                      onClose={() => setMobileFiltersOpen(false)}
+                    />
                   </div>
                 )}
               </div>
@@ -1765,14 +1251,29 @@ function Products() {
               )}
 
               {loading && (
-                <div className="rounded-3xl border border-line bg-white py-20 text-center shadow-sm">
-                  <Loader2
-                    size={38}
-                    className="mx-auto animate-spin text-brand-550"
-                  />
-                  <p className="mt-4 font-medium text-muted">
-                    در حال دریافت محصولات...
-                  </p>
+                <div
+                  className="grid grid-cols-2 gap-3 sm:gap-5 xl:grid-cols-3"
+                  aria-busy="true"
+                  aria-live="polite"
+                >
+                  <span className="sr-only">در حال دریافت محصولات...</span>
+
+                  {Array.from({ length: 12 }, (_, index) => (
+                    <div
+                      key={index}
+                      aria-hidden="true"
+                      className="overflow-hidden rounded-2xl border border-line bg-white shadow-sm"
+                    >
+                      <div className="aspect-square animate-pulse bg-brand-50" />
+
+                      <div className="space-y-2 p-3 sm:p-4">
+                        <div className="h-3 w-3/4 animate-pulse rounded-full bg-brand-100" />
+                        <div className="h-3 w-1/2 animate-pulse rounded-full bg-brand-100" />
+
+                        <div className="mt-3 h-5 w-2/5 animate-pulse rounded-full bg-brand-100" />
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
 

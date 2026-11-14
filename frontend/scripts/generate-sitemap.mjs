@@ -9,8 +9,8 @@
  * ورودی‌ها (متغیر محیطی):
  * - VITE_SITE_URL   نشانی نهایی سایت؛ اگر تنظیم نشده باشد sitemap ساخته
  *                   نمی‌شود (تا آدرس‌های example.com به گوگل نرود).
- * - VITE_API_URL    نشانی API برای گرفتن محصولات/دسته‌ها/مقاله‌ها. اگر در
- *                   زمان build در دسترس نباشد، فقط صفحه‌های ثابت نوشته
+ * - VITE_API_URL    نشانی API برای گرفتن محصولات/دسته‌ها/مقاله‌ها/صفحات سایت.
+ *                   اگر در زمان build در دسترس نباشد، فقط صفحه‌های ثابت نوشته
  *                   می‌شوند و build شکست نمی‌خورد.
  *
  * اجرا: npm run sitemap  (و به‌صورت خودکار بعد از npm run build)
@@ -150,10 +150,12 @@ function toLastmod(value) {
 }
 
 async function buildSitemap() {
-  const [products, categoriesPayload, articles] = await Promise.all([
+  const [products, categoriesPayload, articles, pages] = await Promise.all([
     fetchAll("/products", { perPage: 48 }),
     fetchJson("/categories"),
     fetchAll("/articles", { perPage: 24 }),
+    // صفحات ثابت سایت (درباره ما، تماس با ما، قوانین و ...) بدون صفحه‌بندی برمی‌گردند.
+    fetchJson("/pages"),
   ]);
 
   const productEntries = products
@@ -191,11 +193,27 @@ async function buildSitemap() {
     }),
   );
 
+  /*
+   * صفحات ثابت سایت (درباره ما، تماس با ما، قوانین...). این صفحات در پنل
+   * «مدیریت محتوا» ساخته می‌شوند و تا پیش از این در sitemap نبودند؛ یعنی
+   * گوگل آن‌ها را فقط از طریق لینک فوتر پیدا می‌کرد.
+   */
+  const pageEntries = listOf(pages)
+    .filter((page) => page?.slug)
+    .map((page) =>
+      urlEntry(`/pages/${page.slug}`, {
+        lastmod: toLastmod(page.updated_at),
+        changefreq: "monthly",
+        priority: "0.5",
+      }),
+    );
+
   const urls = [
     ...staticEntries,
     ...categoryEntries,
     ...productEntries,
     ...articleEntries,
+    ...pageEntries,
   ];
 
   return [

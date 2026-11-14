@@ -18,6 +18,7 @@ interface Coupon {
   min_order_total: string | number;
   max_discount: string | number | null;
   usage_limit: number | null;
+  per_user_limit: number | null;
   used_count: number;
   starts_at: string | null;
   expires_at: string | null;
@@ -32,6 +33,7 @@ interface CouponForm {
   min_order_total: string;
   max_discount: string;
   usage_limit: string;
+  per_user_limit: string;
   starts_at: string;
   expires_at: string;
   is_active: boolean;
@@ -45,6 +47,7 @@ const initialForm: CouponForm = {
   min_order_total: "0",
   max_discount: "",
   usage_limit: "",
+  per_user_limit: "",
   starts_at: "",
   expires_at: "",
   is_active: true,
@@ -129,6 +132,8 @@ function AdminCoupons() {
         coupon.max_discount === null ? "" : String(coupon.max_discount),
       usage_limit:
         coupon.usage_limit === null ? "" : String(coupon.usage_limit),
+      per_user_limit:
+        coupon.per_user_limit === null ? "" : String(coupon.per_user_limit),
       starts_at: toDateTimeInput(coupon.starts_at),
       expires_at: toDateTimeInput(coupon.expires_at),
       is_active: Boolean(coupon.is_active),
@@ -148,6 +153,9 @@ function AdminCoupons() {
         ? Number(form.max_discount)
         : null,
       usage_limit: form.usage_limit.trim() ? Number(form.usage_limit) : null,
+      per_user_limit: form.per_user_limit.trim()
+        ? Number(form.per_user_limit)
+        : null,
       starts_at: form.starts_at || null,
       expires_at: form.expires_at || null,
       is_active: form.is_active,
@@ -411,6 +419,33 @@ function AdminCoupons() {
             </div>
 
             <div className="admin-field">
+              <label className="admin-label" htmlFor="coupon-per-user">
+                سقف استفادهٔ هر کاربر
+              </label>
+              <input
+                id="coupon-per-user"
+                type="number"
+                min={1}
+                className="admin-input"
+                value={form.per_user_limit}
+                onChange={(event) =>
+                  updateField("per_user_limit", event.target.value)
+                }
+                dir="ltr"
+                placeholder="بدون محدودیت"
+              />
+              <p
+                style={{
+                  marginTop: 6,
+                  fontSize: 11,
+                  color: "#6b7280",
+                }}
+              >
+                خالی بماند، هر کاربر می‌تواند کد را نامحدود استفاده کند.
+              </p>
+            </div>
+
+            <div className="admin-field">
               <label className="admin-label" htmlFor="coupon-start">
                 شروع اعتبار (شمسی)
               </label>
@@ -511,6 +546,7 @@ function AdminCoupons() {
                   <th>تخفیف</th>
                   <th>حداقل سبد</th>
                   <th>استفاده</th>
+                  <th>سقف هر کاربر</th>
                   <th>پایان اعتبار</th>
                   <th>وضعیت</th>
                   <th>عملیات</th>
@@ -548,6 +584,11 @@ function AdminCoupons() {
                         {coupon.usage_limit === null
                           ? "∞"
                           : formatAdminNumber(coupon.usage_limit)}
+                      </td>
+                      <td>
+                        {coupon.per_user_limit === null
+                          ? "∞"
+                          : formatAdminNumber(coupon.per_user_limit)}
                       </td>
                       <td>{formatAdminDate(coupon.expires_at)}</td>
                       <td>

@@ -8,6 +8,7 @@ import WishlistProvider from "./context/WishlistContext";
 import { prefetchCategories } from "./services/categories";
 import { migrateLegacyStorage } from "./utils/storageKeys";
 import { initTheme } from "./utils/theme";
+import { registerServiceWorker } from "./pwa";
 
 import "./index.css";
 
@@ -22,9 +23,17 @@ migrateLegacyStorage();
 // زودتر از درخواست‌های صفحه‌ها به سرور برسد (سرور توسعه تک‌رشته‌ای است).
 prefetchCategories();
 
-ReactDOM.createRoot(
-document.getElementById("root")!
-).render(
-<React.StrictMode> <AuthProvider> <WishlistProvider> <CartProvider> <App /> </CartProvider> </WishlistProvider> </AuthProvider>
-</React.StrictMode>
+// سرویس‌ورکر فقط در build نهایی ثبت می‌شود (نصب‌پذیری و کارکرد آفلاین).
+registerServiceWorker();
+
+ReactDOM.createRoot(document.getElementById("root")!).render(
+  <React.StrictMode>
+    <AuthProvider>
+      <WishlistProvider>
+        <CartProvider>
+          <App />
+        </CartProvider>
+      </WishlistProvider>
+    </AuthProvider>
+  </React.StrictMode>,
 );

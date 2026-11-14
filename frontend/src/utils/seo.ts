@@ -20,8 +20,8 @@ export const DEFAULT_DESCRIPTION =
   "خرید آنلاین لباس زیر زنانه، ست، سوتین، شورت و لباس خواب از بهرنگ شاپ؛ " +
   "ارسال سریع به سراسر ایران، تضمین اصالت کالا و پشتیبانی واقعی.";
 
-/** تصویر پیش‌فرض اشتراک‌گذاری (از پوشهٔ public فرانت‌اند سرو می‌شود). */
-const DEFAULT_IMAGE = "/images/Behrang Shop Lingerie Elegance.png";
+/** تصویر پیش‌فرض اشتراک‌گذاری (نسخهٔ فشرده در پوشهٔ public فرانت‌اند). */
+const DEFAULT_IMAGE = "/images/og-default.jpg";
 
 /** تگ robots برای صفحه‌هایی که نباید ایندکس شوند. */
 export const NO_INDEX_ROBOTS = "noindex, follow";

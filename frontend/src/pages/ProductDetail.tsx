@@ -31,6 +31,7 @@ import {
 import Layout from "../components/Layout";
 import Button from "../components/Button";
 import ProductCard from "../components/ProductCard";
+import RecentlyViewed from "../components/RecentlyViewed";
 import SizeGuideModal from "../components/SizeGuide";
 import ProductSizeGuide from "../components/ProductSizeGuide";
 import { resolveSizeGuideTab, type SizeGuideTabId } from "../data/sizeGuide";
@@ -42,6 +43,7 @@ import api from "../services/api";
 import { useCart } from "../context/CartContext";
 import { useWishlist } from "../context/WishlistContext";
 import type { WishlistProduct } from "../services/wishlist";
+import { recordProductView } from "../services/recentlyViewed";
 import { calculateProductPrice } from "../utils/price";
 import { formatJalaliDateTime } from "../utils/jalali";
 import { usePageMeta } from "../hooks/usePageMeta";
@@ -346,6 +348,13 @@ function ProductDetail() {
         setSelectedImageIndex(0);
         setQuantity(1);
         setAddedToCart(false);
+
+        // ثبت بازدید برای ریل «بازدیدهای اخیر»؛ خطا هرگز صفحه را نمی‌شکند.
+        try {
+          recordProductView(productData);
+        } catch (viewError) {
+          console.error("Recently viewed error:", viewError);
+        }
 
         // Select the first available active variant.
         const firstAvailableVariant = (productData.variants ?? []).find(
@@ -2374,6 +2383,15 @@ function ProductDetail() {
             )}
           </section>
         )}
+
+        {/* بازدیدهای اخیر کاربر؛ محصول جاری کنار گذاشته می‌شود */}
+        <div className="mt-4">
+          <RecentlyViewed
+            excludeIds={[product.id]}
+            limit={6}
+            className="rounded-3xl border border-line bg-white p-4 sm:p-5"
+          />
+        </div>
       </section>
 
       <SizeGuideModal

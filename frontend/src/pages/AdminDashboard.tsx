@@ -1,5 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import type { CSSProperties } from "react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import type { CSSProperties, DragEvent, ReactNode } from "react";
 import { Link } from "react-router-dom";
 import {
   Package,
@@ -23,9 +30,44 @@ import {
   Phone,
   Store,
   CircleHelp,
+  ArrowDown,
+  ArrowUp,
+  Check,
+  EyeOff,
+  GripVertical,
+  Headset,
+  Megaphone,
+  Newspaper,
+  Plus,
+  RotateCcw,
+  Settings,
+  SlidersHorizontal,
+  Link2,
+  Trash2,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { adminApi } from "../services/api";
+import { useAdminAuth } from "../context/AdminAuthContext";
+import { ADMIN_PERMISSIONS } from "../utils/adminPermissions";
+import { ADMIN_NAV_ITEMS, getAdminNavItem } from "../utils/adminNavItems";
+import {
+  DASHBOARD_BLOCK_IDS,
+  DASHBOARD_BLOCK_META,
+  DASHBOARD_SHORTCUT_MIME,
+  addDashboardShortcutBlock,
+  createDefaultAdminDashboardLayout,
+  dashboardShortcutBlockId,
+  getDashboardBlockMeta,
+  isDashboardCustomBlockId,
+  parseDashboardShortcutPayload,
+  readAdminDashboardLayout,
+  removeDashboardBlock,
+  saveAdminDashboardLayout,
+  type AdminDashboardCustomBlock,
+  type AdminDashboardLayout,
+  type AdminDashboardShortcutPayload,
+  type DashboardBlockId,
+} from "../utils/adminDashboardLayout";
 
 type SalesTrendRange = "7d" | "30d" | "12m";
 
@@ -247,6 +289,7 @@ const dashboardStyles = `
   font-family:inherit;
   min-width:0;
   width:100%;
+  position:relative;
 }
 .dashboard-page *, .dashboard-page *::before, .dashboard-page *::after {
   box-sizing:border-box;
@@ -428,7 +471,93 @@ const dashboardStyles = `
 .dashboard-channel-total {display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:20px;padding-top:15px;border-top:1px solid #edf0f2;color:#7d8994;font-size:10px;}
 .dashboard-empty-note {padding:14px;border-radius:10px;background:#f7f9fa;color:#929ba5;font-size:10px;line-height:2;}
 
+/* شبکهٔ بخش‌های نمای کلی؛ ترتیب و نمایش با «چیدمان» قابل تغییر است */
+.dashboard-blocks {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;align-items:start;}
+.dashboard-block {position:relative;min-width:0;display:flex;flex-direction:column;gap:10px;}
+.dashboard-block[data-span="full"] {grid-column:1 / -1;}
+.dashboard-block > .dashboard-section {margin-bottom:0;}
+.dashboard-block .dashboard-welcome-card {margin:0;}
+.dashboard-block > .dashboard-panel {margin:0;}
+.dashboard-block.is-dragging {opacity:.5;}
+.dashboard-block.is-drop-before::before,
+.dashboard-block.is-drop-after::after {
+  content:"";position:absolute;inset-inline:0;height:3px;border-radius:3px;
+  background:#7fa889;box-shadow:0 0 10px rgba(127,168,137,.55);
+}
+.dashboard-block.is-drop-before::before {top:-10px;}
+.dashboard-block.is-drop-after::after {bottom:-10px;}
+.dashboard-block-bar {
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  padding:6px 9px;border:1px dashed #cfdbd2;border-radius:10px;background:#f7faf6;
+  color:#5b6b60;font-size:10px;font-weight:800;
+}
+.dashboard-block-bar-title {display:inline-flex;align-items:center;gap:6px;min-width:0;}
+.dashboard-block-grip {display:inline-flex;align-items:center;color:#7d8c81;cursor:grab;}
+.dashboard-block-grip:active {cursor:grabbing;}
+.dashboard-block-actions {display:inline-flex;align-items:center;gap:3px;}
+.dashboard-block-action {
+  display:inline-flex;align-items:center;justify-content:center;width:23px;height:23px;padding:0;
+  border:1px solid #e1e8e2;border-radius:7px;background:#fff;color:#5b6b60;cursor:pointer;
+}
+.dashboard-block-action:hover:not(:disabled) {background:#edf4e9;color:#3f5a45;}
+.dashboard-block-action:disabled {opacity:.4;cursor:not-allowed;}
+.dashboard-block-empty {
+  grid-column:1 / -1;padding:22px;border:1px dashed #dfe7e1;border-radius:14px;
+  background:#fbfcfb;color:#8b959f;font-size:11px;text-align:center;line-height:2;
+}
+.dashboard-layout-tools {position:relative;display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.dashboard-layout-toggle.is-active {background:#edf4e9;border-color:#d6e4d8;color:#3f5a45;}
+.dashboard-layout-popover {
+  position:absolute;z-index:30;top:calc(100% + 8px);inset-inline-end:0;
+  width:min(330px,calc(100vw - 40px));max-height:min(430px,70vh);overflow:auto;
+  padding:8px;background:#fff;border:1px solid #e6ece7;border-radius:14px;
+  box-shadow:0 16px 36px rgba(30,45,35,.14);text-align:right;
+}
+.dashboard-layout-popover-title {margin:0;padding:8px 10px;color:#7d8a83;font-size:10px;font-weight:800;}
+.dashboard-layout-item {
+  display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;
+  padding:9px 10px;border:0;border-radius:10px;background:transparent;color:#33443a;
+  font:inherit;font-size:11px;font-weight:800;text-align:right;cursor:pointer;
+}
+.dashboard-layout-item:hover {background:#f3f8f1;}
+.dashboard-layout-item small {display:block;margin-top:3px;color:#929c95;font-size:9.5px;font-weight:600;line-height:1.9;}
+.dashboard-layout-item-state {display:inline-flex;align-items:center;gap:4px;flex:0 0 auto;color:#5b7b62;font-size:9.5px;}
+.dashboard-layout-item.is-added .dashboard-layout-item-state {color:#9aa4a0;}
+.dashboard-layout-hint {margin:0;padding:8px 10px 4px;color:#96a09a;font-size:9.5px;line-height:1.9;}
+.dashboard-health-list {display:flex;flex-direction:column;gap:14px;}
+.dashboard-health-row {display:flex;flex-direction:column;gap:7px;}
+.dashboard-health-head {display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.dashboard-health-label {color:#53616d;font-size:11px;font-weight:800;}
+.dashboard-health-value {color:#263442;font-size:12px;font-weight:900;}
+.dashboard-health-track {height:7px;overflow:hidden;border-radius:6px;background:#f0f2f4;}
+.dashboard-health-progress {height:100%;border-radius:inherit;}
+.dashboard-health-note {margin:0;color:#98a1aa;font-size:9.5px;line-height:2;}
+.dashboard-health-foot {display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:16px;padding-top:13px;border-top:1px solid #edf0f2;color:#7d8994;font-size:10px;}
+.dashboard-shortcut-list {display:flex;flex-direction:column;gap:9px;}
+.dashboard-shortcut {display:flex;align-items:center;gap:10px;padding:10px 11px;border:1px solid #edf0f2;border-radius:11px;color:inherit;text-decoration:none;background:#fff;}
+.dashboard-shortcut:hover {border-color:#dfe7e1;background:#f9fbf8;}
+.dashboard-shortcut-icon {display:flex;align-items:center;justify-content:center;flex:0 0 32px;width:32px;height:32px;border-radius:9px;background:#eef4ea;color:#54785a;}
+.dashboard-shortcut-text {min-width:0;}
+.dashboard-shortcut-title {display:block;color:#33414e;font-size:11px;font-weight:800;}
+.dashboard-shortcut-description {display:block;margin-top:2px;color:#98a1aa;font-size:9.5px;line-height:1.8;}
+/* میان‌بر بخش‌های منو که از سایدبار روی نمای کلی کشیده شده‌اند */
+.dashboard-shortcut-block {display:flex;flex-direction:column;gap:12px;}
+.dashboard-shortcut-block .dashboard-panel-header {margin-bottom:0;}
+.dashboard-shortcut-block .dashboard-shortcut-icon {flex:0 0 34px;width:34px;height:34px;border-radius:10px;}
+.dashboard-shortcut-block-text {margin:0;color:#8d98a2;font-size:10.5px;line-height:2;}
+.dashboard-shortcut-block-link {display:inline-flex;align-items:center;gap:6px;align-self:flex-start;margin-top:auto;padding:7px 13px;border-radius:9px;background:#f1f6ee;color:#4d6f54;font-size:10px;font-weight:800;text-decoration:none;transition:background-color .15s ease;}
+.dashboard-shortcut-block-link:hover {background:#e6f0e1;}
+.dashboard-shortcut-dropzone {
+  position:absolute;inset:0;z-index:80;margin:-6px;display:flex;align-items:center;justify-content:center;gap:9px;
+  border:2px dashed #8fb395;border-radius:16px;background:rgba(244,249,241,.42);backdrop-filter:blur(1px);
+  color:#3f6047;font-size:12px;font-weight:800;pointer-events:none;
+}
+.dashboard-layout-item-main {display:inline-flex;align-items:center;gap:8px;min-width:0;color:#5b7b62;}
+.dashboard-layout-item-main > svg {flex:0 0 auto;}
+.dashboard-layout-item-main > span {min-width:0;}
+
 @media (max-width:1100px) {
+  .dashboard-blocks {grid-template-columns:minmax(0,1fr);}
   .dashboard-stats-grid {grid-template-columns:repeat(2,minmax(0,1fr));}
   .dashboard-lower-grid {grid-template-columns:minmax(0,1fr);}
   .dashboard-charts-grid {grid-template-columns:minmax(0,2fr) minmax(0,1fr);}
@@ -1173,10 +1302,33 @@ function SalesChannelsChart({ channels }: { channels: SalesChannelItem[] }) {
 }
 
 function AdminDashboard() {
+  const { user, can } = useAdminAuth();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
+  const [dashboardLayout, setDashboardLayout] = useState<AdminDashboardLayout>(
+    () => readAdminDashboardLayout(user?.id),
+  );
+  const [layoutEditing, setLayoutEditing] = useState(false);
+  const [addMenuOpen, setAddMenuOpen] = useState(false);
+  const [draggingBlock, setDraggingBlock] = useState<DashboardBlockId | null>(
+    null,
+  );
+  const [blockDrop, setBlockDrop] = useState<{
+    id: DashboardBlockId;
+    after: boolean;
+  } | null>(null);
+  /** آیا همین حالا بخشی از منو روی صفحهٔ نمای کلی کشیده شده است؟ */
+  const [shortcutDragActive, setShortcutDragActive] = useState(false);
+
+  /** ریشهٔ صفحهٔ نمای کلی؛ برای تشخیص ورود/خروج کشیدن استفاده می‌شود. */
+  const pageRef = useRef<HTMLDivElement | null>(null);
+
+  /* چیدمان ذخیره‌شدهٔ همین مدیر (در صورت تغییر حساب دوباره خوانده می‌شود) */
+  useEffect(() => {
+    setDashboardLayout(readAdminDashboardLayout(user?.id));
+  }, [user?.id]);
 
   const loadDashboard = useCallback(async (initial = false) => {
     try {
@@ -1303,9 +1455,448 @@ function AdminDashboard() {
 
   const salesChannels = data?.sales?.channels ?? [];
 
+  /* ---------- چیدمان شخصی‌سازی‌شدهٔ نمای کلی ---------- */
+
+  const persistDashboardLayout = (next: AdminDashboardLayout) => {
+    setDashboardLayout(next);
+    saveAdminDashboardLayout(user?.id, next);
+  };
+
+  const visibleBlocks = useMemo(
+    () =>
+      dashboardLayout.order.filter(
+        (blockId) => !dashboardLayout.hidden.includes(blockId),
+      ),
+    [dashboardLayout],
+  );
+
+  const setBlockHidden = (blockId: DashboardBlockId, hidden: boolean) => {
+    const hiddenSet = new Set(dashboardLayout.hidden);
+
+    if (hidden) {
+      hiddenSet.add(blockId);
+    } else {
+      hiddenSet.delete(blockId);
+    }
+
+    persistDashboardLayout({
+      ...dashboardLayout,
+      hidden: dashboardLayout.order.filter((id) => hiddenSet.has(id)),
+    });
+  };
+
+  /** جابه‌جایی یک بخش قبل/بعد از بخش دیگر (کشیدن با ماوس). */
+  const moveBlockBefore = (
+    blockId: DashboardBlockId,
+    targetId: DashboardBlockId,
+    after: boolean,
+  ) => {
+    if (blockId === targetId) {
+      return;
+    }
+
+    const order = dashboardLayout.order.filter((id) => id !== blockId);
+    const targetIndex = order.indexOf(targetId);
+
+    if (targetIndex < 0) {
+      return;
+    }
+
+    order.splice(targetIndex + (after ? 1 : 0), 0, blockId);
+    persistDashboardLayout({ ...dashboardLayout, order });
+  };
+
+  /** جابه‌جایی یک پله‌ای بخش (برای لمس و موبایل). */
+  const moveBlockByOffset = (blockId: DashboardBlockId, offset: number) => {
+    const index = visibleBlocks.indexOf(blockId);
+    const target = visibleBlocks[index + offset];
+
+    if (!target) {
+      return;
+    }
+
+    moveBlockBefore(blockId, target, offset > 0);
+  };
+
+  const resetDashboardLayout = () => {
+    persistDashboardLayout(createDefaultAdminDashboardLayout());
+    setDraggingBlock(null);
+    setBlockDrop(null);
+  };
+
+  /* ---------- افزودن بخش‌های منو به نمای کلی (کشیدن از سایدبار) ---------- */
+
+  /** آیا دادهٔ در حال کشیده شدن، یک بخش منو برای افزودن به داشبورد است؟ */
+  const isShortcutDrag = (dataTransfer: DataTransfer | null) =>
+    Boolean(
+      dataTransfer &&
+        Array.from(dataTransfer.types).includes(DASHBOARD_SHORTCUT_MIME),
+    );
+
+  /** افزودن میان‌بر یک بخش منو به نمای کلی (هم با کشیدن، هم از فهرست). */
+  const addShortcutBlock = (payload: AdminDashboardShortcutPayload) => {
+    persistDashboardLayout(addDashboardShortcutBlock(dashboardLayout, payload));
+    setAddMenuOpen(false);
+    setShortcutDragActive(false);
+  };
+
+  const removeShortcutBlock = (blockId: DashboardBlockId) => {
+    persistDashboardLayout(removeDashboardBlock(dashboardLayout, blockId));
+  };
+
+  const handleShortcutDragOver = (event: DragEvent<HTMLElement>) => {
+    if (!isShortcutDrag(event.dataTransfer)) {
+      return;
+    }
+
+    event.preventDefault();
+    /* در حالت «چیدمان» مبدأ کشیدن move است؛ هماهنگ می‌کنیم تا رها کردن مجاز باشد. */
+    event.dataTransfer.dropEffect =
+      event.dataTransfer.effectAllowed === "move" ? "move" : "copy";
+    setShortcutDragActive(true);
+  };
+
+  /*
+   * فعال/غیرفعال کردن کادر «رها کنید» با یک شنوندهٔ سراسری انجام می‌شود تا
+   * هنگام عبور از روی کارت‌های داخلی صفحه پرش نکند و اگر کشیدن لغو شد هم
+   * کادر گیر نکند.
+   */
+  useEffect(() => {
+    const handleWindowDragOver = (event: globalThis.DragEvent) => {
+      if (!isShortcutDrag(event.dataTransfer)) {
+        return;
+      }
+
+      const page = pageRef.current;
+
+      setShortcutDragActive(
+        Boolean(page && event.composedPath().includes(page)),
+      );
+    };
+
+    const clearShortcutDrag = () => setShortcutDragActive(false);
+
+    window.addEventListener("dragover", handleWindowDragOver);
+    window.addEventListener("dragend", clearShortcutDrag);
+    window.addEventListener("drop", clearShortcutDrag);
+
+    return () => {
+      window.removeEventListener("dragover", handleWindowDragOver);
+      window.removeEventListener("dragend", clearShortcutDrag);
+      window.removeEventListener("drop", clearShortcutDrag);
+    };
+  }, []);
+
+  const handleShortcutDrop = (event: DragEvent<HTMLElement>) => {
+    if (!isShortcutDrag(event.dataTransfer)) {
+      return;
+    }
+
+    event.preventDefault();
+    setShortcutDragActive(false);
+
+    const payload = parseDashboardShortcutPayload(
+      event.dataTransfer.getData(DASHBOARD_SHORTCUT_MIME),
+    );
+
+    if (payload) {
+      addShortcutBlock(payload);
+    }
+  };
+
+  /** بخش‌های منوی پنل که همین مدیر به آن‌ها دسترسی دارد (خود داشبورد منهای می‌شود). */
+  const navShortcutTargets = ADMIN_NAV_ITEMS.filter(
+    (item) => item.to !== "/admin" && can(item.permission),
+  );
+
+  const handleBlockDragStart = (
+    event: DragEvent<HTMLElement>,
+    blockId: DashboardBlockId,
+  ) => {
+    event.dataTransfer.effectAllowed = "move";
+    event.dataTransfer.setData("text/plain", blockId);
+    setDraggingBlock(blockId);
+    setBlockDrop(null);
+  };
+
+  const handleBlockDragOver = (
+    event: DragEvent<HTMLElement>,
+    blockId: DashboardBlockId,
+  ) => {
+    if (!draggingBlock || draggingBlock === blockId) {
+      return;
+    }
+
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+
+    const rect = event.currentTarget.getBoundingClientRect();
+    const after = (event.clientY - rect.top) / Math.max(rect.height, 1) > 0.5;
+
+    setBlockDrop({ id: blockId, after });
+  };
+
+  const handleBlockDrop = (
+    event: DragEvent<HTMLElement>,
+    blockId: DashboardBlockId,
+  ) => {
+    if (!draggingBlock) {
+      return;
+    }
+
+    event.preventDefault();
+
+    const after = blockDrop?.id === blockId ? blockDrop.after : false;
+
+    moveBlockBefore(draggingBlock, blockId, after);
+    setDraggingBlock(null);
+    setBlockDrop(null);
+  };
+
+  const handleBlockDragEnd = () => {
+    setDraggingBlock(null);
+    setBlockDrop(null);
+  };
+
+  useEffect(() => {
+    if (!addMenuOpen) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setAddMenuOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [addMenuOpen]);
+
+  useEffect(() => {
+    if (!layoutEditing) {
+      setAddMenuOpen(false);
+    }
+  }, [layoutEditing]);
+
+  /* ---------- شاخص‌های «سلامت فروشگاه» ---------- */
+
+  const paidPayments = data?.payments.paid ?? 0;
+  const unpaidPayments = data?.payments.unpaid ?? 0;
+  const totalPayments = paidPayments + unpaidPayments;
+  const completionRate =
+    totalOrders > 0
+      ? Math.round(((data?.orders.completed ?? 0) / totalOrders) * 100)
+      : 0;
+  const paymentRate =
+    totalPayments > 0 ? Math.round((paidPayments / totalPayments) * 100) : 0;
+  const activeProductsRate =
+    data && data.products.total > 0
+      ? Math.round((data.products.active / data.products.total) * 100)
+      : 0;
+  const averagePaidOrder =
+    paidPayments > 0 ? Number(data?.sales.total ?? 0) / paidPayments : 0;
+
+  const supportShortcuts: {
+    to: string;
+    title: string;
+    description: string;
+    icon: LucideIcon;
+    permission: string;
+  }[] = [
+    {
+      to: "/admin/support",
+      title: "گفتگوهای پشتیبانی",
+      description: "پیام‌ها و درخواست‌های مشتریان",
+      icon: Headset,
+      permission: ADMIN_PERMISSIONS.messaging,
+    },
+    {
+      to: "/admin/messaging",
+      title: "پیام‌رسانی",
+      description: "ارسال پیامک، تلگرام و واتساپ",
+      icon: Megaphone,
+      permission: ADMIN_PERMISSIONS.messaging,
+    },
+    {
+      to: "/admin/articles",
+      title: "مقالات و راهنما",
+      description: "نوشتن و ویرایش مقاله‌های سایت",
+      icon: Newspaper,
+      permission: ADMIN_PERMISSIONS.articles,
+    },
+    {
+      to: "/admin/settings",
+      title: "تنظیمات فروشگاه",
+      description: "تماس، ارسال، مالیات و درگاه پرداخت",
+      icon: Settings,
+      permission: ADMIN_PERMISSIONS.settings,
+    },
+  ].filter((item) => can(item.permission));
+
+  /** نوار کنترل هر بخش در حالت «چیدمان» (کشیدن، بالا/پایین، پنهان‌کردن). */
+  const renderBlockControls = (blockId: DashboardBlockId) => {
+    if (!layoutEditing) {
+      return null;
+    }
+
+    const meta = getDashboardBlockMeta(blockId, dashboardLayout);
+    const index = visibleBlocks.indexOf(blockId);
+
+    return (
+      <div className="dashboard-block-bar">
+        <span className="dashboard-block-bar-title">
+          <span
+            className="dashboard-block-grip"
+            draggable
+            onDragStart={(event) => handleBlockDragStart(event, blockId)}
+            onDragEnd={handleBlockDragEnd}
+            title="برای جابه‌جایی این بخش بکشید"
+            aria-label={`کشیدن بخش ${meta.label}`}
+            role="button"
+            tabIndex={-1}
+          >
+            <GripVertical size={14} />
+          </span>
+          {meta.label}
+        </span>
+
+        <span className="dashboard-block-actions">
+          <button
+            type="button"
+            className="dashboard-block-action"
+            onClick={() => moveBlockByOffset(blockId, -1)}
+            disabled={index <= 0}
+            title="انتقال بخش به بالا"
+            aria-label={`انتقال ${meta.label} به بالا`}
+          >
+            <ArrowUp size={13} />
+          </button>
+
+          <button
+            type="button"
+            className="dashboard-block-action"
+            onClick={() => moveBlockByOffset(blockId, 1)}
+            disabled={index === visibleBlocks.length - 1}
+            title="انتقال بخش به پایین"
+            aria-label={`انتقال ${meta.label} به پایین`}
+          >
+            <ArrowDown size={13} />
+          </button>
+
+          {/* برای میان‌برها امکان حذف کامل هم هست */}
+          {isDashboardCustomBlockId(blockId) ? (
+            <button
+              type="button"
+              className="dashboard-block-action"
+              onClick={() => removeShortcutBlock(blockId)}
+              title="حذف این میان‌بر از نمای کلی"
+              aria-label={`حذف ${meta.label} از نمای کلی`}
+            >
+              <Trash2 size={13} />
+            </button>
+          ) : (
+            <button
+              type="button"
+              className="dashboard-block-action"
+              onClick={() => setBlockHidden(blockId, true)}
+              title="پنهان کردن این بخش"
+              aria-label={`پنهان کردن ${meta.label}`}
+            >
+              <EyeOff size={13} />
+            </button>
+          )}
+        </span>
+      </div>
+    );
+  };
+
+  /** پوستهٔ هر بخش: ترتیب، ناحیهٔ رها کردن و نوار کنترل. */
+  const renderBlock = (blockId: DashboardBlockId, content: ReactNode) => {
+    if (dashboardLayout.hidden.includes(blockId)) {
+      return null;
+    }
+
+    const drop = blockDrop?.id === blockId ? blockDrop : null;
+    const meta = getDashboardBlockMeta(blockId, dashboardLayout);
+
+    return (
+      <section
+        key={blockId}
+        className={`dashboard-block ${
+          draggingBlock === blockId ? "is-dragging" : ""
+        } ${
+          drop ? (drop.after ? "is-drop-after" : "is-drop-before") : ""
+        }`}
+        data-block={blockId}
+        data-span={meta.span}
+        style={{ order: dashboardLayout.order.indexOf(blockId) }}
+        onDragOver={(event) => handleBlockDragOver(event, blockId)}
+        onDrop={(event) => handleBlockDrop(event, blockId)}
+        onDragLeave={() =>
+          setBlockDrop((current) => (current?.id === blockId ? null : current))
+        }
+        aria-label={meta.label}
+      >
+        {renderBlockControls(blockId)}
+        {content}
+      </section>
+    );
+  };
+
+  /** کارت یک بخش منو که مدیر به نمای کلی اضافه کرده است. */
+  const renderShortcutBlock = (block: AdminDashboardCustomBlock) => {
+    const Icon = getAdminNavItem(block.path)?.icon ?? Link2;
+
+    return renderBlock(
+      block.id,
+      <section className="dashboard-panel dashboard-shortcut-block">
+        <div className="dashboard-panel-header">
+          <h2 className="dashboard-panel-title">{block.label}</h2>
+
+          <span className="dashboard-shortcut-icon" aria-hidden="true">
+            <Icon size={17} strokeWidth={1.9} />
+          </span>
+        </div>
+
+        <p className="dashboard-shortcut-block-text">{block.description}</p>
+
+        <Link
+          to={block.path}
+          className="dashboard-shortcut-block-link"
+          title={`رفتن به ${block.label}`}
+        >
+          رفتن به بخش
+          <ArrowLeft size={13} aria-hidden="true" />
+        </Link>
+      </section>,
+    );
+  };
+
+  const customBlocks = dashboardLayout.order.filter(
+    (blockId): blockId is `custom:${string}` =>
+      isDashboardCustomBlockId(blockId),
+  );
+
   return (
-    <div className="dashboard-page" style={pageStyle}>
+    <div
+      ref={pageRef}
+      className={`dashboard-page ${
+        shortcutDragActive ? "is-shortcut-drop-active" : ""
+      }`}
+      style={pageStyle}
+      onDragOver={handleShortcutDragOver}
+      onDrop={handleShortcutDrop}
+    >
       <style>{dashboardStyles}</style>
+
+      {shortcutDragActive && (
+        <div className="dashboard-shortcut-dropzone" aria-hidden="true">
+          <Plus size={17} />
+          <span>برای افزودن این بخش به نمای کلی، همین‌جا رها کنید</span>
+        </div>
+      )}
 
       <header className="dashboard-header">
         <div>
@@ -1332,6 +1923,151 @@ function AdminDashboard() {
             />
             پنل مدیریت فروشگاه
           </span>
+
+          <div className="dashboard-layout-tools">
+            <button
+              type="button"
+              className={`dashboard-refresh-button dashboard-layout-toggle ${
+                layoutEditing ? "is-active" : ""
+              }`}
+              onClick={() => setLayoutEditing((editing) => !editing)}
+              aria-pressed={layoutEditing}
+              title={
+                layoutEditing
+                  ? "پایان شخصی‌سازی نمای کلی"
+                  : "شخصی‌سازی چیدمان نمای کلی"
+              }
+            >
+              {layoutEditing ? (
+                <Check size={14} aria-hidden="true" />
+              ) : (
+                <SlidersHorizontal size={14} aria-hidden="true" />
+              )}
+              {layoutEditing ? "پایان" : "چیدمان"}
+            </button>
+
+            {layoutEditing && (
+              <>
+                <button
+                  type="button"
+                  className="dashboard-refresh-button"
+                  onClick={() => setAddMenuOpen((open) => !open)}
+                  aria-expanded={addMenuOpen}
+                  aria-haspopup="dialog"
+                  title="افزودن بخش به نمای کلی"
+                >
+                  <Plus size={14} aria-hidden="true" />
+                  افزودن بخش
+                </button>
+
+                <button
+                  type="button"
+                  className="dashboard-refresh-button"
+                  onClick={resetDashboardLayout}
+                  title="بازگشت به چیدمان پیش‌فرض"
+                >
+                  <RotateCcw size={14} aria-hidden="true" />
+                  پیش‌فرض
+                </button>
+              </>
+            )}
+
+            {layoutEditing && addMenuOpen && (
+              <div
+                className="dashboard-layout-popover"
+                role="dialog"
+                aria-label="بخش‌های نمای کلی"
+              >
+                <p className="dashboard-layout-popover-title">
+                  بخش‌های نمای کلی
+                </p>
+
+                {DASHBOARD_BLOCK_IDS.map((blockId) => {
+                  const meta = DASHBOARD_BLOCK_META[blockId];
+                  const hidden = dashboardLayout.hidden.includes(blockId);
+
+                  return (
+                    <button
+                      key={blockId}
+                      type="button"
+                      className={`dashboard-layout-item ${
+                        hidden ? "" : "is-added"
+                      }`}
+                      onClick={() => setBlockHidden(blockId, !hidden)}
+                    >
+                      <span>
+                        {meta.label}
+                        <small>{meta.description}</small>
+                      </span>
+                      <span className="dashboard-layout-item-state">
+                        {hidden ? (
+                          <Plus size={13} aria-hidden="true" />
+                        ) : (
+                          <Check size={13} aria-hidden="true" />
+                        )}
+                        {hidden ? "افزودن" : "حذف"}
+                      </span>
+                    </button>
+                  );
+                })}
+
+                <p className="dashboard-layout-popover-title">
+                  میان‌برهای منوی پنل
+                </p>
+
+                {navShortcutTargets.map((item) => {
+                  const blockId = dashboardShortcutBlockId(item.to);
+                  const added =
+                    dashboardLayout.custom.some(
+                      (block) => block.id === blockId,
+                    ) && !dashboardLayout.hidden.includes(blockId);
+                  const Icon = item.icon;
+
+                  return (
+                    <button
+                      key={item.to}
+                      type="button"
+                      className={`dashboard-layout-item ${
+                        added ? "is-added" : ""
+                      }`}
+                      onClick={() => {
+                        if (added) {
+                          removeShortcutBlock(blockId);
+
+                          return;
+                        }
+
+                        addShortcutBlock({ path: item.to, label: item.label });
+                      }}
+                    >
+                      <span className="dashboard-layout-item-main">
+                        <Icon size={14} strokeWidth={1.9} aria-hidden="true" />
+                        <span>
+                          {item.label}
+                          <small>{item.to}</small>
+                        </span>
+                      </span>
+                      <span className="dashboard-layout-item-state">
+                        {added ? (
+                          <Check size={13} aria-hidden="true" />
+                        ) : (
+                          <Plus size={13} aria-hidden="true" />
+                        )}
+                        {added ? "حذف" : "افزودن"}
+                      </span>
+                    </button>
+                  );
+                })}
+
+                <p className="dashboard-layout-hint">
+                  هر بخشی را که می‌خواهید به نمای کلی اضافه یا از آن حذف کنید؛
+                  ترتیب نمایش را هم با کشیدن دستهٔ ⋮⋮ روی خودِ بخش‌ها تغییر
+                  دهید. برای افزودن سریع هر بخش از پنل، همان بخش را از منوی
+                  کنار صفحه بکشید و روی این صفحه رها کنید.
+                </p>
+              </div>
+            )}
+          </div>
 
           <button
             type="button"
@@ -1374,10 +2110,13 @@ function AdminDashboard() {
             </div>
           )}
 
-          <section
-            className="dashboard-welcome-card"
-            aria-label="خلاصه فروش هفتگی"
-          >
+          <div className="dashboard-blocks">
+            {renderBlock(
+              "welcome",
+              <div
+                className="dashboard-welcome-card"
+                aria-label="خلاصه فروش هفتگی"
+              >
             <div className="dashboard-welcome-content">
               <div className="dashboard-welcome-label">
                 <Sparkles size={15} aria-hidden="true" />
@@ -1439,11 +2178,14 @@ function AdminDashboard() {
                 محاسبه هفتگی از شنبه تا جمعه
               </div>
             </div>
-          </section>
+              </div>,
+            )}
 
-          <section className="dashboard-section">
-            <div className="dashboard-section-heading">
-              <h2 className="dashboard-section-title">دسترسی سریع</h2>
+            {renderBlock(
+              "quick-links",
+              <section className="dashboard-section">
+                <div className="dashboard-section-heading">
+                  <h2 className="dashboard-section-title">دسترسی سریع</h2>
               <span className="dashboard-section-caption">
                 بخش‌های پرکاربرد مدیریت
               </span>
@@ -1487,10 +2229,14 @@ function AdminDashboard() {
                 );
               })}
             </div>
-          </section>
-          <section className="dashboard-section">
-            <div className="dashboard-section-heading">
-              <h2 className="dashboard-section-title">آمار کلی فروشگاه</h2>
+              </section>,
+            )}
+
+            {renderBlock(
+              "stats",
+              <section className="dashboard-section">
+                <div className="dashboard-section-heading">
+                  <h2 className="dashboard-section-title">آمار کلی فروشگاه</h2>
               <span className="dashboard-section-caption">
                 نمای کلی اطلاعات
               </span>
@@ -1522,11 +2268,14 @@ function AdminDashboard() {
                 );
               })}
             </div>
-          </section>
+              </section>,
+            )}
 
-          <section className="dashboard-section">
-            <div className="dashboard-section-heading">
-              <h2 className="dashboard-section-title">نبض فروشگاه</h2>
+            {renderBlock(
+              "sales-trend",
+              <section className="dashboard-section">
+                <div className="dashboard-section-heading">
+                  <h2 className="dashboard-section-title">نبض فروشگاه</h2>
               <span className="dashboard-section-caption">
                 نمودار تعاملی روند فروش
               </span>
@@ -1548,10 +2297,12 @@ function AdminDashboard() {
               </div>
               <SalesTrendChart />
             </div>
-          </section>
+              </section>,
+            )}
 
-          <div className="dashboard-lower-grid">
-            <section className="dashboard-panel">
+            {renderBlock(
+              "order-status",
+              <section className="dashboard-panel">
               <div className="dashboard-panel-header">
                 <div>
                   <h2 className="dashboard-panel-title">وضعیت سفارش‌ها</h2>
@@ -1611,9 +2362,12 @@ function AdminDashboard() {
                   );
                 })}
               </div>
-            </section>
+              </section>,
+            )}
 
-            <section className="dashboard-panel">
+            {renderBlock(
+              "payment-status",
+              <section className="dashboard-panel">
               <div className="dashboard-panel-header">
                 <div>
                   <h2 className="dashboard-panel-title">وضعیت پرداخت‌ها</h2>
@@ -1655,7 +2409,173 @@ function AdminDashboard() {
                 رفتن به سفارش‌ها
                 <ArrowLeft size={14} aria-hidden="true" />
               </Link>
-            </section>
+              </section>,
+            )}
+
+            {renderBlock(
+              "sales-channels",
+              <section className="dashboard-panel">
+                <div className="dashboard-panel-header">
+                  <div>
+                    <h2 className="dashboard-panel-title">کانال‌های فروش</h2>
+                    <p className="dashboard-panel-subtitle">
+                      سهم هر کانال از فروش پرداخت‌شده
+                    </p>
+                  </div>
+                  <Globe size={19} color="#8c9aa5" aria-hidden="true" />
+                </div>
+
+                <SalesChannelsChart channels={salesChannels} />
+              </section>,
+            )}
+
+            {renderBlock(
+              "store-health",
+              <section className="dashboard-panel">
+                <div className="dashboard-panel-header">
+                  <div>
+                    <h2 className="dashboard-panel-title">سلامت فروشگاه</h2>
+                    <p className="dashboard-panel-subtitle">
+                      چند شاخص کلیدی برای پیگیری وضعیت فروش
+                    </p>
+                  </div>
+                  <Activity size={19} color="#8c9aa5" aria-hidden="true" />
+                </div>
+
+                <div className="dashboard-health-list">
+                  {[
+                    {
+                      label: "نرخ تکمیل سفارش",
+                      value: completionRate,
+                      hint: `${formatNumber(
+                        data.orders.completed,
+                      )} سفارش تکمیل‌شده از ${formatNumber(totalOrders)}`,
+                      color: "#54785a",
+                    },
+                    {
+                      label: "نرخ پرداخت سفارش‌ها",
+                      value: paymentRate,
+                      hint: `${formatNumber(paidPayments)} پرداخت‌شده و ${formatNumber(
+                        unpaidPayments,
+                      )} پرداخت‌نشده`,
+                      color: "#397c91",
+                    },
+                    {
+                      label: "محصولات فعال",
+                      value: activeProductsRate,
+                      hint: `${formatNumber(
+                        data.products.active,
+                      )} محصول فعال از ${formatNumber(data.products.total)}`,
+                      color: "#c96548",
+                    },
+                  ].map((metric) => (
+                    <div className="dashboard-health-row" key={metric.label}>
+                      <div className="dashboard-health-head">
+                        <span className="dashboard-health-label">
+                          {metric.label}
+                        </span>
+                        <span className="dashboard-health-value">
+                          {formatNumber(metric.value)}٪
+                        </span>
+                      </div>
+
+                      <div
+                        className="dashboard-health-track"
+                        role="progressbar"
+                        aria-label={metric.label}
+                        aria-valuemin={0}
+                        aria-valuemax={100}
+                        aria-valuenow={metric.value}
+                      >
+                        <div
+                          className="dashboard-health-progress"
+                          style={{
+                            width: `${Math.min(
+                              100,
+                              Math.max(0, metric.value),
+                            )}%`,
+                            background: metric.color,
+                          }}
+                        />
+                      </div>
+
+                      <p className="dashboard-health-note">{metric.hint}</p>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="dashboard-health-foot">
+                  <span>میانگین ارزش هر سفارش پرداخت‌شده</span>
+                  <strong>{formatPrice(averagePaidOrder)}</strong>
+                </div>
+              </section>,
+            )}
+
+            {renderBlock(
+              "support-shortcuts",
+              <section className="dashboard-panel">
+                <div className="dashboard-panel-header">
+                  <div>
+                    <h2 className="dashboard-panel-title">
+                      میان‌برهای پشتیبانی
+                    </h2>
+                    <p className="dashboard-panel-subtitle">
+                      دسترسی سریع به بخش‌های ارتباط با مشتری
+                    </p>
+                  </div>
+                  <Headset size={19} color="#8c9aa5" aria-hidden="true" />
+                </div>
+
+                {supportShortcuts.length > 0 ? (
+                  <div className="dashboard-shortcut-list">
+                    {supportShortcuts.map((item) => {
+                      const Icon = item.icon;
+
+                      return (
+                        <Link
+                          to={item.to}
+                          className="dashboard-shortcut"
+                          key={item.to}
+                        >
+                          <span className="dashboard-shortcut-icon">
+                            <Icon size={17} aria-hidden="true" />
+                          </span>
+                          <span className="dashboard-shortcut-text">
+                            <span className="dashboard-shortcut-title">
+                              {item.title}
+                            </span>
+                            <span className="dashboard-shortcut-description">
+                              {item.description}
+                            </span>
+                          </span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="dashboard-empty-note">
+                    برای دیدن این میان‌برها، دسترسی بخش پشتیبانی یا تنظیمات لازم
+                    است.
+                  </p>
+                )}
+              </section>,
+            )}
+
+            {/* میان‌برهایی که مدیر از منوی پنل به نمای کلی اضافه کرده است */}
+            {customBlocks.map((blockId) => {
+              const block = dashboardLayout.custom.find(
+                (item) => item.id === blockId,
+              );
+
+              return block ? renderShortcutBlock(block) : null;
+            })}
+
+            {visibleBlocks.length === 0 && (
+              <div className="dashboard-block-empty">
+                همهٔ بخش‌های نمای کلی پنهان شده‌اند. با «افزودن بخش» هر کدام را
+                که لازم دارید به صفحه برگردانید.
+              </div>
+            )}
           </div>
         </>
       ) : null}

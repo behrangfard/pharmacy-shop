@@ -14,10 +14,12 @@ import {
   Trash2,
 } from "lucide-react";
 import { adminApi } from "../services/api";
+import OrderStatusSmsCard from "../components/OrderStatusSmsCard";
+import AdminMessagingContactsCard from "../components/AdminMessagingContactsCard";
 
 type ChannelKey = "sms" | "telegram" | "whatsapp" | "bale";
 
-type AudienceKey = "custom" | "order_phones" | "default";
+type AudienceKey = "custom" | "order_phones" | "default" | "contacts";
 
 type MessagingChannel = {
   key: ChannelKey;
@@ -35,7 +37,8 @@ type MessagingChannel = {
 
 type MessagingSettings = {
   channels: MessagingChannel[];
-  audiences: { order_phones: number };
+  audiences: { order_phones: number; contacts: number };
+  contact_groups: { name: string; count: number }[];
   stats: { total: number; sent: number; failed: number; today: number };
   audience_limit: number;
 };
@@ -311,6 +314,7 @@ function AdminMessaging() {
 
   const [channelKey, setChannelKey] = useState<ChannelKey>("sms");
   const [audience, setAudience] = useState<AudienceKey>("custom");
+  const [contactGroup, setContactGroup] = useState("");
   const [recipientsText, setRecipientsText] = useState("");
   const [body, setBody] = useState("");
   const [asTemplate, setAsTemplate] = useState(false);
@@ -543,6 +547,7 @@ function AdminMessaging() {
         body: trimmedBody,
         audience,
         recipients: audience === "custom" ? customRecipients : [],
+        group: audience === "contacts" ? contactGroup : null,
         as_template: asTemplate,
       });
 
@@ -765,6 +770,15 @@ function AdminMessaging() {
                 شماره‌های سفارش‌ها ({formatNumber(settings?.audiences.order_phones ?? 0)})
               </button>
 
+              <button
+                type="button"
+                className={audience === "contacts" ? "is-active" : ""}
+                onClick={() => setAudience("contacts")}
+                disabled={(settings?.audiences.contacts ?? 0) === 0}
+              >
+                مخاطبین وارد‌شده ({formatNumber(settings?.audiences.contacts ?? 0)})
+              </button>
+
               {selectedChannel?.default_recipient && (
                 <button
                   type="button"
@@ -804,6 +818,30 @@ function AdminMessaging() {
               پیام برای همهٔ شماره‌های ثبت‌شده در سفارش‌ها ارسال می‌شود (حداکثر{" "}
               {formatNumber(settings?.audience_limit ?? 0)} گیرنده).
             </div>
+          )}
+
+          {audience === "contacts" && (
+            <label className="msg-field">
+              <span className="msg-label">گروه مخاطبین</span>
+
+              <select
+                className="msg-input"
+                value={contactGroup}
+                onChange={(event) => setContactGroup(event.target.value)}
+              >
+                <option value="">همهٔ مخاطبین</option>
+                {(settings?.contact_groups ?? []).map((group) => (
+                  <option key={group.name} value={group.name}>
+                    {group.name} ({formatNumber(group.count)})
+                  </option>
+                ))}
+              </select>
+
+              <span className="msg-hint">
+                پیام برای شماره‌هایی ارسال می‌شود که در این صفحه وارد کرده‌اید (حداکثر{" "}
+                {formatNumber(settings?.audience_limit ?? 0)} گیرنده در هر ارسال).
+              </span>
+            </label>
           )}
 
           {audience === "default" && selectedChannel?.default_recipient && (
@@ -906,6 +944,10 @@ function AdminMessaging() {
 
         </form>
       </section>
+
+      <AdminMessagingContactsCard onChanged={() => void loadSettings()} />
+
+      <OrderStatusSmsCard />
 
       <section className="msg-card msg-birthday">
         <div className="msg-card-head">
@@ -1986,6 +2028,42 @@ const msgStyles = `
 }
 
 .msg-bday-form { gap: 14px; }
+
+/* ---------- Order status SMS ---------- */
+.msg-ostatus-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.msg-ostatus-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  color: #52655a;
+  background: #f7faf4;
+  border: 1px solid #dfe8d9;
+  border-radius: 10px;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.msg-ostatus-option:hover {
+  border-color: #bed3b5;
+}
+
+.msg-ostatus-option.is-active {
+  color: #2f5a38;
+  background: #eaf3e2;
+  border-color: #9dbf92;
+  font-weight: 700;
+}
+
+.msg-ostatus-option input {
+  accent-color: #4f7754;
+}
 
 .msg-bday-row {
   display: grid;

@@ -16,6 +16,8 @@ class Order extends Model
         'idempotency_key',
         'recipient_name',
         'user_id',
+        'guest_token',
+        'guest_access_code',
         'order_number',
         'subtotal',
         'shipping_cost',
@@ -27,6 +29,8 @@ class Order extends Model
         'total',
         'status',
         'payment_status',
+        'payment_method',
+        'paid_at',
         'phone',
         'address',
         'postal_code',
@@ -38,6 +42,14 @@ class Order extends Model
         'sales_channel',
     ];
 
+    /**
+     * کد پیگیری مهمان رمز دسترسی است؛ فقط در پاسخ ثبت سفارش (و بازیابی
+     * دسترسی) با `makeVisible` نمایش داده می‌شود و در جزئیات/فاکتور/پنل نیست.
+     */
+    protected $hidden = [
+        'guest_access_code',
+    ];
+
     protected $casts = [
         'subtotal' => 'decimal:2',
         'shipping_cost' => 'decimal:2',
@@ -46,6 +58,7 @@ class Order extends Model
         'tax_percent' => 'decimal:2',
         'tax_amount' => 'decimal:2',
         'total' => 'decimal:2',
+        'paid_at' => 'datetime',
         'shipped_at' => 'datetime',
         'delivered_at' => 'datetime',
     ];

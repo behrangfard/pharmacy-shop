@@ -9,6 +9,7 @@ use App\Models\ShipmentEvent;
 use App\Models\ShippingMethod;
 use App\Models\ShippingRule;
 use App\Models\ShippingZone;
+use App\Models\StoreSetting;
 use App\Services\Messaging\MessagingManager;
 use App\Services\Shipping\ShippingService;
 use Illuminate\Http\JsonResponse;
@@ -510,6 +511,78 @@ class AdminShippingController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'روش ارسال حذف شد.',
+        ]);
+    }
+
+    /**
+     * محتوای قابل ویرایش صفحهٔ عمومی «روش‌های ارسال و اطلاعات ارسال».
+     *
+     * روش‌های ارسالِ همین صفحه از جدول shipping_methods خوانده می‌شوند
+     * (تب «روش‌های ارسال»)؛ این endpoint فقط عنوان، معرفی، نکته‌ها، متن
+     * تکمیلی و نمایش/مخفی‌کردن هزینه‌ها را برمی‌گرداند.
+     */
+    public function page(): JsonResponse
+    {
+        return response()->json([
+            'success' => true,
+            'data' => StoreSetting::shippingPage(),
+        ]);
+    }
+
+    /**
+     * ذخیرهٔ صفحهٔ «روش‌های ارسال و اطلاعات ارسال» از پنل مدیریت.
+     */
+    public function updatePage(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'title' => ['required', 'string', 'max:120'],
+            'intro' => ['nullable', 'string', 'max:1000'],
+            'notes' => [
+                'nullable',
+                'array',
+                'max:'.StoreSetting::SHIPPING_PAGE_NOTES_MAX,
+            ],
+            'notes.*' => ['nullable', 'string', 'max:300'],
+            'content' => ['nullable', 'string', 'max:20000'],
+            'show_costs' => ['sometimes', 'boolean'],
+        ], [
+            'title.required' => 'عنوان صفحه را وارد کنید.',
+            'title.max' => 'عنوان صفحه حداکثر ۱۲۰ نویسه می‌تواند باشد.',
+            'intro.max' => 'متن معرفی حداکثر ۱۰۰۰ نویسه می‌تواند باشد.',
+            'notes.max' => 'حداکثر '.StoreSetting::SHIPPING_PAGE_NOTES_MAX
+                .' نکته می‌توانید ثبت کنید.',
+            'notes.*.max' => 'هر نکته حداکثر ۳۰۰ نویسه می‌تواند باشد.',
+            'content.max' => 'متن تکمیلی بیش از حد طولانی است (حداکثر ۲۰۰۰۰ نویسه).',
+        ]);
+
+        $notes = [];
+
+        foreach ($validated['notes'] ?? [] as $note) {
+            $note = trim((string) $note);
+
+            if ($note !== '') {
+                $notes[] = $note;
+            }
+        }
+
+        StoreSetting::setValue('shipping_page_title', $validated['title']);
+        StoreSetting::setValue('shipping_page_intro', $validated['intro'] ?? '');
+        StoreSetting::setValue(
+            'shipping_page_notes',
+            json_encode($notes, JSON_UNESCAPED_UNICODE) ?: '[]'
+        );
+        StoreSetting::setValue('shipping_page_content', $validated['content'] ?? '');
+        StoreSetting::setValue(
+            'shipping_page_show_costs',
+            ($validated['show_costs'] ?? true) ? '1' : '0'
+        );
+
+        StoreSetting::forgetCache();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'صفحهٔ روش‌های ارسال ذخیره شد.',
+            'data' => StoreSetting::shippingPage(),
         ]);
     }
 

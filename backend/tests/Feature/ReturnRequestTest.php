@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Coupon;
 use App\Models\Order;
 use App\Models\ReturnRequest;
 use App\Models\User;
@@ -139,6 +140,45 @@ class ReturnRequestTest extends TestCase
             'id' => $order->id,
             'payment_status' => 'refunded',
         ]);
+    }
+
+    public function test_refunding_a_returned_order_releases_the_coupon_usage_slot(): void
+    {
+        $admin = User::factory()->create(['role' => 'admin']);
+        $user = User::factory()->create(['role' => 'user']);
+        $order = $this->createOrder($user, 'ORD-RETURN-010');
+
+        $coupon = Coupon::query()->create([
+            'code' => 'RETURN10',
+            'type' => 'fixed',
+            'value' => 10000,
+            'usage_limit' => 5,
+            'used_count' => 1,
+            'is_active' => true,
+        ]);
+
+        $order->forceFill([
+            'coupon_code' => $coupon->code,
+            'coupon_discount' => 10000,
+            'discount' => 10000,
+        ])->save();
+
+        $returnRequest = ReturnRequest::query()->create([
+            'order_id' => $order->id,
+            'user_id' => $user->id,
+            'status' => 'pending',
+            'reason' => 'انصراف از خرید',
+        ]);
+
+        Sanctum::actingAs($admin);
+
+        $this->patchJson(
+            "/api/v1/admin/returns/{$returnRequest->id}/status",
+            ['status' => 'refunded']
+        )->assertOk()
+            ->assertJsonPath('data.status', 'refunded');
+
+        $this->assertSame(0, (int) $coupon->fresh()->used_count);
     }
 
     public function test_customer_can_list_own_return_requests(): void

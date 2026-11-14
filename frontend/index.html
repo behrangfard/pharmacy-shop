@@ -4,6 +4,31 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
+    <!-- رنگ پس‌زمینهٔ اولیه پیش از بارگذاری CSS؛ تا وقتی فایل‌های JS/CSS
+         نرسیده‌اند، صفحهٔ سفید پیش‌فرض مرورگر دیده نشود. هم‌رنگ با
+         background_color در manifest و پس‌زمینهٔ صفحات فروشگاه (کرم).
+         این قاعده فقط رنگ بوم (canvas) را می‌پوشاند و تم‌های روشن/تیرهٔ
+         داخل index.css همچنان روی body اعمال می‌شوند. -->
+    <style>
+      html {
+        background-color: #faf9f4;
+      }
+    </style>
+
+    <!-- اپلیکیشن وب نصب‌شدنی (PWA): manifest، آیکن‌ها و تنظیمات iOS -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="32x32"
+      href="/icons/favicon-32.png"
+    />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <meta name="application-name" content="بهرنگ شاپ" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="بهرنگ شاپ" />
+
     <title>بهرنگ شاپ | فروشگاه آنلاین لباس زیر زنانه</title>
 
     <!-- این مقادیر پیش‌فرض هستند؛ با باز شدن هر مسیر، هوک usePageMeta
@@ -14,7 +39,7 @@
     <meta property="og:locale" content="fa_IR" />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta property="og:image" content="/images/Behrang Shop Lingerie Elegance.png" />
+    <meta property="og:image" content="/images/og-default.jpg" />
 
     <meta
       name="description"

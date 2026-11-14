@@ -6,11 +6,18 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\ReturnRequest;
 use App\Models\StoreSetting;
+use App\Services\Notifications\AdminNotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Throwable;
 
 class ReturnRequestController extends Controller
 {
+    public function __construct(
+        private readonly AdminNotificationService $notifications
+    ) {
+    }
+
     /**
      * فهرست درخواست‌های مرجوعی کاربر جاری.
      */
@@ -98,6 +105,13 @@ class ReturnRequestController extends Controller
             'reason' => $validated['reason'],
             'description' => $validated['description'] ?? null,
         ]);
+
+        // اعلان زنگولهٔ پنل؛ خطای اعلان نباید ثبت درخواست را متوقف کند.
+        try {
+            $this->notifications->returnRequested($returnRequest->load('order'));
+        } catch (Throwable) {
+            // درخواست ثبت شده است.
+        }
 
         return response()->json([
             'success' => true,
