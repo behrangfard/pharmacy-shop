@@ -536,6 +536,106 @@ class ProductColorTest extends TestCase
         $this->assertDatabaseCount('product_colors', 0);
     }
 
+    /**
+     * «ذخیره و ادامه» در پنل، فرم را روی همان صفحه نگه می‌دارد؛ ردیف رنگی که
+     * تازه ساخته شده هنوز شناسه ندارد. ذخیرهٔ دوم باید همان رنگ را به‌روزرسانی
+     * کند و نباید خطای یکتایی ۱۰۶۲ (Duplicate entry) بدهد.
+     */
+    public function test_saving_color_without_id_updates_the_existing_row(): void
+    {
+        $this->actingAsAdmin();
+
+        $create = $this->postJson('/api/v1/admin/products', $this->productPayload([
+            'colors' => [
+                ['name' => 'مشکی', 'hex' => '#111111', 'stock' => 5],
+            ],
+        ]));
+
+        $create->assertSuccessful();
+
+        $productId = (int) $create->json('data.id');
+
+        $update = $this->putJson('/api/v1/admin/products/'.$productId, [
+            'colors' => [
+                ['name' => 'مشکی', 'hex' => '#111111', 'stock' => 12],
+            ],
+        ]);
+
+        $update->assertOk();
+
+        $this->assertDatabaseCount('product_colors', 1);
+        $this->assertDatabaseHas('product_colors', [
+            'product_id' => $productId,
+            'name' => 'مشکی',
+            'stock' => 12,
+        ]);
+    }
+
+    /**
+     * نام رنگ با حروف عربی (ك/ي) و فارسی (ک/ی) یکی است؛ نباید دو ردیف بسازد.
+     */
+    public function test_color_name_matching_ignores_arabic_and_persian_letters(): void
+    {
+        $this->actingAsAdmin();
+
+        $create = $this->postJson('/api/v1/admin/products', $this->productPayload([
+            'colors' => [
+                ['name' => 'مشكي', 'hex' => '#111111'],
+            ],
+        ]));
+
+        $create->assertSuccessful();
+
+        $productId = (int) $create->json('data.id');
+
+        $update = $this->putJson('/api/v1/admin/products/'.$productId, [
+            'colors' => [
+                ['name' => 'مشکی', 'hex' => '#222222'],
+            ],
+        ]);
+
+        $update->assertOk();
+
+        $this->assertDatabaseCount('product_colors', 1);
+        $this->assertDatabaseHas('product_colors', [
+            'product_id' => $productId,
+            'name' => 'مشکی',
+        ]);
+    }
+
+    /**
+     * شناسهٔ رنگ محصول دیگر نباید بی‌صدا به درج تکراری تبدیل شود.
+     */
+    public function test_color_id_from_another_product_is_rejected(): void
+    {
+        $this->actingAsAdmin();
+
+        $firstId = (int) $this->postJson('/api/v1/admin/products', $this->productPayload([
+            'colors' => [['name' => 'مشکی', 'hex' => '#111111']],
+        ]))->json('data.id');
+
+        $secondId = (int) $this->postJson('/api/v1/admin/products', $this->productPayload([
+            'colors' => [['name' => 'سفید', 'hex' => '#ffffff']],
+        ]))->json('data.id');
+
+        $foreignColor = ProductColor::query()
+            ->where('product_id', $firstId)
+            ->firstOrFail();
+
+        $response = $this->putJson('/api/v1/admin/products/'.$secondId, [
+            'colors' => [
+                ['id' => $foreignColor->id, 'name' => 'مشکی', 'hex' => '#111111'],
+            ],
+        ]);
+
+        $response->assertStatus(422)->assertJsonValidationErrors('colors.0.id');
+
+        $this->assertDatabaseHas('product_colors', [
+            'product_id' => $firstId,
+            'name' => 'مشکی',
+        ]);
+    }
+
     public function test_product_without_colors_still_accepts_orders(): void
     {
         $product = $this->makeProduct();

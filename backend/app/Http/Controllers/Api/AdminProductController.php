@@ -10,6 +10,7 @@ use App\Models\ProductSizeGuide;
 use App\Models\ProductVariant;
 use App\Models\StockMovement;
 use App\Services\Inventory\StockLedger;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -1185,6 +1186,22 @@ class AdminProductController extends Controller
         $usedNames = [];
         $position = 0;
 
+        /*
+         * رنگ‌های موجود این محصول با نامِ یکسان‌سازی‌شده ایندکس می‌شوند.
+         *
+         * چرا لازم است: پنل پس از «ذخیره و ادامه» در همان صفحه می‌ماند و ممکن
+         * است ردیف رنگی که تازه ساخته شده هنوز شناسه نداشته باشد؛ ارسال دوبارهٔ
+         * آن ردیف نباید درج تکراری بسازد و نباید به خطای یکتایی ۱۰۶۲ بخورد.
+         * به همین دلیل نام بدون شناسه با رنگ‌های موجود تطبیق داده می‌شود.
+         *
+         * @var array<string, ProductColor> $existingByName
+         */
+        $existingByName = [];
+
+        foreach ($product->colors()->get() as $existingColor) {
+            $existingByName[$this->colorNameKey($existingColor->name)] = $existingColor;
+        }
+
         foreach (array_values($colors) as $index => $colorData) {
             $name = trim((string) ($colorData['name'] ?? ''));
 
@@ -1193,7 +1210,7 @@ class AdminProductController extends Controller
                 continue;
             }
 
-            $nameKey = mb_strtolower($name, 'UTF-8');
+            $nameKey = $this->colorNameKey($name);
 
             if (isset($usedNames[$nameKey])) {
                 throw ValidationException::withMessages([
@@ -1230,6 +1247,20 @@ class AdminProductController extends Controller
                 $existing = $product->colors()
                     ->whereKey((int) $colorData['id'])
                     ->first();
+
+                /*
+                 * شناسهٔ متعلق به محصول دیگر نباید بی‌صدا به درج تکراری تبدیل
+                 * شود؛ پیام روشن به‌جای خطای دیتابیس برگردانده می‌شود.
+                 */
+                if (! $existing) {
+                    throw ValidationException::withMessages([
+                        "colors.$index.id" => [
+                            'این رنگ متعلق به محصول انتخاب‌شده نیست.',
+                        ],
+                    ]);
+                }
+            } else {
+                $existing = $existingByName[$nameKey] ?? null;
             }
 
             if ($existing) {
@@ -1239,12 +1270,26 @@ class AdminProductController extends Controller
                 continue;
             }
 
-            $created = ProductColor::query()->create([
-                'product_id' => $product->id,
-                ...$data,
-            ]);
+            /*
+             * یکتایی (product_id, name) در دیتابیس با collation فارسی سنجیده
+             * می‌شود؛ اگر نامی پس از یکسان‌سازی همچنان با ردیف موجود یکی
+             * نبود، اینجا به پیام اعتبارسنجی تبدیل می‌شود، نه خطای ۵۰۰.
+             */
+            try {
+                $created = ProductColor::query()->create([
+                    'product_id' => $product->id,
+                    ...$data,
+                ]);
+            } catch (QueryException) {
+                throw ValidationException::withMessages([
+                    "colors.$index.name" => [
+                        "رنگ «{$name}» قبلاً برای این محصول ثبت شده است.",
+                    ],
+                ]);
+            }
 
             $keptIds[] = (int) $created->id;
+            $existingByName[$nameKey] = $created;
         }
 
         $deleteQuery = ProductColor::query()->where('product_id', $product->id);
@@ -1311,6 +1356,29 @@ class AdminProductController extends Controller
         }
 
         $product->unsetRelation('packItems');
+    }
+
+    /**
+     * کلید مقایسهٔ نام رنگ.
+     *
+     * حروف عربی/فارسی (ي/ی و ك/ک)، نیم‌فاصله، کشیده، اعراب و فاصله‌های
+     * تکراری را یکی می‌کند تا تطبیق نام‌ها با رفتار یکتایی دیتابیس هم‌خوان
+     * باشد و دو رنگ «یکی» به‌اشتباه ساخته نشود.
+     */
+    private function colorNameKey(string $name): string
+    {
+        $value = mb_strtolower(trim($name), 'UTF-8');
+
+        $value = str_replace(
+            ["ي", "ك", "ى", "\u{0640}", "\u{200c}", "\u{200e}", "\u{200f}", "\u{00a0}"],
+            ['ی', 'ک', 'ی', '', '', '', '', ' '],
+            $value
+        );
+
+        $value = preg_replace('/[\x{064B}-\x{065F}\x{0670}]/u', '', $value) ?? $value;
+        $value = preg_replace('/\s+/u', ' ', $value) ?? $value;
+
+        return trim($value);
     }
 
     /**

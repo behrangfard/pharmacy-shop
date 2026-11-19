@@ -2990,4 +2990,38 @@ sitemap.xml و robots.txt (ساخت خودکار در build):
   حسابداری) آن‌ها باید مسیر/پارامتر مستقل داشته باشند یا فهرست
   `ADMIN_SEARCH_EXTRA_ENTRIES` گسترش یابد.
 
+### ۱۴. رفع خطای «Duplicate entry» رنگ محصول در جریان «ذخیره و ادامه»
+
+- خطا: `SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry
+  '18-مشکی' for key 'product_colors.product_colors_product_id_name_unique'`.
+- ریشهٔ مشکل (خروجی تسک ۱۳): فرم محصول پس از «ذخیره و ادامه» در همان صفحه
+  می‌ماند؛ ردیف رنگی که در همان ذخیره ساخته شده بود شناسه (`id`) نداشت، پس
+  ذخیرهٔ دوم آن را دوباره «ردیف جدید» می‌دید و بک‌اند تلاش می‌کرد همان
+  `(product_id, name)` را دوباره درج کند. یکتایی جدول، خطای ۱۰۶۲ می‌داد.
+  حالت مشابه: نام رنگ با حروف عربی/فارسی متفاوت (ي/ی، ك/ک) یا شناسهٔ رنگ
+  متعلق به محصول دیگر.
+- بک‌اند (`app/Http/Controllers/Api/AdminProductController.php`):
+  - `syncColors` رنگ‌های موجود محصول را با کلید یکسان‌شدهٔ نام ایندکس می‌کند و
+    ردیفِ بدون شناسه را با هم‌نام موجود **به‌روزرسانی** می‌کند (نه درج تکراری).
+  - `colorNameKey` (متد جدید): trim + lowercase + ي/ك/ى → ی/ک + حذف نیم‌فاصله،
+    کشیده، اعراب و یکسان‌سازی فاصله‌ها.
+  - شناسهٔ رنگ محصول دیگر دیگر بی‌صدا درج نمی‌شود؛ `422` با پیام «این رنگ
+    متعلق به محصول انتخاب‌شده نیست.» (هم‌رفتار با `syncVariants`).
+  - `QueryException` هنگام درج (اگر collation دیتابیس نام را یکی بداند و
+    یکسان‌سازی PHP نه) به `ValidationException` با پیام «رنگ «…» قبلاً برای این
+    محصول ثبت شده است.» تبدیل می‌شود، نه ۵۰۰.
+- فرانت (`frontend/src/pages/AdminProductForm.tsx`):
+  - تابع `syncSavedRowIds(productData)` پس از ذخیرهٔ موفق در حالت «ادامه»،
+    شناسهٔ رنگ‌ها (تطبیق نام با `normalizeRowKey`) و تنوع‌ها (تطبیق SKU) را از
+    پاسخ سرور روی ردیف‌های فرم می‌گذارد؛ «ثبت محصول و ادامه» از مسیر ناوبری به
+    صفحهٔ ویرایش و بارگذاری مجدد همین کار را می‌کند.
+- تست‌ها (`backend/tests/Feature/ProductColorTest.php` — ۳ تست جدید):
+  `saving color without id updates the existing row`،
+  `color name matching ignores arabic and persian letters`،
+  `color id from another product is rejected`.
+- بررسی: `php artisan test` → ۵۰۰ تست PASS (۲۵۰۹ assertion)؛ فرانت
+  `npx tsc --noEmit` بدون خطا، `npm run lint` → ۰ خطا/۰ هشدار،
+  `npm run test` → ۷۷ تست PASS (۱۳ فایل)، `npm run build` سبز.
+- مستندات: `TECHNICAL_GUIDE.md` نسخهٔ ۱.۲۴ (بخش‌های ۹ + تاریخچه).
+
 

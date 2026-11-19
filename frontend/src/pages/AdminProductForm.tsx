@@ -420,6 +420,24 @@ function readProduct(product: Product): ProductFormData {
 
 }
 
+/**
+ * کلید مقایسهٔ نام ردیف‌های فارسی (رنگ).
+ *
+ * همان یکسان‌سازی سمت سرور: ي/ك/ى عربی، نیم‌فاصله، کشیده و فاصله‌های
+ * تکراری نادیده گرفته می‌شوند تا ردیف تازه بتواند شناسهٔ خود را در پاسخ
+ * سرور پیدا کند.
+ */
+function normalizeRowKey(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/ي/g, "ی")
+    .replace(/ك/g, "ک")
+    .replace(/ى/g, "ی")
+    .replace(/[\u200c\u200e\u200f\u0640]/g, "")
+    .replace(/\s+/g, " ");
+}
+
 
 
 function imageUrl(path: string | null | undefined): string {
@@ -823,6 +841,47 @@ function AdminProductForm() {
         ...item,
         colors: item.colors.filter((color) => color !== removed.name),
       })),
+    );
+  }
+
+  /**
+   * همگام‌سازی شناسهٔ ردیف‌ها با پاسخ سرور پس از «ذخیره و ادامه».
+   *
+   * چون فرم پس از ذخیره در همین صفحه می‌ماند، ردیف تازه‌ساخته (رنگ یا تنوع)
+   * بدون شناسه در فرم باقی می‌ماند؛ ذخیرهٔ بعدی دوباره آن را «ردیف جدید»
+   * می‌دید و خطای یکتایی ۱۰۶۲ (Duplicate entry) می‌گرفت. پاسخ سرور منبع
+   * درست شناسه‌هاست.
+   */
+  function syncSavedRowIds(productData: Product) {
+    const colorIds = new Map(
+      (productData.colors ?? []).map((color) => [
+        normalizeRowKey(color.name),
+        color.id,
+      ]),
+    );
+
+    setColors((current) =>
+      current.map((color) => {
+        if (color.id) return color;
+
+        const savedId = colorIds.get(normalizeRowKey(color.name));
+
+        return savedId ? { ...color, id: savedId } : color;
+      }),
+    );
+
+    const variantIds = new Map(
+      (productData.variants ?? []).map((variant) => [variant.sku.trim(), variant.id]),
+    );
+
+    setVariants((current) =>
+      current.map((variant) => {
+        if (variant.id) return variant;
+
+        const savedId = variantIds.get(variant.sku.trim());
+
+        return savedId ? { ...variant, id: savedId } : variant;
+      }),
     );
   }
 
@@ -1523,9 +1582,19 @@ function AdminProductForm() {
 
       if (isEdit && id) {
 
-        await adminApi.put(`/admin/products/${id}`, payload);
+        const updated = await adminApi.put(`/admin/products/${id}`, payload);
 
         if (keepEditing) {
+
+          /*
+           * پاسخ سرور را برای شناسهٔ ردیف‌های تازه اعمال می‌کنیم تا ذخیرهٔ
+           * بعدی همان رنگ/تنوع را به‌روزرسانی کند، نه اینکه دوباره بسازد.
+           */
+          const savedProduct = updated?.data?.data as Product | undefined;
+
+          if (savedProduct) {
+            syncSavedRowIds(savedProduct);
+          }
 
           setSavedNotice("تغییرات ذخیره شد؛ می‌توانید ویرایش را ادامه دهید.");
 
