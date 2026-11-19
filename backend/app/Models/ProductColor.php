@@ -40,11 +40,17 @@ class ProductColor extends Model
         'name',
         'hex',
         'image',
+        /*
+         * موجودی ثبت‌شدهٔ همین رنگ؛ فقط برای اطلاع مدیر است و NULL یعنی
+         * «ثبت نشده». موجودی رسمی کالا/تنوع است که سفارش‌ها از آن کم می‌کنند.
+         */
+        'stock',
         'sort_order',
         'is_active',
     ];
 
     protected $casts = [
+        'stock' => 'integer',
         'sort_order' => 'integer',
         'is_active' => 'boolean',
     ];

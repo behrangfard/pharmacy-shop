@@ -635,6 +635,17 @@ class AdminProductController extends Controller
                 'max:255',
             ],
 
+            /*
+             * موجودی هر رنگ اطلاعاتی است؛ خالی‌بودن آن («ثبت نشده») مجاز است
+             * و عدد ارسالی فقط در همین رنگ ذخیره می‌شود.
+             */
+            'colors.*.stock' => [
+                'nullable',
+                'integer',
+                'min:0',
+                'max:1000000',
+            ],
+
             'colors.*.sort_order' => [
                 'nullable',
                 'integer',
@@ -1163,6 +1174,9 @@ class AdminProductController extends Controller
      * دیگر در فهرست نیستند حذف می‌شوند. حذف رنگ برای تاریخچهٔ سفارش‌ها
      * مشکلی ایجاد نمی‌کند چون نام رنگ داخل خود سفارش ذخیره شده است.
      *
+     * ستون `stock` هر رنگ اطلاعاتی است (موجودی ثبت‌شده توسط مدیر) و به
+     * موجودی رسمی محصول/تنوع که سفارش‌ها از آن کم می‌کنند دست نمی‌زند.
+     *
      * @param  array<int, array<string, mixed>>  $colors
      */
     private function syncColors(Product $product, array $colors): void
@@ -1195,6 +1209,13 @@ class AdminProductController extends Controller
                 'name' => $name,
                 'hex' => $this->normalizeHex($colorData['hex'] ?? null),
                 'image' => $this->nullIfBlank($colorData['image'] ?? null),
+                /*
+                 * موجودی رنگ اطلاعاتی است؛ نبود مقدار یعنی «ثبت نشده» و
+                 * موجودی رسمی همچنان روی محصول/تنوع می‌ماند.
+                 */
+                'stock' => isset($colorData['stock']) && $colorData['stock'] !== ''
+                    ? max(0, (int) $colorData['stock'])
+                    : null,
                 'sort_order' => isset($colorData['sort_order'])
                     ? (int) $colorData['sort_order']
                     : $position,

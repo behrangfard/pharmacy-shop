@@ -5,9 +5,10 @@ import { ArrowLeft, Eye, Heart, Sparkles, Tag } from "lucide-react";
 
 import QuickViewModal from "./QuickViewModal";
 import { useWishlist } from "../context/WishlistContext";
+import { useStoreSettings } from "../hooks/useStoreSettings";
 import type { WishlistProduct } from "../services/wishlist";
 import { getStorageUrl } from "../utils/images";
-import { calculateProductPrice } from "../utils/price";
+import { calculateProductPrice, calculateVatAmount } from "../utils/price";
 
 /**
  * دو نمای کارت محصول:
@@ -376,7 +377,13 @@ function CardMedia({
   );
 }
 
-function GridPrice({ product }: { product: WishlistProduct }) {
+function GridPrice({
+  product,
+  vatPercent,
+}: {
+  product: WishlistProduct;
+  vatPercent: number;
+}) {
   const {
     originalPrice,
     discountPercent,
@@ -421,11 +428,26 @@ function GridPrice({ product }: { product: WishlistProduct }) {
           </div>
         )
       )}
+
+      {/* ارزش افزوده همین‌جا روی کارت دیده می‌شود، نه فقط در مرحلهٔ پرداخت */}
+      {vatPercent > 0 && Boolean(product.is_taxable) && (
+        <div className="mt-1 text-[10px] font-medium text-muted-soft sm:text-xs">
+          ارزش افزوده ({vatPercent.toLocaleString("fa-IR")}٪):{" "}
+          {calculateVatAmount(finalPrice, vatPercent).toLocaleString("fa-IR")}{" "}
+          تومان
+        </div>
+      )}
     </div>
   );
 }
 
-function HomePrice({ product }: { product: WishlistProduct }) {
+function HomePrice({
+  product,
+  vatPercent,
+}: {
+  product: WishlistProduct;
+  vatPercent: number;
+}) {
   const {
     originalPrice,
     discountPercent,
@@ -497,6 +519,15 @@ function HomePrice({ product }: { product: WishlistProduct }) {
             )}
         </>
       )}
+
+      {/* مبلغ ارزش افزوده؛ فقط برای کالاهای مشمول و وقتی مالیات فعال است */}
+      {vatPercent > 0 && Boolean(product.is_taxable) && (
+        <div className="mt-1 w-full text-left text-xs font-medium text-muted-soft">
+          ارزش افزوده ({vatPercent.toLocaleString("fa-IR")}٪):{" "}
+          {calculateVatAmount(finalPrice, vatPercent).toLocaleString("fa-IR")}{" "}
+          تومان
+        </div>
+      )}
     </div>
   );
 }
@@ -510,7 +541,12 @@ function GridCard({
   className = "",
   showWishlistButton,
   onQuickView,
-}: Props & { showWishlistButton: boolean; onQuickView: () => void }) {
+  vatPercent,
+}: Props & {
+  showWishlistButton: boolean;
+  onQuickView: () => void;
+  vatPercent: number;
+}) {
   const imageUrl = productCardImageUrl(product);
   const hoverImageUrl = productCardHoverImageUrl(product);
   const imageAlt = productCardImageAlt(product);
@@ -598,7 +634,7 @@ function GridCard({
           </div>
 
           <div className="min-h-[68px] shrink-0 pt-1 sm:min-h-[76px]">
-            <GridPrice product={product} />
+            <GridPrice product={product} vatPercent={vatPercent} />
           </div>
 
           <div className="mt-2 flex min-h-5 shrink-0 flex-wrap items-center justify-between gap-1 text-[10px] sm:text-xs">
@@ -661,7 +697,12 @@ function HomeCard({
   className = "",
   showWishlistButton,
   onQuickView,
-}: Props & { showWishlistButton: boolean; onQuickView: () => void }) {
+  vatPercent,
+}: Props & {
+  showWishlistButton: boolean;
+  onQuickView: () => void;
+  vatPercent: number;
+}) {
   const imageUrl = productCardImageUrl(product);
   const hoverImageUrl = productCardHoverImageUrl(product);
   const imageAlt = productCardImageAlt(product);
@@ -751,7 +792,7 @@ function HomeCard({
         <SizeChips chips={sizeChips.chips} extra={sizeChips.extra} />
       </div>
 
-      <HomePrice product={product} />
+      <HomePrice product={product} vatPercent={vatPercent} />
 
       <Link
         to={`/product/${product.slug}`}
@@ -791,6 +832,16 @@ export default function ProductCard({
 }: Props) {
   const [quickViewOpen, setQuickViewOpen] = useState(false);
 
+  /*
+   * درصد ارزش افزوده از تنظیمات فروشگاه می‌آید (همان منبعی که چک‌اوت استفاده
+   * می‌کند)؛ اگر مالیات خاموش باشد یا درصد صفر باشد، خط ارزش افزوده روی کارت
+   * نمایش داده نمی‌شود.
+   */
+  const { vat_enabled, vat_percent } = useStoreSettings();
+  const vatPercent = vat_enabled
+    ? Math.min(Math.max(Number(vat_percent) || 0, 0), 100)
+    : 0;
+
   return (
     <>
       {variant === "home" ? (
@@ -799,6 +850,7 @@ export default function ProductCard({
           className={className}
           showWishlistButton={showWishlistButton}
           onQuickView={() => setQuickViewOpen(true)}
+          vatPercent={vatPercent}
         />
       ) : (
         <GridCard
@@ -806,6 +858,7 @@ export default function ProductCard({
           className={className}
           showWishlistButton={showWishlistButton}
           onQuickView={() => setQuickViewOpen(true)}
+          vatPercent={vatPercent}
         />
       )}
 

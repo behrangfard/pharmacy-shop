@@ -85,6 +85,8 @@ interface ProductColorData {
   name: string;
   hex: string | null;
   image: string | null;
+  /** موجودی ثبت‌شدهٔ این رنگ؛ null یعنی «ثبت نشده» */
+  stock: number | null;
   sort_order: number;
   is_active: boolean;
 }
@@ -95,6 +97,8 @@ interface ProductColorForm {
   name: string;
   hex: string;
   image: string;
+  /** موجودی این رنگ به‌صورت متن فرم (خالی = ثبت نشده) */
+  stock: string;
   is_active: boolean;
 }
 
@@ -586,6 +590,10 @@ function AdminProductForm() {
               name: color.name,
               hex: color.hex ?? "",
               image: color.image ?? "",
+              stock:
+                color.stock === null || color.stock === undefined
+                  ? ""
+                  : String(color.stock),
               is_active: color.is_active,
             })),
           );
@@ -783,6 +791,7 @@ function AdminProductForm() {
           name: preset?.name ?? "",
           hex: preset?.hex ?? "",
           image: "",
+          stock: "",
           is_active: true,
         },
       ];
@@ -1309,6 +1318,24 @@ function AdminProductForm() {
       return;
     }
 
+    /* موجودی رنگ اختیاری است؛ اگر پر شود باید عدد صحیح و غیرمنفی باشد. */
+    const invalidColorStock = colors.find((color) => {
+      const value = color.stock.trim();
+
+      if (value === "") return false;
+
+      const parsed = Number(value);
+
+      return !Number.isInteger(parsed) || parsed < 0 || parsed > 1000000;
+    });
+
+    if (invalidColorStock) {
+      setError(
+        `موجودی رنگ «${invalidColorStock.name || "بدون نام"}» باید عدد صحیح و غیرمنفی باشد.`,
+      );
+      return;
+    }
+
     /* ---------------- اعتبارسنجی اجزای پک ---------------- */
 
     if (isPack) {
@@ -1362,6 +1389,8 @@ function AdminProductForm() {
         name: color.name.trim(),
         hex: color.hex.trim() || null,
         image: color.image.trim() || null,
+        /* خالی یعنی «ثبت نشده»؛ عدد صفر یعنی «تمام شده» */
+        stock: color.stock.trim() === "" ? null : Number(color.stock),
         is_active: color.is_active,
       }));
 
@@ -2672,6 +2701,9 @@ function AdminProductForm() {
             رنگ‌هایی که اینجا تعریف می‌شود در صفحهٔ محصول به شکل سواچ به مشتری
             نشان داده می‌شود و او باید یکی را انتخاب کند. برای هر رنگ می‌توانید
             تصویر اختصاصی بگذارید تا با انتخاب آن رنگ، تصویر گالری عوض شود.
+            فیلد «موجودی این رنگ» هم تعداد فعلی همان رنگ را برای اطلاع شما
+            نگه می‌دارد؛ موجودی رسمی کالا همچنان در فیلد «موجودی» بالای صفحه و
+            روی تنوع‌هاست.
           </p>
 
           <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 14 }}>
@@ -2862,6 +2894,34 @@ function AdminProductForm() {
                         style={fieldStyle}
                         disabled={!color.is_active}
                       />
+                    </div>
+
+                    <div>
+                      <label style={labelStyle}>موجودی این رنگ (عدد)</label>
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        min={0}
+                        step={1}
+                        value={color.stock}
+                        onChange={(event) =>
+                          updateColor(index, { stock: event.target.value })
+                        }
+                        placeholder="مثلاً ۵ (خالی = ثبت نشده)"
+                        style={fieldStyle}
+                        disabled={!color.is_active}
+                      />
+                      <p
+                        style={{
+                          color: "#6b7280",
+                          fontSize: 11,
+                          lineHeight: 1.8,
+                          margin: "6px 0 0",
+                        }}
+                      >
+                        فقط برای اطلاع شماست؛ خالی بگذارید یعنی «ثبت نشده» و
+                        عدد صفر یعنی «تمام شده».
+                      </p>
                     </div>
                   </div>
                 </div>

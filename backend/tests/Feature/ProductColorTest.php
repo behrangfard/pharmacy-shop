@@ -468,6 +468,74 @@ class ProductColorTest extends TestCase
         ], $item->pack_colors);
     }
 
+    /**
+     * موجودی هر رنگ فقط «اطلاعاتی» است: مدیر آن را وارد می‌کند تا بداند از هر
+     * رنگ چند عدد دارد و همین عدد در پاسخ پنل برمی‌گردد.
+     */
+    public function test_color_stock_is_saved_and_returned_to_admin(): void
+    {
+        $this->actingAsAdmin();
+
+        $response = $this->postJson('/api/v1/admin/products', $this->productPayload([
+            'colors' => [
+                ['name' => 'مشکی', 'hex' => '#111111', 'stock' => 7],
+                ['name' => 'سفید', 'hex' => '#ffffff'],
+            ],
+        ]));
+
+        $response->assertSuccessful();
+
+        $productId = (int) $response->json('data.id');
+
+        $this->assertDatabaseHas('product_colors', [
+            'product_id' => $productId,
+            'name' => 'مشکی',
+            'stock' => 7,
+        ]);
+
+        // رنگ بدون تعداد، «ثبت نشده» می‌ماند و به‌غلط صفر ذخیره نمی‌شود.
+        $this->assertDatabaseHas('product_colors', [
+            'product_id' => $productId,
+            'name' => 'سفید',
+            'stock' => null,
+        ]);
+
+        $black = ProductColor::query()
+            ->where('product_id', $productId)
+            ->where('name', 'مشکی')
+            ->firstOrFail();
+
+        $update = $this->putJson('/api/v1/admin/products/'.$productId, [
+            'colors' => [
+                ['id' => $black->id, 'name' => 'مشکی', 'hex' => '#111111', 'stock' => 3],
+            ],
+        ]);
+
+        $update->assertOk();
+
+        $this->assertSame(3, (int) $black->fresh()->stock);
+
+        $returned = collect($update->json('data.colors'))
+            ->firstWhere('name', 'مشکی');
+
+        $this->assertSame(3, (int) ($returned['stock'] ?? -1));
+    }
+
+    public function test_color_stock_rejects_negative_quantity(): void
+    {
+        $this->actingAsAdmin();
+
+        $response = $this->postJson('/api/v1/admin/products', $this->productPayload([
+            'colors' => [
+                ['name' => 'مشکی', 'hex' => '#111111', 'stock' => -2],
+            ],
+        ]));
+
+        $response->assertStatus(422);
+
+        $this->assertDatabaseCount('product_colors', 0);
+    }
+
     public function test_product_without_colors_still_accepts_orders(): void
     {
         $product = $this->makeProduct();

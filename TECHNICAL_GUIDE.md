@@ -1,6 +1,6 @@
 ﻿# راهنمای فنی جامع پروژه «بهرنگ شاپ»
 
-> **نسخهٔ سند:** 1.21
+> **نسخهٔ سند:** 1.22
 > **تاریخ:** ۲۹ آبان ۱۴۰۵ / 2026-11-19
 > **مخاطب:** توسعه‌دهندهٔ جدید، بازبین خارجی، دستیار هوش مصنوعی
 > **دامنه:** کل مونوریپو (`backend/` + `frontend/`)
@@ -112,11 +112,11 @@
 | زبان رابط کاربری | فارسی و RTL؛ هیچ لایهٔ i18n وجود ندارد (متن‌ها inline هستند) |
 | تاریخ شمسی | `backend/app/Support/JalaliDate.php` و `frontend/src/utils/jalali.ts` |
 | تعداد مسیرها | ۲۵۰ (۲۷ گروه) — ۱۸۹ مسیر زیر `/api/v1/admin` |
-| تعداد مایگریشن‌ها | ۷۵ |
+| تعداد مایگریشن‌ها | ۷۶ |
 | تعداد مدل‌ها | ۴۴ |
 | تعداد کنترلرها (پوشهٔ Api) | ۵۸ |
-| تست‌ها | بک‌اند: ۶۸ فایل Feature (+۱ Unit)، ۴۹۵ تست و ۲۴۸۹ assertion — فرانت: ۱۱ فایل Vitest، ۶۴ تست |
-| حجم کد فرانت | `frontend/src`: ۱۸۷ فایل `.ts/.tsx`، حدود ۸۴٬۶۰۰ خط + ۱۶ فایل CSS با ۶٬۴۳۴ خط (`index.css` ۱۰۵ خط + `styles/` ۱۵ فایل) |
+| تست‌ها | بک‌اند: ۶۸ فایل Feature (+۱ Unit)، ۴۹۷ تست و ۲۴۹۷ assertion — فرانت: ۱۲ فایل Vitest، ۶۸ تست |
+| حجم کد فرانت | `frontend/src`: ۱۸۸ فایل `.ts/.tsx`، حدود ۸۴٬۷۵۰ خط + ۱۶ فایل CSS با ۶٬۴۳۴ خط (`index.css` ۱۰۵ خط + `styles/` ۱۵ فایل) |
 | حجم کد بک‌اند | `backend/app`: ۱۴۵ فایل، حدود ۲۱٬۹۰۰ خط |
 
 > نسخه‌های بالا از `composer.json` / `package.json` و `php artisan --version`
@@ -470,7 +470,7 @@ php artisan view:cache
 | `products` | `category_id` (الزامی، `restrictOnDelete`)، `brand_id` (nullable)، `name`، `slug`، `sku`، `price`، `compare_price`، `discount_percent`، `stock`، `weight`، `thumbnail`، `is_active/is_featured/is_new`، `views_count`، `sales_count`، `is_taxable`، `cost_price`، `is_returnable`، `meta_title/meta_description` |
 | `product_images` | چند تصویر برای هر محصول + تصویر اصلی (`alt` قابل ویرایش از پنل) + `width`/`height` ذاتی که هنگام ذخیره از فایل پر می‌شود (رزرو فضا و کاهش CLS) |
 | `product_variants` | تنوع‌ها؛ فیلد `size` برای فیلتر سایز و `is_active` |
-| `product_colors` | پالت رنگ محصول، `is_active`، `sort_order` |
+| `product_colors` | پالت رنگ محصول، `is_active`، `sort_order`، `stock` (موجودی اعلامی هر رنگ؛ `NULL` = ثبت نشده و فقط اطلاعاتی است — موجودی رسمی روی محصول/تنوع است) |
 | `product_pack_items` | اقلام «پک» (چند‌تایی) با رنگ‌های انتخابی |
 | `product_reviews` | امتیاز، متن، `status` (تأییدشده/در انتظار)، پاسخ مدیر |
 | `product_size_guides` | راهنمای سایز اختصاصی هر محصول (`is_enabled` + محتوا) |
@@ -758,6 +758,17 @@ php artisan view:cache
 - مبالغ سفارش: `subtotal` از اقلام، `discount` از کد تخفیف، `shipping_cost`
   از قواعد ارسال، مالیات بر اساس تنظیمات فروشگاه و `is_taxable` محصول، و
   `total` نهایی — همه در سمت سرور محاسبه می‌شوند (قیمت فرانت اعتماد نمی‌شود).
+- **نمایش ارزش افزوده روی کارت محصول:** `ProductCard` درصد را از
+  `GET /store-settings` (`vat_enabled`/`vat_percent`) با هوک `useStoreSettings`
+  می‌خواند و فقط برای کالاهای `is_taxable` خط «ارزش افزوده (٪): مبلغ» را زیر
+  قیمت نشان می‌دهد (`utils/price.ts::calculateVatAmount` با همان فرمول
+  `round(مبلغ × درصد ÷ ۱۰۰)` چک‌اوت). این عدد فقط نمایشی است؛ مبنای سفارش
+  همچنان محاسبهٔ سرور است.
+- **موجودی رنگ اطلاعاتی است:** ستون `product_colors.stock` (nullable) را مدیر
+  در فرم محصول وارد می‌کند تا معلوم باشد از هر رنگ چند عدد دارد؛ `NULL` یعنی
+  «ثبت نشده» و `0` یعنی «تمام شده». ثبت سفارش، لغو و
+  `orders:release-abandoned` به این ستون دست نمی‌زنند و موجودی رسمی همان
+  `products.stock` / `product_variants.stock` است (`OrderStockService`).
 - **پرداخت آنلاین:** فقط آزمایشی. با `POST /orders/{orderNumber}/pay` وضعیت به
   `payment_status = paid`، `paid_at = now` و `status = processing` تغییر می‌کند.
   در production این مسیر همیشه `403` می‌دهد.
@@ -1075,6 +1086,11 @@ php artisan view:cache
   `RichTextContent`, `JalaliDatePicker`, `AddressMapPicker` (Leaflet)،
   `SupportWidget`, `StorefrontPopup`, `StoryStrip/StoryViewer`,
   `AnnouncementBar`, `HeaderSearch`, `ThemeSwitcher`, `InstallPwaPrompt`.
+- **ارزش افزودهٔ کارت محصول:** کارت (`GridPrice`/`HomePrice`) مبلغ مالیات را
+  از تنظیمات فروشگاه روی همان کارت نشان می‌دهد تا مشتری قبل از پرداخت هم
+  عدد نهایی را ببیند؛ در فرم محصول پنل (`pages/AdminProductForm.tsx` →
+  «رنگ‌های محصول») هم برای هر رنگ یک فیلد «موجودی این رنگ» وجود دارد که با
+  `colors.*.stock` ذخیره می‌شود.
 - **بارگذاری:** صفحه‌های اصلی skeleton دارند (مقالات، جزئیات مقاله، دسته‌ها،
   جست‌وجوی هدر، گالری محصول، اطلاعات ارسال) و شبکهٔ محصولات `/products` هم
   با ۱۲ کارت اسکلتی (`animate-pulse`) و `aria-busy` نمایش داده می‌شود؛
@@ -1352,6 +1368,7 @@ node -p "require('./package.json').dependencies.react"
 | 1.19 | 2026-11-17 | **سئوی تصاویر + حذف تکرار DOM + نردبان حساب مهمان + یکپارچه‌سازی مسیر تصاویر:** ستون‌های ابعاد ذاتی (`banners.image_width/image_height/mobile_image_width/mobile_image_height`, `product_images.width/height`) با `App\Support\Media\ImageDimensions` و هوک `saving` مدل‌ها؛ `width`/`height` روی `<img>` بنر و کارت محصول (CLS)؛ `alt` تصویر اصلی محصول از پنل (`productCardImageAlt`)؛ `WebpConverter` + `config/media.php` + `MEDIA_WEBP*` و تبدیل آپلود بنر/محصول به WebP در صورت فعال بودن GD/Imagick؛ کامندهای `images:webp` و `images:migrate-legacy` (dry-run پیش‌فرض، `--apply` برای اجرا) و انتقال واقعی ۱ مسیر قدیمی؛ `hooks/useMediaQuery.ts` و رندر تک‌نسخه‌ای هیرو/بنر (حذف متن تکراری DOM)؛ شمارندهٔ H1 در پنل بنرها (`bannerH1Summary`) با تست `bannerText.test.ts`؛ کارت «ساخت حساب با همین شماره» در `/track-order` و پیش‌پرکردن `/register` (بستن بخش هدایت مهمان در بدهی ۱۴)؛ ۶ تست بک‌اند (`ImageMediaTest`) و ۵ تست فرانت |
 | 1.20 | 2026-11-18 | **شکستن فایل‌های بزرگ (بدهی ۱ — مرحلهٔ اول):** `index.css` (۶٬۴۲۱ خط) به هستهٔ ۱۰۵ خطی (`@import "tailwindcss"` + فونت + `@theme`) و ۱۵ فایل `src/styles/*.css` با ترتیب سند تقسیم شد و در `main.tsx` به همان ترتیب ایمپورت می‌شود (تأیید: هش بیلد CSS و ساختار ۴۳ بلوک `@media`/`@supports`/`@layer` و ۱٬۸۲۳ انتخابگر با قبل یکسان)؛ `AdminShipping.tsx` (۴٬۴۲۲ خط) به `pages/AdminShipping.tsx` (۱۴۴ خط) + `components/admin/shipping/` (۱۱ فایل: `shippingShared` با انواع/کمکی‌ها/`NoticeBox`/`Field` و ۱۰ تب) شکسته شد؛ بدون تغییر رفتار (tsc/lint/۶۴ تست/build سبز) |
 | 1.21 | 2026-11-19 | **شکستن فایل‌های بزرگ (بدهی ۱ — مرحلهٔ دوم):** `pages/AdminDashboard.tsx` (۲٬۵۸۵ خط) به پوستهٔ ۱٬۱۲۷ خطی (دریافت داده، آمار، `renderBlock`) + `components/admin/dashboard/` شکسته شد: `dashboardShared.ts` (۲۲۰: انواع `DashboardData`/`SalesTrend*`/`SalesChannelItem`، قالب‌بندهای فارسی عدد/قیمت/تاریخ، `quickLinks`، `channelPresentation`)، `dashboardStyles.ts` (۳۱۷: استایل تزریقی)، `SalesTrendChart.tsx` (۵۰۸: نمودار SVG تعاملی + `buildSmoothPath`)، `SalesChannelsChart.tsx` (۲۳۰: دونات/فهرست کانال‌ها)، `useDashboardLayout.ts` (۳۰۳: چیدمان شخصی هر مدیر، پنهان/ترتیب/کشیدن، میان‌برهای منو)؛ بدون تغییر رفتار (tsc/lint با ۰ خطا، ۶۴ تست، build سبز) |
+| 1.22 | 2026-11-19 | **موجودی هر رنگ + ارزش افزودهٔ کارت محصول:** ستون nullable `product_colors.stock` (مایگریشن `2026_11_19_120000`) با فیلد «موجودی این رنگ» در فرم محصول پنل (`colors.*.stock`، `NULL` = ثبت نشده) — فقط اطلاعاتی و بدون دخالت در موجودی سفارش؛ `utils/price.ts::calculateVatAmount` + نمایش «ارزش افزوده (٪): مبلغ» زیر قیمت `ProductCard` (grid/home) بر اساس `vat_enabled`/`vat_percent` فروشگاه و `is_taxable` کالا؛ ۲ تست بک‌اند (`ProductColorTest`) و ۴ تست فرانت (`price.test.ts`) — ۴۹۷ تست بک‌اند و ۶۸ تست فرانت سبز |
 
 
 ---

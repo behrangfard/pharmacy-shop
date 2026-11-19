@@ -1,4 +1,4 @@
-راه‌اندازی پروژه «بهرنگ شاپ» (فروشگاه لباس زیر)
+﻿راه‌اندازی پروژه «بهرنگ شاپ» (فروشگاه لباس زیر)
 =============================================
 
 پیش‌نیازها: PHP 8.3+ ، Composer ، Node.js 20+ ، MySQL
@@ -211,7 +211,36 @@
   6) بنرها — /admin/banners
      - جدول banners (title، subtitle، image، mobile_image، link، button_label،
        position، sort_order، is_active، starts_at، ends_at).
-     - position یکی از home_hero، home_strip، products_top است.
+     - position یکی از home_hero، home_strip، home_grid، products_top است.
+     - بخش چندستونهٔ صفحهٔ اول (home_grid): بنرهای این بخش در یک ردیف مستقل
+       پس از دسته‌بندی محصولات در صفحهٔ اول نمایش داده می‌شوند (پایین‌تر از
+       هیرو و نوار تبلیغاتی، بالای محصولات ویژه) — pages/Home.tsx → BannerGrid.
+       چیدمان و تعداد بنرها از جدول banner_sections می‌آید و در پنل بنرها با
+       کارت «بخش بنرهای صفحهٔ اول (چندستونه)» تنظیم می‌شود:
+       one (یک بنر)، two (دو بنر کنار هم)، three (سه بنر در یک ردیف)،
+       three_split (دو بنر روی هم سمت راست + یک بنر بلند سمت چپ) و four.
+     - API بخش‌ها: GET /api/v1/admin/banner-sections (چیدمان + عنوان + تعداد
+       بنر هر بخش) و PUT /api/v1/admin/banner-sections/{position} با بدنهٔ
+       layout/title/subtitle/is_active. هر تغییر کش
+       storefront.banners.index.v6 را پاک می‌کند.
+     - تعداد اسلات هر چیدمان در بک‌اند (BannerSection::SLOTS) و فرانت‌اند
+       (utils/bannerGrid.ts) یکسان است؛ فقط بنرهای اول این بخش بر اساس
+       sort_order نمایش داده می‌شوند و بقیه ذخیره می‌مانند.
+     - پاسخ عمومی GET /api/v1/banners علاوه بر data (بنرها) فیلد sections را
+       هم برمی‌گرداند (فقط بخش‌های فعال، همراه slots) تا صفحهٔ اول برای
+       چیدمان درخواست جداگانه نفرستد. بخش غیرفعال در سایت رندر نمی‌شود.
+     - در صفحهٔ فروشگاه برای هر نما یک گرید جدا رندر می‌شود (دسکتاپ
+       `hidden md:grid` و موبایل `grid md:hidden`) و مثل هیرو دسکتاپ فقط
+       image و موبایل فقط mobile_image را نشان می‌دهد؛ بنابراین کاشی خالی یا
+       جانشین‌شدن تصویر دسکتاپ در موبایل پیش نمی‌آید. در چیدمان three_split
+       جای کاشی‌ها با col-start/row-start/row-span تعیین می‌شود (در RTL ستون ۱
+       سمت راست است) و بنر بلند با row-span-2 ارتفاع دو ردیف را می‌گیرد.
+     - ⚠️ ویرایش فایل‌های فارسی با PowerShell: خواندن/نوشتن پیش‌فرض
+       (Get-Content/Set-Content بدون -Encoding) فایل UTF-8 را با کدپیج
+       ویندوز می‌خواند و متن فارسی را به هم می‌ریزد. از
+       [IO.File]::ReadAllText/WriteAllText با UTF8Encoding یا ابزار ویرایش
+       استفاده شود (یک‌بار همین اشتباه کل متن AdminBanners.tsx را خراب کرد و
+       با git checkout و اعمال دوبارهٔ تغییرات برگشت).
      - دکمهٔ «افزودن بنر» در سرصفحه و روی کارت «فهرست بنرها» فرم ایجاد بنر
        را باز می‌کند؛ دکمهٔ «ویرایش» هر ردیف همان فرم را با داده‌های بنر باز
        می‌کند و «بستن فرم»/«انصراف» آن را می‌بندد.
@@ -603,7 +632,8 @@
 علاقه‌مندی‌ها (لیست دلخواه) + صفحه‌بندی سمت سرور فهرست محصولات:
   فروشگاه:
     مسیر صفحه:  http://localhost:5173/wishlist
-    - دکمهٔ قلب روی کارت محصول (هر دو نمای grid و home) و آیکن قلب در هدر
+    - دکمهٔ قلب روی کارت محصول (هر دو نمای grid و home)، دکمهٔ «افزودن به
+      علاقه‌مندی‌ها» در صفحهٔ محصول (ProductDetail) و آیکن قلب در هدر
       (موبایل و دسکتاپ) با شمارندهٔ تعداد.
     - مهمان: فهرست در localStorage با کلید behrang-shop-wishlist ذخیره می‌شود؛
       کاربر واردشده: روی سرور (جدول wishlist_items).
@@ -611,10 +641,12 @@
       می‌شود (syncGuestWishlist در services/wishlist.ts)، پس از آن شمارنده و
       قلب‌ها از سرور می‌آیند.
     - تغییر وضعیت خوش‌بینانه (optimistic) است تا کلیک فوری حس شود؛ در خطا
-      فهرست به حالت قبل برمی‌گردد و خطا در کنسول ثبت می‌شود.
+      فهرست به حالت قبل برمی‌گردد و پیام خطا در context (فیلد error) نگه
+      داشته می‌شود تا در صفحه به کاربر نشان داده شود.
     - صفحهٔ علاقه‌مندی‌ها: همان ProductCard (با افزودن به سبد)، دکمهٔ
-      «حذف از علاقه‌مندی‌ها»، حالت خالی و لودینگ، و برای مهمان یادآوری
-      «با ورود، فهرست به حساب شما منتقل می‌شود».
+      «حذف از علاقه‌مندی‌ها»، حالت خالی و لودینگ، کادر خطا با دکمهٔ «تلاش
+      دوباره» (refresh) و برای مهمان یادآوری «با ورود، فهرست به حساب شما
+      منتقل می‌شود».
 
   مسیرهای API (نیازمند ورود با sanctum):
     GET    /api/v1/wishlist
@@ -623,16 +655,42 @@
 
   قواعد: هر کاربر برای هر محصول فقط یک ردیف (unique user_id + product_id)؛
   فقط محصول فعال برمی‌گردد؛ پاسخ شامل تصویر اصلی/بندانگشتی، قیمت و موجودی
-  برای کارت است. پنل مدیریت بخش اختصاصی ندارد.
+  برای کارت است.
+
+  آمار علاقه‌مندی‌ها در پنل مدیریت:
+    مسیر صفحه:  http://localhost:5173/admin/wishlist
+    مجوز: customers.manage (بخش «علاقه‌مندی‌ها» در گروه سفارشات سایدبار)
+    سه تب:
+      ۱) داشبورد آماری: کارت‌های کل علاقه‌مندی، تعداد مشتری/محصول، نرخ تبدیل
+         علاقه‌مندی به خرید، تعداد محصولات ناموجودِ ذخیره‌شده، نمودار ستونی
+         روند (۷/۱۴/۳۰/۹۰ روز)، ۱۰ محصول پرطرفدار، دسته‌بندی‌های پرتقاضا،
+         مشتریان فعال و جریان آخرین فعالیت‌ها.
+      ۲) محصولات پرطرفدار: جدول صفحه‌بندی‌شده با جست‌وجو، فیلتر موجودی،
+         مرتب‌سازی (بیشترین/کمترین علاقه‌مندی، کمترین فروش، کمترین موجودی،
+         گران‌ترین، نام) و خروجی CSV.
+      ۳) علاقه‌مندی مشتریان: جدول صفحه‌بندی‌شده با جست‌وجوی نام/ایمیل/تلفن،
+         فیلتر «فقط دارای علاقه‌مندی»، مرتب‌سازی، خروجی CSV و پنجرهٔ اقلام
+         هر مشتری (محصول، قیمت، وضعیت موجودی، تاریخ افزودن، ارزش تقریبی).
+    «نرخ تبدیل» = اقلامی که همان مشتری بعداً همان محصول را در سفارشی غیر از
+    «لغوشده» خریداری کرده است.
+
+  مسیرهای API پنل (نیازمند ورود مدیر + مجوز customers.manage):
+    GET /api/v1/admin/wishlist/overview?days=7|14|30|90
+    GET /api/v1/admin/wishlist/products?search=&stock=&sort_by=&sort_direction=&per_page=&page=
+    GET /api/v1/admin/wishlist/customers?search=&only=with_wishlist|all&sort_by=&sort_direction=&per_page=&page=
+    GET /api/v1/admin/wishlist/customers/{customerId}
 
   فایل‌های مرتبط:
     backend:  app/Models/WishlistItem.php
               app/Http/Controllers/Api/WishlistController.php
+              app/Http/Controllers/Api/AdminWishlistController.php
               database/migrations/2026_11_11_000000_create_wishlist_items_table.php
               tests/Feature/WishlistTest.php   (۷ تست / ۳۱ assertion)
+              tests/Feature/AdminWishlistStatsTest.php (۸ تست / ۶۹ assertion)
     frontend: services/wishlist.ts (حافظهٔ مهمان + فراخوانی API + ادغام)
               context/WishlistContext.tsx
-              pages/Wishlist.tsx
+              pages/Wishlist.tsx · pages/ProductDetail.tsx (دکمهٔ علاقه‌مندی)
+              pages/AdminWishlist.tsx
               components/ProductCard.tsx (دکمهٔ قلب و نماهای grid/home)
               components/Header.tsx · utils/storageKeys.ts · main.tsx · App.tsx
 
@@ -751,9 +809,42 @@
       - دکمه‌های ↑ ↓ برای جابه‌جایی سریع (مناسب موبایل و لمس).
       - دکمهٔ پین برای بردن آیتم به بخش «دسترسی سریع» در بالای منو.
       - دکمهٔ «پیش‌فرض» برای بازگشت به چیدمان اولیه.
+    - گروه‌ها هم جابه‌جا می‌شوند: کافی است نوشتهٔ عنوان گروه را با ماوس
+      بگیرید و بکشید (بدون هیچ دستهٔ اضافه کنار عنوان؛ با pointer events،
+      آستانهٔ ۴ پیکسل و در نتیجه کلیک ساده گروه را باز/بسته می‌کند). در حالت
+      «چیدمان» دکمه‌های ↑ ↓ هم هست. ترتیب گروه‌ها در فیلد groupOrder چیدمان
+      ذخیره می‌شود و گروه «دسترسی سریع» همیشه بالای منو می‌ماند.
+    - هنگام کشیدن گروه، محل دقیق رها کردن با خط آبی (بدون جابه‌جایی چیدمان)
+      نشان داده می‌شود و با Escape یا pointercancel لغو می‌شود.
+    - کشیدن آیتم‌های منو همیشه فعال است (نه فقط در حالت چیدمان): رها کردن
+      داخل سایدبار = تغییر ترتیب/گروه، رها کردن روی «نمای کلی» = ساخت میان‌بر.
     - آیتم‌های پین‌شده فقط در «دسترسی سریع» دیده می‌شوند و با دکمهٔ
       PinOff به گروه پیش‌فرض خود برمی‌گردند.
     - در حالت عادی (بدون ویرایش) آیتم‌های پین‌شده با آیکن کوچک پین مشخص‌اند.
+
+  شخصی‌سازی صفحهٔ «نمای کلی» (داشبورد):
+    - دکمهٔ «چیدمان» در هدر صفحه، حالت ویرایش را روشن می‌کند؛ برای هر بخش
+      (welcome، quick-links، stats، sales-trend، order-status،
+      payment-status، sales-channels، store-health، support-shortcuts) یک
+      نوار کنترل با دستهٔ ⋮⋮ (کشیدن با ماوس)، دکمه‌های ↑ ↓ و دکمهٔ پنهان‌کردن
+      نمایش داده می‌شود.
+    - منابع جدید: «کانال‌های فروش» (از data.sales.channels)، «سلامت فروشگاه»
+      (نرخ تکمیل سفارش/پرداخت/محصولات فعال + میانگین سبد) و «میان‌برهای
+      پشتیبانی» (لینک‌های مجاز بر اساس can()).
+    - دکمهٔ «افزودن بخش» فهرست کامل بخش‌ها را با وضعیت افزودن/حذف نشان
+      می‌دهد؛ «پیش‌فرض» چیدمان اولیه را برمی‌گرداند.
+    - بخش‌ها در شبکهٔ دوستونی می‌نشینند (data-span=full/half)؛ در عرض کمتر
+      از ۱۱۰۰ پیکسل تک‌ستونی می‌شوند.
+    - چیدمان در utils/adminDashboardLayout.ts (نرمال‌سازی + افزودن خودکار
+      بخش‌های جدید) و localStorage با کلید adminDashboard:<adminId>
+      (پیش‌فرض: behrang-shop-admin-dashboard) ذخیره می‌شود.
+    - میان‌بر بخش‌های پنل: هر ردیف منوی سایدبار draggable است و با کشیدن و
+      رها کردن روی داشبورد (MIME اختصاصی
+      application/x-admin-dashboard-shortcut) یک بلوک custom:/path ساخته
+      می‌شود؛ همین فهرست در «افزودن بخش → میان‌برهای منوی پنل» هم با کلیک
+      اضافه/حذف می‌شود. داده در layout.custom ذخیره می‌شود (نسخهٔ چیدمان ۲)
+      و چیدمان‌های نسخهٔ ۱ بدون ریست ارتقا می‌یابند. منبع مشترک فهرست بخش‌ها
+      utils/adminNavItems.ts است (سایدبار و داشبورد از یک فهرست می‌خوانند).
 
   بستن و باز کردن گروه‌ها (سایدبار خلوت‌تر):
     - کلیک روی عنوان هر گروه (عمومی/فروشگاه/سفارشات/گزارشات و «دسترسی
@@ -785,6 +876,7 @@
 
   فایل‌های مرتبط:
     frontend/src/utils/adminSidebarLayout.ts
+    frontend/src/utils/adminNavItems.ts   (فهرست مشترک بخش‌های منو)
     frontend/src/components/AdminLayout.tsx
     frontend/src/index.css   (بخش «منوی سایدبار قابل شخصی‌سازی»)
 
@@ -901,6 +993,38 @@ sitemap.xml و robots.txt (ساخت خودکار در build):
    - قاعدهٔ کار: فایل‌های فارسی فقط با ابزار editor یا Node با UTF-8 صریح
      ویرایش شوند؛ Set-Content پاورشل متن را خراب می‌کند.
 
+تم جایگزین «اقیانوس» + سوییچ پیش‌نمایش (انجام شد):
+  - پالت پیشنهادی: #b6dfed (آبی پاستلی) · #002941 (سرمه‌ای) · #fd6e6e (کورال).
+    این سه رنگ فقط سه «نقطه» از سه خانواده‌اند، نه یک مقیاس؛ پس برای هر کدام
+    طیف ساخته شد تا کنتراست AA حفظ شود و متن روی کورال روشن قرار نگیرد:
+      brand-900 #002941 · brand-800 #053449 · brand-700 #0b455e
+      brand-600 #135f7d (۷.۲:۱) · brand-500 #2f7f9e (۴.۵:۱)
+      brand-250 #b6dfed (سطح روشن/کارت) · cream #f7fbfd · line #dcebf3
+      blush-400 #fd6e6e (فقط پرکننده/تزئین) · blush-600 #d93b3b (۴.۵:۱)
+      discount #b32c2c (۶.۳:۱) · muted #4a6472 (۶.۳:۱) · gold #8a5f18
+  - نکتهٔ کنتراست: سفید روی #fd6e6e فقط ۲.۸:۱ است (رد AA، حتی برای متن
+    بزرگ)؛ بنابراین دکمهٔ کورالی باید متن سرمه‌ای بگیرد (۵.۴:۱) یا از
+    کورال تیره‌تر (#d93b3b به بالا) استفاده شود.
+  - پیاده‌سازی بدون تغییر کلاس‌ها: بلوک `html[data-theme="ocean"]` در انتهای
+    frontend/src/index.css همان متغیرهای @theme (و متغیرهای قدیمی
+    --store-*/--category-*) را بازتعریف می‌کند. کلاس‌های Tailwind به
+    var(--color-*) کامپایل می‌شوند، پس کل فروشگاه و پنل با همین یک بلوک
+    رنگ عوض می‌کنند.
+  - فایل‌ها: frontend/src/utils/theme.ts (STOREFRONT_THEMES، applyTheme،
+    setTheme، initTheme، currentTheme) · components/ThemeSwitcher.tsx
+    (ابزار شناور پایین-چپ؛ دکمهٔ پشتیبانی سمت راست است و تداخل ندارد) ·
+    components/Layout.tsx (رندر) · main.tsx (initTheme پیش از رندر) ·
+    utils/storageKeys.ts (کلید behrang-shop-storefront-theme).
+  - فعال‌سازی برای مقایسه: در محیط توسعه (?npm run dev) ابزار همیشه دیده
+    می‌شود. در نسخهٔ ساخته‌شده فقط وقتی نمایش داده می‌شود که تم غیرپیش‌فرض
+    فعال باشد. برای تست بدون کلیک: /?theme=ocean (ذخیره می‌شود) و
+    /?theme=sage برای بازگشت به تم فعلی.
+  - هگزهای سبز باقی‌مانده فقط در فایل‌های Admin هستند (#edf4e9، #9aa894،
+    #829084، #527b54، #4f7754 …)؛ در تم اقیانوس دست‌نخورده می‌مانند. اگر
+    تم جدید نهایی شد، آن‌ها هم باید در یک پاس به توکن تبدیل شوند.
+  - قاعدهٔ کار: فایل‌های فارسی فقط با ابزار editor یا Node با UTF-8 صریح
+    ویرایش شوند؛ Set-Content پاورشل متن را خراب می‌کند.
+
 فاز ۲ ظاهر — کارت محصول (انجام شد):
   - تصویر کارت با نسبت ثابت aspect-[4/5] به‌جای h-36/h-52/h-56؛ ارتفاع کارت
     هنگام لود تصویر نمی‌پرد (CLS). تصویرها absolute داخل جعبهٔ نسبت‌ثابت.
@@ -950,5 +1074,1882 @@ sitemap.xml و robots.txt (ساخت خودکار در build):
   - تست: backend/tests/Feature/TrustBadgeTest.php (۵ تست، ۲۳ اظهار)
     ساخت + تازه‌سازی کش عمومی · حذف غیرفعال و بدون تصویر از خروجی عمومی ·
     تغییر وضعیت و حذف · بارگذاری تصویر · دسترسی مهمان (۴۰۱).
+
+
+
+تبریک تولد خودکار مشتریان (پیامک) — انجام شد:
+  - دیتابیس:
+    migration 2026_11_15_000000_add_birthday_fields_to_users_table
+      users: phone (20, nullable) · birth_date (date, nullable) ·
+             birthday_greeting_opt_out (bool, default false)
+    migration 2026_11_15_000100_create_birthday_greetings_table
+      birthday_greetings: user_id (nullOnDelete) · jalali_year · jalali_date ·
+      channel · recipient · body · status (pending|sent|failed) ·
+      provider_message_id · error · outbound_message_id · sent_at
+      unique(user_id, jalali_year) ← مانع ارسال تکراری در یک سال شمسی
+  - تاریخ شمسی سمت سرور: backend/app/Support/JalaliDate.php
+    (پورت PHP از frontend/src/utils/jalali.ts: fromGregorian/toGregorian/
+     fromDate/today/key/iso/label/monthName/monthLength/toPersianDigits)
+    معیار تطبیق تولد «ماه-روز شمسی» است، نه میلادی؛ بنابراین ۳۱ شهریور و
+    ۳۰ اسفند و سال کبیسه هم درست مدیریت می‌شوند.
+  - مدل‌ها: App\Models\BirthdayGreeting (STATUS_*) · User: fillable جدید
+    (phone/birth_date/birthday_greeting_opt_out)، cast تاریخ و relation
+    birthdayGreetings.
+  - سرویس: App\Services\Messaging\BirthdayGreetingService
+    تنظیمات در جدول store_settings (بدون تغییر فایل‌ها):
+      birthday_greeting_enabled · birthday_greeting_channel ·
+      birthday_greeting_template · birthday_greeting_send_time (پیش‌فرض ۱۰:۰۰)
+    متغیرهای متن: {name} {first_name} {store} {date}
+    متدها: settings/updateSettings · channelOptions · directory (اولویت شماره:
+    پروفایل ← آخرین شمارهٔ سفارش) · recipientsForDate · hasRunForDate ·
+    shouldRunNow (فعال + رسیدن ساعت + عدم تلاش امروز) · sendForDate ·
+    overview (آمار، تولدهای امروز و ۷ روز آینده، پیش‌نمایش) · render/preview.
+    هر ارسال در outbound_messages (تاریخچهٔ همان صفحه) هم ثبت می‌شود.
+  - کامند: php artisan birthday:greetings
+    گزینه‌ها: --date=YYYY-MM-DD · --force · --dry-run
+    زمان‌بندی: routes/console.php → Schedule::command('birthday:greetings')
+    ->everyFifteenMinutes()->withoutOverlapping()؛ یعنی ساعت ارسال از پنل
+    قابل تغییر است. روی سرور فقط کرون سراسری لازم است:
+      * * * * * cd /path/backend && php artisan schedule:run >> /dev/null 2>&1
+  - API (گروه admin + admin.permission:messaging، routes/api.php):
+      GET  /api/v1/admin/messaging/birthday        (overview)
+      PUT  /api/v1/admin/messaging/birthday        (ذخیرهٔ تنظیمات)
+      POST /api/v1/admin/messaging/birthday/send   (ارسال دستی؛ body: force?)
+    کنترلر: AdminMessagingController@birthdaySettings/updateBirthdaySettings/
+    sendBirthdayGreetings — اگر کانال انتخاب‌شده در .env تنظیم نشده باشد ۴۲۲
+    با خطای channel برمی‌گردد.
+  - ثبت‌نام و پروفایل:
+      AuthController@register و @update حالا phone (نرمال‌سازی به 09xxxxxxxxx
+      با App\Services\Messaging\Support\PhoneNumber) و birth_date
+      (date_format:Y-m-d + before:today) و در پروفایل
+      birthday_greeting_opt_out را می‌پذیرند؛ همه اختیاری‌اند.
+  - فرانت فروشگاه:
+      pages/Register.tsx: فیلد اختیاری «شمارهٔ موبایل» + JalaliDatePicker برای
+        «تاریخ تولد» (مقدار میلادی YYYY-MM-DD به API می‌رود).
+      pages/Account.tsx: نمایش موبایل/تاریخ تولد (شمسی با formatJalaliShort)،
+        ویرایش آن‌ها و چک‌باکس «دریافت پیامک تبریک تولد را می‌خواهم».
+      context/AuthContext.tsx: AuthUser حالا phone/birth_date/
+        birthday_greeting_opt_out دارد.
+  - پنل مدیریت (pages/AdminMessaging.tsx): کارت «تبریک تولد خودکار» بین
+    «ارسال پیام جدید» و «تاریخچهٔ ارسال‌ها»:
+      سوییچ فعال/غیرفعال · انتخاب کانال (فقط کانال‌های تنظیم‌شده) · ساعت ارسال ·
+      متن قالب با چیپ‌های متغیر و پیش‌نمایش زنده + شمارش بخش پیامک ·
+      ذخیرهٔ تنظیمات · «ارسال تبریک امروز» و «ارسال دوباره» (با تأیید) ·
+      آمار (مشتری با تاریخ تولد/قابل ارسال/تولد امروز/ارسال‌شدهٔ امسال) ·
+      جدول تولدهای امروز و ۷ روز آینده با وضعیت (ارسال شد/ناموفق/در انتظار/
+      انصراف داده/بدون شماره) و منبع شماره (پروفایل یا سفارش).
+    استایل‌ها در همان بلوک msgStyles (کلاس‌های msg-bday-* و msg-switch).
+  - تست: backend/tests/Feature/BirthdayGreetingTest.php (۱۰ تست، ۶۳ اظهار)
+    ثبت‌نام با/بدون موبایل و تولد · محافظت مسیرها (۴۰۱/۴۰۳) · overview و
+    تنظیمات پیش‌فرض · ذخیرهٔ تنظیمات + اعتبارسنجی · ارسال و جلوگیری از تکرار
+    (force) · نیاز کانال به تنظیمات · زمان‌بندی (خاموش/ساعت نرسیده/رسیده/
+    اجرای دوباره) · رد کردن انصراف‌داده و بدون شماره · فالبک شمارهٔ سفارش.
+
+  به‌روزرسانی (رفع خطای MySQL و بهبود تقویم تولد):
+  - روی دیتابیس واقعی (mysql/pharmacy_shop) مایگریشن‌ها اجرا شد:
+      php artisan migrate
+    خطای «Unknown column 'phone' in 'field list'» هنگام ویرایش پروفایل
+    به همین دلیل بود (مایگریشن‌ها Pending مانده بودند).
+  - JalaliDatePicker: پراپ‌های جدید minYear / maxYear اضافه شد؛ فهرست سال‌ها
+    دیگر به «۲۰ سال قبل/بعد» محدود نیست و در دکمه‌های ماه قبل/بعد هم داخل
+    همان بازه محدود می‌شود. در ثبت‌نام و حساب کاربری برای تاریخ تولد بازهٔ
+    «۱۰۰ سال قبل تا سال جاری شمسی» تنظیم شد تا انتخاب سال‌های قدیمی ممکن باشد.
+  - متن رضایت‌نامه/چک‌باکس تولد به زبان تخفیف و جشنواره تغییر کرد:
+      «برای دریافت تخفیفات و جشنواره‌های مخصوص روز تولد شما.»
+      «می‌خواهم تخفیفات و جشنواره‌های مخصوص روز تولد را دریافت کنم.»
+  - متن پیش‌فرض پیام تبریک حالا به تخفیف تولد اشاره می‌کند و در پنل دکمهٔ
+    «متن پیش‌فرض» برای بازگرداندن آن اضافه شد (کلید default_template در
+    خروجی overview). کادر «متن پیام تبریک» در پنل قابل ویرایش آزاد است
+    (۵ خط، حداکثر ۱۰۰۰ نویسه) و پیش‌نمایش زنده دارد.
+
+  به‌روزرسانی (باز شدن صفحه‌ها از بالای صفحه):
+  - کامپوننت جدید frontend/src/components/ScrollToTop.tsx داخل <BrowserRouter>
+    در App.tsx (قبل از AdminAuthProvider) مانت شد.
+  - مشکل: مسیریابی سمت کلاینت موقعیت اسکرول صفحهٔ قبلی را حفظ می‌کرد؛ اگر
+    صفحهٔ جدید کوتاه‌تر بود مرورگر آن عدد را تا انتها محدود می‌کرد و صفحه از
+    پایین باز می‌شد. حالا با هر تغییر pathname اسکرول پرشی به بالا برمی‌گردد
+    (window.scrollTo + documentElement/body.scrollTop = 0).
+  - history.scrollRestoration = "manual" تنظیم شد تا بعد از رفرش یا بازگشت با
+    دکمهٔ مرورگر هم موقعیت قبلی بازگردانده نشود.
+  - اگر آدرس hash داشته باشد (#section) به همان بخش اسکرول می‌شود.
+  - تغییر فقط query string (مثل فیلترهای صفحهٔ محصولات که با setSearchParams
+    در آدرس ذخیره می‌شوند) اسکرول را ریست نمی‌کند تا هنگام فیلتر/جست‌وجو صفحه
+    نپرد؛ انتخاب صفحه در فهرست محصولات مثل قبل خودش به بالا اسکرول می‌کند.
+
+
+
+انتخاب رنگ محصول و رنگ اجزای پک — انجام شد:
+  - دیتابیس (mysql/pharmacy_shop؛ migrate اجرا شد):
+    migration 2026_11_17_000000_create_product_colors_table
+      product_colors: product_id (cascade) · name (60) · hex (9, nullable) ·
+      image (nullable) · sort_order · is_active · unique(product_id, name)
+      ایندکس: (product_id, is_active, sort_order)
+    migration 2026_11_17_000100_create_product_pack_items_table
+      product_pack_items: product_id (cascade) · name (120) · quantity
+      (پیش‌فرض ۱) · colors (json: نام رنگ‌های مجاز این قطعه) · sort_order
+    migration 2026_11_17_000200_add_color_fields_to_order_items_table
+      order_items: color_name (60, nullable) · pack_colors (json, nullable)
+      ← نام رنگ داخل سفارش ذخیره می‌شود تا تاریخچه با تغییر پالت خراب نشود.
+  - مدل‌ها:
+      App\Models\ProductColor (فهرست PRESETS برای رنگ‌های آمادهٔ پوشاک)
+      App\Models\ProductPackItem (cast colors=array + متد colorNames())
+      Product: relation colors() و packItems() (هر دو sort_order سپس id)
+      OrderItem: fillable + cast جدید (color_name, pack_colors=array)
+  - پنل مدیریت (AdminProductController):
+      اعتبارسنجی colors.* (name اجباری · hex با الگوی #RGB/#RRGGBB ·
+      image/sort_order/is_active) و pack_items.* (name اجباری · quantity
+      ۱..۱۰۰ · colors.* از پالت همان محصول)
+      متدهای syncColors / syncPackItems: رنگ‌های ارسال‌شده upsert و بقیه حذف
+      می‌شوند؛ رنگ‌های مجاز قطعات پک باید در پالت محصول باشند وگرنه ۴۲۲.
+      store/update/show هر سه حالا colors و pack_items را برمی‌گردانند
+      (کلید JSON: colors و pack_items). اگر کلید ارسال نشود دست نمی‌خورد.
+  - API عمومی: ProductController@show حالا colors (فقط is_active، مرتب‌شده)
+    و pack_items را برمی‌گرداند.
+  - ثبت سفارش (OrderController@store):
+      items.*.color_name (nullable|max 60) و
+      items.*.pack_colors [{name, color}] (حداکثر ۱۲)
+      اگر محصول پک دارد: برای هر قطعه‌ای که رنگ مجاز دارد، رنگ همان قطعه
+      اجباری و باید در فهرست مجاز باشد؛ اگر پک ندارد و پالت رنگ دارد:
+      color_name اجباری و باید در پالت باشد؛ محصول بدون رنگ مثل قبل است.
+      کلید یکتای اقلام شامل تنوع + رنگ + ترکیب پک شد، پس یک محصول با دو رنگ
+      در یک سفارش مجاز است و تکرار دقیق همان ترکیب ۴۲۲ می‌گیرد.
+  - فرانت فروشگاه:
+      pages/ProductDetail.tsx: بخش «انتخاب رنگ» با سواچ (کد رنگ از پنل) و
+        بخش «انتخاب رنگ اجزای پک» برای محصولات پک؛ اگر رنگ یکتا باشد خودکار
+        انتخاب می‌شود. تا انتخاب رنگ کامل نشود دکمهٔ افزودن به سبد نمایش
+        داده نمی‌شود. تصویر رنگ انتخابی جای تصویر گالری را می‌گیرد.
+      context/CartContext.tsx: CartItem حالا color_name و pack_colors دارد و
+        cartKey = product:variant:color:pack است (دو رنگ = دو ردیف سبد).
+      pages/Cart.tsx: نمایش «رنگ: …» و «رنگ اجزای پک: …».
+      pages/Checkout.tsx: ارسال color_name/pack_colors در payload و کلید
+        یکتای اقلام همراستا با بک‌اند.
+      pages/OrderDetail.tsx و pages/AdminOrders.tsx (جزئیات و برگهٔ چاپ):
+        نمایش رنگ محصول و رنگ اجزای پک.
+  - پنل مدیریت — فرم محصول (pages/AdminProductForm.tsx):
+      بخش «رنگ‌های محصول»: افزودن سریع از ۱۵ رنگ آمادهٔ پوشاک (مشکی، سفید،
+      نود، بژ، کرم، خاکستری، سرمه‌ای، آبی، قرمز، زرشکی، صورتی، هلویی، بنفش،
+      سبز، قهوه‌ای) + ردیف دستی با نام، انتخابگر رنگ (input type=color)،
+      مسیر تصویر رنگ، فعال/غیرفعال و حذف.
+
+      بخش «پک چندعددی»: سوییچ «این محصول یک پک است» + قطعات (نام، تعداد،
+      رنگ‌های مجاز از پالت) با افزودن/حذف قطعه.
+      اعتبارسنجی سمت کلاینت: نام رنگ تکراری، کد رنگ نامعتبر، نام/تعداد قطعه و
+      رنگ‌های خارج از پالت. payload شامل colors و pack_items است.
+  - تست: backend/tests/Feature/ProductColorTest.php (۱۲ تست، ۳۴ اظهار)
+    ساخت محصول با رنگ و اجزای پک · جایگزینی پالت در ویرایش · رنگ قطعهٔ پک
+    خارج از پالت ۴۲۲ · نام رنگ تکراری ۴۲۲ · خروجی عمومی فقط رنگ‌های فعال ·
+    اجباری‌بودن رنگ در سفارش · رد رنگ نامعتبر · ذخیرهٔ color_name · دو رنگ از
+    یک محصول در یک سفارش · اجباری‌بودن رنگ هر قطعهٔ پک · ذخیرهٔ pack_colors ·
+    سازگاری محصول بدون رنگ.
+  - وضعیت کلی: کل تست‌های بک‌اند ۲۷۹ تست / ۱۴۱۶ اظهار PASS ·
+    tsc --noEmit بدون خطا · vite build موفق.
+
+تاریخ‌های بخش «ارسال و حمل و نقل» شمسی شد — انجام شد:
+  - مشکل: ستون «زمان» جدول‌های تاریخچه با Intl.DateTimeFormat("fa-IR") نمایش
+    داده می‌شد که خروجی‌اش به دادهٔ تقویم فارسی سیستم/مرورگر وابسته است و روی
+    بعضی دستگاه‌ها میلادی نشان می‌داد؛ فیلترهای «از تاریخ/تا تاریخ» و «تاریخ
+    تحویل مورد انتظار» هم ورودی بومی type="date" (تقویم میلادی) بودند.
+  - ابزار جدید در frontend/src/utils/jalali.ts:
+      toJalaliDateTime(value) — زمان ISO سرور (UTC) را به وقت محلی تبدیل و
+        سپس به اجزای شمسی می‌شکند. رشتهٔ «YYYY-MM-DD» و مقدار نیمه‌شب UTC
+        (تاریخ تحویل) بدون جابه‌جایی منطقهٔ زمانی خوانده می‌شوند تا روز عوض نشود.
+      formatJalaliDateTime(value, { withTime, withWeekday }) — مثل
+        «۲۹ آبان ۱۴۰۵، ساعت ۱۴:۳۰».
+      formatJalaliDateTimeShort(value) — مثل «۱۴۰۵/۰۸/۲۹».
+  - frontend/src/utils/adminFormat.ts: formatAdminDate حالا روی همین توابع
+    سوار است (خروجی قطعی شمسی + تبدیل UTC به وقت محلی)؛ در نتیجه تاریخ‌های
+    بقیهٔ صفحات پنل هم بدون وابستگی به تقویم سیستم شمسی می‌شوند.
+  - pages/AdminShipping.tsx:
+      هر چهار ورودی type="date" با JalaliDatePicker (تقویم شمسی پروژه)
+      جایگزین شد: فیلتر «از تاریخ/تا تاریخ» در تب مرسوله‌ها، همان فیلتر در تب
+      تاریخچه، «تاریخ تحویل مورد انتظار» در فرم ثبت مرسوله و فرم ویرایش.
+      مقدار ذخیره‌شده همان YYYY-MM-DD است که API انتظار دارد (value.slice(0,10)).
+      ستون «زمان» جدول تاریخچهٔ رویدادها — هم در جزئیات مرسوله و هم در تب
+      تاریخچه — حالا تاریخ + ساعت شمسی نشان می‌دهد.
+      کارت «زمان‌ها» در جزئیات مرسوله: ثبت/ارسال/تحویل با ساعت شمسی.
+  - pages/AdminOrders.tsx و pages/OrderDetail.tsx: helper تاریخ هر صفحه هم به
+    تقویم شمسی داخلی پروژه منتقل شد (تاریخ ثبت سفارش و تاریخ ارسال).
+  - بررسی: خروجی با تقویم فارسی ICU و در منطقهٔ زمانی منفی
+    (TZ=America/New_York) مقایسه شد؛ تاریخ‌های فقط-تاریخ بدون جابه‌جایی روز و
+    زمان‌های واقعی با تبدیل به وقت محلی درست نمایش داده می‌شوند.
+    tsc --noEmit بدون خطا · vite build موفق.
+
+تنظیم ظاهر بنرها: گردی گوشهٔ سراسری + حذف پس‌زمینهٔ پشت بنر — انجام شد:
+   - هدف: مدیر بتواند گردی گوشهٔ همهٔ بنرها (هیرو، بنرهای چندستونه، نوار
+     کمپین و بنر بالای صفحهٔ محصولات) را در یک جا تنظیم کند و رنگ
+     پس‌زمینه‌ای که دور/پشت بنرها دیده می‌شد حذف شود.
+   - بک‌اند:
+     - StoreSetting: کلید banner_radius (پیش‌فرض '16'، بازهٔ مجاز 0 تا 48؛
+       مقدار خارج از بازه در bannerRadius() به بازه clamp می‌شود). بدون
+       مایگریشن جدید — StoreSetting کلید/مقدار است.
+     - GET /api/v1/admin/banner-sections و پاسخ عمومی GET /api/v1/banners
+       علاوه بر sections فیلد appearance را هم برمی‌گردانند:
+       { appearance: { radius: <int> } }.
+     - PUT /api/v1/admin/banner-appearance با بدنهٔ { radius: 0..48 } مقدار
+       را ذخیره و کش storefront.banners.index.v7 را پاک می‌کند (مسیر مهمان
+       نیست؛ فقط ادمین). اعتبارسنجی: integer، بین 0 و 48.
+     - کش عمومی بنرها به v7 ارتقا یافت (تست: BannerSectionTest).
+   - فرانت‌اند (frontend/src/utils/bannerGrid.ts):
+     - BannerAppearance، DEFAULT_BANNER_RADIUS=16، MAX_BANNER_RADIUS=48،
+       BANNER_RADIUS_PRESETS=[0,8,12,16,24,32]، normalizeBannerRadius()،
+       bannerRadiusStyle() (استایل inline borderRadius — چون مقدار داینامیک
+       است از کلاس ثابت Tailwind استفاده نمی‌شود) و parseBannerAppearance()
+       برای خواندن امن از پاسخ API.
+   - فرانت‌اند (صفحات):
+     - pages/Home.tsx: گردی روی هیرو، کاشی‌های بنر چندستونه و کاشی‌های نوار
+       کمپین اعمال می‌شود؛ rounded-2xl ثابت کاشی‌ها و bg-brand-75 دور هیرو
+       حذف شد (کادر هیرو در fit=contain با w-fit max-w-full است تا قاب
+       رنگی اضافه دور تصویر نیاید).
+     - pages/Products.tsx: بنر بالای صفحه (products_top) هم rounded-3xl و
+       bg-brand-75 ثابت را کنار گذاشت و radius را از همان appearance
+       می‌خواند.
+     - pages/AdminBanners.tsx: کارت جدید «ظاهر همهٔ بنرها» با ورودی عددی،
+       دکمه‌های پیش‌فرض، پیش‌نمایش زنده و ذخیره (PUT banner-appearance).
+   - تست: backend/tests/Feature/BannerSectionTest.php — پیش‌فرض radius=16 در
+     پاسخ عمومی، تغییر radius توسط ادمین + پاک‌شدن کش و بازتاب فوری در پاسخ
+     عمومی (شامل radius=0)، رد مقدار خارج از بازه (۴۲۲) و ۴۰۳/۴۰۱ برای مهمان
+     روی PUT banner-appearance.
+   - بررسی: php artisan test --filter=Banner همه PASS · tsc --noEmit بدون خطا ·
+     vite build موفق.
+
+ساده‌سازی بنرها: چهار بخش مستقل + بنر موبایل جدا + گردی گوشهٔ هر بخش — انجام شد:
+   - هدف: بخش بنرها ساده و بدون ابهام شود؛ صفحهٔ اول دو بخش بنر مستقل (بالا و
+     وسط) داشته باشد که ابعاد و گردی گوشهٔ هر کدام جدا تنظیم شود؛ موبایل هم دو
+     بخش تصویر مستقل (بالای صفحه و وسط صفحه) با ابعاد/تعداد/گردی مستقل؛ بنر
+     موبایل کاملاً از بنرهای دیگر جدا؛ «تصاویر آمادهٔ سایت» از فرم بنر حذف شود.
+   - بک‌اند:
+     - position های جدید در App\Models\Banner::POSITIONS:
+       home_mobile_top و home_mobile_middle (به‌علاوهٔ ثابت MOBILE_POSITIONS و
+       متد isMobilePosition()).
+     - مایگریشن 2026_11_21_000000_add_radius_to_banner_sections_table.php:
+       ستون radius (unsignedSmallInteger، nullable) روی banner_sections + ساخت
+       ردیف دو بخش موبایل (layout=one، fit=contain، radius=null).
+       radius=null یعنی «همان پیش‌فرض سراسری» تا نصب‌های قدیمی ظاهرشان عوض نشود.
+     - BannerSection: ثابت‌های GRID_POSITION/MOBILE_TOP_POSITION/
+       MOBILE_MIDDLE_POSITION/MOBILE_POSITIONS/RADIUS_MIN=0/RADIUS_MAX=48،
+       متدهای isMobile() و effectiveRadius() (radius بخش یا
+       StoreSetting::bannerRadius()) و radius در storefrontArray().
+     - PUT /api/v1/admin/banner-sections/{position}: فیلد radius (nullable،
+       0..48) هم پذیرفته می‌شود. پاسخ sectionPayload شامل radius (مؤثر)،
+       radius_default، radius_custom، radius_min/max و is_mobile است.
+     - بنرهای موبایل یک تصویر دارند: در validateBanner اگر position موبایل
+       باشد، همان تصویر در هر دو ستون image و mobile_image ذخیره می‌شود تا
+       فروشگاه (که در موبایل mobile_image را می‌خواند) آن را نشان دهد.
+     - کش عمومی بنرها به storefront.banners.index.v7 ارتقا یافت.
+   - فرانت‌اند:
+     - utils/banners.ts: BannerPosition + دو موقعیت موبایل، MOBILE_BANNER_POSITIONS
+       و isMobileBannerPosition().
+     - utils/bannerGrid.ts: HOME_MOBILE_TOP_POSITION،
+       HOME_MOBILE_MIDDLE_POSITION، BANNER_MOBILE_HEIGHT_PRESETS، فیلد radius در
+       BannerSectionConfig، bannerSectionRadius(section, fallback) و خواندن
+       radius در parseBannerSection().
+     - pages/Home.tsx: چهار ناحیهٔ بنر مستقل — هیرو دسکتاپ (hidden md:block)،
+       بنر بالای موبایل (md:hidden)، گرید دسکتاپ (hidden md:block) و بنر وسط
+       موبایل (md:hidden). گردی هر ناحیه از تنظیمات همان بخش می‌آید
+       (heroRadius/gridRadius/mobileTopRadius/mobileMiddleRadius). بنرهای
+       دسکتاپ دیگر در موبایل رندر نمی‌شوند و ارتفاع ثابت کاشی‌های گرید
+       (height_desktop) هم اعمال می‌شود (به‌جز چیدمان three_split که نسبت خودش
+       را نگه می‌دارد).
+     - components/AdminBannerSectionCard.tsx (جدید): کارت تنظیمات هر بخش؛ فقط
+       فیلدهای مربوط به همان بخش را نشان می‌دهد (چیدمان برای گرید؛ تعداد تصاویر
+       برای هیرو/موبایل؛ ارتفاع همان نما؛ گردی گوشه با پیش‌فرض‌ها؛ جاگیری تصویر؛
+       فعال/غیرفعال) + دکمهٔ ذخیره و افزودن بنر.
+     - pages/AdminBanners.tsx: سه تب «بنرهای دسکتاپ» / «بنرهای موبایل» /
+       «سایر بنرها» با شمارنده؛ هر تب فقط کارت‌های بخش و بنرهای خودش را نشان
+       می‌دهد. کارت «ظاهر همهٔ بنرها» به تب «سایر بنرها» منتقل و به «گردی گوشهٔ
+       نوار تبلیغاتی و بنر محصولات» تبدیل شد. «تصاویر آمادهٔ سایت» (SITE_IMAGE_
+       PRESETS و SITE_MOBILE_IMAGE_PRESETS) و دکمه‌هایشان حذف شد؛ بارگذاری
+       تصویر، مسیر دستی، ابعاد پیشنهادی، ویرایشگر متن/فونت، بازهٔ نمایش، ترتیب و
+       وضعیت حفظ شد. در فرم بنر موبایل فقط یک فیلد تصویر نمایش داده می‌شود.
+   - تست (backend/tests/Feature/BannerSectionTest.php): وجود دو بخش موبایل،
+     تنظیم radius هر بخش و بازتابش در پاسخ عمومی، مستقل‌بودن radius بخش از
+     تغییر پیش‌فرض سراسری، رد radius خارج از بازه (۴۲۲) و پر شدن mobile_image
+     برای بنر موبایل.
+   - بررسی: php artisan test --filter=Banner همه PASS · tsc --noEmit بدون خطا ·
+     vite build موفق.
+
+جدایی کامل بنر دسکتاپ/موبایل + انیمیشن هاور دسکتاپ + اصلاح گردی موبایل — انجام شد:
+   - هدف: در تب «بنرهای دسکتاپ» هیچ نشانی از بنر موبایل و در تب «بنرهای موبایل»
+     هیچ نشانی از بنر دسکتاپ نباشد؛ برای بنر بالای صفحه و بنر وسط صفحه (دسکتاپ)
+     انیمیشن هاور قابل انتخاب باشد؛ گردی گوشهٔ بنرهای موبایل که روی گوشی دیده
+     نمی‌شد اصلاح شود.
+   - علت باگ گردی موبایل: کادر بنر هیرو در fit=contain با `w-fit` رندر می‌شد و
+     تصویر پرترهٔ موبایل (`w-auto max-w-full`) عرض ذاتی خودش را می‌گرفت و از کادر
+     بیرون می‌زد؛ در نتیجه گوشه‌های گرد کادر بیرون از صفحهٔ گوشی می‌افتاد و گردی
+     دیده نمی‌شد. اصلاح در همان مرحله: کادر تمام‌عرض + تصویر `mx-auto max-w-full`
+     + `border-radius: inherit` روی خود تصویر (heroFrame در pages/Home.tsx)؛
+     کاشی‌های گرید هم `border-radius: inherit` گرفتند. (در مرحلهٔ بعد کادر به
+     `mx-auto w-fit max-w-full` تغییر کرد تا سایه فقط دور خود بنر بیفتد؛
+     `max-w-full` جلوی سرریز تصویر پرتره را می‌گیرد.)
+   - بک‌اند:
+     - مایگریشن 2026_11_22_000000_add_animation_to_banner_sections_table.php:
+       ستون animation (string(20)، nullable) روی banner_sections. ردیف home_grid
+       به zoom به‌روزرسانی می‌شود تا بزرگ‌نمایی قبلیِ هاور همان بخش حفظ شود.
+     - BannerSection: ثابت‌های ANIMATIONS=[none,zoom,lift,zoom_lift,shine] و
+       DEFAULT_ANIMATION='none'، فیلد fillable، متد normalizedAnimation()
+       (مقدار خالی/ناشناخته = none) و animation در storefrontArray().
+     - PUT /api/v1/admin/banner-sections/{position}: فیلد animation با
+       Rule::in(BannerSection::ANIMATIONS) پذیرفته می‌شود؛ sectionPayload هم
+       animation و animations را برمی‌گرداند.
+     - کش عمومی بنرها به storefront.banners.index.v8 ارتقا یافت.
+   - فرانت‌اند:
+     - utils/bannerGrid.ts: type BannerSectionAnimation، DEFAULT_BANNER_ANIMATION،
+       BANNER_SECTION_ANIMATIONS (برچسب/توضیح فارسی)،
+       normalizeBannerSectionAnimation()، bannerFrameAnimationClass()
+       (lift/zoom_lift: بالا آمدن + سایه)، bannerImageAnimationClass()
+       (zoom/zoom_lift: scale تصویر داخل کادر)، BANNER_SHINE_CLASS (لایهٔ درخشش)
+       و animation در BannerSectionConfig و parseBannerSection(). همهٔ کلاس‌ها
+       `motion-reduce:` دارند. group-hover:scale ثابت از BANNER_GRID_IMAGE_CLASS
+       حذف شد تا انیمیشن هر بخش تنها منبع حرکت باشد.
+     - pages/Home.tsx: HeroBannerCarousel و BannerGrid پراپ animation گرفتند
+       (فقط بخش‌های دسکتاپ مقدار دارند؛ بخش‌های موبایل none). انیمیشن روی کادر
+       (group/overflow-hidden) و تصویر اعمال می‌شود؛ لایهٔ shine هم داخل کادر
+       رندر می‌شود.
+     - components/AdminBannerSectionCard.tsx: فیلد animation در کارت بخش‌های
+       دسکتاپ (hero/grid) با دکمه‌های none/zoom/lift/zoom_lift/shine.
+     - pages/AdminBanners.tsx:
+       - «محل نمایش» فرم فقط موقعیت‌های همان تب را نشان می‌دهد
+         (positionOptionsForTab(activeTab))؛ تغییر تب با فرم باز، موقعیت فرم را
+         به بخش پیش‌فرض همان تب برمی‌گرداند.
+       - فیلد «تصویر موبایل» فقط برای نوار تبلیغاتی و بالای صفحهٔ محصولات
+         (POSITIONS_WITH_MOBILE_IMAGE) نمایش داده و ارسال می‌شود؛ برای بنرهای
+         بالای/وسط صفحهٔ اول هر نما مقدار null می‌رود (بنر موبایل در بک‌اند از
+         image پر می‌شود).
+       - بارگذاری/ذخیرهٔ animation در loadSections و saveSection.
+   - تست (BannerSectionTest): animation پیش‌فرض هر بخش (گرید zoom، بقیه none)،
+     تنظیم animation توسط ادمین و بازتاب فوری در پاسخ عمومی، رد مقدار نامعتبر
+     (۴۲۲). مجموع تست‌های بنر: ۴۳ PASS / ۲۵۹ assertion.
+   - بررسی: tsc --noEmit بدون خطا · vite build موفق · رندر واقعی ۳۹۰px با
+     اسکرین‌شات headless بررسی شد (بنر موبایل با گوشهٔ گرد داخل صفحه).
+
+حذف رنگ/کارت پشت بنرها تا سایه فقط روی خود بنر بیفتد — انجام شد:
+   - هدف: بنرها روی هیچ رنگ یا کارتی ننشینند و اطرافشان خالی از رنگ باشد؛ با
+     انیمیشن lift فقط خود بنر سایه بگیرد، نه سکشنِ دربرگیرنده.
+   - utils/bannerGrid.ts: ثابت BANNER_SECTION_SURFACE_CLASS = "bg-white"
+     (سطح رنگ‌نخوردهٔ پشت همهٔ بخش‌های بنر). برای برگشت به پس‌زمینهٔ صفحه فقط
+     همین مقدار را به bg-transparent تغییر دهید.
+   - pages/Home.tsx:
+     - هر چهار بخش بنر (هیرو دسکتاپ، بالای موبایل، بخش چندستونه و وسط موبایل)
+       به‌جای bg-cream از BANNER_SECTION_SURFACE_CLASS استفاده می‌کنند؛ نوار
+       بنرهای کوتاه (home_strip) هم همین‌طور.
+     - کاشی‌های بخش چندستونه دیگر `border border-brand-100 bg-white` و
+       `hover:border-brand-300` ندارند؛ کارت نوار بنرهای کوتاه هم بی‌قاب و
+       بی‌پس‌زمینه شد. حلقهٔ فوکوس کیبورد باقی ماند.
+     - heroFrame: کادر در fit=contain به `mx-auto w-fit max-w-full
+       overflow-hidden` تغییر کرد؛ یعنی کادر دقیقاً به اندازهٔ تصویر است (نه عرض
+       سکشن) و سایهٔ هاور دور خود بنر می‌افتد. `max-w-full` سرریز تصویر پرترهٔ
+       موبایل را می‌گیرد و `overflow-hidden` برش بزرگ‌نمایی و گوشهٔ گرد را حفظ
+       می‌کند. در fit=cover کادر همان w-full است (تصویر کادر را پر می‌کند).
+   - بررسی: tsc --noEmit بدون خطا؛ اندازه‌گیری DOM با رندر headless:
+     موبایل ۳۹۰px → کادر هیرو ۳۷۵×۳۷۵ با تصویر ۳۷۵×۳۷۵، bg=transparent،
+     border-width=0، radius=32px؛ دسکتاپ ۱۴۴۰px → سکشن هیرو bg=white،
+     کادر ۱۳۷۲×۷۶۸ برابر تصویر ۱۳۷۲×۷۶۸ (سایه دقیقاً هم‌اندازهٔ بنر)،
+     کاشی بخش چندستونه ۱۲۳۲×۴۶۲ با border-width=0 و bg=transparent.
+
+فاصلهٔ باکس بنر از منوی دسته‌بندی — انجام شد:
+   - بخش هیرو (دسکتاپ) `pt-4 md:pt-6` و بنر بالای صفحه در موبایل `pt-4` گرفتند
+     تا کادر بنر به منوی دسته‌بندی نچسبد. مقدارِ موبایل هم‌اندازهٔ padding افقی
+     کانتینر (px-4) و مقدار دسکتاپ هم‌اندازهٔ px-6 است.
+   - اندازه‌گیری DOM: موبایل ۳۹۰px → gap = ۱۶px · دسکتاپ ۱۴۴۰px → gap = ۲۴px
+     (menu bottom تا hero top).
+
+
+بخش «مدیریت محتوا» در پنل + صفحات سایت — انجام شد:
+   - بک‌اند:
+     - migration 2026_11_23_000000_create_pages_table.php + App\Models\Page
+       (slug فارسی خودکار و یکتا، excerpt خودکار از متن، scope published با
+       is_published + published_at ≤ اکنون).
+     - PageController: GET /pages و GET /pages/{slug} فقط صفحات منتشرشده.
+     - AdminPageController: index/store/show/update/updateStatus/destroy با
+       stats، فیلتر وضعیت و جست‌وجو؛ مجوز جدید PAGES_MANAGE در AdminRole
+       (به نقش مدیر محصولات هم داده شد) و مسیرهای /admin/pages/*.
+     - AdminBannerController::reorder + PUT /admin/banners/order برای ذخیرهٔ
+       ترتیب اسلایدها؛ فقط بنرهای همان بخش پذیرفته می‌شوند.
+     - تست ContentManagementTest: ۶ PASS / ۲۴ assertion.
+   - فرانت‌اند:
+     - services/pages.ts + hooks/useSitePages.ts + storageKeys.storefrontPages
+       (کش فهرست صفحات تا لینک‌های فوتر بدون پرش چیدمان پر شوند).
+     - components/RichTextContent.tsx (رندر سبک ##/###/-/>/**) و
+       pages/PageView.tsx (مسیر /pages/:slug با بردکرامب، متا و حالت خطا).
+     - pages/AdminContent.tsx: سه تب «بنرها / اسلایدر / صفحات سایت» با
+       همگام‌سازی ?tab= در آدرس. تب بنرها همان pages/AdminBanners است با
+       prop جدید embedded که سربرگ بزرگ صفحه را حذف می‌کند.
+     - components/AdminSliderPanel.tsx: تنظیمات بخش home_hero با
+       AdminBannerSectionCard (تعداد اسلاید، ارتفاع، گردی گوشه، انیمیشن) و
+       جدول اسلایدها با جابه‌جایی ↑↓ (PUT /admin/banners/order)،
+       فعال/غیرفعال، بازهٔ نمایش و حذف. نوشتن متن/تصویر اسلاید در تب بنرها.
+     - components/AdminPagesPanel.tsx: آمار، فیلتر وضعیت، جست‌وجو، فرم
+       ایجاد/ویرایش، جدول با تغییر وضعیت/پیش‌نمایش/حذف و صفحه‌بندی.
+     - منو: آیتم «بنرها» جای خود را به «مدیریت محتوا» (/admin/content با
+       آیکن LayoutTemplate) داد؛ مسیر قدیمی /admin/banners با Navigate به
+       /admin/content?tab=banners ریدایرکت می‌شود (adminSidebarLayout و
+       adminPermissions هم به‌روزرسانی شدند: کلید pages = pages.manage).
+     - فوتر: صفحه‌های منتشرشده‌ای که show_in_footer دارند از useSitePages
+       به شکل لینک /pages/{slug} در «دسترسی سریع» اضافه می‌شوند.
+     - Home: بخش بنر چندستونهٔ وسط صفحه `pt-10` و بنر وسط صفحه در موبایل
+       `pt-8` گرفت تا از دسته‌بندی بالای خودش فاصله بگیرد.
+   - بررسی: tsc --noEmit بدون خطا · vite build موفق · ContentManagementTest
+     ۶ PASS / ۲۴ assertion.
+
+
+
+بهبودهای تجربهٔ کاربری فروشگاه (مرز خطا، صفحهٔ ۴۰۴، sitemap صفحات سایت، پیش‌نمایش صفحات) — انجام شد:
+  - فرانت‌اند:
+    - components/ErrorBoundary.tsx (جدید): کلاس ErrorBoundary با prop اختیاری resetKey
+      و پوشش RouteErrorBoundary که با تغییر مسیر (pathname/search) حالت خطا را ریست
+      می‌کند. صفحهٔ خطای فارسی با پیام فنی فقط در حالت dev و دکمه‌های «تلاش مجدد» و
+      «بازگشت به خانه». در App.tsx کل ناحیهٔ Suspense (همهٔ مسیرها) داخل
+      RouteErrorBoundary قرار گرفت؛ یعنی خطای رندر در هر صفحهٔ تنبل‌بارگذاری‌شده به‌جای
+      صفحهٔ سفید، پیام قابل‌بازیابی نشان می‌دهد.
+    - pages/NotFound.tsx (جدید) + مسیر «*» در App.tsx: صفحهٔ ۴۰۴ داخل Layout با نشان
+      ۴۰۴، جست‌وجوی محصول (فرم → /products?search=)، میان‌برهای محصولات/مقالات/راهنمای
+      سایز و چیپ صفحات سایت (useSitePages). متا با NO_INDEX_ROBOTS تا ۴۰۴ در گوگل ثبت
+      نشود. مسیر ناشناختهٔ داخل پنل هم با «*» به /admin ریدایرکت می‌شود تا مدیر از پنل
+      بیرون نیفتد.
+    - scripts/generate-sitemap.mjs: علاوه بر محصولات/دسته‌ها/مقاله‌ها، صفحات منتشرشدهٔ
+      سایت هم از GET /pages خوانده می‌شوند و /pages/{slug} با lastmod از updated_at،
+      changefreq=monthly و priority=0.5 به sitemap اضافه می‌شود.
+    - components/PagePreviewDialog.tsx (جدید) + AdminPagesPanel: دکمهٔ «پیش‌نمایش» در
+      هر ردیف جدول و در سربرگ فرم. متن با همان RichTextContent صفحهٔ سایت رندر می‌شود؛
+      پیش‌نمایش ردیف، متن کامل را از GET /admin/pages/{id} می‌گیرد و پیش‌نمایش فرم، متن
+      ذخیره‌نشده را نشان می‌دهد (بدون نیاز به انتشار آزمایشی). پنجره با Esc یا کلیک روی
+      پس‌زمینه بسته می‌شود، اسکرول پس‌زمینه قفل می‌شود و برای صفحات منتشرشده دکمهٔ
+      «مشاهده در سایت» (/pages/{slug}) دارد.
+  - بررسی: npx tsc --noEmit بدون خطا · npm run build موفق (sitemap.xml و robots.txt ساخته شد).
+
+
+پیامک خودکار وضعیت سفارش + زنگولهٔ اعلان پنل — انجام شد:
+  - بک‌اند:
+    - migration 2026_11_24_000000_create_admin_notifications_table:
+      جدول admin_notifications (type، title، body، url، meta، read_at) با
+      ایندکس (read_at, created_at) و (type, created_at).
+    - app/Support/OrderStatus.php (جدید): ثابت‌ها و برچسب فارسی پنج وضعیت
+      سفارش (در انتظار پرداخت، در حال آماده‌سازی، ارسال‌شده، تحویل‌شده،
+      لغوشده) تا متن پیامک و اعلان‌ها یکسان بمانند.
+    - app/Services/Messaging/OrderStatusMessenger.php (جدید): تنظیمات در
+      store_settings با کلیدهای order_status_sms_enabled،
+      order_status_sms_statuses و order_status_sms_template؛ متغیرهای
+      {name} {order} {status} {tracking} {total} {store}؛ ارسال پیامک از
+      همان کانال SMS (کاوه‌نگار/SMS.ir/سرویس دلخواه) با ثبت در
+      outbound_messages (meta.source = order_status). خطای ارسال فقط لاگ
+      می‌شود و تغییر وضعیت سفارش را خراب نمی‌کند.
+    - app/Models/AdminNotification.php + app/Services/Notifications/
+      AdminNotificationService.php (جدید): ساخت اعلان برای سفارش جدید،
+      تغییر وضعیت سفارش (همراه با نتیجهٔ پیامک)، پیام جدید پشتیبانی و
+      درخواست مرجوعی؛ unreadCount/recent/markAllRead.
+    - AdminOrderController: پس از ثبت تغییر وضعیت (updateStatus) و همچنین
+      ثبت اطلاعات ارسال با mark_shipped، پیامک + اعلان ارسال می‌شود و نتیجه
+      در کلید sms پاسخ برمی‌گردد. اگر وضعیت واقعاً تغییر نکرده باشد هیچ
+      پیام/اعلانی ساخته نمی‌شود.
+    - AdminMessagingController: GET/PUT /admin/messaging/order-status برای
+      خواندن/ذخیرهٔ تنظیمات، همراه با متغیرها، متن پیش‌فرض و وضعیت فعال
+      بودن کانال پیامک.
+    - AdminNotificationController: GET /admin/notifications (unread_count +
+      15 اعلان آخر)، POST /admin/notifications/{id}/read و
+      POST /admin/notifications/read-all (برای همهٔ مدیران، بدون محدودیت
+      مجوز).
+    - اعلان سفارش جدید در OrderController::store، اعلان پیام مشتری در
+      SupportManager::postUserMessage (وب‌چت و پیام‌رسان‌ها) و اعلان مرجوعی
+      در ReturnRequestController::store — همه با try/catch تا ثبت اصلی
+      هرگز به‌خاطر اعلان شکست نخورد.
+    - تست: OrderStatusSmsTest (۹ PASS) و AdminNotificationTest (۶ PASS)؛
+      کل تست‌ها بدون خطا.
+  - فرانت‌اند:
+    - services/adminNotifications.ts (جدید): تایپ‌ها و توابع دریافت/خواندن
+      اعلان‌ها از adminApi.
+    - components/AdminNotificationBell.tsx (جدید): زنگولهٔ واقعی جای متن
+      ثابت قبلی در AdminLayout؛ نشان عددی خوانده‌نشده (تا +۹۹)، کشوی اعلان
+      با آیکن هر نوع، زمان نسبی فارسی، «همه خوانده شد»، بستن با کلیک بیرون
+      یا Esc، به‌روزرسانی هر ۴۵ ثانیه و هنگام بازگشت به تب. کلیک روی اعلان
+      آن را خوانده می‌کند و به صفحهٔ مربوطه (/admin/orders، /admin/support،
+      /admin/returns) می‌برد. وضعیت‌های loading/خطا/خالی هم پوشش دارند.
+    - components/OrderStatusSmsCard.tsx (جدید) + نمایش در صفحهٔ پیام‌رسانی
+      (بالای کارت تبریک تولد): کلید فعال/غیرفعال، انتخاب وضعیت‌های پیامک،
+      ویرایش متن با درج متغیر در محل نشانگر، بازگرداندن متن پیش‌فرض،
+      پیش‌نمایش زنده با دادهٔ نمونه و شمارش نویسه/بخش پیامک، هشدار وقتی
+      کانال پیامک تنظیم نشده است.
+    - AdminOrders: پیام موفقیت تغییر وضعیت حالا نتیجهٔ پیامک را هم نشان
+      می‌دهد («پیامک اطلاع‌رسانی برای مشتری ارسال شد» یا خطای ارسال).
+  - بررسی: tsc --noEmit بدون خطا · vite build موفق (۲.۱۲s) ·
+    OrderStatusSmsTest + AdminNotificationTest: ۱۵ PASS / ۷۴ assertion.
+
+
+بهبود ظاهری: جست‌وجوی لحظه‌ای + نمایش سریع + بازدیدهای اخیر + PWA — انجام شد:
+  - جست‌وجوی لحظه‌ای (فروشگاه):
+    - components/HeaderSearch.tsx (جدید): کادر جست‌وجوی هدر حالا combobox واقعی
+      است؛ با ۲۵۰ms تعویق و از حداقل ۲ نویسه، GET /products?search=…&per_page=6
+      را صدا می‌زند و تصویر، نام، برند/دسته و قیمتِ نهایی را در کشوی زیر کادر
+      نشان می‌دهد (اسکلتون لودینگ، حالت خالی و خطای شبکه هم پوشش داده شده).
+      ناوبری با ↑/↓/Enter/Escape، aria-expanded/aria-activedescendant،
+      بستن با کلیک بیرون یا تغییر مسیر، و پاک‌کردن سریع متن.
+    - services/searchHistory.ts (جدید): شش جست‌وجوی آخر در localStorage
+      (behrang-shop-search-history) نگه‌داری و به‌صورت چیپ پیشنهاد می‌شود؛
+      حذف تک‌عبارت و «پاک کردن» کل تاریخچه هم دارد. همهٔ نمونه‌های کادر با
+      رویداد behrang:search-history همگام می‌شوند.
+    - Header.tsx: فرم داخلی با <HeaderSearch /> جایگزین شد (کد هدر کوتاه‌تر و
+      یک منبع واحد برای جست‌وجو).
+  - نمایش سریع (Quick View):
+    - components/QuickViewModal.tsx (جدید): مودال با portal روی body (خارج از
+      overflow کارت)، گالری تصویر با تامبنیل، برند/دسته، قیمت و تخفیف، انتخاب
+      سایز از تنوع‌های موجود، موجودی، تعداد، «افزودن به سبد خرید» (CartContext
+      با variant_id)، قلب علاقه‌مندی، لینک «مشاهدهٔ کامل» و پیام موفقیت با
+      لینک سبد. Esc، کلیک پس‌زمینه، قفل اسکرول و trap سادهٔ Tab دارد.
+    - ProductCard.tsx: دکمهٔ چشم «نمایش سریع» روی هر کارت (شبکه و ریل خانه)؛
+      state مودال داخل خود کارت است تا بدون context اضافه در هر صفحه‌ای کار
+      کند.
+  - بازدیدهای اخیر:
+    - services/recentlyViewed.ts (جدید): عکس فوری سبک محصول (۱۲ مورد آخر،
+      بدون تکرار، پاک‌سازی دادهٔ خراب) در localStorage.
+    - hooks/useRecentlyViewed.ts (جدید): همگام‌سازی زنده بین تب‌ها/نمونه‌ها.
+    - components/RecentlyViewed.tsx (جدید): ریل افقی کارت‌های کوچک با قیمت،
+      برچسب تخفیف، حذف تک‌مورد و «پاک کردن تاریخچه»؛ در نبود داده هیچ فضایی
+      اشغال نمی‌کند.
+    - ProductDetail: هر بازدید ثبت می‌شود و ریل «بازدیدهای اخیر» (به‌جز محصول
+      جاری) زیر محصولات مرتبط می‌آید. Home: ریل بازدیدهای اخیر بالای مقالات،
+      فقط وقتی کاربر قبلاً محصولی دیده باشد.
+    - utils/storageKeys.ts: کلیدهای searchHistory / recentlyViewed /
+      pwaInstallDismissed اضافه شد.
+  - PWA (نصب‌پذیری + آفلاین):
+    - public/manifest.webmanifest (جدید): نام/نام کوتاه فارسی، start_url،
+      display standalone، theme/background color برند، آیکن‌های ۱۹۲/۵۱۲ و
+      maskable، و سه shortcut (فروشگاه، سبد خرید، علاقه‌مندی‌ها).
+    - public/sw.js (جدید): پیش‌کش پوسته، ناوبری network-first با fallback به
+      کش و صفحهٔ آفلاین، فایل‌های ثابت stale-while-revalidate، پاک‌سازی کش
+      نسخه‌های قدیمی، و عدم کش درخواست‌های API (قیمت/موجودی کهنه نشود).
+    - public/offline.html (جدید): صفحهٔ آفلاین RTL با دکمهٔ «تلاش دوباره» و
+      لینک فروشگاه.
+    - scripts/generate-pwa-icons.mjs (جدید) + npm run icons: آیکن‌های PNG
+      (قلب کرم روی گرادیان سبز) بدون وابستگی بیرونی با zlib و کدگذار PNG
+      ساخته می‌شوند: public/icons/icon-192.png, icon-512.png,
+      maskable-512.png, apple-touch-icon.png, favicon-32.png.
+    - src/pwa.ts (جدید) + main.tsx: ثبت /sw.js فقط در build تولید.
+    - components/InstallPwaPrompt.tsx (جدید) + Layout: کارت «بهرنگ شاپ را نصب
+      کنید» با beforeinstallprompt؛ بستن آن تا ۱۴ روز تکرار نمی‌شود و در حالت
+      standalone نمایش داده نمی‌شود.
+    - index.html: لینک manifest، آیکن ۳۲px، apple-touch-icon و متاهای iOS.
+    - index.css: استایل‌های rail-scroll، انیمیشن مودال نمایش سریع و کارت نصب
+      (با احترام به prefers-reduced-motion).
+  - بررسی: tsc --noEmit بدون خطا · vite build موفق (۳.۷۳s) — manifest/sw/
+    offline.html و آیکن‌ها در dist کپی شدند. آیکن ۱۹۲ به‌صورت تصویری بازبینی شد.
+  - بررسی نهایی و تغییر منو:
+    - tsc --noEmit بدون خطا · vite build دوباره موفق (۲۱۱۸ ماژول).
+    - vite preview روی پورت ۴۱۸۱: /، /manifest.webmanifest، /sw.js،
+      /offline.html، هر پنج آیکن و /products همه با کد ۲۰۰ و MIME درست.
+    - ابعاد واقعی PNG‌ها با sizes در manifest یکی است (۱۹۲×۱۹۲، ۵۱۲×۵۱۲ و
+      maskable ۵۱۲×۵۱۲).
+    - sw.js: node --check بدون خطا؛ کش صفحات حداکثر ۳۰ ورودی نگه می‌دارد
+      (trim) تا حافظهٔ مرورگر با گذر زمان پر نشود.
+    - components/CategoryMenu.tsx: «راهنمای انتخاب سایز» و «مقالات و راهنما»
+      در نوار دسکتاپ داخل یک گروه با ms-auto به انتهای خط (سمت چپ نوار)
+      منتقل شدند تا فاصلهٔ خالی میان دسته‌بندی‌ها و این دکمه‌ها خودکار پر شود؛
+      shrink-0 مانع شکستن دکمه‌ها بین دو خط می‌شود. منوی موبایل بدون تغییر است.
+  - گروه‌بندی منوی موبایل، نسخه‌بندی خودکار سرویس‌ورکر و بخش «هدر و فوتر»:
+    - components/CategoryMenu.tsx: دو لینک «راهنمای انتخاب سایز» و «مقالات و
+      راهنما» در منوی موبایل هم داخل یک ردیف با justify-end قرار گرفتند؛ در
+      RTL یعنی گوشهٔ چپ پنل، هماهنگ با نوار دسکتاپ، و با flex-wrap در صفحه‌های
+      باریک به خط بعد می‌روند.
+    - vite.config.ts: پلاگین behrang-sw-version بعد از build از نام فایل‌های
+      dist/assets هش ۱۰ کاراکتری می‌سازد و const VERSION در dist/sw.js را
+      جایگزین می‌کند؛ نسخهٔ کش دیگر دستی نیست و در این build مقدار
+      b63e6d93d9 گرفت.
+    - بک‌اند: کلیدهای هدر/فوتر به StoreSetting::DEFAULTS اضافه شد
+      (header_logo_text، header_tagline، header_show_search، header_cta_*،
+      footer_about_*، footer_highlight_*، footer_copyright و
+      footer_quick_links).
+    - HeaderFooterController: GET عمومی /header-footer و GET/PUT مدیریتی
+      /admin/header-footer با اعتبارسنجی و ذخیرهٔ لینک‌های سریع به‌صورت JSON
+      (حداکثر ۱۲ لینک، حذف ردیف‌های خالی، رد کردن لینک بدون عنوان/نشانی).
+    - فرانت: services/headerFooter.ts + hooks/useHeaderFooter.ts با همان الگوی
+      کش (حافظه → localStorage → شبکه) و کلید
+      behrang-shop-storefront-header-footer.
+    - Header: متن لوگو، شعار اختیاری کنار لوگو (فقط lg)، خاموش‌کردن کادر
+      جست‌وجو و دکمهٔ CTA (مسیر داخلی با Link، لینک خارجی با a و تب جدید
+      اختیاری).
+    - Footer: عنوان/متن درباره، کارت تأکید، کپی‌رایت و لینک‌های سریع از سرور؛
+      لینک‌های خارجی در تب جدید و صفحه‌های «نمایش در فوتر» بعد از آن‌ها.
+    - pages/AdminHeaderFooter.tsx + مسیر /admin/header-footer با مجوز
+      settings.manage و آیتم منو «هدر و فوتر» (PanelTop)؛ فرم شامل
+      تکرارشوندهٔ لینک‌ها با افزودن/حذف و بازگردانی تغییرات ذخیره‌نشده.
+    - src/types/node-runtime.d.ts: تایپ‌های حداقلی node:crypto/fs/promises/path
+      تا vite.config.ts بدون نصب @types/node هم typecheck شود.
+    - SITE_GUIDE.md (جدید): راهنمای فارسی کل سایت — راه‌اندازی، جدول «چه چیزی
+      را کجا تغییر دهم»، فیلدهای هدر/فوتر، متن‌های ثابت، رنگ/فونت/SEO/PWA،
+      کش‌ها، افزودن تنظیم جدید در بک‌اند، دستورات، چک‌لیست انتشار و عیب‌یابی.
+  - بررسی: tsc --noEmit بدون خطا · vite build موفق (۲.۸۹s) و لاگ پلاگین
+    «نسخهٔ کش سرویس‌ورکر: b63e6d93d9» با VERSION جدید در dist/sw.js.
+    - tests/Feature/HeaderFooterTest.php (جدید): ۴ تست / ۲۵ assertion —
+      پیش‌فرض‌های عمومی، ذخیره از پنل و تازه‌شدن کش عمومی، رد لینک بدون نشانی
+      (۴۲۲) و جلوگیری از ویرایش توسط مهمان (۴۰۱)؛ نتیجه: PASS.
+    - اصلاح: مسیر «/admin/header-footer» در ADMIN_SIDEBAR_DEFAULT_GROUPS
+      (frontend/src/utils/adminSidebarLayout.ts، گروه «گزارشات») ثبت شد؛ بدون
+      آن آیتم «هدر و فوتر» در سایدبار پنل دیده نمی‌شد. build مجدد: ۲.۷۵s و
+      VERSION سرویس‌ورکر 72676298d7.
+
+  - شخصی‌سازی کامل منوی پنل و صفحهٔ «نمای کلی»:
+    - سایدبار: ترتیب گروه‌ها در فیلد جدید AdminSidebarLayout.groupOrder ذخیره
+      می‌شود (normalizeAdminSidebarLayout برای چیدمان‌های ذخیره‌شدهٔ قبلی
+      خودکار مقدار پیش‌فرض را اضافه می‌کند). در حالت «چیدمان» هر گروه دستهٔ
+      ⋮⋮ برای کشیدن با ماوس و دکمه‌های ↑ ↓ برای لمس دارد؛ ناحیهٔ رها کردن
+      بین گروه‌ها با خط آبی نشان داده می‌شود و «دسترسی سریع» همیشه بالای منو
+      می‌ماند. مدیریت کشیدن آیتم‌ها و گروه‌ها از هم جدا شد تا درگ گروه،
+      جابه‌جایی آیتم را تحریک نکند.
+    - داشبورد: utils/adminDashboardLayout.ts (فهرست DASHBOARD_BLOCK_IDS،
+      عنوان/توضیح/عرض هر بخش، نرمال‌سازی و خواندن/ذخیره در localStorage
+      به‌ازای هر مدیر). AdminDashboard به شبکهٔ dashboard-blocks منتقل شد؛
+      هر بخش نوار کنترل (کشیدن با ⋮⋮، ↑ ↓، پنهان‌کردن) دارد و با «افزودن
+      بخش» همهٔ بخش‌های پنهان‌شده برمی‌گردند. سه بخش جدید: «کانال‌های فروش»
+      (SalesChannelsChart که قبلاً رندر نمی‌شد)، «سلامت فروشگاه» (نرخ تکمیل
+      سفارش/پرداخت/محصولات فعال + میانگین سبد) و «میان‌برهای پشتیبانی»
+      (فیلترشده با can). دکمهٔ «پیش‌فرض» چیدمان اولیه را برمی‌گرداند.
+    - storageKeys: adminDashboard = behrang-shop-admin-dashboard (کلید هر مدیر:
+      behrang-shop-admin-dashboard:<adminId>).
+    - نسخهٔ بعدی: کشیدن گروه‌ها به pointer events منتقل شد (محاسبهٔ گروه هدف از
+      موقعیت اشاره‌گر، با آستانهٔ ۴ پیکسل تا کلیک ساده جابه‌جایی ایجاد نکند)
+      و هر ردیف منو draggable است تا با رها کردن روی داشبورد، بلوک میان‌بر
+      custom:/path ساخته شود (layout.custom، نسخهٔ چیدمان ۲، سازگار با چیدمان
+      نسخهٔ ۱). فهرست بخش‌ها به utils/adminNavItems.ts منتقل شد و «افزودن بخش»
+      هم «میان‌برهای منوی پنل» را با کلیک اضافه/حذف می‌کند.
+    - بازطراحی ظاهر سایدبار: دستهٔ ⋮⋮ (هم در گروه‌ها و هم در آیتم‌ها) حذف شد و
+      ظاهر منو دقیقاً به حالت سادهٔ قبل برگشت. جابه‌جایی با ماوس فقط با گرفتن
+      خودِ نوشته انجام می‌شود: نوشتهٔ عنوان گروه = جابه‌جایی گروه (pointer
+      events، آستانهٔ ۴ پیکسل، کلیک ساده هنوز گروه را باز/بسته می‌کند)، و
+      نوشتهٔ هر آیتم = جابه‌جایی آیتم با HTML5 drag (effectAllowed = copyMove
+      تا هم مرتب‌سازی داخل سایدبار و هم ساخت میان‌بر روی داشبورد کار کند).
+      کشیدن آیتم دیگر به حالت «چیدمان» محدود نیست. نشانگر محل رها کردن گروه
+      با ::before/::after روی همان گروه کشیده می‌شود، پس هیچ عنصری به منو
+      اضافه نمی‌شود و ارتفاع/فاصله‌ها تغییر نمی‌کند.
+    - بررسی: tsc --noEmit بدون خطا · npm run build موفق (۲.۵۱s) · تست
+      منطقی مستقل normalize/میان‌بر (۹ بررسی، همه PASS). تست مرورگری کشیدن
+      گروه‌ها/بخش‌ها نیاز به بررسی دستی دارد.
+
+  - ستون «خدمات مشتریان» فوتر: قابل ویرایش از پنل + بازکردن چت با کلیک:
+    - بک‌اند: سه کلید تازه در store_settings — `footer_services_title`،
+      `footer_services` (JSON آرایه‌ای title/description/icon/action/url،
+      حداکثر ۸ ردیف) و `footer_show_contact` ('1'/'0'). اعتبارسنجی: آیکن از
+      فهرست SERVICE_ICONS و اقدام از none|url|support؛ ردیف «بازکردن لینک»
+      بدون نشانی، خطای ۴۲۲ با شمارهٔ همان ردیف برمی‌گرداند.
+    - فرانت: services/headerFooter.ts (FOOTER_SERVICE_ICONS،
+      FOOTER_SERVICES_MAX، نرمال‌سازی ردیف‌ها) و بازنویسی ستون «خدمات
+      مشتریان» در Footer.tsx با کامپوننت ServiceRow: سه حالت «فقط متن»،
+      «لینک» (مسیر داخلی با Router، بقیه با a: tel/mailto/https) و «دکمهٔ
+      چت پشتیبانی». ردیف‌های تلفن/ایمیل/نشانی با چک‌باکس پنل خاموش‌شدنی شدند.
+    - بازکردن چت از هر جای سایت: utils/supportChat.ts رویداد سراسری
+      `behrang:open-support-chat` را روی window می‌فرستد و SupportWidget با
+      شنیدن آن پنل را باز می‌کند (بدون prop-drilling و بدون تغییر منطق گفتگو).
+    - پنل «هدر و فوتر»: فیلد عنوان ستون، فهرست ردیف‌ها با عنوان/توضیح/آیکن/
+      اقدام/نشانی و افزودن-حذف (حداکثر ۸) و چک‌باکس «نمایش ردیف‌های تلفن،
+      ایمیل و نشانی».
+    - بررسی: `php -l` بدون خطا · HeaderFooterTest: ۸ تست / ۵۱ assertion PASS
+      (۴ تست تازه برای همین بخش) · tsc --noEmit بدون خطا · vite build موفق
+      (۵.۶۵s) با VERSION تازهٔ سرویس‌ورکر (a44895e3c2).
+
+
+
+صفحهٔ «روش‌های ارسال و اطلاعات ارسال» + رفع نشانگر کلیک فوتر + بهینه‌سازی سرعت — انجام شد:
+  - بک‌اند:
+    - StoreSetting: پنج کلید تازهٔ shipping_page_title / shipping_page_intro /
+      shipping_page_notes (JSON آرایه‌ای، حداکثر ۱۰ نکته) / shipping_page_content /
+      shipping_page_show_costs، به‌همراه متد مشترک StoreSetting::shippingPage()
+      (پیش‌فرض‌ها، پاک‌سازی نکته‌های خالی و سقف تعداد در همین متد).
+      لینک سریع پیش‌فرض «روش‌های ارسال» (/shipping-info) به footer_quick_links اضافه شد
+      و ردیف «روش‌های ارسال» در footer_services پیش‌فرض به حالت «لینک» با همین آدرس
+      تغییر کرد (برای نصب‌های تازه؛ نصب فعلی از پنل «هدر و فوتر» قابل تنظیم است).
+    - AdminShippingController: page() و updatePage() برای خواندن/ذخیرهٔ متن صفحه از
+      پنل؛ اعتبارسنجی عنوان (الزامی، ۱۲۰ نویسه)، معرفی (۱۰۰۰)، نکته‌ها (۱۰ در ۳۰۰)
+      و متن تکمیلی (۲۰۰۰۰) و پاک‌سازی کش store_settings پس از ذخیره.
+    - ShippingInfoController (جدید): GET /api/v1/shipping-info با عنوان/معرفی/نکته‌ها/
+      متن تکمیلی/نمایش هزینه‌ها + روش‌های فعال shipping_methods (نام، حامل، توضیح،
+      هزینهٔ پایه، هر کیلو، ارسال رایگان بالای مبلغ، بازهٔ تحویل و is_express) +
+      وضعیت ارسال رایگان، shipping_note، تلفن و ساعات کاری.
+    - routes/api.php: GET|PUT /admin/shipping/page و GET /shipping-info.
+    - tests/Feature/ShippingInfoTest.php (جدید، ۵ تست): پیش‌فرض‌ها و ۵ روش فعال،
+      مخفی‌بودن روش غیرفعال، ذخیره از پنل و بازتاب فوری در مسیر عمومی (با پاک‌شدن کش)،
+      الزامی‌بودن عنوان و سقف ۱۰ نکته. HeaderFooterTest هم برای ۷ لینک سریع به‌روز شد.
+      نتیجه: ۱۳ تست / ۸۳ assertion PASS · php -l همهٔ فایل‌ها بدون خطا.
+  - فرانت‌اند:
+    - services/shippingInfo.ts (جدید): تایپ‌ها، DEFAULT_SHIPPING_INFO، normalize و
+      fetchShippingInfo با فالبک پیش‌فرض در خطای شبکه.
+    - pages/ShippingInfo.tsx (جدید، مسیر /shipping-info با lazy import): بردکرامب،
+      متا/JSON-LD بردکرامب، هدر گرادیانی، بنر ارسال رایگان، کارت روش‌ها (با نشان
+      «ارسال سریع» و هزینهٔ پایه/کیلو)، نکته‌های اطلاعات ارسال، متن تکمیلی با
+      RichTextContent و کارت پشتیبانی (چت سایت + tel)؛ اسکلت بارگذاری و حالت خالی.
+    - App.tsx: مسیر /shipping-info.
+    - AdminShipping.tsx: تب هفتم «صفحهٔ ارسال» (ShippingPageTab) با عنوان، معرفی،
+      ویرایشگر فهرست نکته‌ها (افزودن/حذف تا ۱۰)، متن تکمیلی با راهنمای نشانه‌ها،
+      چک‌باکس نمایش هزینه‌ها، دکمهٔ «مشاهده در سایت» (/shipping-info) و میان‌بر
+      «ویرایش روش‌های ارسال». اعتبارسنجی سمت کلاینت + همگام‌سازی پاسخ سرور.
+    - Footer.tsx: ردیف‌های ستون «خدمات مشتریان» کلاس group گرفتند و عنوان ردیف با
+      hover جابه‌جا می‌شود؛ چون Tailwind v4 برخلاف v3 دیگر cursor:pointer را برای
+      دکمه‌ها نمی‌گذارد، قاعدهٔ base در index.css اضافه شد:
+      button:not(:disabled), [role="button"]:not([aria-disabled="true"]) { cursor: pointer; }
+      (همین نشانگر دست را در کل سایت و پنل برمی‌گرداند).
+    - Checkout.tsx: لینک «روش‌های ارسال و اطلاعات ارسال» کنار هزینهٔ ارسال.
+  - بهینه‌سازی سرعت (گزارش کامل در تحویل):
+    - تصویر og:image پیش‌فرض از PNG ۱٫۸۶ مگابایتی به images/og-default.jpg (۸۷ کیلوبایت)
+      تبدیل شد و seo.ts + index.html به آن اشاره می‌کنند.
+    - پنج بنر صفحهٔ اصلی در storage/app/public/banners با کیفیت ۸۲ بازفشرده شدند
+      (۱۰۱۵→۳۰۰، ۹۴۷→۲۲۶، ۸۴۴→۱۹۷، ۹۷۰→۲۲۴ و ۹۲۹→۲۵۲ کیلوبایت)؛ نسخهٔ اصلی در
+      storage/app/banners-backup نگه داشته شد. جمع حجم بنرها ۴٫۷MB → ۱٫۲MB.
+  - بررسی: php -l و تست‌های بک‌اند PASS · tsc --noEmit بدون خطا · vite build موفق
+    (chunk تازهٔ ShippingInfo = ۱۲٫۲ کیلوبایت، gzip ۳٫۷) با نسخهٔ تازهٔ سرویس‌ورکر.
+
+
+امکان بازکردن سایت روی گوشی در شبکهٔ محلی (همان مودم) — انجام شد:
+  - frontend/vite.config.ts: server.host = true و preview.host = true تا dev server و
+    preview روی همهٔ اینترفیس‌ها گوش بدهند (localhost + IP شبکهٔ محلی).
+  - frontend/src/utils/apiOrigin.ts (جدید): تعیین متمرکز آدرس API و ریشهٔ storage.
+    اگر صفحه با IP شبکه باز شود و VITE_API_URL روی localhost/127.0.0.1 باشد، نام
+    میزبان با IP فعلیِ صفحه جایگزین می‌شود (پورت و مسیر حفظ می‌شوند)؛ در نتیجه هم
+    درخواست‌های API و هم آدرس تصاویر محصول/بنر روی گوشی درست کار می‌کند و لازم نیست
+    .env تغییر کند. services/api.ts و utils/images.ts (با حفظ خروجی API_ORIGIN) از همین
+    ماژول استفاده می‌کنند.
+  - backend/.env: CORS_ALLOWED_ORIGINS شامل localhost:5173/4173 و 192.168.10.104:5173/4173
+    شد تا درخواست‌های گوشی رد نشوند (در تولید فقط دامنهٔ واقعی بماند).
+  - تست دستی: بک‌اند با `php artisan serve --host=0.0.0.0 --port=8000` روی 0.0.0.0
+    بالا آمد، GET http://192.168.10.104:8000/api/v1/shipping-info = 200 با هدر CORS
+    درست، تصویر storage/banners = 200، و http://192.168.10.104:5173 = 200.
+  - tsc --noEmit بدون خطا · vite build موفق (dist به‌روز) · راهنما در SITE_GUIDE.md
+    (بخش «باز کردن سایت روی گوشی»).
+
+استوری‌های صفحهٔ اول (دایره‌های بالای دسته‌بندی‌ها) — انجام شد:
+  نوار استوری شبیه استوری اینستاگرام در صفحهٔ اول، دقیقاً بالای بخش
+  «دسته‌بندی محصولات»؛ همهٔ محتوا از پنل مدیریت می‌آید و هیچ استوری ثابتی در
+  کد فرانت نیست.
+  - دیتابیس: جدول stories
+    (migration 2026_11_27_000000_create_stories_table)
+    ستون‌ها: title · cover_image · slides (JSON آرایه‌ای از {image, caption, link})
+    · sort_order · is_active · index(is_active, sort_order)
+  - مدل: backend/app/Models/Story.php (fillable، cast slides=array،
+    cast is_active/sort_order، scope visible = فعال‌ها به ترتیب sort_order سپس id)
+  - API عمومی: GET /api/v1/stories (StoryController) — فقط استوری‌های فعال و
+    دارای اسلاید تصویری؛ اسلاید بدون تصویر حذف می‌شود، متن/لینک خالی به null
+    تبدیل می‌شود و اگر cover_image خالی باشد تصویر اولین اسلاید برمی‌گردد.
+    خروجی ۱۰ دقیقه کش می‌شود (STOREFRONT_CACHE_KEY) و در کش «آرایه» ذخیره
+    می‌شود، نه Collection (همان درس بنرها/نشان‌ها برای درایور file/database).
+  - API مدیریت (گروه مجوز banners.manage در routes/api.php):
+    GET/POST /admin/stories · PUT /admin/stories/{id} ·
+    PATCH /admin/stories/{id}/status · DELETE /admin/stories/{id} ·
+    POST /admin/stories/image (بارگذاری تصویر تا ۵ مگابایت، دیسک public).
+    اعتبارسنجی: عنوان تا ۱۲۰ نویسه، ۱ تا ۳۰ اسلاید، هر اسلاید تصویر اجباری
+    (تصویر خالی → خطای ۴۲۲ روی slides)، متن تا ۱۶۰ و لینک تا ۲۰۴۸ نویسه،
+    ترتیب ۰ تا ۹۹۹۹. هر نوشتن، کش عمومی را پاک می‌کند.
+  - فرانت فروشگاه:
+      services/stories.ts  (حافظه → localStorage → شبکه، normalize،
+                            getCachedStories/fetchStories/invalidateStoriesCache
+                            + readSeenStoryIds/markStorySeen برای حلقهٔ دیده‌شده)
+      hooks/useStories.ts
+      کلیدها: STORAGE_KEYS.storefrontStories و STORAGE_KEYS.storiesSeen
+      components/StoryStrip.tsx — دایره‌ها با حلقهٔ گرادیان، عنوان زیر دایره،
+        اسکرول افقی با فلش (RTL-aware)؛ اگر استوری فعالی نباشد هیچ چیزی رندر
+        نمی‌شود (بدون جای خالی/پرش چیدمان). استوری دیده‌شده تا ۲۴ ساعت حلقهٔ
+        خاکستری دارد.
+      components/StoryViewer.tsx — نمایشگر تمام‌صفحه با Portal: نوار پیشرفت
+        هر اسلاید (۵ ثانیه)، تپ چپ/راست (RTL)، کشیدن انگشت (swipe)، کلیدهای
+        Escape/فلش‌ها/فاصله (توقف موقت)، پیش‌بارگذاری اسلاید بعدی، قفل اسکرول
+        صفحه، متن و لینک اسلاید (لینک داخلی با react-router و بیرونی در تب
+        جدید). پایان اسلاید آخر، نمایشگر را می‌بندد.
+      Home.tsx: <StoryStrip /> بلافاصله قبل از بخش «دسته‌بندی محصولات».
+  - پنل مدیریت: frontend/src/pages/AdminStories.tsx
+    مسیر: /admin/stories (App.tsx، با AdminPermissionGuard روی
+    ADMIN_PERMISSIONS.banners) · آیتم سایدبار در utils/adminNavItems.ts
+    (گروه فروشگاه، آیکن CirclePlay) · ثبت در utils/adminSidebarLayout.ts
+    (گروه store، بعد از نوار اطلاع‌رسانی).
+    امکانات: آمار (کل/فعال/غیرفعال/کل اسلایدها)، فرم افزودن و ویرایش
+    (عنوان، ترتیب، کاور با بارگذاری یا مسیر دستی و پیش‌نمایش گرد، وضعیت نمایش)،
+    تکرارکنندهٔ اسلایدها (بارگذاری تصویر، متن، لینک، جابه‌جایی بالا/پایین،
+    حذف)، جدول فهرست با پیش‌نمایش دایره، تعداد اسلاید، ویرایش/تغییر وضعیت/حذف.
+  - تست: backend/tests/Feature/StoryTest.php (۷ تست، ۳۷ اظهار) —
+    ساخت + تازه‌شدن کش عمومی · حذف غیرفعال/بدون اسلاید از خروجی عمومی ·
+    جایگزینی کاور با اولین اسلاید · ویرایش، تغییر وضعیت و حذف · بارگذاری تصویر
+    (PNG واقعی، چون GD در این محیط نیست) · اعتبارسنجی اسلاید · مهمان (۴۰۱).
+  - بررسی: php -l بدون خطا · route:list هفت مسیر stories را نشان می‌دهد ·
+    GET /api/v1/stories = 200 · php artisan test کامل: ۳۶۴ تست PASS ·
+    tsc --noEmit بدون خطا · vite build موفق (chunk تازهٔ AdminStories = ۱۷ کیلوبایت).
+
+
+
+بازطراحی فیلتر صفحهٔ محصولات — انجام شد:
+  پنل فیلتر قبلاً دو نسخهٔ جدا (سایدبار دسکتاپ و کشوی موبایل) با فاصله‌ها و
+  اندازه‌های متفاوت داشت. حالا هر دو نما از یک کامپوننت مشترک استفاده می‌کنند:
+  - components/ProductFilterPanel.tsx (جدید): چیدمان فشرده و یکدست
+    · عنوان بخش‌ها ۱۱px با خط جداکنندهٔ کم‌رنگ (به‌جای mt-6/pt-5 پشت‌سرهم)
+    · ردیف دسته‌بندی و برند ۱۳px با ارتفاع کم و هاور ملایم
+    · چیپ‌های سایز ۱۱px، چهار کلید «ویژگی‌ها» در گرید دوستونه
+    · ورودی‌های قیمت h-9 با دکمهٔ «اعمال» کنارشان + میان‌برهای قیمت ۱۰px
+    · مرتب‌سازی به‌صورت select فشرده (به‌جای پنج دکمهٔ عمودی)
+    · در موبایل با onClose سربرگ «فیلتر محصولات / بستن» می‌گیرد.
+  - آکاردئون برای حذف اسکرول‌های تودرتو: هر بخش یک سربرگ تاشو با ChevronDown و
+    شمارندهٔ فیلتر فعال گرفت. دو لیست بلند (دسته‌بندی با max-h-52 و برند با
+    max-h-44) دیگر اسکرول داخلی ندارند؛ به‌جایش «۸ مورد اول + نمایش همه (n)»
+    نمایش داده می‌شود، برندهای انتخاب‌شده همیشه دیده می‌شوند و برای برندها
+    جستجوی محلی اضافه شد. بخش‌های دارای فیلتر فعال خودکار باز می‌شوند و
+    «دسته‌بندی» و «مرتب‌سازی» پیش‌فرض باز هستند؛ در نتیجه پنل دسکتاپ داخل
+    max-h سایدبار جا می‌شود و اسکرول داخلی عملاً ظاهر نمی‌شود
+    (overscroll-contain هم اضافه شد). ته کشوی موبایل دکمهٔ «نمایش N محصول»
+    برای بستن پنل قرار گرفت.
+  - Products.tsx: پراپ‌های مشترک در یک آبجکت filterPanelProps ساخته می‌شود و
+    هر دو نما همان را می‌گیرند (بدون تکرار مارک‌آپ)؛ نوار جست‌وجو هم فشرده‌تر
+    شد (h-11، rounded-2xl، آیکن‌های کوچک‌تر) و گزینه‌های مرتب‌سازی از
+    SORT_OPTIONS ساخته می‌شوند.
+  - بررسی: tsc --noEmit بدون خطا · vite build موفق.
+
+پاپ‌آپ‌های تبلیغاتی (مدیریت کامل) — انجام شد:
+  پاپ‌آپ مودال/شیت با همهٔ تنظیمات لازم برای یک کمپین واقعی؛ محتوا، ظاهر،
+  هدف‌گیری، زمان‌بندی و قاعدهٔ تکرار همه از پنل مدیریت
+  (/admin/popups) می‌آید و هیچ پاپ‌آپ ثابتی در فرانت نیست.
+  - دیتابیس: جدول popups
+    (migration 2026_11_28_000000_create_popups_table)
+    ستون‌ها: title · badge · description · image · image_alt ·
+    theme (light|dark|brand) · layout (center|bottom|corner) ·
+    image_position (top|side) · cta_text/cta_link · secondary_text/secondary_link ·
+    coupon_code · display_pages (JSON: home|products|product|cart|checkout) ·
+    devices (all|desktop|mobile) · delay_seconds (0..30) ·
+    auto_close_seconds (0..120) · frequency (always|session|daily|weekly|once) ·
+    starts_at · ends_at · countdown_to · close_on_backdrop · show_close ·
+    is_active · sort_order · index(is_active, sort_order)
+  - مدل: backend/app/Models/Popup.php (fillable/cast کامل، ثابت‌های
+    DISPLAY_PAGES/THEMES/LAYOUTS/IMAGE_POSITIONS/DEVICES/FREQUENCIES،
+    scope ordered = sort_order سپس id)
+  - API عمومی: GET /api/v1/popups (PopupController) — فقط پاپ‌آپ‌های فعالِ
+    داخل بازهٔ زمانی (starts_at ≤ now ≤ ends_at)، با فیلدهای نمایشی و
+    display_pages همیشه آرایه (خالی = همهٔ صفحه‌ها). کش ۵ دقیقه‌ای
+    (storefront.popups.v1) و ذخیرهٔ «آرایه» به‌جای Collection در کش
+    (همان درس بنرها/استوری‌ها). فیلتر زمان در هر درخواست روی دادهٔ کش اعمال
+    می‌شود تا شروع/پایان کمپین دقیق باشد.
+  - API مدیریت (گروه مجوز banners.manage در routes/api.php):
+    GET/POST /admin/popups · PUT /admin/popups/{id} ·
+    PATCH /admin/popups/{id}/status · DELETE /admin/popups/{id} ·
+    POST /admin/popups/image (تا ۵ مگابایت، دیسک public، پوشهٔ popups).
+    اعتبارسنجی: حداقل یکی از عنوان/توضیح/تصویر اجباری (وگرنه ۴۲۲ روی title)،
+    عنوان ۱۲۰ · برچسب ۶۰ · توضیح ۶۰۰ · متن دکمه ۴۰ · لینک ۲۰۴۸ ·
+    کد تخفیف ۴۰ · صفحه‌های مجاز محدود · delay 0..30 · auto_close 0..120 ·
+    ends_at باید بعد از starts_at باشد · sort_order 0..9999.
+    هر نوشتن، کش عمومی را پاک می‌کند.
+  - فرانت فروشگاه:
+      services/popups.ts — تایپ‌ها، normalize (پاپ‌آپ بدون محتوا حذف می‌شود)،
+        کش حافظه/localStorage با TTL یک‌ساعته و revalidate دودقیقه‌ای،
+        popupPageForPath، isPopupForPage/Device، shouldShowPopup و
+        markPopupDismissed (always|session|daily|weekly|once با
+        sessionStorage برای شناسهٔ نشست و localStorage برای سابقه)،
+        pickPopup (اولین واجد شرایط) و remainingMs برای شمارش معکوس.
+      کلیدها: STORAGE_KEYS.storefrontPopups / popupsSeen / popupsSession.
+      components/StorefrontPopup.tsx — در Layout سوار می‌شود (همهٔ صفحه‌ها):
+        Portal + پس‌زمینهٔ تار، سه جاگذاری (مودال وسط/شیت پایین/کارت گوشه)،
+        تأخیر باز شدن، بستن با Esc/ضربدر/کلیک پس‌زمینه (طبق تنظیم)، بستن
+        خودکار، قفل اسکرول، تصویر بالا یا کنار متن، برچسب، عنوان، توضیح،
+        شمارش معکوس، کد تخفیف با دکمهٔ کپی، دکمهٔ اصلی/دوم (لینک داخلی با
+        react-router و بیرونی در تب جدید) و انیمیشن ورود.
+  - پنل مدیریت: frontend/src/pages/AdminPopups.tsx
+    مسیر: /admin/popups (App.tsx، AdminPermissionGuard روی
+    ADMIN_PERMISSIONS.banners) · آیتم سایدبار در utils/adminNavItems.ts
+    (گروه فروشگاه، آیکن MonitorSmartphone) · ثبت در
+    utils/adminSidebarLayout.ts (گروه store، بعد از استوری‌ها).
+    امکانات: آمار (کل/در حال نمایش/زمان‌بندی‌شده/منقضی)، فرم کامل
+    (محتوا و تصویر با بارگذاری و پیش‌نمایش، دکمه‌ها و کد تخفیف، تم/جاگذاری/
+    موقعیت تصویر، صفحه‌های هدف، دستگاه، شروع/پایان/شمارش معکوس، تأخیر،
+    بستن خودکار، تکرار، رفتار بستن، فعال بودن، اولویت) + پیش‌نمایش زندهٔ
+    کارت، و جدول فهرست با تصویر، صفحه‌ها، تکرار، زمان‌بندی، وضعیت
+    (فعال/غیرفعال/زمان‌بندی‌شده/منقضی) و اقدامات ویرایش/تغییر وضعیت/حذف.
+  - تست: backend/tests/Feature/PopupTest.php (۸ تست، ۵۰ اظهار) — ساخت و
+    تازه‌شدن کش · حذف غیرفعال/منقضی/آینده از خروجی عمومی · ترتیب اولویت ·
+    ویرایش/تغییر وضعیت/حذف · اعتبارسنجی محتوا و هدف‌گیری · پاپ‌آپ فقط‌تصویری
+    و نرمال‌سازی صفحه‌ها به null · بارگذاری تصویر (PNG واقعی) · مهمان (۴۰۱).
+  - بررسی: migrate اجرا شد · route:list هر ۷ مسیر popups را نشان می‌دهد ·
+    smoke test زنده با tinker (ساخت رکورد، پاسخ عمومی با کد تخفیف و
+    display_pages درست، سپس حذف و cache:clear) · php artisan test کامل:
+    ۳۷۲ تست PASS · tsc --noEmit بدون خطا · vite build موفق
+    (chunk تازهٔ AdminPopups = ۲۹ کیلوبایت).
+
+مستند فنی کامل برای تحویل به توسعه‌دهنده/هوش مصنوعی — انجام شد:
+  فایل TECHNICAL_GUIDE.md در ریشهٔ پروژه ساخته شد (فارسی، حدود ۹۹۰ خط، بدون هیچ
+  مقدار محرمانه؛ فقط نام کلیدهای env). هدف: وقتی لازم شد پروژه به دستیار هوش
+  مصنوعی یا بازبین بیرونی سپرده شود، یک مرجع فنی دقیق و کوتاه در دست باشد.
+  - سرصفحه و هشدار امنیتی: تصریح اینکه فایل هیچ رمز/توکن/کلید API ندارد و برای
+    اشتراک‌گذاری امن است؛ فهرست ۱۶ بخشی (بدون لینک anchor برای جلوگیری از لینک
+    شکسته در مارک‌داون فارسی).
+  - شناسنامهٔ فنی: Laravel 13.31 / PHP 8.4 (نیازمندی ^8.3) / Sanctum 4 /
+    React 19.3 / TS 7 / Vite 8.3 / Tailwind 4.3 / MySQL محلی و sqlite در نمونهٔ
+    env / پورت‌های 8000 و 5173 و 4173 / حجم کد (frontend ۱۵۲ فایل ≈85k خط،
+    backend/app ۱۳۳ فایل ≈24k خط) / ۲۴۴ مسیر، ۶۷ مایگریشن، ۴۲ مدل، ۵۶ کنترلر،
+    ۵۳ فایل تست و ۳۷۲ تست.
+  - معماری: نمودار متنی SPA ↔ API ↔ MySQL و storage/queue/scheduler/پیام‌رسان‌ها
+    + سه جریان کلیدی (خرید، محتوا، پشتیبانی).
+  - نقشهٔ پوشه‌های backend/frontend و مستندات ریشه.
+  - راه‌اندازی از صفر، جدول کلیدهای env (فقط نام‌ها)، دستورات پرکاربرد و
+    چک‌لیست production (config:cache، route:cache، کرون schedule:run، پرداخت
+    غیرفعال در production).
+  - احراز هویت: Sanctum Bearer، توکن‌های بدون انقضا، پاسخ user شامل
+    admin_role/permissions، میدلویرهای admin و admin.permission، جدول کامل
+    ماتریس ۱۷ مجوز × ۴ نقش (super_admin/product_manager/order_manager/support)
+    و نکات امنیتی.
+  - مدل داده در ۶ حوزه (کاتالوگ، فروش، محتوا، پیام‌رسانی، حسابداری، پلتفرم) با
+    ستون‌های کلیدی و قواعد مهم (قیمت مؤثر، وضعیت‌های سفارش، مقادیر مجاز پاپ‌آپ).
+  - API: قراردادهای پاسخ و خطا، جدول مسیرهای عمومی، پارامترهای کامل
+    GET /products (search/category/brand/size/min_price/max_price/in_stock/
+    discount_only/featured/new/sort/per_page)، مسیرهای نیازمند ورود و جدول
+    ۲۸ گروه ادمین با تعداد مسیر و کنترلر.
+  - قواعد دامنه: ثبت سفارش با Idempotency-Key، کاهش/بازگردانی موجودی، کد تخفیف،
+    سه لایهٔ ارسال، مرجوعی، فاکتور خرید و cost_price، پاپ‌آپ/استوری/کش تنظیمات،
+    پیام‌رسانی چهارکاناله، چت پشتیبانی و تبریک تولد شمسی.
+  - فرانت‌اند: جدول مسیرهای فروشگاه، فهرست بخش‌های ادمین، Contextها، کلیدهای
+    localStorage، الگوی کش محتوا، تم sage/ocean، PWA و سئو.
+  - یکپارچگی‌ها (SMS/Telegram/Bale/WhatsApp/Leaflet)، نقشهٔ «کجا چه چیزی را
+    عوض کنم»، قراردادهای کدنویسی، ۱۲ مورد بدهی فنی (فایل‌های بزرگ، نبود تست
+    فرانت، sales_count غیرواقعی، توکن بدون انقضا، تصاویر محلی، کش دستی، پرداخت
+    دمو، نبود i18n، لودر شبکهٔ محصولات، نبود ledger موجودی، ناسازگاری env) و
+    چک‌لیست تحویل به AI با متن آمادهٔ شروع گفتگو.
+  - بررسی: ساخت اعداد از route:list --json (۲۴۴ مسیر)، شمارش مایگریشن/مدل/کنترلر
+    از پوشه‌ها، شمارش ۳۷۲ تست از tests، نسخه‌ها از composer.json/package.json/
+    artisan؛ اعتبارسنجی مارک‌داون با اسکریپت موقت (هم‌ترازی ستون‌های ۳۳۴ ردیف
+    جدول و بسته‌بودن code fenceها) و سپس حذف همهٔ فایل‌های موقت.
+
+قانون همگام‌سازی سند فنی (تصمیم دائمی) — انجام شد:
+  از این پس هر تغییری در کد، همان لحظه باید بخش مربوطهٔ TECHNICAL_GUIDE.md را
+  هم به‌روز کند. این قاعده در سه جا ثبت شد تا فراموش نشود:
+  - TECHNICAL_GUIDE.md، بالای فایل: کادر «قانون نگهداری (اجباری)» با جدول
+    «اگر این تغییر کرد → این بخش‌ها به‌روز شوند» (مسیر/گروه API → ۸+۱۲،
+    مایگریشن/ستون/مدل → ۷+آمار ۲، نسخهٔ فریم‌ورک → ۲+تاریخ، نقش/مجوز → ۶+۱۲،
+    env/config → ۵+۱۱، قاعدهٔ کسب‌وکار → ۹، فایل/Context فرانت → ۴+۱۰،
+    دستور جدید → ۵+۱۶، بدهی فنی → ۱۴).
+  - TECHNICAL_GUIDE.md، بخش ۱۶: «چک‌لیست پایان هر تغییر» در ۷ بند + دستورهای
+    بازتولید آمار که از bash/grep به PowerShell تبدیل شد (محیط ویندوز) و شمارش
+    مایگریشن/مدل/کنترلر/فایل تست و فایل‌های فرانت هم اضافه شد.
+  - AGENTS.md (فایل جدید در ریشه): قواعد اجباری کار برای هر دستیار هوش مصنوعی —
+    نقشهٔ سریع مخزن، جدول دستورهای راستی‌آزمایی (artisan test، route:list،
+    tsc --noEmit، npm run build)، هشت قاعدهٔ نشکن (عدم افشای .env، هم‌زمانی
+    AdminRole.php و adminPermissions.ts، خواندن کلیدهای storage از
+    storageKeys.ts با پیشوند behrang-shop-، محاسبهٔ قیمت/تخفیف/موجودی فقط سمت
+    سرور، حفظ idempotency سفارش، چک‌لیست چهارگانهٔ قابلیت ادمین، ممنوعیت
+    migrate:fresh/cache:clear بدون هماهنگی، پرهیز از الگوی ساختاری جدید) و
+    همان جدول همگام‌سازی سند.
+  - نسخهٔ سند به 1.1 رسید و ردیفش در جدول تاریخچهٔ بخش ۱۶ ثبت شد؛ جدول مستندات
+    ریشه در بخش ۴ و فهرست مستندات در خلاصهٔ یک‌صفحه‌ای هم AGENTS.md را معرفی
+    می‌کنند.
+  - بررسی: اسکریپت موقت، توازن code fence و هم‌ترازی ستون‌های جدول‌های معمولی و
+    داخل blockquote را در هر دو فایل چک کرد؛ فایل موقت حذف شد.
+
+اصلاح سند فنی پس از بازبینی «نواقص فروشگاه» — انجام شد:
+  در جریان بررسی کامل شکاف‌ها تا یک فروشگاه اینترنتی کامل، سه مورد نادرست/ناقص
+  در TECHNICAL_GUIDE.md پیدا و اصلاح شد (طبق قانون همگام‌سازی):
+  - throttle: نوشته شده بود ورود/ثبت‌نام محدودیت نرخ دارند. واقعیت این است که
+    throttleApi() در bootstrap/app.php صدا زده نشده، پس گروه api فقط
+    SubstituteBindings دارد (route:list -v و کد Middleware فریم‌ورک تأیید کرد)؛
+    throttle صریح فقط روی مسیرهای پشتیبانی است (۲۰/۶۰/۱۲۰). بخش ۶ اصلاح شد و
+    بدهی فنی شمارهٔ ۱۳ اضافه شد: نبود rate limit روی auth و ثبت سفارش.
+  - email_verified_at: این ستون هرگز در ثبت‌نام پر نمی‌شود و هیچ مسیری آن را
+    الزام نمی‌کند؛ پس «تأیید ایمیل» وجود ندارد (نه فقط غیرفعال).
+  - نسخهٔ سند به 1.2 رفت و ردیف تاریخچه ثبت شد.
+  - بررسی: اسکریپت موقت توازن code fence و هم‌ترازی جدول‌ها را تأیید کرد و حذف شد.
+
+آغاز فاز ۱ نقشهٔ راه «فروشگاه کامل» — انجام شد (بخش اول):
+  ۱) آزادسازی خودکار سفارش رهاشده:
+     - سرویس جدید App\Services\Orders\OrderStockService: بازگرداندن موجودی
+       اقلام (محصول یا تنوع) با lockForUpdate و محافظ stock_restored_at؛
+       OrderController@cancel به آن منتقل شد (رفتار قبلی حفظ شد).
+     - کامند جدید orders:release-abandoned با گزینه‌های --minutes=60
+       (مهلت پرداخت)، --limit=200 و --dry-run. سفارش‌های pending/unpaid با
+       stock_restored_at=null و created_at قدیمی‌تر از مهلت را در تراکنش
+       قفل می‌کند، دوباره وضعیت را چک می‌کند (اگر بین انتخاب و اجرا پرداخت
+       شده باشد رد می‌شود)، موجودی را آزاد و وضعیت را cancelled می‌کند.
+     - زمان‌بندی در routes/console.php: هر ۱۰ دقیقه با withoutOverlapping.
+  ۲) محدودیت نرخ و قفل ورود:
+     - AppServiceProvider: دو limiter به نام auth (۱۵/دقیقه per IP روی
+       register/login) و orders (۲۰/دقیقه per user/IP روی POST /orders) با
+       پاسخ ۴۲۹ فارسی.
+     - AuthController@login: شمارش تلاش‌های ناموفق با RateLimiter به کلید
+       login:<email>|<ip>؛ پنج تلاش ناموفق → قفل ۱۵ دقیقه‌ای با ۴۲۹ و
+       retry_after؛ ورود موفق شمارنده را clear می‌کند.
+  ۳) تست: دو فایل جدید —
+     tests/Feature/OrderAbandonedReleaseTest.php (۷ تست: لغو و بازگردانی
+     موجودی، سفارش تازه دست‌نخورده، گزینهٔ minutes، سفارش پرداخت‌شده،
+     idempotent، موجودی تنوع، dry-run) و
+     tests/Feature/LoginThrottleTest.php (۳ تست: قفل بعد از ۵ تلاش، ریست با
+     ورود موفق، سقف ۱۵/دقیقه per IP).
+  ۴) مستندات طبق قانون همگام‌سازی: TECHNICAL_GUIDE.md بخش‌های ۳، ۴، ۵، ۶، ۹،
+     ۱۱، ۱۴ و تاریخچه به‌روز شد؛ آمار بخش ۲ بازتولید شد (۵۴ فایل/۳۸۲ تست،
+     backend/app ۱۳۵ فایل)؛ AGENTS.md بند ۵ به OrderStockService ارجاع داد؛
+     نسخهٔ سند 1.3.
+  - بررسی: php artisan test کامل ۳۸۲ تست PASS (۲۰۰۷ assertion) + حذف فایل‌های
+    موقت. تذکر: لغو خودکار فقط بر اساس زمان است و هنوز پرداخت واقعی/COD
+    وجود ندارد؛ اگر درگاه واقعی اضافه شد باید payment_method هم در شرط کامند
+    لحاظ شود.
+
+افزودن پرداخت در محل (COD) — انجام شد (بخش دوم فاز ۱):
+  ۱) مدل داده و دامنه:
+     - مایگریشن جدید 2026_11_13_000000_add_payment_method_to_orders_table:
+       orders.payment_method (پیش‌فرض online) + orders.paid_at + ایندکس؛
+       سفارش‌های paid قبلی paid_at = COALESCE(updated_at, created_at) گرفتند.
+     - کلاس App\Support\PaymentMethod با مقادیر online/cod و برچسب فارسی.
+     - Order: فیلدهای payment_method/paid_at به fillable و cast اضافه شد.
+  ۲) جریان سفارش:
+     - POST /orders بدنهٔ اختیاری payment_method می‌گیرد (Rule::in)؛
+       سفارش COD با status=processing و payment_status=unpaid ساخته می‌شود
+       (موجودی رزرو می‌ماند، منتظر درگاه نمی‌ماند).
+     - روش پرداخت بخشی از تطابق Idempotency-Key شد؛ تغییر روش با همان کلید
+       → 409 (نه بازگشت سفارش قبلی).
+     - POST /orders/{orderNumber}/pay برای COD → 422 فارسی؛ پرداخت demo
+       حالا paid_at را هم ثبت می‌کند.
+     - کامند orders:release-abandoned صریحاً payment_method != cod را
+       فیلتر می‌کند (هم در انتخاب، هم در تراکنش قفل‌شده).
+  ۳) پنل مدیریت:
+     - مسیر جدید PATCH /admin/orders/{orderNumber}/payment (مجوز orders.manage)
+       برای ثبت دریافت وجه COD (paid/unpaid)؛ فقط COD مجاز است، سفارش لغوشده
+       یا refunded رد می‌شود و paid_at ست/پاک می‌شود.
+     - updateStatus اجازه می‌دهد سفارش COD پرداخت‌نشده به processing/shipped/
+       delivered برود (چون وجه هنگام تحویل می‌آید).
+     - AdminOrders: نمایش روش پرداخت (جزئیات/فاکتور/موبایل) + دکمهٔ «ثبت
+       دریافت وجه» + گزینه‌های وضعیت برای COD.
+  ۴) فروشگاه:
+     - Checkout: انتخاب «پرداخت آنلاین / پرداخت در محل» + پیام و دکمهٔ ثبت
+       سفارش؛ COD مستقیم به جزئیات سفارش می‌رود (نه صفحهٔ پرداخت).
+     - Account/OrderDetail/Payment: برای COD دکمهٔ ادامه پرداخت پنهان و پیام
+       «مبلغ هنگام تحویل» نمایش داده می‌شود؛ روش پرداخت در جزئیات سفارش آمد.
+  ۵) تست: tests/Feature/CodOrderTest.php (۱۰ تست: ثبت COD و رزرو موجودی،
+     پیش‌فرض online، رد روش نامعتبر، رد pay برای COD، عدم لغو COD در کامند،
+     ثبت وجه توسط ادمین، رد تسویهٔ دستی سفارش آنلاین، ارسال/تحویل COD قبل از
+     پرداخت، تعارض idempotency با تغییر روش، لغو COD + بازگردانی موجودی).
+  ۶) مستندات: TECHNICAL_GUIDE.md به 1.4 (آمار ۵۵ فایل/۳۹۲ تست، ۶۸ مایگریشن،
+     ۱۳۶ فایل backend/app، ۲۴۵ مسیر/۱۸۵ ادمین؛ بخش‌های ۱، ۲، ۳، ۴، ۷، ۸، ۹،
+     ۱۰، ۱۱، ۱۲، ۱۴ و تاریخچه)؛ AGENTS.md بند ۹؛ Start.txt همین ردیف.
+  - بررسی: php artisan test کامل ۳۹۲ تست PASS (۲۰۶۷ assertion)؛
+    npm run typecheck بدون خطا. محدودیت باقی‌مانده: COD سقف مبلغ/هزینهٔ اضافی
+    ندارد و درگاه واقعی هنوز وصل نیست.
+
+فاکتور چاپی، صفحات قانونی و سقف کوپن هر کاربر — انجام شد (ادامهٔ فاز ۱):
+  ۱) سقف استفادهٔ هر کاربر کوپن:
+     - مایگریشن 2026_11_13_010000_add_per_user_limit_to_coupons_table:
+       coupons.per_user_limit (nullable؛ خالی = بدون محدودیت شخصی).
+     - Coupon::perUserUsageError(userId): شمارش سفارش‌های همان کاربر با همان
+       coupon_code؛ سفارش‌های cancelled/refunded شمرده نمی‌شوند تا لغو، سهمیه
+       را آزاد کند. بررسی نهایی داخل تراکنش ثبت سفارش (بعد از قفل کوپن) و
+       بررسی زودهنگام در POST /coupons/check (در صورت وجود توکن) انجام می‌شود.
+     - پنل کدهای تخفیف: فیلد «سقف استفادهٔ هر کاربر» + ستون آن در جدول؛
+       اعتبارسنجی ادمین min:1.
+     - تست: tests/Feature/CouponPerUserLimitTest.php (۷ تست: بلاک کاربر دوم،
+       استفادهٔ کاربران دیگر، آزادشدن با لغو، null = نامحدود، check برای کاربر
+       رسیده به سقف، check مهمان، اعتبارسنجی ادمین).
+  ۲) صفحات اعتماد/قانونی:
+     - App\Support\LegalPages: متن پنج صفحه (about/contact/terms/privacy/
+       returns) با متغیرهای {{store_name}}، {{store_phone}}، {{store_email}}،
+       {{store_address}}، {{store_working_hours}}، {{return_policy_days}} و
+       توضیح شفاف پرداخت آنلاین/در محل، ارسال، لغو و کالاهای بهداشتی.
+     - App\Services\Content\LegalPageInstaller + کامند pages:legal
+       (idempotent؛ --force برای بازنویسی متن مدیر) + LegalPagesSeeder در
+       DatabaseSeeder. روی دیتابیس توسعه اجرا شد: ۵ صفحه ساخته شد.
+     - PageController متغیرها را با StoreSetting::publicSettings() پر می‌کند
+       (هم فهرست و هم جزئیات) تا با تغییر شماره/نشانی، صفحات خودکار به‌روز شوند.
+     - تست: tests/Feature/LegalPagesTest.php (۵ تست: نصب، idempotent، حفظ
+       ویرایش مدیر، رندر متغیرها در API، نمایش در فوتر).
+  ۳) فاکتور/رسید چاپی:
+     - صفحهٔ مستقل InvoiceView در مسیر /account/orders/:orderNumber/invoice
+       (بدون هدر/فوتر سایت): هدر فروشگاه، شماره فاکتور، تاریخ شمسی، وضعیت
+       سفارش/پرداخت/روش پرداخت/تاریخ پرداخت، گیرنده و کد پستی، جدول کالاها با
+       کد کالا و رنگ/پک، جمع‌ها، تخفیف کوپن، ارسال، مالیات، مبلغ نهایی، مبلغ
+       قابل پرداخت در محل برای COD، مهلت مرجوعی و جای امضا/مهر.
+     - دکمهٔ «فاکتور / رسید چاپی (PDF)» در جزئیات سفارش؛ چاپ با window.print
+       و ذخیرهٔ PDF از پنجرهٔ چاپ مرورگر (بدون وابستگی جدید).
+     - فاکتور پنل: ستون «کد کالا» و «تاریخ پرداخت» اضافه شد.
+  ۴) بررسی: php artisan test کامل ۴۰۴ تست PASS (۲۱۳۹ assertion)؛
+     npm run typecheck و npm run build بدون خطا؛ php -l روی فایل‌های جدید.
+     migrate روی دیتابیس توسعه اجرا شد (payment_method و per_user_limit).
+     محدودیت باقی‌مانده: used_count کوپن هنگام لغو سفارش کم نمی‌شود (بند
+     پیشنهادی جدا) و PDF سرورساید (بدون مرورگر) وجود ندارد.
+
+رفع کندی پنل و پرش دکمهٔ «به‌روزرسانی» حسابداری:
+  - علت: در accountingUi.tsx تابع‌های success/error در هر رندر از نو ساخته
+    می‌شدند؛ چون loadOverview در AdminAccounting (و load در SuppliersPanel)
+    به error وابسته بودند، useCallback هر رندر تابع تازه می‌گرفت، افکت
+    دوباره اجرا می‌شد و درخواست GET /admin/accounting/overview بی‌پایان
+    تکرار می‌شد. روی php artisan serve (تک‌رشته‌ای) همین حلقه بقیهٔ درخواست‌های
+    پنل را هم پشت صف می‌گذاشت و کل پنل کند می‌شد.
+  - اصلاح accountingUi.tsx: success/error با useCallback هویت ثابت گرفتند
+    (همهٔ پنل‌های حسابداری و SuppliersPanel از همین مسیر درست شدند).
+  - اصلاح AdminAccounting.tsx: بارگذاری اولیه با initialLoadRef فقط یک‌بار
+    (جلوگیری از درخواست دوباره در React.StrictMode)، state جدا برای
+    refreshing و قفل refreshingRef تا دکمه در طول درخواست غیرفعال بماند؛
+    دکمه دیگر متنش با هر رندر عوض نمی‌شود.
+  - بررسی: npx tsc --noEmit و npm run build سبز. تست بک‌اند لازم نبود چون
+    هیچ فایل بک‌اندی تغییر نکرد.
+  - مستندات: TECHNICAL_GUIDE.md بند «تابع‌های وابستگی افکت» در بخش ۱۳ و
+    ردیف تاریخچهٔ 1.5.1؛ همین بند در Start.txt.
+
+
+بازیابی رمز عبور، سفارش مهمان و رهگیری عمومی سفارش:
+  - بک‌اند:
+    • POST /auth/forgot-password و POST /auth/reset-password با Password broker
+      (جدول password_reset_tokens)؛ نوتیفیکیشن فارسی ResetPasswordNotification
+      و لینک SPA بر پایه FRONTEND_URL. پاسخ forgot برای ایمیل موجود/ناموجود
+      یکسان است و پس از reset همهٔ توکن‌های Sanctum حذف می‌شوند.
+    • orders.user_id nullable شد + ستون guest_token (مایگریشن جدید). هدر
+      X-Guest-Token (UUID) برای Idempotency مهمان و یکتایی
+      (guest_token, idempotency_key). مهمان فقط payment_method=cod می‌پذیرد.
+    • POST /orders از گروه auth خارج و عمومی شد (توکن Sanctum اختیاری است)؛
+      POST /orders/track برای رهگیری عمومی با شماره سفارش + تلفن (throttle 10/min،
+      پاسخ محدود و شماره ماسک‌شده).
+    • config/app.php: frontend_url (FRONTEND_URL) و .env.example.
+  - فرانت:
+    • Checkout بدون ورود قابل ثبت است؛ روش آنلاین برای مهمان قفل و COD اجباری
+      می‌شود؛ هدر X-Guest-Token از localStorage (کلید guestToken) و انتقال به
+      صفحهٔ رهگیری با شماره سفارش/تلفن در state.
+    • صفحات ForgotPassword، ResetPassword، TrackOrder + لینک «رمز را فراموش
+      کرده‌ام» در ورود و «رهگیری سفارش» در فوتر.
+  - تست‌ها: GuestCheckoutTest (۵)، OrderTrackingTest (۴)، PasswordResetFlowTest
+    (۴) جدید؛ در مجموع ۴۱۷ تست PASS (۲۱۸۸ assertion). بررسی: php artisan test،
+    tsc --noEmit، build.
+  - مستندات: TECHNICAL_GUIDE نسخهٔ 1.6 (بخش‌های ۲، ۵، ۶، ۷، ۸، ۹، ۱۰، ۱۲، ۱۳، ۱۴)،
+    SITE_GUIDE بخش ۱۷ و AGENTS.md بند ۱۱.
+  - بدهی: مهمان نمی‌تواند لغو/فاکتور/مرجوعی ثبت کند؛ ارسال ایمیل واقعی نیازمند
+    تنظیم SMTP در production است (MAIL_MAILER فعلی log).
+
+دسترسی مهمان به سفارش خودش (فاکتور و لغو) — انجام شد:
+  - بک‌اند:
+    • GET /orders/{orderNumber} و POST /orders/{orderNumber}/cancel از گروه
+      auth:sanctum خارج و عمومی شدند (throttle 60/min و orders). مالکیت داخل
+      OrderController با findOwnedOrder سنجیده می‌شود: کاربر با user_id و مهمان
+      با (user_id = NULL + guest_token). بدون هویت → 401.
+    • قواعد لغو تغییر نکرد (فقط سفارش unpaid، لغونشده و ارسال‌نشده؛ بازگردانی
+      موجودی همچنان از OrderStockService). پاسخ include فاکتور همان show است.
+    • تست جدید: tests/Feature/GuestOrderAccessTest.php (۷ تست: مشاهدهٔ سفارش
+      خود، رد سفارش مهمان دیگر، 401 بدون هویت، لغو + بازگردانی موجودی، رد لغو
+      سفارش مهمان دیگر، رد لغو سفارش ارسال‌شده، 401 برای لغو بدون هویت).
+  - فرانت:
+    • interceptor در services/api.ts برای درخواست‌های بدون توکن، هدر
+      X-Guest-Token را از localStorage (کلید guestToken) می‌فرستد.
+    • TrackOrder: دکمه‌های «مشاهدهٔ فاکتور» و «لغو سفارش» (فقط مهمان و سفارش
+      پرداخت‌نشده) + پیام موفقیت/خطا؛ InvoiceView برای مهمان لینک بازگشت به
+      رهگیری و پیام خطای مناسب دارد.
+  - بررسی: php artisan test کامل ۴۲۴ تست PASS (۲۲۱۹ assertion)؛ tsc --noEmit و
+    build سبز؛ route:list تأیید کرد فقط GET /orders، DELETE /orders/{n}، pay و
+    returns پشت auth:sanctum مانده‌اند.
+  - مستندات: TECHNICAL_GUIDE نسخهٔ 1.7 (بخش‌های ۲، ۸، ۹، ۱۰، ۱۲، ۱۴ و تاریخچه)،
+    SITE_GUIDE بخش ۱۰ و AGENTS.md بند ۱۱.
+  - بدهی: مرجوعی و پرداخت آنلاین مهمان و «کد پیگیری کوتاه» باقی مانده است؛
+    پاک‌شدن localStorage دسترسی مهمان را از بین می‌برد.
+
+سقف کوپن هر کاربر برای مهمان (بر پایهٔ شمارهٔ تماس) — انجام شد:
+  - بک‌اند:
+    • Coupon::perPhoneUsageError(phone): شمارش سفارش‌های مهمان با همان
+      coupon_code و همان شمارهٔ تماس؛ مقایسه در PHP روی PhoneNumber::normalize
+      انجام می‌شود تا ارقام فارسی/لاتین و قالب +98/09 یک هویت حساب شوند.
+      سفارش‌های cancelled/refunded شمرده نمی‌شوند (سهمیه با لغو آزاد می‌شود).
+    • OrderController: بررسی نهایی داخل تراکنش؛ کاربر با user_id و مهمان با
+      phone سفارش. CouponController@check: فیلد اختیاری phone و بررسی زودهنگام.
+    • پیام خطای مهمان: «این کد تخفیف برای هر شماره تماس فقط یک بار ...».
+  - فرانت: Checkout در applyCoupon شمارهٔ واردشده را در body می‌فرستد
+    (phone: phone.trim() || undefined).
+  - تست: ۵ تست جدید در CouponPerUserLimitTest (دو سفارش مهمان با یک شماره،
+    شمارهٔ متفاوت، ارقام فارسی، check با phone، آزادشدن سهمیه با لغو)؛
+    جمع تست‌های این فایل ۱۲.
+  - بررسی: php artisan test کامل ۴۲۹ تست PASS (۲۲۴۰ assertion)؛ tsc --noEmit
+    و build سبز.
+  - مستندات: TECHNICAL_GUIDE نسخهٔ 1.8 (بخش‌های ۲، ۸، ۹ و تاریخچه)، AGENTS.md
+    بند ۱۰.
+  - محدودیت: مهمان با شمارهٔ دیگر می‌تواند همان کد را استفاده کند (هویت
+    واقعی ندارد)؛ جلوگیری کامل نیازمند ورود اجباری یا کد پیگیری است.
+
+اسکلت لودینگ شبکهٔ محصولات (/products) — انجام شد:
+  - Products.tsx: جای Loader2 + متن، ۱۲ کارت اسکلتی با aspect-square،
+    animate-pulse، aria-busy و متن sr-only برای صفحه‌خوان‌ها؛ شبکه با همان
+    کلاس‌های گرید واقعی (grid-cols-2/xl:grid-cols-3) رندر می‌شود تا ارتفاع
+    صفحه نپرد. ایمپورت بی‌استفادهٔ Loader2 حذف شد.
+  - بررسی: tsc --noEmit و build سبز؛ تست بک‌اند لازم نبود چون فایل بک‌اند
+    تغییر نکرد.
+  - مستندات: TECHNICAL_GUIDE نسخهٔ 1.9 (بخش ۱۰، بدهی ۱۴ ردیف ۱۰ و تاریخچه).
+  - باقی‌مانده: CAPTCHA روی forgot-password به درخواست کاربر به تعویق افتاد و
+    درگاه پرداخت واقعی بدون اطلاعات پذیرنده انجام‌شدنی نیست.
+
+بستهٔ «برد سریع» (سه قلم) — انجام شد:
+  ۱) آزادسازی سهمیهٔ کوپن هنگام لغو/بازپرداخت:
+     - سرویس جدید App\Services\Orders\OrderCouponService با متد release(Order):
+       اگر coupon_code و coupon_discount مثبت باشد، used_count را فقط وقتی
+       مثبت است یک واحد کم می‌کند (کاهش اتمیک با where used_count > 0؛ هرگز
+       منفی نمی‌شود). Idempotency از مسیرهای فراخوان تأمین می‌شود.
+     - فراخوان‌ها: OrderController@cancel (لغو مشتری/مهمان)،
+       ReleaseAbandonedOrders (لغو خودکار)، AdminOrderController@updateStatus
+       (لغو توسط مدیر) و AdminReturnRequestController@updateStatus
+       (status=refunded؛ اگر payment_status قبلاً refunded باشد دوباره کم
+       نمی‌شود).
+     - تست: test_cancelling_an_order_frees_the_coupon_usage_slot،
+       test_releasing_abandoned_order_releases_the_coupon_usage_slot،
+       test_admin_cancelling_an_order_releases_the_coupon_usage_slot،
+       test_refunding_a_returned_order_releases_the_coupon_usage_slot.
+  ۲) سقف مبلغ پرداخت در محل (COD):
+     - config/payment.php: cod_max_total از COD_MAX_TOTAL (۰ = بدون سقف).
+     - OrderController@store بعد از محاسبهٔ total و داخل تراکنش بررسی می‌کند؛
+       رد شدن با 422 یعنی موجودی و used_count هم rollback می‌شوند.
+     - GET /store-settings فیلد cod_max_total را برمی‌گرداند؛
+       StorefrontSettings و Checkout از آن استفاده می‌کنند: گزینهٔ COD غیرفعال
+       و علت (به‌همراه سقف) نمایش داده می‌شود؛ کاربر واردشده اگر COD انتخاب
+       کرده باشد خودکار به online سوییچ می‌شود. مهمان همچنان فقط COD دارد و
+       پیام «وارد حساب کاربری شوید» می‌بیند. اعتبارسنجی نهایی سمت سرور است.
+     - تست: سه تست در CodOrderTest (رد بالای سقف + rollback، مجاز در مرز،
+       بی‌اثر بودن سقف روی سفارش آنلاین).
+  ۳) نمونهٔ env:
+     - backend/.env.example از SQLite به MySQL (pharmacy_shop) هم‌راستا شد و
+       COD_MAX_TOTAL=0 اضافه شد (بدهی فنی ۱۲ بسته شد).
+  - بررسی: php artisan test کامل ۴۳۶ تست PASS (۲۲۶۵ assertion)، tsc --noEmit
+    و npm run build سبز (بدون تغییر بک‌اند برای build تأیید شد).
+  - مستندات: TECHNICAL_GUIDE نسخهٔ 1.10 (بخش‌های ۲، ۵، ۸، ۹.۱، ۹.۲، ۱۲،
+    بدهی ۱۴ ردیف ۷ و ۱۲ و تاریخچه) و AGENTS.md بند ۹.
+  - باقی‌مانده: کد رهگیری کوتاه مهمان، سپس Vitest + Testing Library/ESLint؛
+    CAPTCHA/درگاه واقعی/سئو همچنان منتظر دامنه و اطلاعات پذیرنده است.
+
+کد پیگیری مهمان (بستن بخش «بازیابی دسترسی» بدهی ۱۴) — انجام شد:
+  - بک‌اند:
+    • مایگریشن add_guest_access_code_to_orders_table: ستون
+      orders.guest_access_code (رشته، nullable، unique).
+    • App\Support\GuestAccessCode: تولید ۸ کاراکتری از الفبای بدون
+      کاراکترهای مبهم (I/O/0/1)، normalize (حذف خط تیره/فاصله، ارقام فارسی و
+      حروف کوچک) و matches با hash_equals.
+    • OrderController@store برای سفارش مهمان کد یکتا می‌سازد و فقط در پاسخ
+      ثبت سفارش (و تکرار Idempotency) با makeVisible برمی‌گرداند؛ مدل Order
+      ستون را در $hidden دارد تا در جزئیات/فاکتور/پنل لو نرود.
+    • OrderTrackingController@recoverAccess + POST /orders/recover
+      (throttle 10/min): با «شماره سفارش + کد پیگیری» همان guest_token
+      برمی‌گردد؛ فقط سفارش مهمان بررسی می‌شود و پاسخ همهٔ خطاها یکسان (۴۰۴)
+      است تا وجود سفارش لو نرود.
+    • تست: GuestOrderRecoveryTest (۱۱ تست، ۴۳ assertion) — ساخت کد، عدم
+      ساخت برای کاربر، بازیابی صحیح، پذیرش کد با خط تیره/حروف کوچک، رد کد
+      اشتباه/سفارش ناشناس/سفارش کاربر، دسترسی با توکن بازیابی‌شده، مخفی بودن
+      کد در جزئیات، یکتایی کدها و تکرار Idempotency.
+  - فرانت:
+    • Checkout: کد پیگیری از پاسخ ثبت سفارش در state به /track-order منتقل
+      می‌شود؛ TrackOrder کارت «کد پیگیری مهمان» + دکمهٔ کپی نمایش می‌دهد.
+    • TrackOrder: بخش بازشو «دسترسی به سفارش را از دست داده‌اید؟» با فرم
+      شماره سفارش + کد؛ پس از موفقیت guestToken در localStorage ذخیره و در
+      صورت نبود وضعیت، رهگیری دوباره اجرا می‌شود (فاکتور/لغو دوباره فعال).
+  - بررسی: php artisan test کامل ۴۴۷ تست PASS (۲۳۰۸ assertion)،
+    tsc --noEmit و npm run build سبز.
+  - مستندات: TECHNICAL_GUIDE نسخهٔ 1.11 (بخش‌های ۲، ۷، ۸، ۹.۲، ۱۰، بدهی ۱۴
+    و تاریخچه) و AGENTS.md بند ۱۱. ردیف کهنهٔ «پایگاه داده» بخش ۲ (SQLite در
+    `.env.example`) هم اصلاح شد.
+  - باقی‌مانده بدهی ۱۴: مرجوعی/پرداخت آنلاین مهمان و نردبان ساخت حساب؛
+    بعدی: Vitest + Testing Library/ESLint.
+
+کد پیگیری مهمان (تکمیل با backfill) + راه‌اندازی تست و لینت فرانت — انجام شد:
+
+  - بک‌اند:
+    • App\Console\Commands\BackfillGuestAccessCodes + دستور
+      `orders:backfill-guest-access-codes` با --dry-run و --limit. فقط
+      سفارش‌های «مهمان، دارای guest_token و بدون کد» را در تراکنش و با
+      lockForUpdate به‌روزرسانی می‌کند، کد موجود را بازنویسی نمی‌کند و
+      یکتایی را با حلقهٔ exists روی ستون unique + تلاش مجدد تراکنش می‌گیرد.
+    • تست GuestAccessCodeBackfillTest (۱۰ تست): پر شدن کد، دست‌نزدن به سفارش
+      کاربر، حفظ کد موجود، idempotency، یکتایی کدها، --dry-run، --limit، رد
+      سفارش بدون guest_token، بازیابی موفق با کد ساخته‌شده و پیام «کاری نمانده».
+    • روی دیتابیس محلی: dry-run یک سفارش مهمان قدیمی را نشان داد و همان یک
+      سفارش کد گرفت؛ اجرای دوباره «همهٔ سفارش‌های مهمان کد پیگیری دارند» داد.
+  - فرانت (تست):
+    • Vitest 5.1 + jsdom 31 + @testing-library/react/dom/jest-dom/user-event
+      نصب شد؛ vitest.config.ts (environment jsdom، setupFiles
+      src/test/setup.ts، include src/**/*.test.{ts,tsx}) و setup مشترک با
+      پاک‌سازی DOM و localStorage/sessionStorage بعد از هر تست.
+    • scripts: test (`vitest run`) و test:watch.
+    • helper مشترک src/utils/guestAccessCode.ts (normalize/format/isComplete) و
+      استفاده در TrackOrder: نمایش ABCD-2345، اعتبارسنجی ۸ کاراکتری فرم
+      بازیابی و کپی کد قالب‌بندی‌شده.
+    • ۱۷ تست در ۴ فایل: guestAccessCode، storageKeys (مهاجرت pharmacy-shop-*)،
+      jalali (ارقام فارسی/عربی) و Button/ButtonLink.
+  - فرانت (لینت):
+    • ESLint نصب نشد: TypeScript 7.0.2 (نیتیو) API کامپایلر جاوااسکریپت ندارد
+      (ts.createSourceFile/createProgram وجود ندارد) و typescript-eslint@8
+      فقط typescript <6.1 را می‌پذیرد؛ برگرداندن TypeScript به ۶ تغییر
+      زنجیرهٔ ابزار را لازم داشت.
+    • جایگزین: oxlint 1.93 + .oxlintrc.json (correctness=warn،
+      rules-of-hooks=error، exhaustive-deps/no-unused-vars=warn) و scripts
+      lint/lint:fix. ۷ هشدار اولیه اصلاح شد (۳ اسکیپ اضافی `\*` در `<style>`
+      تزریقی AdminOrders، ۳ ایمپورت بلااستفاده در AdminDashboard/AdminWishlist
+      و کاراکترکلاس مبهم ZWNJ/ZWJ در productSizeGuide) → ۰ هشدار/۰ خطا روی
+      ۱۶۳ فایل. Prettier عمداً اضافه نشد تا کل سورس بازقالب‌بندی نشود.
+  - بررسی: php artisan test کامل ۴۵۷ تست PASS (۲۳۳۵ assertion)؛ npm run test
+    ۱۷ تست PASS؛ npm run lint ۰ خطا؛ npx tsc --noEmit و npm run build سبز.
+  - مستندات: TECHNICAL_GUIDE نسخهٔ 1.12 (آمار بخش ۱/۲/۴، دستورها، بخش ۹.۲،
+    کیفیت، بستن بدهی ۲ و تاریخچه) و AGENTS.md (دستورهای test/lint + دلیل
+    oxlint). tsconfig شامل vitest.config.ts شد.
+  - بعدی: تست services/api.ts (هدر مهمان/۴۰۱) و فرم بازیابی TrackOrder، سپس
+    sales_count واقعی و sanctum.expiration.
+
+════════════════════════════════════════════════════════════════════════════
+کانال‌های ارتباطی فروشگاه (۱۴۰۵/۰۸/۲۴ — نسخهٔ سند ۱.۱۳)
+════════════════════════════════════════════════════════════════════════════
+
+درخواست: در صفحهٔ ثبت‌نام و حساب کاربری بخشی برای عضویت در کانال‌ها و ارسال
+پیام به اکانت فروشگاه در تلگرام/واتس‌اپ/بله/ایتا/اینستاگرام اضافه شود و کل
+ارتباط با این پیام‌رسان‌ها از پنل مدیریت شود. تصمیم کاربر: «فقط لینک‌ها» —
+توکن ربات‌ها همان‌جا در .env می‌ماند و به پنل منتقل نشد.
+
+- بک‌اند:
+  - مایگریشن 2026_11_30_000000_create_contact_channels_table: جدول
+    contact_channels با key یکتا (telegram|whatsapp|bale|eitaa|instagram)،
+    title، description، join_url/join_label (عضویت در کانال)،
+    chat_url/chat_label (ارسال پیام)، sort_order، is_active. پنج ردیف پایه
+    داخل همان مایگریشن ساخته می‌شود (بدون لینک تا مدیر پر کند).
+  - مدل ContactChannel (+ scopeVisible، KEYS، hasLinks).
+  - App\Support\ContactLinks: تبدیل ورودی مدیر به لینک کامل؛ لینک کامل حفظ،
+    دامنهٔ بی‌پروتکل https می‌گیرد، @handle با پایهٔ هر پلتفرم (t.me، ble.ir،
+    eitaa.com، instagram.com) ساخته می‌شود، شمارهٔ واتساپ (ارقام فارسی/عربی و
+    ۰۹/‎+98) به https://wa.me/98...، پیام اینستاگرام به https://ig.me/m/<user>.
+  - ContactChannelController (عمومی): GET /api/v1/contact-channels؛ فقط فعال‌ها
+    با حداقل یک لینک؛ کش ۱۰ دقیقه‌ای storefront.contact-channels.v1 (آرایه،
+    نه Collection) و خروجی سبک join_url/join_label/chat_url/chat_label.
+  - AdminContactChannelController + گروه admin.permission:channels.manage:
+    GET /admin/channels · PUT /admin/channels/{contactChannel} ·
+    PATCH /admin/channels/{contactChannel}/status. مقدار نامعتبر ۴۲۲ با پیام
+    فارسی؛ هر نوشتن کش عمومی را پاک می‌کند. ساخت/حذف ردیف عمداً نبود (پنج
+    پلتفرم ثابت‌اند).
+  - مجوز جدید channels.manage در AdminRole (مدیر ارشد + نقش پشتیبانی) و
+    آینهٔ آن در utils/adminPermissions.ts. توضیح نقش پشتیبانی هم به‌روز شد.
+  - تست: tests/Feature/ContactChannelTest.php — ۸ تست/۴۸ assertion (بذر پنج
+    کانال، پنهان‌بودن ردیف بی‌لینک، نرمال‌سازی تلگرام/بله/ایتا/واتساپ/اینستاگرام،
+    ۴۲۲ برای لینک نامفهوم، مخفی‌شدن کانال خاموش، ۴۰۳ برای order_manager و
+    ۲۰۰ برای support).
+
+- فرانت فروشگاه:
+  - services/contactChannels.ts: تایپ‌ها، CONTACT_CHANNEL_META (برچسب/نمونهٔ
+    ورودی هر پلتفرم)، normalizeContactChannel، contactChannelJoinLabel/ChatLabel،
+    contactChannelChatHref (افزودن ?text= برای واتساپ با متن آماده)، کش
+    حافظه/localStorage با کلید جدید storefrontContactChannels و
+    invalidateContactChannelsCache.
+  - hooks/useContactChannels.ts (همان الگوی useTrustBadges).
+  - components/StoreChannelsSection.tsx: بخش «همراه ما باشید» با کارت هر کانال
+    (آیکن، عنوان، توضیح، دکمهٔ «عضویت در کانال» و «ارسال پیام»، target=_blank و
+    rel="noopener noreferrer")؛ اگر هیچ کانالی لینک نداشته باشد null برمی‌گرداند.
+  - در Register.tsx و Account.tsx زیر کارت اصلی/ستون کنار اضافه شد.
+
+- پنل مدیریت:
+  - pages/AdminChannels.tsx در /admin/channels (lazy + AdminPermissionGuard روی
+    ADMIN_PERMISSIONS.channels): آمار کل/فعال/دارای لینک، راهنمای کوتاه، و برای
+    هر کانال فرم عنوان/توضیح/ترتیب/برچسب‌ها/لینک‌ها + کلید فعال/غیرفعال +
+    پیش‌نمایش لینک‌ها. یادآوری می‌کند ارسال خودکار از /admin/messaging و با
+    توکن .env است.
+  - آیتم سایدبار «کانال‌های ارتباطی» در adminNavItems.ts (بعد از پیام‌رسانی،
+    آیکن MessagesSquare) و ثبت در adminSidebarLayout.ts (گروه orders).
+
+- تست فرانت: ۹ تست جدید در services/contactChannels.test.ts (۵) و
+  components/StoreChannelsSection.test.tsx (۴).
+
+- بررسی نهایی: php artisan migrate (جدول ساخته شد)؛ php artisan test کامل ۴۶۵
+  تست PASS (۲۳۸۳ assertion)؛ npm run test ۲۶ تست PASS؛ npm run lint ۰ خطا
+  (۱۶۹ فایل)؛ npx tsc --noEmit سبز؛ npm run build موفق (sw نسخه‌گذاری شد).
+
+- مستندات: TECHNICAL_GUIDE نسخهٔ ۱.۱۳ (آمار بخش ۱/۴/۷، جدول contact_channels،
+  GET /contact-channels، گروه channels، بخش ۹.۸، مسیر /admin/channels، ماتریس
+  مجوز، نقشهٔ بخش ۱۲، بدهی ۲ و تاریخچه) + SITE_GUIDE بخش ۱۸ + همین بلوک.
+
+════════════════════════════════════════════════════════════════════════════
+چیدمان دوستونهٔ ثبت‌نام/حساب + بازطراحی «همراه ما باشید» (۱۴۰۵/۰۸/۲۴ — سند ۱.۱۴)
+════════════════════════════════════════════════════════════════════════════
+
+درخواست: صفحه‌های ایجاد حساب و حساب کاربری دوستونه شوند تا اسکرول کم شود و
+کارت‌های «همراه ما باشید» از ته صفحه بالاتر بیایند، مرتب و هم‌تراز شوند.
+
+- StoreChannelsSection بازنویسی شد: به‌جای شبکهٔ کارت‌های دوستونهٔ نامرتب، یک
+  «فهرست ردیفی» شد؛ سربرگ با آیکن/عنوان روی پس‌زمینهٔ brand-50، هر ردیف شامل
+  آیکن پلتفرم ۳۶px، عنوان و توضیح با truncate (هم‌تراز)، و دو دکمهٔ آیکنی
+  هم‌اندازه (h-9 w-9) با sr-only برای نام دسترس‌پذیر و title برای tooltip؛
+  پانویس معنی دو آیکن (عضویت/پیام) را توضیح می‌دهد. ردیف‌ها divide-y و
+  hover:bg-cream-deep دارند. خروجی null برای فهرست خالی حفظ شد.
+- Register.tsx: از max-w-md تک‌ستونه به `max-w-5xl` با
+  `lg:grid-cols-[minmax(0,1fr)_20rem]` تغییر کرد؛ فرم در ستون اصلی با فیلدهای
+  دوستونه (sm:grid-cols-2: نام/ایمیل، موبایل/تولد، رمز/تکرار رمز)، سربرگ افقی
+  به‌جای بلوک وسط‌چین، فوتر یک‌ردیفی («قبلاً حساب ساخته‌اید؟» + بازگشت) و ستون
+  کنار چسبان (lg:sticky lg:top-24) شامل بخش کانال‌ها و کارت «چرا حساب بسازم؟».
+- Account.tsx: بخش کانال‌ها از ته صفحه (که به‌صورت یک سلول جدول ۳ستونه می‌افتاد)
+  به بالای ستون کنار منتقل شد (قبل از کارت سبد خرید و خوش‌آمد)؛ ستون‌های
+  اصلی/کنار با md:col-span-2 + md:col-start-3/md:row-start-1 صریح شدند و فاصلهٔ
+  سربرگ کمی جمع‌تر شد. فرم «تغییر رمز عبور» تاشو شد (state
+  showPasswordForm، دکمهٔ سربرگ با aria-expanded/aria-controls و chevron،
+  فرم با کلاس hidden وقتی بسته است) تا طول صفحه کم شود.
+- بررسی: npx tsc --noEmit سبز، npm run lint ۰ خطا (۱۶۹ فایل)، npm run test
+  ۲۶ تست PASS (۶ فایل)، npm run build موفق.
+- مستندات: TECHNICAL_GUIDE بخش ۹.۸ (بند چیدمان) + تاریخچه ۱.۱۴ و SITE_GUIDE
+  بخش ۱۸ به‌روزرسانی شد.
+
+
+
+
+
+
+
+
+════════════════════════════════════════════════════════════════════════════
+صفحهٔ مستقل «سفارش‌های من» + منوی نام حساب (۱۴۰۵/۰۸/۲۴ — سند ۱.۱۵)
+════════════════════════════════════════════════════════════════════════════
+
+- درخواست: بخش «سفارش‌های من» از پایین صفحهٔ «حساب کاربری من» برداشته شود و
+  صفحهٔ جدا داشته باشد؛ کارت‌های سفارش دوستونه شوند تا اسکرول زیاد نشود؛ و
+  لینک صفحه داخل نام صاحب حساب باشد تا با کلیک روی نام، هم «سفارش‌های من» و
+  هم «حساب کاربری من» در دسترس باشد.
+
+- pages/AccountOrders.tsx (جدید، مسیر /account/orders): همان بارگذاری
+  GET /orders و لغو سفارش (POST /orders/{orderNumber}/cancel) از Account.tsx
+  منتقل شد. کارت‌ها فشرده‌اند (تصویر ۵۶px، شمارهٔ سفارش، چیپ وضعیت، مبلغ نهایی،
+  هزینهٔ ارسال/تخفیف، وضعیت و روش پرداخت، ردیف «مشاهده جزئیات») و از md به بالا
+  در دو ستون (md:grid-cols-2) چیده می‌شوند؛ در موبایل تک‌ستونه‌اند. دکمه‌های
+  «ادامهٔ پرداخت» (فقط سفارش آنلاین پرداخت‌نشده) و «لغو سفارش» با همان شروط سرور
+  زیر هر کارت می‌آیند. حالت لودینگ، خطا با «تلاش دوباره» و حالت خالی (لینک
+  محصولات + پیگیری سفارش مهمان) هم پوشش داده شد.
+
+- utils/orderDisplay.ts (جدید): برچسب‌ها و رنگ وضعیت سفارش/پرداخت،
+  formatOrderPrice/formatOrderDate، orderThumbnail، orderItemCount و قواعد
+  canContinuePayment/canCancelCustomerOrder از Account.tsx خارج و مشترک شدند
+  (نوع OrderSummary هم اینجاست). ۱۳ تست در orderDisplay.test.ts.
+
+- components/AccountNameMenu.tsx (جدید): نام صاحب حساب در سربرگ /account دکمهٔ
+  بازشو شد؛ منو دو میان‌بر «سفارش‌های من» (/account/orders) و «حساب کاربری من»
+  (/account) دارد، با aria-expanded/aria-haspopup=menu و بستن با کلیک بیرون،
+  Escape و تغییر مسیر (الگوی HeaderSearch). ۴ تست در AccountNameMenu.test.tsx.
+
+- Account.tsx: کارت سفارش‌ها، state/effect/هندلر مربوطه و تابع‌های نمایش حذف
+  شدند (صفحه کوتاه‌تر شد)؛ زیرنویس سربرگ به «اطلاعات حساب، آدرس‌ها و امنیت حساب
+  خود را مدیریت کنید.» تغییر کرد و نام حساب با AccountNameMenu جای h2 نشست.
+
+- App.tsx: مسیر lazy جدید `/account/orders` (قبل از `/account/orders/:orderNumber`).
+- OrderDetail.tsx و Payment.tsx: لینک‌های بازگشت/«مشاهده سفارش‌ها» به
+  `/account/orders` تغییر کردند (متن: «بازگشت به سفارش‌های من»).
+
+- بررسی: npx tsc --noEmit سبز؛ npm run lint ۰ خطا (۱۷۴ فایل)؛ npm run test
+  ۴۳ تست PASS (۸ فایل، شامل ۱۷ تست جدید)؛ npm run build موفق (چانک
+  AccountOrders ساخته شد).
+
+- مستندات: TECHNICAL_GUIDE نسخهٔ ۱.۱۵ (۹.۸، جدول مسیرها ۱۰.۱، آمار تست و
+  تاریخچه) + SITE_GUIDE بخش ۱۰ + همین بلوک.
+
+════════════════════════════════════════════════════════════════════════════
+اصلاح ۱.۱۵ — منوی نام حساب به هدر سایت منتقل شد (۱۴۰۵/۰۸/۲۴)
+════════════════════════════════════════════════════════════════════════════
+
+- گزارش: «نام حساب در سربرگ /account دکمهٔ بازشو نیست». علت: منوی بازشو فقط در
+  سربرگ کارت پروفایل صفحهٔ /account بود، ولی نام کاربر در هدر چسبان سایت
+  (components/Header.tsx) هنوز Link ساده به /account بود؛ کلیک روی آن چیزی را
+  باز نمی‌کرد.
+
+- components/AccountNameMenu.tsx سه حالت دارد (prop تازه `variant`): `page`
+  (پیش‌فرض؛ نام بزرگ در کارت پروفایل)، `header` (آواتار + نام + فلش در هدر
+  دسکتاپ) و `icon` (فقط آیکن کاربر در هدر موبایل). شناسهٔ aria-controls با
+  useId یکتا شد (ممکن است دو نمونه در یک صفحه باشند) و منوی حالت آیکنی با
+  start-0 به داخل صفحه باز می‌شود تا در موبایل از لبه بیرون نزند.
+
+- Header.tsx: Link نام کاربر (دسکتاپ) و Link آیکن حساب (موبایل) با
+  AccountNameMenu جایگزین شدند؛ دکمهٔ «خروج» سر جایش ماند.
+
+- تست: ۲ تست تازه برای حالت‌های header/icon در AccountNameMenu.test.tsx؛ جمع
+  تست‌های فرانت ۴۵ در ۸ فایل.
+
+- بررسی: npx tsc --noEmit سبز؛ npm run lint ۰ خطا (۱۷۴ فایل)؛ npm run test
+  ۴۵ تست PASS؛ npm run build موفق.
+
+- مستندات: TECHNICAL_GUIDE §۹.۸ و آمار/تاریخچهٔ ۱.۱۵ به‌روز شد؛ SITE_GUIDE
+  بخش ۱۰ ردیف «نام حساب در هدر سایت» گرفت.
+
+
+════════════════════════════════════════════════════════════════════════════
+شمارندهٔ فروش محصولات واقعی شد + کامند هم‌خوان‌سازی (۱۴۰۵/۰۸/۲۶)
+════════════════════════════════════════════════════════════════════════════
+
+- مسئله: `products.sales_count` با ثبت سفارش تغییر نمی‌کرد و فقط از داده/سیدر
+  می‌آمد؛ بنابراین مرتبسازی «پرفروش‌ترین» و ستون «فروش» در آمار علاقه‌مندی
+  پنل عدد واقعی نبود (بدهی فنی ۳).
+
+- Services/Orders/OrderSalesService.php (جدید):
+  - record(Order): مجموع quantity هر محصول در اقلام سفارش را (با groupBy،
+    بدون شمارش محصولات حذف‌شده) یک‌بار به sales_count اضافه می‌کند.
+  - revert(Order): همان مقدار را با شرط sales_count >= quantity کم می‌کند تا
+    عدد هرگز منفی نشود.
+  - شمارش همیشه روی محصول اصلی است، حتی وقتی اقلام تنوع (variant) دارند؛
+    چون ستون sales_count روی products است.
+
+- اتصال‌ها (همه داخل همان تراکنشی که موجودی را تغییر می‌دهد):
+  - OrderController@store پس از ساخت اقلام → sales->record
+  - OrderController@cancel (مشتری/مهمان)، AdminOrderController (شاخهٔ لغو) و
+    کامند orders:release-abandoned → sales->revert
+  - هر سه مسیر لغو با stock_restored_at تضمین می‌کنند بازگردانی یک‌بار انجام
+    شود، پس شمارنده دوبار کم نمی‌شود. مرجوعی/بازپرداخت موجودی را برنمی‌گرداند،
+    بنابراین شمارندهٔ فروش هم دست نمی‌خورد (هم‌راستا با انبار).
+
+- Console/Commands/SyncProductSalesCount.php (جدید، products:sync-sales-count):
+  مجموع quantity اقلام سفارش‌های لغونشده را از order_items می‌گیرد و با
+  chunkById محصولات را مقایسه و اصلاح می‌کند؛ `--dry-run` فقط اختلاف‌ها را چاپ
+  می‌کند. چون این کار «بازتولید آمار» است (قاعدهٔ ۷ AGENTS.md)، اجرای آن روی
+  دادهٔ واقعی به هماهنگی مدیر نیاز دارد و در این تغییر اجرا نشد.
+
+- تست: tests/Feature/ProductSalesCountTest.php (۷ تست، ۳۲ assertion): ثبت سفارش
+  عادی و تنوعی، لغو مشتری، لغو مدیر، آزادسازی خودکار سفارش رهاشده، منفی‌نشدن
+  شمارنده و بازسازی با کامند (dry-run بدون تغییر).
+
+- بررسی: php artisan test کامل ۴۷۲ تست PASS (۲۴۱۵ assertion).
+
+- مستندات: TECHNICAL_GUIDE نسخهٔ ۱.۱۶ (آمار §۱، سرویس/کامند §۴، جدول دستورات
+  §۵، قاعدهٔ شمارنده در §۹.۱، نقشهٔ §۱۲، بدهی ۳ در §۱۴ و جدول تاریخچه).
+
+
+════════════════════════════════════════════════════════════════════════════
+عمر توکن API + مدیریت نشست منقضی در فرانت (۱۴۰۵/۰۸/۲۶)
+════════════════════════════════════════════════════════════════════════════
+
+- مسئله: `sanctum.expiration = null` بود، یعنی توکنی که در localStorage نگه
+  داشته می‌شود هیچ‌وقت منقضی نمی‌شد؛ اگر لو می‌رفت تا «خروج» یا «تغییر رمز»
+  معتبر می‌ماند (بدهی فنی ۴). از طرف دیگر فرانت هم هیچ واکنشی به ۴۰۱ نداشت و
+  کاربر با صفحهٔ نیمه‌کاره/خطای خام روبه‌رو می‌شد.
+
+- backend/config/sanctum.php: `expiration` از `(int) env('SANCTUM_EXPIRATION',
+  43200)` خوانده می‌شود (۳۰ روز). مقدار ۰ = بدون انقضا برای اشکال‌زدایی.
+  `.env.example` هم کلید `SANCTUM_EXPIRATION=43200` را گرفت (این فایل در
+  gitignore است، پس در diff نمی‌آید).
+
+- frontend/src/services/api.ts:
+  - اینترسپتور پاسخ `api`: اگر پاسخ ۴۰۱ باشد و توکنی در localStorage باشد،
+    توکن و کاربر از localStorage پاک می‌شوند، نشانهٔ یک‌بارمصرف
+    `behrang-shop-session-expired-notice` در sessionStorage گذاشته می‌شود و
+    رویداد `behrang-shop:session-expired` منتشر می‌شود.
+  - همین قاعده برای `adminApi` با توکن/رویداد جداگانه
+    (`behrang-shop:admin-session-expired`) تا نشست مشتری و مدیر قاطی نشود.
+  - `consumeSessionExpiredNotice()`: پیام فارسی یک‌بارمصرف را برای صفحهٔ ورود
+    برمی‌گرداند و نشانه را پاک می‌کند؛ بدون نشانه رشتهٔ خالی.
+  - ورود با رمز اشتباه هم ۴۰۱ است، ولی چون توکنی وجود ندارد هیچ‌چیز پاک
+    نمی‌شود و پیام «نشست منقضی» نمایش داده نمی‌شود.
+
+- context/AuthContext.tsx و context/AdminAuthContext.tsx: با شنیدن رویداد،
+  state کاربر `null` می‌شود؛ گاردهای مسیر (Route محافظت‌شده / AdminRoute) خودشان
+  کاربر را به `/login` یا `/admin/login` می‌فرستند و نیازی به ریدایرکت دستی
+  نیست.
+
+- pages/Login.tsx: مقدار اولیهٔ `error` از `consumeSessionExpiredNotice()` می‌آید
+  تا کاربر دلیل بازگشت به صفحهٔ ورود را ببیند.
+
+- تست‌ها:
+  - backend/tests/Feature/TokenExpirationTest.php (جدید، ۳ تست): پیکربندی
+    مثبت است، توکن پس از پنجرهٔ انقضا ۴۰۱ می‌دهد (`travel`) و توکن تازه داخل
+    پنجره ۲۰۰ می‌گیرد.
+  - frontend/src/services/api.test.ts: ۳ تست جدید برای پاک‌شدن نشست در ۴۰۱،
+    پیام یک‌بارمصرف «نشست منقضی» و جدابودن نشست مدیر از مشتری (۴۰۱ بدون توکن
+    هیچ‌چیز را پاک نمی‌کند).
+  - frontend/src/pages/AccountOrders.test.tsx: mock مربوط به `useAuth` پایدار شد
+    (آبجکت تازه در هر رندر باعث اجرای بی‌پایان افکت بارگذاری و ناپایداری تست
+    می‌شد).
+
+- بررسی: `php artisan test` → ۴۷۵ تست PASS (۲۴۱۸ assertion)؛ فرانت
+  `npx tsc --noEmit` بدون خطا، `npm run lint` صفر خطا، `npm run test` ۵۹ تست
+  PASS و `npm run build` موفق.
+
+- مستندات: TECHNICAL_GUIDE نسخهٔ ۱.۱۷ (مدل احراز هویت §۶، جدول متغیرهای محیطی
+  §۵، مدل تهدید §۶، دستورها §۵، نقشهٔ §۱۲، آمار §۱ و §۲، بدهی ۲ و ۴ در §۱۴ و
+  جدول تاریخچه).
+
+
+════════════════════════════════════════════════════════════════════════════
+کش خودکار ویترین + دفتر گردش موجودی + کارمزد پرداخت در محل (۱۴۰۵/۰۸/۲۶)
+════════════════════════════════════════════════════════════════════════════
+
+- سه بدهی باقی‌مانده یک‌جا بسته شد: پاک‌سازی دستی کش ویترین (بدهی ۶)، نبود
+  تاریخچه/دفتر برای تغییرات موجودی (بدهی ۱۱) و نبود هزینهٔ اضافی برای سفارش
+  «پرداخت در محل».
+
+- کش خودکار ویترین:
+  - backend/app/Observers/StorefrontCacheObserver.php (جدید): برای مدل‌های
+    محصول، تنوع، دسته، برند، بنر، بخش بنر، فونت بنر، نوار اطلاع‌رسانی، پاپ‌آپ،
+    استوری، نشان اعتماد، کانال ارتباطی و store_settings ثبت شده و در
+    saved/deleted کلیدهای مربوطه را در StorefrontCache پاک می‌کند.
+  - تغییر فقط views_count/sales_count محصول کش را پاک نمی‌کند تا هر بازدید
+    صفحهٔ محصول باعث دورریختن کش نشود.
+  - StorefrontCache: فهرست فیلترهای محصول نسخه‌دار شد
+    (storefront:products:filters-version) تا به‌جای پاک‌کردن تک‌تک کلیدهای
+    کوئری، نسخهٔ کلید عوض شود و کلیدهای قدیمی خودشان بی‌اثر شوند.
+  - کنترلرهای ادمین مثل قبل کش را پاک می‌کنند؛ observer تضمین می‌کند تغییر
+    داده از هر مسیر دیگری (tinker، سیدر، کامند یا آیندهٔ کد) هم ویترین را
+    تازه کند.
+
+- دفتر گردش موجودی (stock_movements):
+  - migration 2026_12_01_000000_create_stock_movements_table.php +
+    App\Models\StockMovement با شش نوع: order، order_restored، purchase،
+    purchase_reversed، manual، import.
+  - App\Services\Inventory\StockLedger::record: quantity = تغییر خالص (کاهش
+    منفی)، stock_after = موجودی پس از تغییر، مقدار صفر ثبت نمی‌شود و ردیف داخل
+    همان تراکنش عملیات ساخته می‌شود.
+  - اتصال‌ها: OrderController@store (with order_id)، OrderStockService::restore
+    (هر سه مسیر لغو)، PurchaseInvoiceService (ثبت/ویرایش/حذف فاکتور خرید)،
+    AdminProductController (ویرایش دستی و موجودی اولیه) و
+    ProductImportService.
+  - رفع خطای برگشت فاکتور خرید: قبلاً به‌جای تغییر واقعی، `-1 * quantity` با
+    موجودی بعد از save ثبت می‌شد؛ حالا existing/new با بریدن روی صفر حساب و
+    همان اختلاف واقعی (`newStock - previousStock`) در دفتر نوشته می‌شود.
+  - گزارش ادمین: GET /api/v1/admin/reports/stock-movements با فیلتر
+    days/type/product_id/variant_id و صفحه‌بندی؛ خروجی شامل movements
+    (جدیدترین اول)، summary (افزایش/کاهش)، meta و فهرست types برای فیلتر.
+  - فرانت: بخش «گردش موجودی» در pages/AdminReports.tsx (زیر گزارش فروش) با
+    انتخاب نوع، بازخوانی، سه نشان خلاصه، جدول (تاریخ شمسی، محصول/تنوع، نوع،
+    تغییر ±، موجودی پس از تغییر، مرجع سفارش/فاکتور، کاربر) و صفحه‌بندی.
+
+- کارمزد پرداخت در محل:
+  - config/payment.php: `cod_fee` از COD_FEE (۰ = بدون کارمزد) و
+    `.env.example` کلید COD_FEE.
+  - migration 2026_12_01_000100_add_cod_fee_to_orders_table.php + ستون
+    orders.cod_fee (مبلغ تاریخی سفارش؛ با تغییر تنظیمات عوض نمی‌شود).
+  - OrderController@store: کارمزد فقط برای COD به total اضافه و در سفارش ذخیره
+    می‌شود؛ سقف COD_MAX_TOTAL هم شامل کارمزد است (اعتبارسنجی داخل تراکنش).
+  - GET /store-settings مقدار cod_fee را برمی‌گرداند و Checkout آن را به‌عنوان
+    ردیف جداگانه و در مبلغ قابل پرداخت نشان می‌دهد.
+
+- تست‌ها:
+  - tests/Feature/StorefrontCacheObserverTest.php (جدید، ۵ تست): دسته و محصول
+    کش/نسخهٔ فیلتر را تازه می‌کنند، views_count کش را پاک نمی‌کند، پاسخ عمومی
+    categories بعد از ذخیره دادهٔ تازه می‌دهد و StoreSetting کش تنظیمات/بنر را
+    پاک می‌کند.
+  - tests/Feature/StockMovementTest.php (جدید، ۵ تست): ثبت سفارش/لغو،
+    ننوشتن مقدار صفر و گزارش با خلاصه/فیلتر نوع (نوع ناشناخته ۴۲۲).
+  - CodOrderTest: ۴ تست جدید برای کارمزد (افزایش total و ستون، معافیت سفارش
+    آنلاین، شمرده‌شدن کارمزد در سقف COD، نمایش در store-settings).
+
+- بررسی: `php artisan test` → ۴۸۹ تست PASS (۲۴۷۳ assertion)؛ فرانت
+  `npx tsc --noEmit` بدون خطا، `npm run lint` صفر خطا (۱۷۶ فایل)،
+  `npm run test` ۵۹ تست PASS و `npm run build` موفق.
+
+- مستندات: TECHNICAL_GUIDE نسخهٔ ۱.۱۸ (آمار §۱ و §۲، جدول env §۵، مدل داده
+  §۷.۲/§۷.۵، مسیر store-settings و reports §۸، قواعد دامنه §۹، نقشهٔ پوشه‌ها
+  §۴، بدهی ۶/۷/۱۱ در §۱۴ و جدول تاریخچه) و SITE_GUIDE (ردیف گزارش + دو نکتهٔ
+  کارمزد COD و تازه‌شدن خودکار سایت).
+
+
+════════════════════════════════════════════════════════════════════════════
+سبک‌کردن محیط توسعه: .clineignore + تنظیمات محلی VS Code (۱۴۰۵/۰۸/۲۶)
+════════════════════════════════════════════════════════════════════════════
+
+- مسئله: با بلند شدن تسک‌ها مصرف رم بالا می‌رفت و سیستم کند می‌شد. اندازه‌گیری
+  نشان داد بار اصلی از خود VS Code است (Extension Host / TypeScript Server /
+  فایل‌واچر) نه از چت: سه پروسهٔ Code مجموعاً ~۳٬۲ گیگابایت، در حالی که node
+  ~۱۰۹ مگابایت و php ~۳۵ مگابایت بود.
+
+- `.clineignore` (جدید، در مخزن ثبت می‌شود): وابستگی‌ها (`node_modules`،
+  `vendor`)، خروجی بیلد/کش (`frontend/dist`، `backend/public/build`،
+  `.phpunit.cache`)، `backend/storage`، لاگ‌ها، فایل‌های SQLite، پشتیبان‌ها و
+  همهٔ `.env*` (به‌جز `.env.example`) از دسترس ابزار هوش مصنوعی خارج شدند؛
+  برای سرعت جست‌وجو و رعایت قاعدهٔ ۱ AGENTS.md (رمزها خوانده نشوند).
+
+- `.vscode/settings.json` (جدید، ولی به‌خاطر `/.vscode/` در `.gitignore` فقط
+  محلی است): `files.watcherExclude` و `search.exclude` برای
+  `node_modules`/`vendor`/`dist`/`coverage`/`backend/storage`/`public/build`/
+  `storage-backup-products`، به‌علاوهٔ `search.followSymlinks: false` و
+  `typescript.disableAutomaticTypeAcquisition: true`.
+
+- هیچ فایلی پاک یا جابه‌جا نشد و رفتار سایت/بک‌اند/تست‌ها تغییر نکرد؛ فقط
+  دیده‌شدن و ایندکس‌شدن پوشه‌های سنگین کم شد. تأیید: `JSON.parse` روی فایل
+  تنظیمات موفق، و `git check-ignore .vscode/settings.json` نشان می‌دهد
+  تنظیمات محلی در مخزن کامیت نمی‌شود.
+
+- نتیجه: بعد از یک‌بار Reload Window، فایل‌واچر و جست‌وجو روی حجم کمتر کار
+  می‌کنند؛ برای تسک‌های بعدی هم قاعدهٔ «تسک کوتاه + خلاصهٔ هندآف» پیشنهاد شد.
+
+- بررسی پروسه‌ها و افزونه‌ها (`code --status` و `code --list-extensions`):
+  سیستم ۸ گیگ رم دارد (i5-3470) و فقط ~۲ گیگ آزاد بود؛ **دو پنجرهٔ VS Code** باز
+  بود (~۱٬۲۶۴ و ~۹۳۸ مگابایت) که هرکدام tsserver و extension-host جدا دارند.
+  افزونه‌های بی‌استفاده هم در حال اجرا بودند: `vscode-eslint` (پروژه oxlint
+  دارد و ESLint نصب نیست)، `htmlhint`، `code-runner`، `BlazorTemplateWizard`،
+  `vscode-dotnet-runtime`، `Bracket Pair Colorizer 2` (منسوخ؛ جایگزین داخلی
+  دارد) و دو افزونهٔ `IntelliCode`. بزرگ‌ترین برد، بستن پنجرهٔ دوم و Reload Window
+  است، نه تغییر کد.
+
+- `.vscode/extensions.json` (جدید، محلی): `recommendations` شامل Tailwind،
+  Cline و Cline RTL و `unwantedRecommendations` برای همان افزونه‌های بی‌ربط؛
+  VS Code خودش دکمهٔ غیرفعال‌سازی نشان می‌دهد. هیچ افزونه‌ای از طرف ما حذف نشد.
+
+- `AGENTS.md`: بخش «تسک‌های بزرگ (سبک نگه‌داشتن context)» اضافه شد — تسک کوتاه +
+  هندآف، خواندن بازه‌ای، ریدایرکت خروجی سنگین به فایل، یک‌بار build در پایان و
+  احترام به `.clineignore`.
+
+
+════════════════════════════════════════════════════════════════════════════
+سئو، نردبان حساب مهمان و یکپارچه‌سازی مسیر تصاویر (۱۴۰۵/۰۸/۲۶)
+════════════════════════════════════════════════════════════════════════════
+
+- هدف: بستن بندهای ۱–۵ فهرست سئو (که واقعاً کدمحور بودند)، ادامهٔ بدهی ۱۴
+  (هدایت مهمان به ساخت حساب) و شروع بدهی ۵ (یکپارچه‌سازی مسیر تصاویر).
+
+- بک‌اند (سئو و تصاویر):
+  - مایگریشن `2026_12_02_000000_add_image_dimensions_to_media_tables`:
+    ستون‌های `banners.image_width/image_height` و
+    `mobile_image_width/mobile_image_height` + `product_images.width/height`
+    (همه nullable؛ روی دیتابیس توسعه اجرا شد).
+  - `App\Support\Media\ImageDimensions` با `getimagesize` (بدون نیاز به GD)
+    و هوک `saving` در `Banner` و `ProductImage` تا ابعاد ذاتی از فایل واقعی پر
+    شود. فایل نبود → null، بدون خطا.
+  - `App\Services\Media\WebpConverter` + `config/media.php` + `MEDIA_WEBP`،
+    `MEDIA_WEBP_QUALITY`، `MEDIA_WEBP_MAX_WIDTH`. آپلود بنر و تصاویر محصول
+    به WebP تبدیل می‌شود اگر `gd` (imagewebp) یا `imagick` فعال باشد؛ در نبود
+    افزونه فایل اصلی دست‌نخورده می‌ماند (این محیط GD/Imagick ندارد).
+  - پاسخ `POST /admin/banners/image` علاوه بر `path`/`url` حالا `width`/`height`
+    هم برمی‌گرداند.
+  - کامندهای `images:webp` و `images:migrate-legacy` (پیش‌فرض dry-run،
+    `--apply` برای اجرای واقعی، هیچ حذفی انجام نمی‌شود). `phpunit.xml` مقدار
+    `MEDIA_WEBP=false` گرفت تا تست‌های آپلود موجود وابسته به پسوند فایل نشوند.
+  - تست `ImageMediaTest` (۶ تست، ۱۶ assertion): پر شدن ابعاد بنر/محصول،
+    رفتار امن فایل گم‌شده، dry-run کامند مسیر قدیمی و انتقال واقعی با
+    `--apply`، و هشدار نبود درایور تصویر.
+
+- گزارش واقعی `images:migrate-legacy` روی دادهٔ فعلی:
+  `products.thumbnail` قدیمی = ۰، `product_images.path` قدیمی = ۱
+  (`products/abbott-blood-pressure.jpg`)، بنر قدیمی = ۰، فایل‌های پوشهٔ
+  `storage/app/public/products` = ۶، `backend/public/storage-old` = ۶ فایل
+  (۳۲۰٫۸ کیلوبایت). با `--apply` همان یک مسیر منتقل شد
+  (`product-images/1/abbott-blood-pressure.jpg`) و ۵ فایل باقی‌مانده که هیچ
+  ردیف دیتابیسی ندارند دست‌نخورده ماندند.
+
+- فرانت (سئو و DOM):
+  - `hooks/useMediaQuery.ts` + `DESKTOP_MEDIA_QUERY`؛ صفحهٔ اصلی حالا هر بخش
+    را فقط در نمای خودش رندر می‌کند (هیرو دسکتاپ، بنر موبایل بالا/وسط، بنر
+    چندستونه، و نوار بنرها با تصویر و متن یک‌نسخه‌ای). متن H1/عنوان تکراری از
+    DOM حذف شد و کاروسلِ نمای دیگر ساخته نمی‌شود.
+  - `BannerImage` ابعاد ذاتی (`width`/`height`) هر تصویر را از API روی تگ
+    `<img>` می‌گذارد (`bannerImageDimensions` در `utils/banners.ts`).
+  - `ProductCard`: `productCardImageAlt` (اولویت alt پنل، بعد نام محصول) و
+    `productCardImageSize` روی `<img>`؛ تایپ‌های `wishlist`/`recentlyViewed`
+    فیلدهای `width`/`height` گرفتند.
+  - شمارندهٔ H1 پنل بنرها: `countBannerH1Layers` + `bannerH1Summary` در
+    `utils/bannerText.ts` (فقط بنرهای فعال صفحهٔ اصلی) و کارت رنگی بالای
+    `/admin/banners` با سه حالت: بدون H1 / دقیقاً یک H1 / بیش از یکی.
+    تست `utils/bannerText.test.ts` (۵ تست).
+
+- نردبان ساخت حساب مهمان (ادامهٔ بدهی ۱۴):
+  - `TrackOrder.tsx`: بعد از ثبت سفارش یا رهگیری موفق، برای مهمان کارت «با
+    همین شماره حساب بسازید و سفارش‌هایتان را یک‌جا ببینید» با لینک
+    `/register?phone=...` و بازگشت به `/account/orders`.
+  - `Register.tsx`: خواندن `phone`/`email` از query و پیش‌پرکردن فرم + پیام
+    توضیحی. اتصال خودکار سفارش‌های قبلی به حساب جدید عمداً انجام نشد چون
+    تأیید مالکیت شماره (OTP) وجود ندارد؛ سفارش‌های مهمان همچنان با
+    «شماره سفارش + تماس» یا «شماره سفارش + کد پیگیری» در دسترس‌اند.
+
+- بررسی: `php artisan test` → ۴۹۵ تست PASS (۲۴۸۹ assertion)؛ فرانت
+  `npx tsc --noEmit` بدون خطا، `npm run lint` (oxlint) صفر خطا/هشدار روی ۱۷۸
+  فایل، `npm run test` ۶۴ تست PASS در ۱۱ فایل و `npm run build` موفق
+  (sitemap مثل قبل چون `VITE_SITE_URL` تنظیم نیست ساخته نشد).
+
+- باقی‌مانده (نیازمند هماهنگی یا محیط سرور):
+  ۱) حذف ۵ فایل باقی‌ماندهٔ `storage/app/public/products/` و ۶ فایل
+     `backend/public/storage-old/` — طبق قاعدهٔ ۷ AGENTS.md بدون تأیید مالک
+     پروژه انجام نمی‌شود.
+  ۲) تبدیل WebP تصاویر قبلی فقط بعد از فعال کردن `ext-gd` (یا `ext-imagick`)
+     روی سرور معنا دارد؛ سپس `php artisan images:webp` (گزارش) و
+     `php artisan images:webp --apply`.
+  ۳) بخش محتوایی سئو (عنوان/توضیح نهایی هر دسته/محصول و پیش‌رندر/SSR) همچنان
+     کار محتوایی/معماری است، نه تغییر کد امروز.
+
+- شکستن فایل‌های بزرگ (بدهی ۱ — مرحلهٔ اول، بدون تغییر رفتار):
+  - `src/index.css` (۶٬۴۲۱ خط) اکنون فقط هستهٔ ۱۰۵ خطی است: ایمپورت Tailwind،
+    فونت وزیرمتن و بلوک `@theme`. بقیهٔ قواعد در ۱۵ فایل `src/styles/*.css`
+    به ترتیب سند قرار گرفتند (base → admin-screens → admin-responsive →
+    admin-page-widths → admin-sidebar-icons → admin-responsive-wide →
+    storefront → admin-components → admin-sidebar → support-widget →
+    support-inbox → admin-sidebar-custom → jalali-picker → theme-preview →
+    storefront-extras) و در `src/main.tsx` به همان ترتیب ایمپورت می‌شوند.
+    چرا ایمپورت از JS و نه `@import` داخل CSS: `@import` باید پیش از هر
+    قاعده‌ای بیاید و آن‌وقت `@theme`/تم «اقیانوس» جابه‌جا می‌شد.
+  - `pages/AdminShipping.tsx` (۴٬۴۲۲ خط) به `pages/AdminShipping.tsx` (۱۴۴
+    خط، فقط تب‌ها و وضعیت صفحه) + `components/admin/shipping/` (۱۱ فایل:
+    `shippingShared` با انواع/کمکی‌ها/`NoticeBox`/`Field` و ۱۰ تب) شکسته شد؛
+    بزرگ‌ترین فایل جدید ۷۵۹ خط (`ShipmentDetailPanel`).
+  - تأیید «صفر تغییر رفتار» برای CSS: بیلد قبل/بعد با همان ورودی‌ها گرفته شد
+    و ۴۳ بلوک `@media`/`@supports`/`@layer` و ۱٬۸۲۳ انتخابگر با اعلان‌های
+    یکسان‌اند؛ تنها اختلاف، سه یوتیلیتی بی‌استفاده (`blur`/`ring`/`filter!`)
+    و جابه‌جایی یوتیلیتی‌های Tailwind به ابتدای فایل خروجی است که چون همهٔ
+    قواعد سفارشی unlayered و بالاتر از `@layer utilities` هستند، اثری ندارد.
+  - بررسی: `npx tsc --noEmit` بدون خطا، `npm run lint` صفر خطا روی ۱۸۹ فایل،
+    `npm run test` ۶۴ تست PASS و `npm run build` موفق.
+  - مرحلهٔ دوم (باقی‌مانده، هر تغییر یک فایل): `AdminProductForm` (~۳٬۴۰۰)،
+    `AdminOrders` (~۲٬۷۰۰)، `AdminDashboard` (~۲٬۶۰۰)، `ProductDetail`
+    (~۲٬۴۰۰)، `AdminMessaging` (~۲٬۲۰۰)، `AdminCustomers` (~۲٬۲۰۰).
+
+### ۱۰. مقاوم‌سازی دو مایگریشن افزایشی (بازبینی بیرونی)
+
+- بازبینی یک مدل بیرونی ادعا کرده بود `2026_12_01_000100_add_cod_fee_to_orders_table`
+  متد `up()` ندارد و `2026_12_02_000000_add_image_dimensions_to_media_tables`
+  ستون `height` را در `product_images` نساخته است. **هر دو ادعا غلط بود**؛
+  آن مدل روی متن بریده/ناقصِ پیست‌شده قضاوت کرده بود، نه روی فایل واقعی
+  (`php -l` هر سه مایگریشن «No syntax errors» می‌دهد و `height` در خط ۲۸
+  همان فایل ساخته می‌شود).
+- ولی نکتهٔ درستی در دل بازبینی بود: این دو مایگریشن با قاعدهٔ خود پروژه
+  (مایگریشن‌های افزایشی دیگر با `Schema::hasColumn` گارد شده‌اند) هم‌راستا
+  نبودند. اصلاح شد:
+  - `cod_fee`: `down()` هم گارد `hasColumn` گرفت (اگر ستون با این مایگریشن
+    ساخته نشده باشد، `dropColumn` خطا می‌داد).
+  - `image dimensions`: `up()` ستون‌به‌ستون گارد شد (روی دیتابیسی که ستون را
+    از قبل دارد، «Duplicate column» نمی‌دهد) و `down()` فقط ستون‌های موجود را
+    حذف می‌کند.
+- دربارهٔ تاریخ‌های آیندهٔ نام فایل (2026_12_01/02 در حالی که امروز 2026-11-19
+  است): Laravel بر اساس ترتیب واژه‌شناختی نام فایل اجرا می‌کند، نه ساعت سیستم؛
+  فقط ترتیب وابستگی مهم است و رعایت شده (`purchase_invoices` در
+  `2026_11_26_000100` پیش از `stock_movements` در `2026_12_01_000000`).
+  `migrate:status` هم نشان می‌دهد هر سه در batch 40/41 اجرا شده‌اند.
+- بررسی: `php artisan test` → **۴۹۵ تست PASS (۲۴۸۹ assertion)**؛ `ImageMediaTest`
+  به‌تنهایی ۶ تست PASS (مایگریشن‌ها از صفر روی sqlite اجرا می‌شوند). چرخهٔ کامل
+  هم روی یک فایل SQLite موقت (نه دیتابیس اصلی) اجرا شد:
+  `migrate` → `migrate:rollback --step=3` → `migrate`، هر سه مایگریشن DONE؛
+  یعنی هر دو `down()` هم سالم‌اند. دیتابیس اصلی دست‌نخورده ماند
+  (`migrate:status`: هر سه در batch 40/41 «Ran»).
+- توجه: چون این دو فایل بعد از `git add` قبلی تغییر کرده‌اند، پیش از کامیت
+  باید دوباره stage شوند.
+
+### ۱۱. شکستن فایل‌های بزرگ (بدهی ۱ — مرحلهٔ دوم: AdminDashboard)
+
+- `frontend/src/pages/AdminDashboard.tsx` از ۲٬۵۸۵ خط به ۱٬۱۲۷ خط رسید
+  (پوستهٔ صفحه: دریافت داده، آمار/وضعیت‌ها، `renderBlock` و چیدمان ۹ بخش) و
+  منطق/نمودار/استایل به پوشهٔ `frontend/src/components/admin/dashboard/`
+  منتقل شد — همان الگوی `components/admin/shipping/`:
+  - `dashboardShared.ts` (۲۲۰): انواع `DashboardData`، `SalesTrend*`،
+    `SalesChannelItem`، `StatItem`، `OrderStatusItem`، `QuickLinkItem` +
+    قالب‌بندهای فارسی `formatNumber`/`formatPrice`/`formatCompactPrice` +
+    `parseDateValue` و `Intl.DateTimeFormat`های `fa-IR` + `quickLinks` و
+    `channelPresentation` و `pageStyle`.
+  - `dashboardStyles.ts` (۳۱۷): استایل تزریقی `<style>{dashboardStyles}</style>`.
+  - `SalesTrendChart.tsx` (۵۰۸): نمودار SVG تعاملی روند فروش + `buildSmoothPath`.
+  - `SalesChannelsChart.tsx` (۲۳۰): دونات و فهرست کانال‌های فروش.
+  - `useDashboardLayout.ts` (۳۰۳): همهٔ وضعیت و رفتار «چیدمان» (ترتیب/پنهان
+    کردن بخش‌ها، کشیدن و رها کردن، میان‌برهای منو، `readAdminDashboardLayout`
+    با `userId` و `can` به‌عنوان پارامتر) — صفحه فقط خروجی هوک را destructure
+    می‌کند.
+- هیچ منطقی بازنویسی نشد؛ کد عیناً بریده/منتقل شد و فقط مرزهای ماژول تغییر کرد
+  (خطوط ۷۱–۱۳۰۲ و ۱۳۰۹–۱۳۳۰ و ۱۴۵۷–۱۶۸۰ فایل قبلی). ایمپورت‌های بی‌استفاده
+  صفحه با راهنمای oxlint حذف شدند.
+- بررسی: `npx tsc --noEmit` بدون خطا، `npm run lint` → ۰ خطا/۰ هشدار،
+  `npm run test` → ۶۴ تست PASS (۱۱ فایل)، `npm run build` سبز.
+- مستندات: `TECHNICAL_GUIDE.md` نسخهٔ ۱.۲۱ (بخش‌های ۴ و ۱۴ + تاریخچه).
+- باقی‌ماندهٔ بدهی ۱: `AdminProductForm` (~۳٬۴۰۶)، `AdminOrders` (~۲٬۷۱۲)،
+  `ProductDetail` (~۲٬۴۱۹)، `AdminMessaging` (~۲٬۱۸۸)، `AdminCustomers` (~۲٬۱۷۰)
+  — هر کدام یک تسک مستقل با همان چرخهٔ تأیید.
+### ۱۲. موجودی هر رنگ در پالت محصول + ارزش افزودهٔ کارت محصول
+
+- دیتابیس (mysql/pharmacy_shop؛ `php artisan migrate` اجرا شد): مایگریشن
+  `2026_11_19_120000_add_stock_to_product_colors_table` — ستون
+  `product_colors.stock` از نوع `unsignedInteger` و **nullable**؛ `NULL` یعنی
+  «ثبت نشده» (رنگ‌های قبلی به‌غلط «۰ موجود» نمی‌شوند) و `۰` یعنی «تمام شده».
+- بک‌اند:
+  - `App\Models\ProductColor` → `stock` در `$fillable` و `$casts` (integer).
+  - `AdminProductController` → قاعدهٔ `colors.*.stock` (`nullable|integer|min:0|max:1000000`)
+    و ذخیره در `syncColors` (خالی → `NULL`). پاسخ ساخت/ویرایش محصول همان
+    `colors` رابطه را با `stock` برمی‌گرداند.
+  - این ستون **فقط اطلاعاتی** است: ثبت سفارش، لغو و `orders:release-abandoned`
+    به آن دست نمی‌زنند؛ موجودی رسمی همان `products.stock`/`product_variants.stock`
+    و بازگردانی فقط از `OrderStockService`.
+- پنل مدیریت (`frontend/src/pages/AdminProductForm.tsx`، بخش «رنگ‌های محصول»):
+  - هر ردیف رنگ فیلد جدید «موجودی این رنگ (عدد)» دارد (خالی = ثبت نشده، صفر =
+    تمام شده) + متن راهنما که موجودی رسمی کالا جای دیگری است.
+  - `ProductColorData/ProductColorForm` فیلد `stock` گرفتند؛ مقدار در
+    `colorsPayload` با `stock: "" → null` ارسال و در اعتبارسنجی فرم با
+    «عدد صحیح و غیرمنفی بودن» بررسی می‌شود.
+- فرانت فروشگاه (کارت محصول):
+  - `utils/price.ts::calculateVatAmount(amount, vatPercent)` با همان فرمول
+    سرور/چک‌اوت (`Math.round(مبلغ × درصد ÷ ۱۰۰)`؛ درصد به بازهٔ ۰–۱۰۰ محدود).
+  - `components/ProductCard.tsx` درصد را از `useStoreSettings` (کلیدهای
+    `vat_enabled`/`vat_percent`) می‌خواند و در `GridPrice`/`HomePrice` — برای
+    کالاهای `is_taxable` — خط «ارزش افزوده (٪): مبلغ تومان» را زیر قیمت نهایی
+    نشان می‌دهد؛ اگر مالیات خاموش باشد یا درصد صفر، چیزی نمایش داده نمی‌شود.
+- تست‌ها: `backend/tests/Feature/ProductColorTest.php` دو تست جدید
+  (`color stock is saved and returned to admin`، `color stock rejects negative
+  quantity`) و `frontend/src/utils/price.test.ts` چهار تست (قیمت/تخفیف + VAT).
+- بررسی: `php artisan test` → ۴۹۷ تست PASS (۲۴۹۷ assertion)؛ فرانت
+  `npx tsc --noEmit` بدون خطا، `npm run lint` → ۰ خطا/۰ هشدار،
+  `npm run test` → ۶۸ تست PASS (۱۲ فایل)، `npm run build` سبز.
+- مستندات: `TECHNICAL_GUIDE.md` نسخهٔ ۱.۲۲ (بخش‌های ۲، ۴، ۷، ۹ + تاریخچه).
+- اگر بعداً «موجودی هر رنگ» باید خودکار با سفارش کم/برگردد یا در صفحهٔ محصول
+  نمایش داده شود، باید در `OrderController@store` و `OrderStockService` مشترک
+  با موجودی محصول/تنوع پیاده شود (فعلاً عمداً فقط اطلاعاتی است).
 
 
