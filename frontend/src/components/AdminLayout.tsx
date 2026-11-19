@@ -45,11 +45,16 @@ import {
   hasAdminPermission,
 } from "../utils/adminPermissions";
 import { ADMIN_NAV_ITEMS } from "../utils/adminNavItems";
+import {
+  buildAdminSearchEntries,
+  searchAdminEntries,
+} from "../utils/adminSearchIndex";
 import { DASHBOARD_SHORTCUT_MIME } from "../utils/adminDashboardLayout";
 import {
   ADMIN_SIDEBAR_DENSITIES,
   ADMIN_SIDEBAR_DENSITY_LABELS,
   ADMIN_SIDEBAR_GROUP_IDS,
+  ADMIN_SIDEBAR_GROUP_LABELS,
   ADMIN_SIDEBAR_PINNED_GROUP_ID,
   ADMIN_SIDEBAR_WIDTH_DEFAULT,
   ADMIN_SIDEBAR_WIDTH_MAX,
@@ -72,11 +77,27 @@ type AdminSidebarSection = {
 
 /* گروه‌های اصلی منو با عنوان و آیکن روشن؛ ترتیب و جای آیتم‌ها قابل تغییر است */
 const adminSidebarSections: AdminSidebarSection[] = [
-  { id: "general", label: "عمومی", icon: LayoutDashboard },
-  { id: "store", label: "فروشگاه", icon: Store },
-  { id: "orders", label: "سفارشات", icon: ShoppingCart },
-  { id: "reports", label: "گزارشات", icon: TrendingUp },
-  { id: "finance", label: "مالی و حسابداری", icon: Calculator },
+  {
+    id: "general",
+    label: ADMIN_SIDEBAR_GROUP_LABELS.general,
+    icon: LayoutDashboard,
+  },
+  { id: "store", label: ADMIN_SIDEBAR_GROUP_LABELS.store, icon: Store },
+  {
+    id: "orders",
+    label: ADMIN_SIDEBAR_GROUP_LABELS.orders,
+    icon: ShoppingCart,
+  },
+  {
+    id: "reports",
+    label: ADMIN_SIDEBAR_GROUP_LABELS.reports,
+    icon: TrendingUp,
+  },
+  {
+    id: "finance",
+    label: ADMIN_SIDEBAR_GROUP_LABELS.finance,
+    icon: Calculator,
+  },
 ];
 
 function AdminLayout() {
@@ -91,8 +112,11 @@ function AdminLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  /** ردیف انتخاب‌شده در نتایج جست‌وجو (با کلیدهای بالا/پایین جابه‌جا می‌شود). */
+  const [activeResult, setActiveResult] = useState(0);
 
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const activeResultRef = useRef<HTMLButtonElement | null>(null);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -680,15 +704,33 @@ function AdminLayout() {
     return match?.label ?? "پنل مدیریت";
   }, [location.pathname]);
 
-  const filteredItems = useMemo(() => {
-    const query = searchQuery.trim().toLocaleLowerCase("fa");
+  /* فهرست جست‌وجو: منوی مجاز این مدیر + زیرصفحه‌های واقعی (مثل افزودن محصول). */
+  const searchEntries = useMemo(
+    () => buildAdminSearchEntries(visibleNavItems),
+    [visibleNavItems],
+  );
 
-    if (!query) return visibleNavItems;
+  const filteredItems = useMemo(
+    () => searchAdminEntries(searchEntries, searchQuery),
+    [searchEntries, searchQuery],
+  );
 
-    return visibleNavItems.filter((item) =>
-      `${item.label} ${item.keywords}`.toLocaleLowerCase("fa").includes(query),
+  /* با تغییر عبارت، انتخاب به اولین نتیجه برمی‌گردد. */
+  useEffect(() => {
+    setActiveResult(0);
+  }, [searchQuery]);
+
+  /* نتیجهٔ انتخاب‌شده همیشه داخل ناحیهٔ اسکرول‌شونده دیده شود. */
+  useEffect(() => {
+    activeResultRef.current?.scrollIntoView({ block: "nearest" });
+  }, [activeResult, filteredItems]);
+
+  /* اگر فهرست کوتاه‌تر شد، انتخاب از بازه خارج نشود. */
+  useEffect(() => {
+    setActiveResult((index) =>
+      index > filteredItems.length - 1 ? Math.max(0, filteredItems.length - 1) : index,
     );
-  }, [searchQuery, visibleNavItems]);
+  }, [filteredItems.length]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -993,12 +1035,16 @@ function AdminLayout() {
           display: flex;
           align-items: flex-start;
           justify-content: center;
-          padding: min(15vh, 120px) 18px 24px;
+          padding: 6vh 16px 24px;
           background: rgba(18, 30, 21, 0.42);
           backdrop-filter: blur(4px);
+          overflow-y: auto;
         }
         .admin-search-dialog {
-          width: min(100%, 540px);
+          display: flex;
+          flex-direction: column;
+          width: min(100%, 560px);
+          max-height: min(78vh, 700px);
           overflow: hidden;
           background: #fff;
           border: 1px solid #e5ebe2;
@@ -1007,6 +1053,7 @@ function AdminLayout() {
         }
         .admin-search-input-wrap {
           display: flex;
+          flex: 0 0 auto;
           align-items: center;
           gap: 12px;
           padding: 18px;
@@ -1025,30 +1072,47 @@ function AdminLayout() {
           font-size: 14px;
         }
         .admin-search-results-title {
+          display: flex;
+          flex: 0 0 auto;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
           padding: 14px 18px 8px;
           color: #849084;
           font-size: 11px;
           font-weight: 700;
         }
+        /* ناحیهٔ نتایج مستقل اسکرول می‌شود تا همهٔ زیرمنوها در دسترس باشند */
+        .admin-search-results {
+          flex: 1 1 auto;
+          min-height: 0;
+          overflow-y: auto;
+          overscroll-behavior: contain;
+          padding-bottom: 8px;
+        }
         .admin-search-result {
           display: flex;
-          align-items: center;
+          align-items: flex-start;
           gap: 12px;
           width: 100%;
-          padding: 13px 18px;
+          padding: 12px 18px;
           color: #354638;
           background: #fff;
           border: 0;
+          border-inline-start: 3px solid transparent;
           cursor: pointer;
           text-align: right;
           font: inherit;
           font-size: 13px;
         }
-        .admin-search-result:hover {
-          background: #f4f7f2;
+        .admin-search-result:hover,
+        .admin-search-result.is-active {
+          background: #f2f7ee;
+          border-inline-start-color: #6a9b63;
         }
         .admin-search-result-icon {
           display: inline-flex;
+          flex: 0 0 auto;
           align-items: center;
           justify-content: center;
           width: 36px;
@@ -1056,6 +1120,48 @@ function AdminLayout() {
           color: #507b53;
           background: #edf4e9;
           border-radius: 10px;
+        }
+        .admin-search-result-text {
+          display: flex;
+          flex: 1 1 auto;
+          flex-direction: column;
+          gap: 3px;
+          min-width: 0;
+        }
+        .admin-search-result-label {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          flex-wrap: wrap;
+          color: #243529;
+          font-weight: 700;
+        }
+        .admin-search-result-badge {
+          padding: 1px 7px;
+          color: #4c7a4f;
+          background: #e8f2e3;
+          border-radius: 999px;
+          font-size: 10px;
+          font-weight: 700;
+        }
+        .admin-search-result-trail {
+          color: #8b978b;
+          font-size: 11px;
+          line-height: 1.7;
+          overflow-wrap: anywhere;
+        }
+        .admin-search-result-arrow {
+          flex: 0 0 auto;
+          margin-top: 9px;
+          color: #91a091;
+        }
+        .admin-search-hint {
+          flex: 0 0 auto;
+          padding: 10px 18px;
+          color: #8b978b;
+          background: #fafbf8;
+          border-top: 1px solid #edf0ea;
+          font-size: 11px;
         }
         .admin-search-empty {
           padding: 24px 18px;
@@ -1828,12 +1934,40 @@ function AdminLayout() {
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
                 onKeyDown={(event) => {
-                  if (event.key === "Enter" && filteredItems[0]) {
-                    openPage(filteredItems[0].to);
+                  if (event.key === "ArrowDown") {
+                    event.preventDefault();
+                    setActiveResult((index) =>
+                      Math.min(index + 1, filteredItems.length - 1),
+                    );
+
+                    return;
+                  }
+
+                  if (event.key === "ArrowUp") {
+                    event.preventDefault();
+                    setActiveResult((index) => Math.max(index - 1, 0));
+
+                    return;
+                  }
+
+                  if (event.key === "Enter") {
+                    const target = filteredItems[activeResult] ?? filteredItems[0];
+
+                    if (target) {
+                      openPage(target.path);
+                    }
                   }
                 }}
-                placeholder="نام بخش موردنظر را بنویسید..."
+                placeholder="نام بخش، زیرمنو یا کار موردنظر را بنویسید..."
                 aria-label="عبارت جست‌وجو"
+                role="combobox"
+                aria-expanded={filteredItems.length > 0}
+                aria-controls="admin-search-results"
+                aria-activedescendant={
+                  filteredItems[activeResult]
+                    ? `admin-search-result-${activeResult}`
+                    : undefined
+                }
               />
 
               <button
@@ -1846,41 +1980,72 @@ function AdminLayout() {
               </button>
             </div>
 
-            <div className="admin-search-results-title">بخش‌های مدیریت</div>
+            <div className="admin-search-results-title">
+              <span>نتایج جست‌وجو</span>
+              <span>{filteredItems.length.toLocaleString("fa-IR")} مورد</span>
+            </div>
 
-            {filteredItems.length ? (
-              filteredItems.map((item) => {
-                const Icon = item.icon;
+            <div
+              className="admin-search-results"
+              id="admin-search-results"
+              role="listbox"
+              aria-label="نتایج جست‌وجوی پنل مدیریت"
+            >
+              {filteredItems.length ? (
+                filteredItems.map((item, index) => {
+                  const Icon = item.icon;
+                  const isActive = index === activeResult;
 
-                return (
-                  <button
-                    key={item.to}
-                    type="button"
-                    className="admin-search-result"
-                    onClick={() => openPage(item.to)}
-                  >
-                    <span className="admin-search-result-icon">
-                      <Icon size={18} />
-                    </span>
-
-                    <span>{item.label}</span>
-
-                    <span
-                      style={{
-                        marginRight: "auto",
-                        color: "#91a091",
-                      }}
+                  return (
+                    <button
+                      key={item.path}
+                      id={`admin-search-result-${index}`}
+                      ref={isActive ? activeResultRef : null}
+                      type="button"
+                      role="option"
+                      aria-selected={isActive}
+                      className={`admin-search-result${isActive ? " is-active" : ""}`}
+                      onMouseEnter={() => setActiveResult(index)}
+                      onClick={() => openPage(item.path)}
                     >
-                      <ChevronLeft size={16} />
-                    </span>
-                  </button>
-                );
-              })
-            ) : (
-              <div className="admin-search-empty">
-                بخشی با این عبارت پیدا نشد.
-              </div>
-            )}
+                      <span className="admin-search-result-icon">
+                        <Icon size={18} />
+                      </span>
+
+                      <span className="admin-search-result-text">
+                        <span className="admin-search-result-label">
+                          {item.label}
+                          {item.parentLabel && (
+                            <span className="admin-search-result-badge">
+                              زیرمنو
+                            </span>
+                          )}
+                        </span>
+
+                        <span className="admin-search-result-trail">
+                          {item.parentLabel
+                            ? `والد: ${item.parentLabel} · گروه: ${item.groupLabel}`
+                            : `والد: ${item.groupLabel}`}
+                        </span>
+                      </span>
+
+                      <span className="admin-search-result-arrow">
+                        <ChevronLeft size={16} />
+                      </span>
+                    </button>
+                  );
+                })
+              ) : (
+                <div className="admin-search-empty">
+                  بخشی با این عبارت پیدا نشد. مثلاً «محصول»، «ارسال» یا
+                  «سفارش» را بنویسید.
+                </div>
+              )}
+            </div>
+
+            <div className="admin-search-hint">
+              ↑ ↓ جابه‌جایی · Enter باز کردن · Esc بستن
+            </div>
           </section>
         </div>
       )}

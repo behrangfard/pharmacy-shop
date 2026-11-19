@@ -26,6 +26,18 @@ export type AdminSidebarContainerId =
   | AdminSidebarGroupId
   | typeof ADMIN_SIDEBAR_PINNED_GROUP_ID;
 
+/**
+ * عنوان فارسی گروه‌های منو؛ هم سایدبار و هم جست‌وجوی سراسری پنل از همین
+ * منبع می‌خوانند تا «والد» هر بخش در نتایج جست‌وجو با منو یکی باشد.
+ */
+export const ADMIN_SIDEBAR_GROUP_LABELS: Record<AdminSidebarGroupId, string> = {
+  general: "عمومی",
+  store: "فروشگاه",
+  orders: "سفارشات",
+  reports: "گزارشات",
+  finance: "مالی و حسابداری",
+};
+
 /** حدود و مقدار پیش‌فرض عرض سایدبار (پیکسل). */
 export const ADMIN_SIDEBAR_WIDTH_MIN = 200;
 export const ADMIN_SIDEBAR_WIDTH_MAX = 420;

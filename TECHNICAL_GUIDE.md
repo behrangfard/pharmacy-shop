@@ -1,6 +1,6 @@
 ﻿# راهنمای فنی جامع پروژه «بهرنگ شاپ»
 
-> **نسخهٔ سند:** 1.22
+> **نسخهٔ سند:** 1.23
 > **تاریخ:** ۲۹ آبان ۱۴۰۵ / 2026-11-19
 > **مخاطب:** توسعه‌دهندهٔ جدید، بازبین خارجی، دستیار هوش مصنوعی
 > **دامنه:** کل مونوریپو (`backend/` + `frontend/`)
@@ -204,9 +204,9 @@
 | `src/context/` | `AuthContext`, `AdminAuthContext`, `CartContext`, `WishlistContext` |
 | `src/hooks/` | `useStoreSettings`, `useHeaderFooter`, `useSitePages`, `useBannerFonts`, `useStories`, `useTrustBadges`, `useContactChannels`, `usePageMeta`, `useRecentlyViewed`, `useMediaQuery` (پاسخ زندهٔ `matchMedia` برای رندر تک‌نسخه‌ای دسکتاپ/موبایل) |
 | `src/services/` | لایهٔ تماس با API (axios) — `api.ts`، `productFilters.ts`، `popups.ts`، `support.ts`، `contactChannels.ts`، `wishlist.ts`، … |
-| `src/utils/` | `storageKeys.ts` (کلیدهای localStorage + مهاجرت از کلیدهای قدیمی)، `guestAccessCode.ts` (نرمال/قالب کد پیگیری مهمان)، `theme.ts`، `seo.ts`، `structuredData.ts`، `price.ts`، `jalali.ts`، `adminPermissions.ts`، `adminNavItems.ts`، `images.ts`، `banner*.ts`، `supportChat.ts` |
+| `src/utils/` | `storageKeys.ts` (کلیدهای localStorage + مهاجرت از کلیدهای قدیمی)، `guestAccessCode.ts` (نرمال/قالب کد پیگیری مهمان)، `theme.ts`، `seo.ts`، `structuredData.ts`، `price.ts`، `jalali.ts`، `adminPermissions.ts`، `adminNavItems.ts`، `adminSidebarLayout.ts` (چیدمان سایدبار + `ADMIN_SIDEBAR_GROUP_LABELS`)، `adminSearchIndex.ts` (فهرست/جست‌وجوی زیرمنوهای پنل)، `images.ts`، `banner*.ts`، `supportChat.ts` |
 | `src/test/` | `setup.ts` مشترک تست‌ها (jest-dom + پاک‌سازی DOM و localStorage بعد از هر تست) |
-| `src/**/*.test.ts(x)` | تست‌های Vitest کنار همان ماژول: `utils/guestAccessCode`، `utils/storageKeys`، `utils/jalali`، `utils/orderDisplay`، `utils/bannerText`، `components/Button`، `components/AccountNameMenu`، `services/contactChannels`، `components/StoreChannelsSection`، `pages/AccountOrders`، `services/api` |
+| `src/**/*.test.ts(x)` | تست‌های Vitest کنار همان ماژول: `utils/guestAccessCode`، `utils/storageKeys`، `utils/jalali`، `utils/orderDisplay`، `utils/bannerText`، `utils/adminSearchIndex`، `utils/price`، `components/Button`، `components/AccountNameMenu`، `services/contactChannels`، `components/StoreChannelsSection`، `pages/AccountOrders`، `services/api` |
 | `src/index.css` | هستهٔ استایل (۱۰۵ خط): `@import "tailwindcss"`، فونت وزیرمتن و بلوک `@theme` با توکن‌های رنگ/شعاع |
 | `src/styles/` | ۱۵ فایل CSS به ترتیب سند: `base`، `admin-screens`، `admin-responsive`، `admin-page-widths`، `admin-sidebar-icons`، `admin-responsive-wide`، `storefront`، `admin-components`، `admin-sidebar`، `support-widget`، `support-inbox`، `admin-sidebar-custom`، `jalali-picker`، `theme-preview`، `storefront-extras` (بزرگ‌ترین ۸۱۹ خط) |
 | `public/` | `manifest.webmanifest`، `sw.js`، `offline.html`، `icons/`، `images/` |
@@ -1033,6 +1033,14 @@ php artisan view:cache
 همهٔ صفحه‌ها `lazy()` هستند و `Suspense` یک fallback سادهٔ «در حال بارگذاری
 صفحه...» دارد. خطاهای رندر با `RouteErrorBoundary` گرفته می‌شوند.
 
+**جست‌وجوی پنل:** دکمهٔ نوار بالا یا `Ctrl/⌘ + K` دیالوگ جست‌وجو را باز می‌کند.
+فهرست نتایج از `utils/adminSearchIndex.ts` ساخته می‌شود: همهٔ آیتم‌های منوی مجاز
+این مدیر + زیرصفحه‌های واقعی (فعلاً `products/create`)؛ هر نتیجه «والد» (گروه منو)
+و برای زیرصفحه‌ها «زیرمنو» را نشان می‌دهد. جست‌وجو با نرمال‌سازی فارسی (ي/ك
+عربی، نیم‌فاصله، کشیده و ارقام) و تطبیق همهٔ کلمه‌ها انجام می‌شود؛ ناحیهٔ نتایج
+مستقل اسکرول می‌شود (پس همهٔ زیرمنوها حتی در ارتفاع کم قابل انتخاب‌اند) و
+`↑`/`↓`/`Enter`/`Esc` پشتیبانی می‌شود.
+
 ### ۱۰.۲ وضعیت و کش سمت کلاینت
 
 | Context | مسئولیت |
@@ -1163,7 +1171,8 @@ php artisan view:cache
 | وضعیت‌ها و برچسب‌های سفارش | `backend/app/Support/OrderStatus.php` |
 | نقش‌ها و مجوزهای مدیر | `backend/app/Support/AdminRole.php` + `frontend/src/utils/adminPermissions.ts` |
 | کانال‌های ارتباطی (تلگرام، واتس‌اپ، بله، ایتا، اینستاگرام) | `backend/app/Support/ContactLinks.php` + `ContactChannelController`/`AdminContactChannelController` + `frontend/src/services/contactChannels.ts` + `components/StoreChannelsSection.tsx` + `pages/AdminChannels.tsx` |
-| منوی سایدبار ادمین | `frontend/src/utils/adminNavItems.ts` + `components/AdminLayout.tsx` |
+| منوی سایدبار ادمین | `frontend/src/utils/adminNavItems.ts` + `adminSidebarLayout.ts` + `components/AdminLayout.tsx` |
+| جست‌وجوی سراسری پنل | `frontend/src/utils/adminSearchIndex.ts` (فهرست زیرمنوها + والد/گروه + نرمال‌سازی فارسی) + دیالوگ `AdminLayout` (↑↓/Enter/Esc، فهرست اسکرول‌شونده) |
 | پاپ‌آپ‌ها | `backend/app/Models/Popup.php` + `AdminPopupController` + `frontend/src/components/StorefrontPopup.tsx` + `pages/AdminPopups.tsx` |
 | بنر/اسلایدر و فونت‌ها | `AdminBannerController`, `AdminBannerSectionController`, `components/AdminBanner*`, `components/Banner*` |
 | نوار اطلاع‌رسانی | `AnnouncementBarController` + `components/AnnouncementBar.tsx` |
@@ -1369,6 +1378,8 @@ node -p "require('./package.json').dependencies.react"
 | 1.20 | 2026-11-18 | **شکستن فایل‌های بزرگ (بدهی ۱ — مرحلهٔ اول):** `index.css` (۶٬۴۲۱ خط) به هستهٔ ۱۰۵ خطی (`@import "tailwindcss"` + فونت + `@theme`) و ۱۵ فایل `src/styles/*.css` با ترتیب سند تقسیم شد و در `main.tsx` به همان ترتیب ایمپورت می‌شود (تأیید: هش بیلد CSS و ساختار ۴۳ بلوک `@media`/`@supports`/`@layer` و ۱٬۸۲۳ انتخابگر با قبل یکسان)؛ `AdminShipping.tsx` (۴٬۴۲۲ خط) به `pages/AdminShipping.tsx` (۱۴۴ خط) + `components/admin/shipping/` (۱۱ فایل: `shippingShared` با انواع/کمکی‌ها/`NoticeBox`/`Field` و ۱۰ تب) شکسته شد؛ بدون تغییر رفتار (tsc/lint/۶۴ تست/build سبز) |
 | 1.21 | 2026-11-19 | **شکستن فایل‌های بزرگ (بدهی ۱ — مرحلهٔ دوم):** `pages/AdminDashboard.tsx` (۲٬۵۸۵ خط) به پوستهٔ ۱٬۱۲۷ خطی (دریافت داده، آمار، `renderBlock`) + `components/admin/dashboard/` شکسته شد: `dashboardShared.ts` (۲۲۰: انواع `DashboardData`/`SalesTrend*`/`SalesChannelItem`، قالب‌بندهای فارسی عدد/قیمت/تاریخ، `quickLinks`، `channelPresentation`)، `dashboardStyles.ts` (۳۱۷: استایل تزریقی)، `SalesTrendChart.tsx` (۵۰۸: نمودار SVG تعاملی + `buildSmoothPath`)، `SalesChannelsChart.tsx` (۲۳۰: دونات/فهرست کانال‌ها)، `useDashboardLayout.ts` (۳۰۳: چیدمان شخصی هر مدیر، پنهان/ترتیب/کشیدن، میان‌برهای منو)؛ بدون تغییر رفتار (tsc/lint با ۰ خطا، ۶۴ تست، build سبز) |
 | 1.22 | 2026-11-19 | **موجودی هر رنگ + ارزش افزودهٔ کارت محصول:** ستون nullable `product_colors.stock` (مایگریشن `2026_11_19_120000`) با فیلد «موجودی این رنگ» در فرم محصول پنل (`colors.*.stock`، `NULL` = ثبت نشده) — فقط اطلاعاتی و بدون دخالت در موجودی سفارش؛ `utils/price.ts::calculateVatAmount` + نمایش «ارزش افزوده (٪): مبلغ» زیر قیمت `ProductCard` (grid/home) بر اساس `vat_enabled`/`vat_percent` فروشگاه و `is_taxable` کالا؛ ۲ تست بک‌اند (`ProductColorTest`) و ۴ تست فرانت (`price.test.ts`) — ۴۹۷ تست بک‌اند و ۶۸ تست فرانت سبز |
+| 1.23 | 2026-11-19 | **جست‌وجوی سراسری پنل + فرم تمام‌عرض محصول:** دیالوگ جست‌وجوی `AdminLayout` بازنویسی شد — فهرست نتایج از `utils/adminSearchIndex.ts` (آیتم‌های منوی مجاز + زیرصفحهٔ «افزودن محصول»)، ناحیهٔ نتایج مستقل اسکرول‌شونده، نمایش «والد/گروه» و برچسب «زیرمنو» برای هر نتیجه، جست‌وجو با نرمال‌سازی فارسی (ي/ك، نیم‌فاصله، کشیده، ارقام) و پیمایش با ↑↓/Enter/Esc؛ عنوان گروه‌ها به `ADMIN_SIDEBAR_GROUP_LABELS` در `adminSidebarLayout.ts` منتقل شد. فرم محصول (`AdminProductForm`) تمام‌عرض شد، نوار دکمهٔ چسبان گرفت و «ذخیره تغییرات و ادامه» پس از ذخیره در همان صفحه می‌ماند (پیام موفقیت + لینک فهرست)؛ «ذخیره و بازگشت به فهرست» جدا شد و «ثبت محصول و ادامه» محصول تازه را در صفحهٔ ویرایش باز می‌کند — ۹ تست فرانت `adminSearchIndex.test.ts` (۷۷ تست فرانت سبز) |
+
 
 
 ---

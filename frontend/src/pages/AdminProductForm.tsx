@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 
 import { Link, useNavigate, useParams } from "react-router-dom";
 
@@ -510,6 +510,16 @@ function AdminProductForm() {
   const [imageBusyId, setImageBusyId] = useState<number | null>(null);
 
   const [error, setError] = useState("");
+
+  /** پیام موفقیت ذخیره؛ چون پس از ذخیره در همین صفحه می‌مانیم. */
+  const [savedNotice, setSavedNotice] = useState("");
+
+  /**
+   * قصد دکمهٔ ارسال فرم: «ادامهٔ ویرایش در همین صفحه» یا «بازگشت به فهرست».
+   * دکمه‌ها پیش از submit مقدارش را می‌گذارند و handler آن را می‌خواند؛
+   * بنابراین اعتبارسنجی بومی فرم (required) دست‌نخورده می‌ماند.
+   */
+  const submitIntentRef = useRef<"stay" | "list">("stay");
 
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
 
@@ -1497,19 +1507,46 @@ function AdminProductForm() {
 
 
 
+    /*
+     * قصد دکمه در لحظهٔ ارسال: «ماندن در همین صفحه» یا «بازگشت به فهرست».
+     * مقدار پس از خواندن به پیش‌فرض («ماندن») برمی‌گردد تا ارسال با Enter هم
+     * رفتار یکسانی داشته باشد.
+     */
+    const keepEditing = submitIntentRef.current === "stay";
+    submitIntentRef.current = "stay";
+
     try {
 
       setSaving(true);
 
-
+      setSavedNotice("");
 
       if (isEdit && id) {
 
         await adminApi.put(`/admin/products/${id}`, payload);
 
+        if (keepEditing) {
+
+          setSavedNotice("تغییرات ذخیره شد؛ می‌توانید ویرایش را ادامه دهید.");
+
+          return;
+
+        }
+
       } else {
 
-        await adminApi.post("/admin/products", payload);
+        const created = await adminApi.post("/admin/products", payload);
+
+        const createdId = Number(created?.data?.data?.id);
+
+        /* «ثبت و ادامه»: محصول تازه در همان صفحهٔ ویرایش باز می‌شود. */
+        if (keepEditing && Number.isFinite(createdId) && createdId > 0) {
+
+          navigate(`/admin/products/${createdId}/edit`, { replace: true });
+
+          return;
+
+        }
 
       }
 
@@ -1806,7 +1843,10 @@ function AdminProductForm() {
 
   return (
 
-    <div dir="rtl" style={{ color: "#111827", maxWidth: "1100px" }}>
+    <div
+      dir="rtl"
+      style={{ color: "#111827", width: "100%", maxWidth: "none", minWidth: 0 }}
+    >
 
       <div
 
@@ -1838,7 +1878,9 @@ function AdminProductForm() {
 
           <p style={{ color: "#6b7280", margin: 0, fontSize: "14px" }}>
 
-            اطلاعات محصول را تکمیل کنید و سپس ذخیره کنید.
+            اطلاعات محصول را کامل کنید؛ با «ذخیره تغییرات و ادامه» در همین صفحه
+
+            می‌مانید و لازم نیست فرم را دوباره باز کنید.
 
           </p>
 
@@ -3355,6 +3397,72 @@ function AdminProductForm() {
 
 
 
+        {savedNotice && (
+
+          <div
+
+            role="status"
+
+            style={{
+
+              display: "flex",
+
+              justifyContent: "space-between",
+
+              alignItems: "center",
+
+              gap: "12px",
+
+              flexWrap: "wrap",
+
+              background: "#f0fdf4",
+
+              border: "1px solid #bbf7d0",
+
+              color: "#166534",
+
+              borderRadius: "10px",
+
+              padding: "12px 16px",
+
+              marginBottom: "12px",
+
+              lineHeight: 1.8,
+
+            }}
+
+          >
+
+            <span>{savedNotice}</span>
+
+            <Link
+
+              to="/admin/products"
+
+              style={{
+
+                color: "#166534",
+
+                fontSize: "13px",
+
+                fontWeight: 700,
+
+                textDecoration: "none",
+
+              }}
+
+            >
+
+              بازگشت به فهرست محصولات
+
+            </Link>
+
+          </div>
+
+        )}
+
+
+
         <div
 
           style={{
@@ -3367,7 +3475,21 @@ function AdminProductForm() {
 
             flexWrap: "wrap",
 
+            marginTop: "10px",
+
             marginBottom: "30px",
+
+            position: "sticky",
+
+            bottom: 0,
+
+            zIndex: 5,
+
+            background: "#fff",
+
+            borderTop: "1px solid #e5e7eb",
+
+            padding: "12px 0",
 
           }}
 
@@ -3377,13 +3499,19 @@ function AdminProductForm() {
 
             type="submit"
 
-            disabled={saving}
+            disabled={saving || uploadingImages}
+
+            onClick={() => {
+
+              submitIntentRef.current = "stay";
+
+            }}
 
             style={{
 
               border: "1px solid #2563eb",
 
-              background: saving ? "#93c5fd" : "#2563eb",
+              background: saving || uploadingImages ? "#93c5fd" : "#2563eb",
 
               color: "#fff",
 
@@ -3391,7 +3519,7 @@ function AdminProductForm() {
 
               borderRadius: "9px",
 
-              cursor: saving ? "wait" : "pointer",
+              cursor: saving || uploadingImages ? "wait" : "pointer",
 
               fontFamily: "inherit",
 
@@ -3409,9 +3537,49 @@ function AdminProductForm() {
 
               : isEdit
 
-                ? "ذخیره تغییرات"
+                ? "ذخیره تغییرات و ادامه"
 
-                : "ثبت محصول"}
+                : "ثبت محصول و ادامه"}
+
+          </button>
+
+
+
+          <button
+
+            type="submit"
+
+            disabled={saving || uploadingImages}
+
+            onClick={() => {
+
+              submitIntentRef.current = "list";
+
+            }}
+
+            style={{
+
+              border: "1px solid #6b7280",
+
+              background: "#fff",
+
+              color: "#374151",
+
+              padding: "12px 20px",
+
+              borderRadius: "9px",
+
+              cursor: saving || uploadingImages ? "wait" : "pointer",
+
+              fontFamily: "inherit",
+
+              fontSize: "14px",
+
+            }}
+
+          >
+
+            {isEdit ? "ذخیره و بازگشت به فهرست" : "ثبت محصول و بازگشت"}
 
           </button>
 
