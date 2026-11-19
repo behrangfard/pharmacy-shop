@@ -2914,6 +2914,7 @@ sitemap.xml و robots.txt (ساخت خودکار در build):
 - باقی‌ماندهٔ بدهی ۱: `AdminProductForm` (~۳٬۴۰۶)، `AdminOrders` (~۲٬۷۱۲)،
   `ProductDetail` (~۲٬۴۱۹)، `AdminMessaging` (~۲٬۱۸۸)، `AdminCustomers` (~۲٬۱۷۰)
   — هر کدام یک تسک مستقل با همان چرخهٔ تأیید.
+
 ### ۱۲. موجودی هر رنگ در پالت محصول + ارزش افزودهٔ کارت محصول
 
 - دیتابیس (mysql/pharmacy_shop؛ `php artisan migrate` اجرا شد): مایگریشن
