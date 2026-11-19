@@ -1,7 +1,7 @@
 ﻿# راهنمای فنی جامع پروژه «بهرنگ شاپ»
 
-> **نسخهٔ سند:** 1.20
-> **تاریخ:** ۲۸ آبان ۱۴۰۵ / 2026-11-18
+> **نسخهٔ سند:** 1.21
+> **تاریخ:** ۲۹ آبان ۱۴۰۵ / 2026-11-19
 > **مخاطب:** توسعه‌دهندهٔ جدید، بازبین خارجی، دستیار هوش مصنوعی
 > **دامنه:** کل مونوریپو (`backend/` + `frontend/`)
 
@@ -200,7 +200,7 @@
 |---|---|
 | `src/App.tsx` | تعریف همهٔ مسیرها؛ همهٔ صفحه‌ها با `lazy()` و `Suspense` |
 | `src/pages/` | ۵۱ صفحه: ۲۲ صفحهٔ فروشگاه (از جمله `ForgotPassword`, `ResetPassword`, `TrackOrder`, `AccountOrders`) + ۲۹ صفحهٔ ادمین (از جمله `AdminDashboard`, `AdminProductForm`, `AdminShipping`, `AdminChannels`, `InvoiceView`) |
-| `src/components/` | ۶۷ فایل: کامپوننت‌های عمومی + پوشهٔ `accounting/` (۷ فایل) + پوشهٔ `admin/shipping/` (۱۱ فایل: `shippingShared` + ۱۰ تب/فرم صفحهٔ ارسال) |
+| `src/components/` | ۷۲ فایل: کامپوننت‌های عمومی + پوشهٔ `accounting/` (۷ فایل) + پوشهٔ `admin/shipping/` (۱۱ فایل: `shippingShared` + ۱۰ تب/فرم صفحهٔ ارسال) + پوشهٔ `admin/dashboard/` (۵ فایل: `dashboardShared`، `dashboardStyles`، `SalesTrendChart`، `SalesChannelsChart`، `useDashboardLayout`) |
 | `src/context/` | `AuthContext`, `AdminAuthContext`, `CartContext`, `WishlistContext` |
 | `src/hooks/` | `useStoreSettings`, `useHeaderFooter`, `useSitePages`, `useBannerFonts`, `useStories`, `useTrustBadges`, `useContactChannels`, `usePageMeta`, `useRecentlyViewed`, `useMediaQuery` (پاسخ زندهٔ `matchMedia` برای رندر تک‌نسخه‌ای دسکتاپ/موبایل) |
 | `src/services/` | لایهٔ تماس با API (axios) — `api.ts`، `productFilters.ts`، `popups.ts`، `support.ts`، `contactChannels.ts`، `wishlist.ts`، … |
@@ -1221,7 +1221,7 @@ php artisan view:cache
 
 | # | مورد | توضیح | پیشنهاد |
 |---|---|---|---|
-| ۱ | فایل‌های بسیار بزرگ | **بخشی انجام شد (۱.۲۰):** `index.css` (۶٬۴۲۱ خط) به هستهٔ ۱۰۵ خطی + ۱۵ فایل `src/styles/*.css` (بزرگ‌ترین ۸۱۹) و `AdminShipping` (۴٬۴۲۲ خط) به `pages/AdminShipping.tsx` (۱۴۴ خط) + ۱۱ فایل `components/admin/shipping/` (بزرگ‌ترین ۷۵۹) شکسته شد؛ خروجی CSS بیلد از نظر ساختار (`@media`/`@layer`) و مجموعهٔ قواعد با قبل یکسان است. باقی‌مانده: `AdminProductForm` (~۳٬۴۰۰)، `AdminOrders` (~۲٬۷۰۰)، `AdminDashboard` (~۲٬۶۰۰)، `ProductDetail` (~۲٬۴۰۰)، `AdminMessaging` (~۲٬۲۰۰)، `AdminCustomers` (~۲٬۲۰۰) | ادامهٔ مرحله‌ای: هر تغییر یک فایل، بدون تغییر رفتار و با تأیید `tsc`/`lint`/`test`/`build` |
+| ۱ | فایل‌های بسیار بزرگ | **بخشی انجام شد (۱.۲۰ و ۱.۲۱):** `index.css` (۶٬۴۲۱ خط) به هستهٔ ۱۰۵ خطی + ۱۵ فایل `src/styles/*.css` (بزرگ‌ترین ۸۱۹)، `AdminShipping` (۴٬۴۲۲ خط) به `pages/AdminShipping.tsx` (۱۴۴ خط) + ۱۱ فایل `components/admin/shipping/` (بزرگ‌ترین ۷۵۹) و `AdminDashboard` (۲٬۵۸۵ خط) به `pages/AdminDashboard.tsx` (۱٬۱۲۷ خط: دریافت داده + چیدمان بخش‌ها) + ۵ فایل `components/admin/dashboard/` (بزرگ‌ترین ۵۰۸: `SalesTrendChart`) شکسته شد؛ رفتار بدون تغییر ماند. باقی‌مانده: `AdminProductForm` (~۳٬۴۰۶)، `AdminOrders` (~۲٬۷۱۲)، `ProductDetail` (~۲٬۴۱۹)، `AdminMessaging` (~۲٬۱۸۸)، `AdminCustomers` (~۲٬۱۷۰) | ادامهٔ مرحله‌ای: هر تغییر یک فایل، بدون تغییر رفتار و با تأیید `tsc`/`lint`/`test`/`build` |
 | ۲ | تست فرانت و لینت | **انجام شد (۱.۱۲، ۱.۱۳، ۱.۱۵ و ۱.۱۷):** Vitest + Testing Library (۱۰ فایل، ۵۹ تست) و لینت با oxlint (۰ خطا)؛ ESLint به‌خاطر نبود API کامپایلر در TypeScript 7 نصب نشد و Prettier عمداً اضافه نشد تا کل سورس بازقالب‌بندی نشود | افزودن تست برای فرم‌های حساس باقی‌مانده (چک‌اوت/پرداخت) |
 | ۳ | `sales_count` واقعی | **انجام شد (۱.۱۶):** `App\Services\Orders\OrderSalesService` در ثبت سفارش اضافه و در سه مسیر لغو (مشتری، مدیر، `orders:release-abandoned`) برمی‌گرداند؛ کاهش با شرط مثبت‌بودن. کامند `products:sync-sales-count` دادهٔ قدیمی را از `order_items` هم‌خوان می‌کند | اجرای یک‌بارهٔ کامند روی دادهٔ واقعی (با هماهنگی، طبق قاعدهٔ ۷ AGENTS.md) |
 | ۴ | عمر توکن | **انجام شد (۱.۱۷):** `sanctum.expiration` از `SANCTUM_EXPIRATION` (پیش‌فرض ۳۰ روز)، اینترسپتور ۴۰۱ نشست را پاک و پیام «نشست منقضی شده» می‌دهد؛ `TokenExpirationTest` + `api.test.ts` | refresh token و CSP همچنان باز است |
@@ -1351,6 +1351,7 @@ node -p "require('./package.json').dependencies.react"
 | 1.18 | 2026-11-17 | **کش خودکار ویترین + دفتر گردش موجودی + کارمزد COD:** `StorefrontCacheObserver` روی ۱۳ مدل ویترین/کاتالوگ/تنظیمات + `StorefrontCache` نسخه‌دار کلید فیلترها (بستن بدهی ۶)؛ جدول `stock_movements` + سرویس `Inventory\StockLedger` در ثبت سفارش، بازگردانی موجودی، فاکتور خرید، ویرایش دستی و ایمپورت + گزارش ادمین `GET /admin/reports/stock-movements` و بخش «گردش موجودی» در `/admin/reports` (بستن بدهی ۱۱)؛ کارمزد ثابت سفارش COD از `COD_FEE` با ستون `orders.cod_fee` و نمایش در چک‌اوت/`store-settings`؛ +۱۴ تست بک‌اند (۴۸۹ تست بک‌اند، ۵۹ تست فرانت) |
 | 1.19 | 2026-11-17 | **سئوی تصاویر + حذف تکرار DOM + نردبان حساب مهمان + یکپارچه‌سازی مسیر تصاویر:** ستون‌های ابعاد ذاتی (`banners.image_width/image_height/mobile_image_width/mobile_image_height`, `product_images.width/height`) با `App\Support\Media\ImageDimensions` و هوک `saving` مدل‌ها؛ `width`/`height` روی `<img>` بنر و کارت محصول (CLS)؛ `alt` تصویر اصلی محصول از پنل (`productCardImageAlt`)؛ `WebpConverter` + `config/media.php` + `MEDIA_WEBP*` و تبدیل آپلود بنر/محصول به WebP در صورت فعال بودن GD/Imagick؛ کامندهای `images:webp` و `images:migrate-legacy` (dry-run پیش‌فرض، `--apply` برای اجرا) و انتقال واقعی ۱ مسیر قدیمی؛ `hooks/useMediaQuery.ts` و رندر تک‌نسخه‌ای هیرو/بنر (حذف متن تکراری DOM)؛ شمارندهٔ H1 در پنل بنرها (`bannerH1Summary`) با تست `bannerText.test.ts`؛ کارت «ساخت حساب با همین شماره» در `/track-order` و پیش‌پرکردن `/register` (بستن بخش هدایت مهمان در بدهی ۱۴)؛ ۶ تست بک‌اند (`ImageMediaTest`) و ۵ تست فرانت |
 | 1.20 | 2026-11-18 | **شکستن فایل‌های بزرگ (بدهی ۱ — مرحلهٔ اول):** `index.css` (۶٬۴۲۱ خط) به هستهٔ ۱۰۵ خطی (`@import "tailwindcss"` + فونت + `@theme`) و ۱۵ فایل `src/styles/*.css` با ترتیب سند تقسیم شد و در `main.tsx` به همان ترتیب ایمپورت می‌شود (تأیید: هش بیلد CSS و ساختار ۴۳ بلوک `@media`/`@supports`/`@layer` و ۱٬۸۲۳ انتخابگر با قبل یکسان)؛ `AdminShipping.tsx` (۴٬۴۲۲ خط) به `pages/AdminShipping.tsx` (۱۴۴ خط) + `components/admin/shipping/` (۱۱ فایل: `shippingShared` با انواع/کمکی‌ها/`NoticeBox`/`Field` و ۱۰ تب) شکسته شد؛ بدون تغییر رفتار (tsc/lint/۶۴ تست/build سبز) |
+| 1.21 | 2026-11-19 | **شکستن فایل‌های بزرگ (بدهی ۱ — مرحلهٔ دوم):** `pages/AdminDashboard.tsx` (۲٬۵۸۵ خط) به پوستهٔ ۱٬۱۲۷ خطی (دریافت داده، آمار، `renderBlock`) + `components/admin/dashboard/` شکسته شد: `dashboardShared.ts` (۲۲۰: انواع `DashboardData`/`SalesTrend*`/`SalesChannelItem`، قالب‌بندهای فارسی عدد/قیمت/تاریخ، `quickLinks`، `channelPresentation`)، `dashboardStyles.ts` (۳۱۷: استایل تزریقی)، `SalesTrendChart.tsx` (۵۰۸: نمودار SVG تعاملی + `buildSmoothPath`)، `SalesChannelsChart.tsx` (۲۳۰: دونات/فهرست کانال‌ها)، `useDashboardLayout.ts` (۳۰۳: چیدمان شخصی هر مدیر، پنهان/ترتیب/کشیدن، میان‌برهای منو)؛ بدون تغییر رفتار (tsc/lint با ۰ خطا، ۶۴ تست، build سبز) |
 
 
 ---
