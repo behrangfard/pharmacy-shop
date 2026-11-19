@@ -8,6 +8,8 @@ use App\Models\ProductColor;
 use App\Models\ProductPackItem;
 use App\Models\ProductSizeGuide;
 use App\Models\ProductVariant;
+use App\Models\StockMovement;
+use App\Services\Inventory\StockLedger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -18,6 +20,10 @@ use Illuminate\Validation\ValidationException;
 
 class AdminProductController extends Controller
 {
+    public function __construct(private readonly StockLedger $ledger)
+    {
+    }
+
     /** حداکثر تعداد رنگ در پالت هر محصول. */
     private const MAX_COLORS = 15;
 
@@ -151,6 +157,23 @@ class AdminProductController extends Controller
         ) {
             $product = Product::create($validated);
 
+            /*
+             * موجودی اولیهٔ محصول در دفتر گردش موجودی ثبت می‌شود تا موجودی
+             * فعلی انبار از روی همین ردیف‌ها قابل ردیابی باشد.
+             */
+            if ((int) $product->stock > 0) {
+                $this->ledger->record(
+                    (int) $product->id,
+                    null,
+                    (int) $product->stock,
+                    StockMovement::TYPE_MANUAL,
+                    (int) $product->stock,
+                    null,
+                    null,
+                    'ثبت محصول با موجودی اولیه',
+                );
+            }
+
             if ($variants !== []) {
                 $this->syncVariants($product, $variants);
             }
@@ -244,7 +267,24 @@ class AdminProductController extends Controller
                 ->lockForUpdate()
                 ->firstOrFail();
 
+            $stockBefore = (int) $lockedProduct->stock;
+
             $lockedProduct->update($validated);
+
+            $stockDelta = (int) $lockedProduct->stock - $stockBefore;
+
+            if ($stockDelta !== 0) {
+                $this->ledger->record(
+                    (int) $lockedProduct->id,
+                    null,
+                    $stockDelta,
+                    StockMovement::TYPE_MANUAL,
+                    (int) $lockedProduct->stock,
+                    null,
+                    null,
+                    'ویرایش دستی موجودی محصول',
+                );
+            }
 
             if ($hasVariants) {
                 $this->syncVariants($lockedProduct, $variants);
@@ -1061,11 +1101,42 @@ class AdminProductController extends Controller
             ];
 
             if ($variant) {
+                $stockBefore = (int) $variant->stock;
+
                 $variant->update($data);
+
                 $savedVariantId = (int) $variant->id;
+
+                $stockDelta = (int) $variant->stock - $stockBefore;
+
+                if ($stockDelta !== 0) {
+                    $this->ledger->record(
+                        (int) $product->id,
+                        $variant,
+                        $stockDelta,
+                        StockMovement::TYPE_MANUAL,
+                        (int) $variant->stock,
+                        null,
+                        null,
+                        'ویرایش دستی موجودی تنوع',
+                    );
+                }
             } else {
                 $createdVariant = $product->variants()->create($data);
                 $savedVariantId = (int) $createdVariant->id;
+
+                if ((int) $createdVariant->stock > 0) {
+                    $this->ledger->record(
+                        (int) $product->id,
+                        $createdVariant,
+                        (int) $createdVariant->stock,
+                        StockMovement::TYPE_MANUAL,
+                        (int) $createdVariant->stock,
+                        null,
+                        null,
+                        'ثبت تنوع با موجودی اولیه',
+                    );
+                }
             }
 
             // Critical: include newly created IDs too, otherwise the cleanup

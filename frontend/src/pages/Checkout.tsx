@@ -367,12 +367,27 @@ function Checkout() {
   }, [netSubtotal, shippingCost, taxAmount]);
 
   /*
-   * سقف سفارش «پرداخت در محل» از تنظیمات سرور می‌آید. اگر مبلغ سبد از آن
-   * بیشتر شود، گزینهٔ COD غیرفعال و علتش نمایش داده می‌شود تا مشتری در مرحلهٔ
-   * ثبت به خطای 422 نخورد. اعتبارسنجی نهایی همیشه سمت سرور است.
+   * کارمزد «پرداخت در محل» از تنظیمات سرور می‌آید (config('payment.cod_fee')).
+   * مبلغ نهایی قابل پرداخت در محل = مبلغ سبد + کارمزد؛ سرور هم دقیقاً همین
+   * عدد را محاسبه و در ستون `orders.cod_fee` ذخیره می‌کند.
+   */
+  const codFee = Math.max(0, Number(storeSettings.cod_fee) || 0);
+
+  const codPayableTotal = useMemo(() => {
+    return Math.max(0, finalTotal + codFee);
+  }, [finalTotal, codFee]);
+
+  /*
+   * سقف سفارش «پرداخت در محل» از تنظیمات سرور می‌آید. اگر مبلغ سبد (به‌همراه
+   * کارمزد COD) از آن بیشتر شود، گزینهٔ COD غیرفعال و علتش نمایش داده می‌شود تا
+   * مشتری در مرحلهٔ ثبت به خطای 422 نخورد. اعتبارسنجی نهایی همیشه سمت سرور است.
    */
   const codMaxTotal = Math.max(0, Number(storeSettings.cod_max_total) || 0);
-  const codLimitExceeded = codMaxTotal > 0 && finalTotal > codMaxTotal;
+  const codLimitExceeded = codMaxTotal > 0 && codPayableTotal > codMaxTotal;
+
+  /** مبلغی که در خلاصهٔ سفارش به‌عنوان مبلغ نهایی نشان داده می‌شود. */
+  const payableTotal =
+    paymentMethod === "cod" ? codPayableTotal : finalTotal;
 
   useEffect(() => {
     if (codLimitExceeded && user && paymentMethod === "cod") {
@@ -1396,6 +1411,13 @@ function Checkout() {
                 <p className="mt-4 rounded-xl border border-brand-100 bg-brand-50 p-4 text-xs leading-6 text-brand-700">
                   مبلغ سفارش را هنگام تحویل به مأمور ارسال بپردازید. پس از
                   تحویل، پرداخت شما در سیستم ثبت می‌شود.
+                  {codFee > 0 && (
+                    <>
+                      {" "}
+                      کارمزد این روش {formatPrice(codFee)} تومان است و در مبلغ
+                      نهایی لحاظ شده است.
+                    </>
+                  )}
                 </p>
               )}
 
@@ -1530,6 +1552,16 @@ function Checkout() {
                     </span>
                   </div>
                 )}
+
+                {paymentMethod === "cod" && codFee > 0 && (
+                  <div className="flex items-center justify-between gap-4 text-sm">
+                    <span className="text-muted">کارمزد پرداخت در محل</span>
+
+                    <span className="font-bold text-ink">
+                      {formatPrice(codFee)} تومان
+                    </span>
+                  </div>
+                )}
               </div>
 
               <div className="mt-5 border-t border-line pt-5">
@@ -1538,7 +1570,7 @@ function Checkout() {
                     <p className="text-xs text-muted-soft">مبلغ نهایی</p>
 
                     <p className="mt-1 text-2xl font-black text-brand-700">
-                      {formatPrice(finalTotal)}
+                      {formatPrice(payableTotal)}
                     </p>
                   </div>
 

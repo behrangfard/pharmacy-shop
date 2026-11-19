@@ -1,9 +1,10 @@
 import { useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { ArrowRight, Cake, Lock, Mail, Phone, User } from "lucide-react";
+import { ArrowRight, Cake, CheckCircle2, Lock, Mail, Phone, User } from "lucide-react";
 
 import Layout from "../components/Layout";
 import JalaliDatePicker from "../components/JalaliDatePicker";
+import StoreChannelsSection from "../components/StoreChannelsSection";
 import { usePrivatePageMeta } from "../hooks/usePageMeta";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
@@ -17,9 +18,24 @@ function Register() {
   const location = useLocation();
   const { setUser } = useAuth();
 
+  const searchParams = useMemo(
+    () => new URLSearchParams(location.search),
+    [location.search],
+  );
+
+  /**
+   * شماره/ایمیل از صفحهٔ رهگیری با query می‌آید تا فرم ثبت‌نام پیش‌پر شود
+   * (نردبان ساخت حساب برای مهمان بعد از ثبت سفارش).
+   */
+  const prefilledPhone = (searchParams.get("phone") ?? "")
+    .replace(/\D/g, "")
+    .slice(0, 11);
+
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [mobile, setMobile] = useState("");
+  const [email, setEmail] = useState(
+    () => searchParams.get("email")?.trim() ?? "",
+  );
+  const [mobile, setMobile] = useState(prefilledPhone);
   const [birthDate, setBirthDate] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirmation, setPasswordConfirmation] = useState("");
@@ -109,21 +125,38 @@ function Register() {
 
   return (
     <Layout>
-      <main dir="rtl" className="max-w-md mx-auto px-6 py-16">
-        <div className="bg-white rounded-3xl border border-line shadow-sm p-8">
-          <div className="text-center mb-8">
-            <div className="w-16 h-16 mx-auto rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center">
-              <User size={30} />
+      <main dir="rtl" className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-14">
+        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
+          <div className="mx-auto w-full max-w-2xl rounded-3xl border border-line bg-white p-6 shadow-sm sm:p-8 lg:max-w-none">
+            <div className="mb-6 flex items-center gap-3 border-b border-line pb-5">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-brand-50 text-brand-600">
+                <User size={24} />
+              </span>
+
+              <div className="min-w-0">
+                <h1 className="text-xl font-black text-ink sm:text-2xl">
+                  ایجاد حساب کاربری
+                </h1>
+
+                <p className="mt-1 text-sm text-muted">
+                  برای خرید سریع‌تر حساب خود را بسازید
+                </p>
+              </div>
             </div>
 
-            <h1 className="text-2xl font-black text-ink mt-5">
-              ایجاد حساب کاربری
-            </h1>
-
-            <p className="text-muted mt-2">
-              برای خرید سریع‌تر حساب خود را بسازید
-            </p>
-          </div>
+          {prefilledPhone && (
+            <div
+              role="status"
+              className="mb-5 rounded-xl border border-brand-200 bg-brand-50 px-4 py-3 text-sm leading-7 text-brand-700"
+            >
+              این حساب با شمارهٔ{" "}
+              <span className="font-black" dir="ltr">
+                {prefilledPhone}
+              </span>{" "}
+              ساخته می‌شود. سفارش‌های قبلی همین شماره را می‌توانید با «شماره
+              سفارش» در صفحهٔ رهگیری ببینید و فاکتور بگیرید.
+            </div>
+          )}
 
           {error && (
             <div
@@ -135,6 +168,7 @@ function Register() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="grid gap-5 sm:grid-cols-2">
             <div>
               <label
                 htmlFor="register-name"
@@ -250,7 +284,9 @@ function Register() {
                 برای دریافت تخفیفات و جشنواره‌های مخصوص روز تولد شما.
               </p>
             </div>
+            </div>
 
+            <div className="grid gap-5 sm:grid-cols-2">
             <div>
               <label
                 htmlFor="register-password"
@@ -308,6 +344,11 @@ function Register() {
                 />
               </div>
             </div>
+            </div>
+
+            <p className="text-xs text-muted-soft">
+              رمز عبور را ترکیبی از حرف و رقم و حداقل ۸ کاراکتر انتخاب کنید.
+            </p>
 
             <button
               type="submit"
@@ -318,27 +359,57 @@ function Register() {
             </button>
           </form>
 
-          <div className="text-center mt-6">
-            <span className="text-sm text-muted">
+          <div className="mt-6 flex flex-col gap-3 border-t border-line pt-5 text-sm sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-muted">
               قبلاً حساب ساخته‌اید؟
-            </span>
+
+              <Link
+                to="/login"
+                state={{ from: redirectPath }}
+                className="font-bold text-brand-600 mr-2 hover:text-brand-700"
+              >
+                وارد شوید
+              </Link>
+            </p>
 
             <Link
-              to="/login"
-              state={{ from: redirectPath }}
-              className="text-sm text-brand-600 font-bold mr-2 hover:text-brand-700"
+              to="/"
+              className="inline-flex items-center gap-1.5 text-muted-soft transition-colors hover:text-brand-600"
             >
-              وارد شوید
+              <ArrowRight size={16} />
+              بازگشت به فروشگاه
             </Link>
           </div>
+          </div>
 
-          <Link
-            to="/"
-            className="flex items-center justify-center gap-2 text-sm text-muted-soft hover:text-brand-600 mt-6"
-          >
-            <ArrowRight size={16} />
-            بازگشت به فروشگاه
-          </Link>
+          <aside className="space-y-4 lg:sticky lg:top-24">
+            <StoreChannelsSection />
+
+            <div className="rounded-3xl border border-line bg-white p-5 shadow-sm">
+              <h2 className="text-sm font-black text-ink">
+                چرا حساب بسازم؟
+              </h2>
+
+              <ul className="mt-3 space-y-2.5 text-sm text-muted">
+                {[
+                  "خرید سریع‌تر با اطلاعات ذخیره‌شده",
+                  "پیگیری و لغو آسان سفارش‌ها",
+                  "ذخیرهٔ آدرس‌ها و لیست علاقه‌مندی‌ها",
+                  "تخفیف و هدیهٔ روز تولد",
+                ].map((benefit) => (
+                  <li key={benefit} className="flex items-start gap-2">
+                    <CheckCircle2
+                      size={16}
+                      className="mt-0.5 shrink-0 text-brand-500"
+                      aria-hidden="true"
+                    />
+
+                    <span className="leading-6">{benefit}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </aside>
         </div>
       </main>
     </Layout>

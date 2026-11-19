@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Banner;
 use App\Models\BannerSection;
 use App\Models\StoreSetting;
+use App\Services\Media\WebpConverter;
 use App\Support\BannerText;
+use App\Support\Media\ImageDimensions;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -320,12 +322,19 @@ class AdminBannerController extends Controller
             ], 500);
         }
 
+        // تبدیل به WebP (اگر افزونهٔ تصویر روی سرور فعال باشد؛ وگرنه بی‌اثر).
+        $path = WebpConverter::convert($path);
+
+        $dimensions = ImageDimensions::forPath($path);
+
         return response()->json([
             'success' => true,
             'message' => 'تصویر بنر بارگذاری شد.',
             'data' => [
                 'path' => $path,
                 'url' => Storage::disk('public')->url($path),
+                'width' => $dimensions['width'] ?? null,
+                'height' => $dimensions['height'] ?? null,
             ],
         ], 201);
     }

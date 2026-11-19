@@ -6,6 +6,8 @@ use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Models\StockMovement;
+use App\Services\Inventory\StockLedger;
 use App\Support\Spreadsheet\ImportText;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -21,6 +23,10 @@ use RuntimeException;
  */
 class ProductImportService
 {
+    public function __construct(private readonly StockLedger $ledger)
+    {
+    }
+
     public const SHEET_PRODUCTS = 'محصولات';
 
     public const SHEET_VARIANTS = 'تنوع‌ها';
@@ -632,8 +638,26 @@ class ProductImportService
                     ->first();
 
                 if ($product !== null) {
+                    $stockBefore = (int) $product->stock;
+
                     $product->fill($data);
                     $product->save();
+
+                    $stockDelta = (int) $product->stock - $stockBefore;
+
+                    if ($stockDelta !== 0) {
+                        $this->ledger->record(
+                            (int) $product->id,
+                            null,
+                            $stockDelta,
+                            StockMovement::TYPE_IMPORT,
+                            (int) $product->stock,
+                            null,
+                            null,
+                            'ایمپورت محصولات',
+                        );
+                    }
+
                     $products[$index]['action'] = 'update';
 
                     continue;
@@ -647,7 +671,21 @@ class ProductImportService
                 $data['is_taxable'] = $data['is_taxable'] ?? false;
                 $data['is_returnable'] = $data['is_returnable'] ?? true;
 
-                Product::create($data);
+                $createdProduct = Product::create($data);
+
+                if ((int) $createdProduct->stock > 0) {
+                    $this->ledger->record(
+                        (int) $createdProduct->id,
+                        null,
+                        (int) $createdProduct->stock,
+                        StockMovement::TYPE_IMPORT,
+                        (int) $createdProduct->stock,
+                        null,
+                        null,
+                        'ایمپورت محصولات',
+                    );
+                }
+
                 $products[$index]['action'] = 'create';
             }
 
@@ -675,8 +713,26 @@ class ProductImportService
                     ->first();
 
                 if ($variant !== null) {
+                    $stockBefore = (int) $variant->stock;
+
                     $variant->fill($data);
                     $variant->save();
+
+                    $stockDelta = (int) $variant->stock - $stockBefore;
+
+                    if ($stockDelta !== 0) {
+                        $this->ledger->record(
+                            (int) $variant->product_id,
+                            $variant,
+                            $stockDelta,
+                            StockMovement::TYPE_IMPORT,
+                            (int) $variant->stock,
+                            null,
+                            null,
+                            'ایمپورت تنوع‌ها',
+                        );
+                    }
+
                     $variants[$index]['action'] = 'update';
 
                     continue;
@@ -686,7 +742,21 @@ class ProductImportService
                 $data['stock'] = $data['stock'] ?? 0;
                 $data['is_active'] = $data['is_active'] ?? true;
 
-                ProductVariant::create($data);
+                $createdVariant = ProductVariant::create($data);
+
+                if ((int) $createdVariant->stock > 0) {
+                    $this->ledger->record(
+                        (int) $createdVariant->product_id,
+                        $createdVariant,
+                        (int) $createdVariant->stock,
+                        StockMovement::TYPE_IMPORT,
+                        (int) $createdVariant->stock,
+                        null,
+                        null,
+                        'ایمپورت تنوع‌ها',
+                    );
+                }
+
                 $variants[$index]['action'] = 'create';
             }
 

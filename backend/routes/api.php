@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\AdminBannerFontController;
 use App\Http\Controllers\Api\AdminBrandController;
 use App\Http\Controllers\Api\AdminCategoryController;
 use App\Http\Controllers\Api\AdminChequeController;
+use App\Http\Controllers\Api\AdminContactChannelController;
 use App\Http\Controllers\Api\AdminCouponController;
 use App\Http\Controllers\Api\AdminCustomerController;
 use App\Http\Controllers\Api\AdminExpenseController;
@@ -41,6 +42,7 @@ use App\Http\Controllers\Api\BannerController;
 use App\Http\Controllers\Api\BannerFontController;
 use App\Http\Controllers\Api\BrandController;
 use App\Http\Controllers\Api\CategoryController;
+use App\Http\Controllers\Api\ContactChannelController;
 use App\Http\Controllers\Api\CouponController;
 use App\Http\Controllers\Api\HeaderFooterController;
 use App\Http\Controllers\Api\OrderController;
@@ -1007,10 +1009,33 @@ Route::prefix('v1')->group(function () {
                     );
                 });
 
+            // Contact Channels (کانال‌های ارتباطی فروشگاه: تلگرام، واتساپ، بله، ایتا، اینستاگرام)
+            Route::middleware('admin.permission:'.AdminRole::CHANNELS_MANAGE)
+                ->group(function () {
+                    Route::get(
+                        '/channels',
+                        [AdminContactChannelController::class, 'index']
+                    );
+
+                    Route::put(
+                        '/channels/{contactChannel}',
+                        [AdminContactChannelController::class, 'update']
+                    );
+
+                    Route::patch(
+                        '/channels/{contactChannel}/status',
+                        [AdminContactChannelController::class, 'updateStatus']
+                    );
+                });
+
             // Reports (گزارش فروش)
             Route::middleware('admin.permission:'.AdminRole::REPORTS_VIEW)
                 ->group(function () {
                     Route::get('/reports/sales', [AdminReportController::class, 'sales']);
+                    Route::get(
+                        '/reports/stock-movements',
+                        [AdminReportController::class, 'stockMovements']
+                    );
                 });
 
             // Admin Accounts (مدیران فروشگاه)
@@ -1077,6 +1102,9 @@ Route::prefix('v1')->group(function () {
 
     // Public Trust Badges (اینماد و مجوزهای فوتر)
     Route::get('/trust-badges', [TrustBadgeController::class, 'index']);
+
+    // Public Contact Channels (کانال‌های ارتباطی: تلگرام، واتساپ، بله، ایتا، اینستاگرام)
+    Route::get('/contact-channels', [ContactChannelController::class, 'index']);
 
     // Public Stories (استوری‌های صفحهٔ اول؛ دایره‌های بالای دسته‌بندی‌ها)
     Route::get('/stories', [StoryController::class, 'index']);

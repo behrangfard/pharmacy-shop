@@ -6,7 +6,7 @@ import {
   type ReactNode,
 } from "react";
 
-import api from "../services/api";
+import api, { SESSION_EXPIRED_EVENT } from "../services/api";
 import { STORAGE_KEYS } from "../utils/storageKeys";
 
 export type UserRole = "admin" | "customer";
@@ -92,6 +92,21 @@ function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     loadUser();
+  }, []);
+
+  /*
+   * توکن‌های API عمر محدود دارند (پیش‌فرض ۳۰ روز). وقتی لایهٔ API پاسخ ۴۰۱
+   * می‌گیرد، نشست محلی را پاک و این رویداد را اعلام می‌کند؛ اینجا کاربر را
+   * خارج‌شده می‌کنیم تا گاردهای مسیرهای خصوصی به `/login` بفرستند.
+   */
+  useEffect(() => {
+    const handleSessionExpired = () => setUser(null);
+
+    window.addEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired);
+
+    return () => {
+      window.removeEventListener(SESSION_EXPIRED_EVENT, handleSessionExpired);
+    };
   }, []);
 
   const logout = async () => {

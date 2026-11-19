@@ -4,6 +4,8 @@ namespace App\Services\Accounting;
 
 use App\Models\Product;
 use App\Models\PurchaseInvoice;
+use App\Models\StockMovement;
+use App\Services\Inventory\StockLedger;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -17,6 +19,10 @@ use Illuminate\Support\Facades\DB;
  */
 class PurchaseInvoiceService
 {
+    public function __construct(private readonly StockLedger $ledger)
+    {
+    }
+
     /**
      * @param  array<string, mixed>  $data
      */
@@ -45,7 +51,7 @@ class PurchaseInvoiceService
                 $invoice->items()->create($item);
             }
 
-            $this->applyStock($items);
+            $this->applyStock($items, $invoice);
             $this->syncPayment($invoice, (float) ($data['paid_amount'] ?? 0));
 
             return $invoice->refresh()->load('items', 'supplier');
@@ -87,7 +93,7 @@ class PurchaseInvoiceService
                 $invoice->items()->create($item);
             }
 
-            $this->applyStock($items);
+            $this->applyStock($items, $invoice);
             $this->syncPayment($invoice, (float) ($data['paid_amount'] ?? 0));
 
             return $invoice->refresh()->load('items', 'supplier');
@@ -210,7 +216,7 @@ class PurchaseInvoiceService
     /**
      * @param  list<array<string, mixed>>  $items
      */
-    private function applyStock(array $items): void
+    private function applyStock(array $items, ?PurchaseInvoice $invoice = null): void
     {
         foreach ($items as $item) {
             if (! isset($item['product_id']) || $item['product_id'] === null) {
@@ -230,6 +236,17 @@ class PurchaseInvoiceService
                 'stock' => (int) $product->stock + (int) $item['quantity'],
                 'cost_price' => (float) $item['unit_cost'],
             ])->save();
+
+            $this->ledger->record(
+                (int) $product->id,
+                null,
+                (int) $item['quantity'],
+                StockMovement::TYPE_PURCHASE,
+                (int) $product->stock,
+                null,
+                $invoice,
+                'فاکتور خرید '.($invoice?->invoice_number ?? ''),
+            );
         }
     }
 
@@ -251,9 +268,26 @@ class PurchaseInvoiceService
                 continue;
             }
 
-            $product->forceFill([
-                'stock' => max((int) $product->stock - (int) $item->quantity, 0),
-            ])->save();
+            /*
+             * تغییر واقعی ممکن است با مقدار فاکتور یکی نباشد، چون موجودی منفی
+             * پذیرفته نمی‌شود و روی صفر بریده می‌شود؛ دفتر باید همان کاهش
+             * واقعی را ثبت کند تا جمع گردش با موجودی بخواند.
+             */
+            $previousStock = (int) $product->stock;
+            $newStock = max($previousStock - (int) $item->quantity, 0);
+
+            $product->forceFill(['stock' => $newStock])->save();
+
+            $this->ledger->record(
+                (int) $product->id,
+                null,
+                $newStock - $previousStock,
+                StockMovement::TYPE_PURCHASE_REVERSED,
+                $newStock,
+                null,
+                $invoice,
+                'برگشت فاکتور خرید '.$invoice->invoice_number,
+            );
         }
     }
 

@@ -7,6 +7,9 @@ export interface WishlistProductImage {
   id: number;
   path: string;
   alt?: string | null;
+  /** ابعاد ذاتی تصویر (از API) برای رزرو فضا و کاهش CLS. */
+  width?: number | null;
+  height?: number | null;
   sort_order?: number;
   is_primary?: boolean;
 }

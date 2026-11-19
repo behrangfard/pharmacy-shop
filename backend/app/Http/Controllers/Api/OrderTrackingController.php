@@ -75,6 +75,7 @@ class OrderTrackingController extends Controller
                 'coupon_discount' => (float) $order->coupon_discount,
                 'shipping_cost' => (float) $order->shipping_cost,
                 'tax_amount' => (float) $order->tax_amount,
+                'cod_fee' => (float) $order->cod_fee,
                 'total' => (float) $order->total,
                 'items' => $order->items->map(
                     fn ($item): array => [

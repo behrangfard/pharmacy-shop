@@ -302,6 +302,65 @@ export function isRenderableTextLayer(layer: BannerTextLayer): boolean {
   return layer.text.trim().length > 0;
 }
 
+/**
+ * تعداد تیترهای H1 قابل‌نمایش یک بنر.
+ *
+ * فقط لایه‌ای شمرده می‌شود که هم `tag: "h1"` داشته باشد و هم متنش خالی
+ * نباشد؛ چون لایهٔ خالی اصلاً رندر نمی‌شود و H1 هم نمی‌سازد.
+ */
+export function countBannerH1Layers(layers: unknown): number {
+  return sanitizeBannerTextLayers(layers).filter(
+    (layer) => layer.tag === "h1" && isRenderableTextLayer(layer),
+  ).length;
+}
+
+export interface BannerH1Summary {
+  /** تعداد کل H1هایی که در این صفحه رندر می‌شوند. */
+  count: number;
+  /** شناسه و عنوان بنرهایی که H1 دارند (برای نمایش در پنل). */
+  banners: { id: number; title: string; count: number }[];
+}
+
+/**
+ * شمارش H1 صفحهٔ اصلی در پنل بنرها.
+ *
+ * قاعدهٔ سئو: هر صفحه دقیقاً یک H1. بنرهای هیرو/نوار/شبکه و بنرهای موبایل
+ * همگی در همان صفحه رندر می‌شوند؛ پس مجموع H1 همهٔ آن‌ها باید صفر یا یک
+ * باشد. بنرهای `products_top` در صفحهٔ محصولات‌اند و اینجا شمرده نمی‌شوند.
+ */
+export function bannerH1Summary(
+  banners: {
+    id: number;
+    title: string | null;
+    position?: string | null;
+    is_active?: boolean | null;
+    text_layers?: unknown;
+  }[],
+): BannerH1Summary {
+  const summary: BannerH1Summary = { count: 0, banners: [] };
+
+  banners.forEach((banner) => {
+    if (banner.position === "products_top" || banner.is_active === false) {
+      return;
+    }
+
+    const count = countBannerH1Layers(banner.text_layers);
+
+    if (count === 0) {
+      return;
+    }
+
+    summary.count += count;
+    summary.banners.push({
+      id: banner.id,
+      title: (banner.title ?? "").trim() || `بنر #${banner.id}`,
+      count,
+    });
+  });
+
+  return summary;
+}
+
 /** رنگ هگز (#rgb/#rrggbb/#rrggbbaa) به rgba برای پس‌زمینهٔ کادر متن. */
 export function hexToRgba(hex: string, alpha = 1): string {
   const normalized = hex.trim().replace(/^#/, "");

@@ -55,6 +55,15 @@ export interface StorefrontBanner {
   mobile_image: string | null;
   /** متن جایگزین تصویر برای سئو و screen reader. */
   image_alt?: string | null;
+  /**
+   * ابعاد ذاتی تصویر دسکتاپ (از API). فروشگاه آن‌ها را روی تگ <img> می‌گذارد
+   * تا ارتفاع بنر پیش از بارگذاری رزرو شود (کاهش CLS).
+   */
+  image_width?: number | null;
+  image_height?: number | null;
+  /** ابعاد ذاتی تصویر موبایل؛ مستقل از تصویر دسکتاپ. */
+  mobile_image_width?: number | null;
+  mobile_image_height?: number | null;
   /** پردهٔ تیره پشت متن (none | light | medium | dark). */
   text_scrim?: string | null;
   /** لایه‌های متن مدیریت‌شده روی بنر (JSON از API). */
@@ -113,6 +122,31 @@ export function bannerImageAlt(
   const title = banner.title?.trim();
 
   return title && title.length > 0 ? title : "بنر فروشگاه";
+}
+
+/**
+ * ابعاد ذاتی تصویر همان نما (از پاسخ API). اگر مقدارها نامعتبر باشند
+ * `null` برمی‌گردد و تگ <img> بدون width/height رندر می‌شود.
+ */
+export function bannerImageDimensions(
+  banner: StorefrontBanner,
+  viewport: BannerViewport,
+): { width: number; height: number } | null {
+  const width =
+    viewport === "mobile" ? banner.mobile_image_width : banner.image_width;
+  const height =
+    viewport === "mobile" ? banner.mobile_image_height : banner.image_height;
+
+  if (
+    typeof width !== "number" ||
+    typeof height !== "number" ||
+    width < 1 ||
+    height < 1
+  ) {
+    return null;
+  }
+
+  return { width: Math.round(width), height: Math.round(height) };
 }
 
 /** پردهٔ تیره پشت متن؛ مقدار ناشناخته به none برمی‌گردد. */

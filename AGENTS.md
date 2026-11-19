@@ -26,11 +26,18 @@
 | فهرست مسیرهای API | `cd backend; php artisan route:list --path=api` |
 | مایگریشن | `cd backend; php artisan migrate` |
 | typecheck فرانت (گارد اصلی) | `cd frontend; npx tsc --noEmit` |
+| تست فرانت | `cd frontend; npm run test` |
+| لینت فرانت | `cd frontend; npm run lint` |
 | بیلد فرانت | `cd frontend; npm run build` |
 | اجرای محلی | `cd backend; php artisan serve` و `cd frontend; npm run dev` |
 
-تست فرانت و ESLint وجود ندارد؛ پس **هر تغییر فرانت باید با `tsc --noEmit` و
-`npm run build` تأیید شود** و تغییر بک‌اند با `php artisan test`.
+تست فرانت با **Vitest + Testing Library** (فایل‌های `*.test.ts(x)` کنار همان ماژول
+در `frontend/src`) و لینت با **oxlint** انجام می‌شود. ESLint نصب نشد چون
+TypeScript نسخهٔ ۷ (نیتیو) API کامپایلر جاوااسکریپت را ندارد و `typescript-eslint`
+تا نسخهٔ ۸ با آن سازگار نیست؛ برای مهاجرت به ESLint باید TypeScript به ≤۶.۰
+برگردد. پس **هر تغییر فرانت باید با `npm run lint`، `npm run test`،
+`npx tsc --noEmit` و `npm run build` تأیید شود** و تغییر بک‌اند با
+`php artisan test`.
 
 ## قواعد نشکن (Non-negotiables)
 
@@ -112,3 +119,19 @@
   `artisan test`).
 - اگر تصمیمی دو راه داشت و ابهام باقی بود، قبل از پیاده‌سازی کوتاه بپرس؛
   حدس نزن.
+
+### تسک‌های بزرگ (سبک نگه‌داشتن context)
+
+- هر بدهی فنی/قابلیت = **یک تسک کوتاه**؛ در پایان یک «هندآف» ۵–۱۰ خطی بنویس:
+  هدف، انجام‌شده، فایل‌های مهم، باقی‌مانده، دستورهای تأیید. تسک بعدی با همان
+  هندآف شروع شود، نه با تاریخچهٔ کامل.
+- خواندن **بازه‌ای** (`start_line`/`end_line`) به‌جای فایل کامل؛ اول جست‌وجو،
+  بعد خواندن. فایل‌های چندهزارخطی (`index.css`، صفحه‌های بزرگ پنل) کامل خوانده
+  نشوند.
+- خروجی سنگین (`php artisan test`، `npm run build`، `vitest`، `dir /s`) را به
+  فایل ریدایرکت کن و فقط خلاصه/انتهای آن را بخوان؛ فایل موقت را همان‌جا پاک کن.
+- `npx tsc --noEmit` بعد از هر تغییر فرانت کافی است؛ `npm run build` و کل
+  تست‌ها فقط یک‌بار در پایان اجرا شوند (`artisan test --filter=...` در میانه).
+- `.clineignore` را جدی بگیر: `vendor`، `node_modules`، `dist`، `storage` و
+  `.env*` از دسترس خارج‌اند؛ اگر خطایی داخل همان‌ها بود، متن خطا را از کاربر
+  بخواه (طبق قاعدهٔ ۱، خود فایل خوانده نشود).

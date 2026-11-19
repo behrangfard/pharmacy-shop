@@ -48,9 +48,14 @@ return [
     | considered expired. This will override any values set in the token's
     | "expires_at" attribute, but first-party sessions are not affected.
     |
+    | پیش‌فرض «بهرنگ شاپ» ۴۳۲۰۰ دقیقه (۳۰ روز) است؛ توکن‌ها در localStorage
+    | نگه داشته می‌شوند و بدون انقضا، توکن دزدیده‌شده تا ابد معتبر می‌ماند.
+    | مقدار ۰ یعنی بدون انقضا (فقط برای اشکال‌زدایی). سمت فرانت، پاسخ ۴۰۱
+    | نشست را پاک می‌کند و پیام «نشست منقضی شده» نشان می‌دهد.
+    |
     */
 
-    'expiration' => null,
+    'expiration' => (int) env('SANCTUM_EXPIRATION', 43200),
 
     /*
     |--------------------------------------------------------------------------

@@ -403,4 +403,64 @@ class CodOrderTest extends TestCase
         $this->assertSame('cancelled', $order->fresh()->status);
         $this->assertSame(0, (int) $coupon->fresh()->used_count);
     }
+
+    public function test_cod_fee_is_added_to_the_order_total(): void
+    {
+        config(['payment.cod_fee' => 5000]);
+
+        $user = User::factory()->create(['role' => 'user']);
+        $product = $this->createProduct(3);
+
+        $this->placeOrder($user, $product)
+            ->assertCreated()
+            ->assertJsonPath('data.cod_fee', '5000.00')
+            ->assertJsonPath('data.total', '105000.00');
+
+        $this->assertDatabaseHas('orders', [
+            'user_id' => $user->id,
+            'payment_method' => 'cod',
+            'cod_fee' => 5000,
+            'total' => 105000,
+        ]);
+    }
+
+    public function test_online_orders_never_pay_the_cod_fee(): void
+    {
+        config(['payment.cod_fee' => 5000]);
+
+        $user = User::factory()->create(['role' => 'user']);
+        $product = $this->createProduct(3);
+
+        $this->placeOrder($user, $product, [
+            'payment_method' => 'online',
+        ])->assertCreated()
+            ->assertJsonPath('data.cod_fee', '0.00')
+            ->assertJsonPath('data.total', '100000.00');
+    }
+
+    public function test_cod_cap_counts_the_cod_fee(): void
+    {
+        // مبلغ کالا دقیقاً روی سقف است، اما با کارمزد از سقف عبور می‌کند.
+        config([
+            'payment.cod_max_total' => 100000,
+            'payment.cod_fee' => 5000,
+        ]);
+
+        $user = User::factory()->create(['role' => 'user']);
+        $product = $this->createProduct(3);
+
+        $this->placeOrder($user, $product)->assertStatus(422);
+
+        $this->assertSame(0, Order::query()->count());
+        $this->assertSame(3, (int) $product->fresh()->stock);
+    }
+
+    public function test_store_settings_expose_the_cod_fee(): void
+    {
+        config(['payment.cod_fee' => 7500]);
+
+        $this->getJson('/api/v1/store-settings')
+            ->assertOk()
+            ->assertJsonPath('data.cod_fee', 7500);
+    }
 }

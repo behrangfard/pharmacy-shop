@@ -6,7 +6,7 @@ import {
   type ReactNode,
 } from "react";
 
-import { adminApi } from "../services/api";
+import { adminApi, ADMIN_SESSION_EXPIRED_EVENT } from "../services/api";
 import type { AuthUser } from "./AuthContext";
 import { STORAGE_KEYS } from "../utils/storageKeys";
 import { adminRoleLabel, hasAdminPermission } from "../utils/adminPermissions";
@@ -96,6 +96,23 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
 
     return () => {
       active = false;
+    };
+  }, []);
+
+  /*
+   * توکن پنل هم عمر محدود دارد؛ با ۴۰۱ لایهٔ API توکن را پاک و این رویداد را
+   * اعلام می‌کند تا وضعیت مدیر هم فوراً خارج‌شده شود (بدون نیاز به رفرش).
+   */
+  useEffect(() => {
+    const handleSessionExpired = () => setUserState(null);
+
+    window.addEventListener(ADMIN_SESSION_EXPIRED_EVENT, handleSessionExpired);
+
+    return () => {
+      window.removeEventListener(
+        ADMIN_SESSION_EXPIRED_EVENT,
+        handleSessionExpired,
+      );
     };
   }, []);
 

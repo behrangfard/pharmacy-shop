@@ -1,0 +1,495 @@
+/* ==================================================
+   منوی سایدبار قابل شخصی‌سازی
+   گروه‌بندی روشن‌تر (عمومی/فروشگاه/سفارشات/گزارشات)
+   + جابه‌جایی آیتم‌ها با کشیدن + پین در «دسترسی سریع»
+================================================== */
+.admin-sidebar .admin-nav-tools {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 6px;
+  padding: 5px 4px 7px;
+  margin: -4px 0 6px;
+  background: linear-gradient(180deg, #17152b 62%, rgba(23, 21, 43, 0.92));
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.12);
+}
+
+.admin-sidebar .admin-nav-tools-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: #8f93ad !important;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-sidebar .admin-nav-tools-actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  margin-inline-start: auto;
+}
+
+.admin-sidebar .admin-nav-tool-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 7px;
+  color: #cbd5e1 !important;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background-color 0.16s ease,
+    border-color 0.16s ease;
+}
+
+.admin-sidebar .admin-nav-tool-button:hover {
+  color: #fff !important;
+  background: rgba(255, 255, 255, 0.16) !important;
+  border-color: rgba(255, 255, 255, 0.24);
+}
+
+.admin-sidebar .admin-nav-tool-button.is-active {
+  color: #fff !important;
+  background: rgba(99, 102, 241, 0.55) !important;
+  border-color: rgba(165, 180, 252, 0.6);
+}
+
+.admin-sidebar .admin-nav-tools-hint {
+  margin: 0 5px 8px;
+  color: #9298b5 !important;
+  font-size: 9.5px;
+  line-height: 1.9;
+}
+
+/* سرتیتر گروه‌ها: آیکن + عنوان + شمارندهٔ آیتم‌ها */
+.admin-sidebar .admin-nav-heading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 9px 5px 5px !important;
+  padding: 0 1px 4px !important;
+  color: #a5a9c4 !important;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.09);
+}
+
+/* هم‌سطح‌سازی با قاعدهٔ قدیمی‌تر گروه‌ها (اولویت انتخابگر) */
+.admin-sidebar .admin-nav-group .admin-nav-heading {
+  margin: 9px 5px 5px !important;
+  padding: 0 1px 4px !important;
+}
+
+.admin-sidebar .admin-nav-group:first-child .admin-nav-heading {
+  margin-top: 2px !important;
+}
+
+.admin-sidebar .admin-nav-heading-icon {
+  display: inline-flex;
+  flex: 0 0 20px;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  color: #a5b4fc !important;
+  background: rgba(255, 255, 255, 0.07);
+  border-radius: 6px;
+}
+
+.admin-sidebar .admin-nav-heading-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: #ebaf0a !important;
+  font-size: 13px !important;
+  font-weight: 800;
+  letter-spacing: 0.25px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* سرتیتر گروه به‌صورت دکمهٔ باز/بسته شدن (dropdown) */
+.admin-sidebar .admin-nav-group button.admin-nav-heading {
+  width: 100%;
+  margin: 9px 5px 5px !important;
+  padding: 3px 4px 5px !important;
+  color: #a5a9c4 !important;
+  background: transparent !important;
+  border: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.09) !important;
+  border-radius: 9px 9px 0 0;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.admin-sidebar .admin-nav-group button.admin-nav-heading:hover {
+  color: #fff !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+}
+
+.admin-sidebar .admin-nav-group button.admin-nav-heading:focus-visible {
+  outline: 2px solid rgba(165, 180, 252, 0.55);
+  outline-offset: 1px;
+}
+
+.admin-sidebar .admin-nav-heading-chevron {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  color: #8b90ad !important;
+  transition: transform 0.2s ease;
+}
+
+.admin-sidebar .admin-nav-heading-chevron.is-collapsed {
+  transform: rotate(90deg);
+}
+
+/* نقطهٔ نشانگر: صفحهٔ فعلی داخل گروه بسته است */
+.admin-sidebar .admin-nav-heading-active-dot {
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  background: #a5b4fc;
+  border-radius: 50%;
+  box-shadow: 0 0 7px rgba(165, 180, 252, 0.85);
+}
+
+/* گروه بسته: بدون خط جداکننده و با فاصلهٔ کمتر تا منو خلوت شود */
+.admin-sidebar .admin-nav-group.is-collapsed .admin-nav-heading {
+  margin-bottom: 3px !important;
+  border-bottom-color: transparent !important;
+}
+
+.admin-sidebar .admin-nav-group.is-collapsed button.admin-nav-heading:hover {
+  border-bottom-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+/* پنل آیتم‌های هر گروه (با بستن گروه پنهان می‌شود) */
+.admin-sidebar .admin-nav-panel {
+  display: block;
+  padding-bottom: 2px;
+}
+
+/* ردیف‌های منو (لینک + دکمه‌های چیدمان) */
+.admin-sidebar .admin-nav-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  border-radius: 10px;
+}
+
+.admin-sidebar .admin-nav-row[draggable="true"] {
+  cursor: pointer;
+}
+
+/* فقط در حالت «چیدمان» ردیف‌ها برای جابه‌جایی کشیده می‌شوند */
+.admin-sidebar .admin-nav.is-editing .admin-nav-row[draggable="true"] {
+  cursor: grab;
+}
+
+.admin-sidebar .admin-nav.is-editing .admin-nav-row[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+.admin-sidebar .admin-nav-row.is-dragging {
+  opacity: 0.45;
+}
+
+.admin-sidebar .admin-nav-row .admin-nav-link {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.admin-nav.is-editing .admin-nav-link {
+  cursor: default;
+}
+
+.admin-nav.is-editing .admin-nav-link {
+  padding-inline-end: 78px !important;
+}
+
+.admin-sidebar .admin-nav-actions {
+  position: absolute;
+  inset-inline-end: 3px;
+  top: 50%;
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  padding: 2px 3px;
+  background: linear-gradient(
+    90deg,
+    rgba(23, 21, 43, 0.96),
+    rgba(23, 21, 43, 0.7)
+  );
+  border-radius: 8px;
+  transform: translateY(-50%);
+}
+
+.admin-sidebar .admin-nav-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 19px;
+  height: 19px;
+  padding: 0;
+  color: #a2a7c2 !important;
+  background: transparent !important;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.admin-sidebar .admin-nav-action:hover:not(:disabled) {
+  color: #fff !important;
+  background: rgba(255, 255, 255, 0.16) !important;
+}
+
+.admin-sidebar .admin-nav-action:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.admin-sidebar .admin-nav-action.is-pinned {
+  color: #c7d2fe !important;
+  background: rgba(99, 102, 241, 0.32) !important;
+}
+
+.admin-sidebar .admin-nav-pin-mark {
+  display: inline-flex;
+  flex: 0 0 15px;
+  align-items: center;
+  justify-content: center;
+  color: #8b93c9 !important;
+}
+
+/* خط نشانگر محل رها کردن آیتم */
+.admin-sidebar .admin-nav-drop-line {
+  display: block;
+  height: 2px;
+  margin: 1px 7px;
+  background: #818cf8;
+  border-radius: 2px;
+  box-shadow: 0 0 8px rgba(129, 140, 248, 0.65);
+}
+
+.admin-sidebar .admin-nav-group.is-drop-active {
+  background: rgba(99, 102, 241, 0.09);
+  border-radius: 10px;
+}
+
+.admin-sidebar .admin-nav-group.is-drop-active .admin-nav-heading {
+  border-bottom-color: rgba(165, 180, 252, 0.35);
+}
+
+.admin-sidebar .admin-nav-group-pinned .admin-nav-heading-icon {
+  color: #c7d2fe !important;
+  background: rgba(99, 102, 241, 0.22);
+}
+
+/* ==================================================
+   سرتیتر گروه + جابه‌جایی گروه‌های منو با ماوس
+================================================== */
+.admin-sidebar .admin-nav-group-head {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  /* کشیدن عنوان نباید متن صفحه را انتخاب کند */
+  user-select: none;
+}
+
+.admin-sidebar .admin-nav-group-head .admin-nav-heading {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.admin-sidebar .admin-nav-group-actions {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+  flex: 0 0 auto;
+}
+
+.admin-sidebar .admin-nav-group-actions .admin-nav-action {
+  background: transparent !important;
+}
+
+/* هنگام کشیدن عنوان یک گروه، بقیهٔ گروه‌ها محو می‌شوند تا مقصد روشن باشد */
+.admin-sidebar .admin-nav-group.is-group-dragging {
+  opacity: 0.55;
+}
+
+/*
+ * خط نشانگر محل رها کردن گروه بدون افزودن هیچ عنصری به منو کشیده می‌شود؛
+ * پس ظاهر سایدبار (فاصله‌ها و ارتفاع ردیف‌ها) هیچ تغییری نمی‌کند.
+ */
+.admin-sidebar .admin-nav-group {
+  position: relative;
+}
+
+.admin-sidebar .admin-nav-group.is-drop-before::before,
+.admin-sidebar .admin-nav-group.is-drop-after::after {
+  content: "";
+  position: absolute;
+  inset-inline: 6px;
+  height: 2px;
+  background: #818cf8;
+  border-radius: 2px;
+  box-shadow: 0 0 9px rgba(129, 140, 248, 0.6);
+  pointer-events: none;
+}
+
+.admin-sidebar .admin-nav-group.is-drop-before::before {
+  top: -2px;
+}
+
+.admin-sidebar .admin-nav-group.is-drop-after::after {
+  bottom: -2px;
+}
+
+.admin-sidebar .admin-nav-empty {
+  margin: 2px 6px 5px;
+  color: #8d93ae !important;
+  font-size: 9.5px;
+  line-height: 1.9;
+}
+
+/* ==================================================
+   تغییر دستی عرض سایدبار (کشیدن لبه) و اندازهٔ آیتم‌های منو
+================================================== */
+.admin-sidebar-resizer {
+  /* سایدبار همیشه به لبهٔ راست چسبیده است، پس از موقعیت فیزیکی استفاده
+     می‌کنیم تا دسته در تمام ارتفاع صفحه (حتی هنگام اسکرول منو) بماند. */
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  right: calc(var(--admin-sidebar-w, 264px) - 10px);
+  z-index: 6;
+  width: 10px;
+  background: transparent;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.admin-sidebar-resizer::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 3px;
+  width: 3px;
+  height: 44px;
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 3px;
+  transform: translateY(-50%);
+  transition:
+    height 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.admin-sidebar-resizer:hover::after,
+.admin-sidebar-resizer:focus-visible::after {
+  height: 68px;
+  background: #818cf8;
+}
+
+.admin-sidebar-resizer:focus-visible {
+  outline: none;
+}
+
+/* در حین کشیدن، مکان‌نما و انتخاب متن غیرفعال می‌شود */
+.admin-layout.is-resizing-sidebar,
+.admin-layout.is-resizing-sidebar * {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
+
+/* اندازهٔ آیتم‌های منو: فشرده / عادی (پیش‌فرض) / بزرگ */
+.admin-sidebar.is-density-compact .admin-nav-link {
+  min-height: 30px !important;
+  padding: 2px 8px !important;
+  gap: 7px !important;
+}
+
+.admin-sidebar.is-density-compact .admin-nav-icon {
+  flex: 0 0 24px !important;
+  width: 24px !important;
+  height: 24px !important;
+}
+
+.admin-sidebar.is-density-compact .admin-nav-label {
+  font-size: 12px !important;
+}
+
+.admin-sidebar.is-density-compact .admin-nav-heading {
+  margin: 6px 8px 3px !important;
+  font-size: 9px !important;
+}
+
+.admin-sidebar.is-density-relaxed .admin-nav-link {
+  min-height: 46px !important;
+  padding: 9px 11px !important;
+  gap: 10px !important;
+}
+
+.admin-sidebar.is-density-relaxed .admin-nav-icon {
+  flex: 0 0 32px !important;
+  width: 32px !important;
+  height: 32px !important;
+}
+
+.admin-sidebar.is-density-relaxed .admin-nav-label {
+  font-size: 15px !important;
+}
+
+.admin-sidebar.is-density-relaxed .admin-nav-heading {
+  margin: 12px 8px 6px !important;
+  font-size: 11px !important;
+}
+
+/* روی موبایل سایدبار کشویی است و تغییر عرض دستی ندارد */
+@media (max-width: 768px) {
+  .admin-sidebar-resizer {
+    display: none;
+  }
+}
+
+/* در ارتفاع‌های کم، سرتیتر گروه‌ها پنهان نشوند تا والدها همیشه واضح بمانند */
+@media (min-width: 769px) and (max-height: 860px) {
+  .admin-sidebar .admin-nav-heading {
+    display: flex !important;
+    margin: 7px 5px 4px !important;
+  }
+
+  .admin-sidebar .admin-nav-group button.admin-nav-heading {
+    margin: 5px 5px 3px !important;
+    padding: 2px 4px 4px !important;
+  }
+
+  .admin-sidebar .admin-nav-group + .admin-nav-group {
+    border-top: 0 !important;
+  }
+}
+

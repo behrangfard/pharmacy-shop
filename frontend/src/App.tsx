@@ -22,6 +22,7 @@ const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const TrackOrder = lazy(() => import("./pages/TrackOrder"));
 const Account = lazy(() => import("./pages/Account"));
+const AccountOrders = lazy(() => import("./pages/AccountOrders"));
 const OrderDetail = lazy(() => import("./pages/OrderDetail"));
 const InvoiceView = lazy(() => import("./pages/InvoiceView"));
 const SizeGuide = lazy(() => import("./pages/SizeGuide"));
@@ -51,6 +52,7 @@ const AdminSupport = lazy(() => import("./pages/AdminSupport"));
 const AdminContent = lazy(() => import("./pages/AdminContent"));
 const AdminAnnouncementBar = lazy(() => import("./pages/AdminAnnouncementBar"));
 const AdminTrustBadges = lazy(() => import("./pages/AdminTrustBadges"));
+const AdminChannels = lazy(() => import("./pages/AdminChannels"));
 const AdminStories = lazy(() => import("./pages/AdminStories"));
 const AdminPopups = lazy(() => import("./pages/AdminPopups"));
 const AdminHeaderFooter = lazy(() => import("./pages/AdminHeaderFooter"));
@@ -110,6 +112,7 @@ function App() {
               <Route path="/track-order" element={<TrackOrder />} />
 
               <Route path="/account" element={<Account />} />
+              <Route path="/account/orders" element={<AccountOrders />} />
               <Route
                 path="/account/orders/:orderNumber"
                 element={<OrderDetail />}
@@ -272,6 +275,17 @@ function App() {
                         section="نمادها و مجوزها"
                       >
                         <AdminTrustBadges />
+                      </AdminPermissionGuard>
+                    }
+                  />
+                  <Route
+                    path="channels"
+                    element={
+                      <AdminPermissionGuard
+                        permission={ADMIN_PERMISSIONS.channels}
+                        section="کانال‌های ارتباطی"
+                      >
+                        <AdminChannels />
                       </AdminPermissionGuard>
                     }
                   />

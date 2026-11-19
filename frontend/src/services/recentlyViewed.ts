@@ -22,6 +22,8 @@ export interface RecentlyViewedImage {
   id?: number;
   path: string;
   alt?: string | null;
+  width?: number | null;
+  height?: number | null;
   sort_order?: number | null;
   is_primary?: boolean | null;
 }

@@ -5,7 +5,7 @@ import { ArrowRight, Lock, Mail, LogIn } from "lucide-react";
 import Layout from "../components/Layout";
 import { usePrivatePageMeta } from "../hooks/usePageMeta";
 import { useAuth } from "../context/AuthContext";
-import api from "../services/api";
+import api, { consumeSessionExpiredNotice } from "../services/api";
 import { STORAGE_KEYS } from "../utils/storageKeys";
 
 function Login() {
@@ -18,7 +18,11 @@ function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  /*
+   * اگر لایهٔ API با ۴۰۱ نشست را بسته باشد، پیام «نشست منقضی شده» یک‌بار از
+   * sessionStorage خوانده و همین‌جا به کاربر نشان داده می‌شود.
+   */
+  const [error, setError] = useState(() => consumeSessionExpiredNotice());
 
   const requestedPath = (location.state as { from?: string } | null)?.from;
 

@@ -39,6 +39,7 @@ import {
   type StorefrontBanner,
 } from "../utils/banners";
 import { usePageMeta } from "../hooks/usePageMeta";
+import { DESKTOP_MEDIA_QUERY, useMediaQuery } from "../hooks/useMediaQuery";
 import { useRecentlyViewed } from "../hooks/useRecentlyViewed";
 import {
   BANNER_GRID_IMAGE_CLASS,
@@ -93,11 +94,10 @@ interface Product {
 
 const BANNER_AUTOPLAY_MS = 5000;
 
-const CAROUSEL_VISIBILITY: Record<BannerViewport, string> = {
-  desktop: "hidden md:block",
-  mobile: "md:hidden",
-};
-
+/**
+ * کلاس پنهان‌سازی نمای غیرفعال حذف شد: بخش‌های دسکتاپ/موبایل با
+ * `useMediaQuery` فقط در نمای مربوط رندر می‌شوند تا DOM تکرار نشود.
+ */
 const CAROUSEL_LABELS: Record<BannerViewport, string> = {
   desktop: "بنرهای صفحهٔ اصلی",
   mobile: "بنرهای صفحهٔ اصلی (موبایل)",
@@ -281,7 +281,7 @@ function HeroBannerCarousel({
 
   return (
     <section
-      className={`relative w-full ${CAROUSEL_VISIBILITY[view]}`}
+      className="relative w-full"
       aria-roledescription="carousel"
       aria-label={CAROUSEL_LABELS[view]}
       onMouseEnter={() => setPaused(true)}
@@ -595,6 +595,14 @@ function BannerGrid({
 
 function Home() {
   const recentlyViewed = useRecentlyViewed();
+
+  /**
+   * نمای فعلی: فقط بخش مربوط به همان نما رندر می‌شود. پیش‌تر هر دو نسخهٔ
+   * دسکتاپ/موبایل در DOM بودند و متن بنر دو بار تکرار می‌شد؛ با این روش
+   * تیتر تکراری حذف می‌شود و کاروسلِ نمای دیگر در حافظه نمی‌نشیند.
+   */
+  const isDesktop = useMediaQuery(DESKTOP_MEDIA_QUERY, true);
+
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
   const [newestProducts, setNewestProducts] = useState<Product[]>([]);
   const [featuredError, setFeaturedError] = useState("");
@@ -809,7 +817,7 @@ function Home() {
         هر بخش تصویر، تعداد، ارتفاع و گردی گوشهٔ خودش را دارد و در نبود بنر
         هیچ بنر/تصویر پیش‌فرضی نمایش داده نمی‌شود.
       */}
-      {heroSection !== null && desktopHeroBanners.length > 0 && (
+      {isDesktop && heroSection !== null && desktopHeroBanners.length > 0 && (
         <section
           className={`relative hidden pt-4 md:block md:pt-6 ${BANNER_SECTION_SURFACE_CLASS}`}
         >
@@ -823,7 +831,7 @@ function Home() {
         </section>
       )}
 
-      {mobileTopSection !== null && mobileTopVisibleBanners.length > 0 && (
+      {!isDesktop && mobileTopSection !== null && mobileTopVisibleBanners.length > 0 && (
         <section
           className={`relative pt-4 md:hidden ${BANNER_SECTION_SURFACE_CLASS}`}
         >
@@ -868,27 +876,18 @@ function Home() {
                   >
                     <BannerImage
                       banner={banner}
+                      view={isDesktop ? "desktop" : "mobile"}
                       alt={stripText || undefined}
                       desktopClassName="block h-auto w-full transition-transform duration-500 ease-out group-hover:scale-[1.02]"
                       mobileClassName="block h-auto w-full transition-transform duration-500 ease-out group-hover:scale-[1.02]"
                     />
 
                     {stripHasLayers && (
-                      <>
-                        <BannerTextLayers
-                          layers={stripLayers}
-                          viewport="mobile"
-                          scrim={bannerTextScrim(banner)}
-                          className="md:hidden"
-                        />
-
-                        <BannerTextLayers
-                          layers={stripLayers}
-                          viewport="desktop"
-                          scrim={bannerTextScrim(banner)}
-                          className="hidden md:block"
-                        />
-                      </>
+                      <BannerTextLayers
+                        layers={stripLayers}
+                        viewport={isDesktop ? "desktop" : "mobile"}
+                        scrim={bannerTextScrim(banner)}
+                      />
                     )}
 
                     {stripText && (
@@ -1048,7 +1047,7 @@ function Home() {
         - موبایل: بنر «وسط صفحه» (home_mobile_middle)
         هر دو با چیدمان/تعداد، ارتفاع و گردی گوشهٔ مستقل خودشان.
       */}
-      {gridSection && desktopGridBanners.length > 0 && (
+      {isDesktop && gridSection && desktopGridBanners.length > 0 && (
         <section
           className={`hidden pt-10 pb-10 md:block ${BANNER_SECTION_SURFACE_CLASS}`}
         >
@@ -1082,7 +1081,8 @@ function Home() {
         </section>
       )}
 
-      {mobileMiddleSection !== null &&
+      {!isDesktop &&
+        mobileMiddleSection !== null &&
         mobileMiddleVisibleBanners.length > 0 && (
           <section
             className={`pt-8 pb-10 md:hidden ${BANNER_SECTION_SURFACE_CLASS}`}

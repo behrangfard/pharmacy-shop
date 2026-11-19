@@ -84,6 +84,7 @@ export const ADMIN_SIDEBAR_DEFAULT_GROUPS: Record<
     "/admin/wishlist",
     "/admin/support",
     "/admin/messaging",
+    "/admin/channels",
   ],
   reports: [
     "/admin/reports",

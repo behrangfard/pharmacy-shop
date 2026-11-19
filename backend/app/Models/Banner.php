@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Support\BannerText;
+use App\Support\Media\ImageDimensions;
 use Illuminate\Database\Eloquent\Model;
 
 class Banner extends Model
@@ -56,7 +57,52 @@ class Banner extends Model
         'text_layers' => 'array',
         'starts_at' => 'datetime',
         'ends_at' => 'datetime',
+        'image_width' => 'integer',
+        'image_height' => 'integer',
+        'mobile_image_width' => 'integer',
+        'mobile_image_height' => 'integer',
     ];
+
+    protected static function booted(): void
+    {
+        /*
+         * پیش از ذخیره، ابعاد ذاتی تصویر از روی فایل خوانده می‌شود تا فروشگاه
+         * بتواند width/height را روی تگ <img> بگذارد و ارتفاع بنر پیش از
+         * بارگذاری رزرو شود (کاهش CLS). اگر فایل پیدا نشود، مقدارها null
+         * می‌مانند و هیچ خطایی رخ نمی‌دهد.
+         */
+        static::saving(function (self $banner): void {
+            $banner->syncImageDimensions();
+        });
+    }
+
+    /**
+     * پرکردن عرض/ارتفاع تصویر دسکتاپ و موبایل؛ فقط برای تصویری که تازه عوض
+     * شده یا ابعادش خالی است (برای پرهیز از خواندن تکراری فایل در هر ذخیره).
+     */
+    public function syncImageDimensions(): void
+    {
+        $pairs = [
+            ['image', 'image_width', 'image_height'],
+            ['mobile_image', 'mobile_image_width', 'mobile_image_height'],
+        ];
+
+        foreach ($pairs as [$pathColumn, $widthColumn, $heightColumn]) {
+            $path = $this->getAttribute($pathColumn);
+            $needsSync = $this->isDirty($pathColumn)
+                || $this->getAttribute($widthColumn) === null
+                || $this->getAttribute($heightColumn) === null;
+
+            if (! $needsSync) {
+                continue;
+            }
+
+            $dimensions = ImageDimensions::forPath(is_string($path) ? $path : null);
+
+            $this->setAttribute($widthColumn, $dimensions['width'] ?? null);
+            $this->setAttribute($heightColumn, $dimensions['height'] ?? null);
+        }
+    }
 
     /**
      * متن لایه‌ای ثبت شده است؟

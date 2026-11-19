@@ -10,6 +10,7 @@ use App\Models\ProductVariant;
 use App\Services\Messaging\OrderStatusMessenger;
 use App\Services\Notifications\AdminNotificationService;
 use App\Services\Orders\OrderCouponService;
+use App\Services\Orders\OrderSalesService;
 use App\Support\PaymentMethod;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -23,7 +24,8 @@ class AdminOrderController extends Controller
     public function __construct(
         private readonly OrderStatusMessenger $orderStatusMessenger,
         private readonly AdminNotificationService $notifications,
-        private readonly OrderCouponService $coupons
+        private readonly OrderCouponService $coupons,
+        private readonly OrderSalesService $sales
     ) {
     }
 
@@ -355,6 +357,9 @@ class AdminOrderController extends Controller
                 $order->stock_restored_at = now();
                 $order->status = 'cancelled';
                 $order->save();
+
+                // شمارندهٔ فروش محصولات مثل موجودی برمی‌گردد.
+                $this->sales->revert($order);
 
                 // لغو توسط مدیر هم سهمیهٔ کوپن را آزاد می‌کند.
                 $this->coupons->release($order);

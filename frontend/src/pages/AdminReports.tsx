@@ -44,6 +44,35 @@ interface SalesReport {
   }[];
 }
 
+/** یک ردیف دفتر «گردش موجودی» (stock_movements). */
+interface StockMovementRow {
+  id: number;
+  type: string;
+  type_label: string | null;
+  quantity: number;
+  stock_after: number;
+  note: string | null;
+  created_at: string | null;
+  product: { id: number; name: string; slug: string } | null;
+  variant: { id: number; name: string; sku: string | null } | null;
+  order_number: string | null;
+  purchase_invoice_number: string | null;
+  user_name: string | null;
+}
+
+interface StockMovementsReport {
+  range: { days: number; from: string };
+  summary: { decrease_total: number; increase_total: number };
+  types: { value: string; label: string }[];
+  movements: StockMovementRow[];
+  meta: {
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+  };
+}
+
 const statusLabels: Record<string, string> = {
   pending: "در انتظار بررسی",
   processing: "در حال پردازش",
@@ -58,6 +87,16 @@ function AdminReports() {
   const [report, setReport] = useState<SalesReport | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  /*
+   * گردش موجودی جدول جداگانه‌ای دارد (دفتر stock_movements) و با فیلتر نوع
+   * تغییر و صفحه‌بندی مستقل بارگذاری می‌شود.
+   */
+  const [movements, setMovements] = useState<StockMovementsReport | null>(null);
+  const [movementsLoading, setMovementsLoading] = useState(true);
+  const [movementsError, setMovementsError] = useState("");
+  const [movementType, setMovementType] = useState("");
+  const [movementPage, setMovementPage] = useState(1);
 
   const loadReport = useCallback(async () => {
     setLoading(true);
@@ -85,6 +124,37 @@ function AdminReports() {
   useEffect(() => {
     void loadReport();
   }, [loadReport]);
+
+  const loadMovements = useCallback(async () => {
+    setMovementsLoading(true);
+    setMovementsError("");
+
+    try {
+      const response = await adminApi.get("/admin/reports/stock-movements", {
+        params: {
+          days,
+          page: movementPage,
+          ...(movementType ? { type: movementType } : {}),
+        },
+      });
+
+      const data = response.data?.data;
+
+      if (!data?.movements) {
+        throw new Error("ساختار پاسخ گردش موجودی معتبر نیست.");
+      }
+
+      setMovements(data);
+    } catch (err) {
+      setMovementsError(getAdminErrorMessage(err));
+    } finally {
+      setMovementsLoading(false);
+    }
+  }, [days, movementPage, movementType]);
+
+  useEffect(() => {
+    void loadMovements();
+  }, [loadMovements]);
 
   const maxDailyRevenue = useMemo(() => {
     if (!report?.daily?.length) return 0;
@@ -395,6 +465,175 @@ function AdminReports() {
                   </tbody>
                 </table>
               </div>
+            )}
+          </section>
+          <section className="admin-card">
+            <div className="admin-card-head">
+              <div>
+                <h2 className="admin-card-title">گردش موجودی</h2>
+                <p className="admin-card-desc">
+                  هر کاهش/افزایش موجودی محصول یا تنوع با علت آن: ثبت سفارش،
+                  بازگردانی سفارش، فاکتور خرید، ویرایش دستی یا ایمپورت.
+                </p>
+              </div>
+
+              <div className="admin-toolbar" style={{ marginBottom: 0 }}>
+                <select
+                  className="admin-select"
+                  aria-label="نوع تغییر موجودی"
+                  value={movementType}
+                  onChange={(event) => {
+                    setMovementType(event.target.value);
+                    setMovementPage(1);
+                  }}
+                >
+                  <option value="">همهٔ علت‌ها</option>
+                  {(movements?.types ?? []).map((type) => (
+                    <option key={type.value} value={type.value}>
+                      {type.label}
+                    </option>
+                  ))}
+                </select>
+
+                <button
+                  type="button"
+                  className="admin-btn admin-btn-sm"
+                  onClick={() => void loadMovements()}
+                  disabled={movementsLoading}
+                >
+                  {movementsLoading ? "..." : "به‌روزرسانی"}
+                </button>
+              </div>
+            </div>
+
+            {movementsError && (
+              <div className="admin-alert admin-alert-error" role="alert">
+                <span aria-hidden="true">!</span>
+                <span>{movementsError}</span>
+              </div>
+            )}
+
+            {movements && (
+              <>
+                <div className="admin-toolbar">
+                  <span className="admin-badge admin-badge-red">
+                    کاهش موجودی:{" "}
+                    {formatAdminNumber(movements.summary.decrease_total)} عدد
+                  </span>
+
+                  <span className="admin-badge admin-badge-green">
+                    افزایش موجودی:{" "}
+                    {formatAdminNumber(movements.summary.increase_total)} عدد
+                  </span>
+
+                  <span className="admin-badge admin-badge-gray">
+                    {formatAdminNumber(movements.meta.total)} ردیف در{" "}
+                    {formatAdminNumber(movements.range.days)} روز اخیر
+                  </span>
+                </div>
+
+                {movements.movements.length === 0 ? (
+                  <p className="admin-empty">
+                    در این بازه تغییری در موجودی ثبت نشده است.
+                  </p>
+                ) : (
+                  <div className="admin-table-wrap">
+                    <table className="admin-table">
+                      <thead>
+                        <tr>
+                          <th>تاریخ</th>
+                          <th>کالا</th>
+                          <th>علت</th>
+                          <th>تغییر</th>
+                          <th>موجودی پس از تغییر</th>
+                          <th>مرجع</th>
+                          <th>کاربر</th>
+                        </tr>
+                      </thead>
+
+                      <tbody>
+                        {movements.movements.map((movement) => (
+                          <tr key={movement.id}>
+                            <td dir="ltr">
+                              {formatAdminDate(movement.created_at, true)}
+                            </td>
+
+                            <td>
+                              {movement.product?.name ?? "—"}
+                              {movement.variant
+                                ? ` — ${movement.variant.name}`
+                                : ""}
+                            </td>
+
+                            <td>{movement.type_label ?? movement.type}</td>
+
+                            <td>
+                              <span
+                                className={`admin-badge ${
+                                  movement.quantity < 0
+                                    ? "admin-badge-red"
+                                    : "admin-badge-green"
+                                }`}
+                              >
+                                {movement.quantity > 0 ? "+" : "−"}
+                                {formatAdminNumber(Math.abs(movement.quantity))}
+                              </span>
+                            </td>
+
+                            <td>{formatAdminNumber(movement.stock_after)}</td>
+
+                            <td dir="ltr">
+                              {movement.order_number ??
+                                movement.purchase_invoice_number ??
+                                "—"}
+                            </td>
+
+                            <td>{movement.user_name ?? "—"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+
+                {movements.meta.last_page > 1 && (
+                  <div className="admin-toolbar">
+                    <button
+                      type="button"
+                      className="admin-btn admin-btn-sm"
+                      onClick={() =>
+                        setMovementPage((page) => Math.max(1, page - 1))
+                      }
+                      disabled={
+                        movementsLoading || movements.meta.current_page <= 1
+                      }
+                    >
+                      صفحهٔ قبل
+                    </button>
+
+                    <span className="admin-badge admin-badge-gray">
+                      صفحهٔ {formatAdminNumber(movements.meta.current_page)} از{" "}
+                      {formatAdminNumber(movements.meta.last_page)}
+                    </span>
+
+                    <button
+                      type="button"
+                      className="admin-btn admin-btn-sm"
+                      onClick={() =>
+                        setMovementPage((page) =>
+                          Math.min(movements.meta.last_page, page + 1),
+                        )
+                      }
+                      disabled={
+                        movementsLoading ||
+                        movements.meta.current_page >= movements.meta.last_page
+                      }
+                    >
+                      صفحهٔ بعد
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </section>
         </>

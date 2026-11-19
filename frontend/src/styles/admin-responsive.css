@@ -1,0 +1,424 @@
+/* ==================================================
+   واکنش‌گرایی: تبلت و موبایل
+================================================== */
+
+@media (max-width: 768px) {
+  /* ساختار اصلی پنل مدیریت */
+  .admin-main {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    margin-right: 0 !important;
+    padding: 16px !important;
+    box-sizing: border-box;
+    overflow-x: hidden;
+  }
+
+  .admin-main input,
+  .admin-main select,
+  .admin-main form,
+  .admin-main button {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* منوی موبایل */
+  .admin-mobile-menu-button {
+    display: flex;
+    margin-bottom: 16px;
+  }
+
+  .admin-sidebar {
+    z-index: 1000;
+    transition: transform 0.25s ease;
+    transform: translateX(100%);
+  }
+
+  .admin-sidebar.is-open {
+    transform: translateX(0);
+  }
+
+  .admin-mobile-overlay {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 999;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: rgba(15, 23, 42, 0.45);
+  }
+
+  .admin-sidebar {
+    z-index: 1000;
+  }
+
+  .admin-mobile-close-button {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    width: 100%;
+    padding: 10px 12px;
+    margin-bottom: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 8px;
+    background: transparent;
+    color: #fff;
+    font-family: inherit;
+    font-size: 14px;
+    cursor: pointer;
+  }
+
+  /* سفارش‌ها: جدول دسکتاپ و کارت موبایل */
+  .admin-orders-desktop-table {
+    display: none;
+  }
+
+  .admin-orders-mobile-cards {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    width: 100%;
+    min-width: 0;
+    padding: 12px;
+    box-sizing: border-box;
+  }
+
+  .admin-orders-mobile-cards article {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .admin-orders-filters {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 12px;
+  }
+
+  .admin-orders-filters label {
+    min-width: 0;
+  }
+
+  .admin-orders-filters input,
+  .admin-orders-filters select {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .admin-orders-filters button[type="submit"] {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .admin-orders-table th,
+  .admin-orders-table td {
+    visibility: visible;
+    vertical-align: middle;
+  }
+
+  .admin-order-details-modal {
+    padding: 14px !important;
+    border-radius: 12px !important;
+    width: 100% !important;
+    max-height: 94vh !important;
+    overflow-y: auto;
+  }
+
+  .admin-order-details-modal h2 {
+    font-size: 18px !important;
+    overflow-wrap: anywhere;
+  }
+
+  .admin-order-details-modal table {
+    font-size: 12px;
+  }
+
+  /* محصولات: کارت موبایل */
+  .admin-products-desktop-table {
+    display: none;
+  }
+
+  .admin-products-mobile-cards {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    padding: 12px;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .admin-products-mobile-cards article {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  /* داشبورد */
+  .admin-dashboard-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 12px !important;
+  }
+
+  .admin-dashboard-stats > div {
+    min-width: 0;
+    padding: 14px !important;
+    overflow-wrap: anywhere;
+  }
+
+  .admin-dashboard-stats > div > div:nth-child(2) {
+    font-size: 20px !important;
+    overflow-wrap: anywhere;
+  }
+
+  .admin-dashboard-panels {
+    grid-template-columns: minmax(0, 1fr) !important;
+    gap: 16px !important;
+  }
+
+  .admin-dashboard-panels > section {
+    min-width: 0;
+    padding: 16px !important;
+  }
+
+  .admin-dashboard-order-statuses {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  .admin-dashboard-order-statuses > div {
+    min-width: 0;
+    padding: 14px !important;
+    gap: 10px;
+  }
+
+  .admin-dashboard-order-statuses > div > span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  .admin-dashboard-panels section h2 {
+    font-size: 17px !important;
+  }
+
+  /* فرم محصول */
+  .admin-product-form {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .admin-product-form input,
+  .admin-product-form select,
+  .admin-product-form textarea {
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .admin-product-form img {
+    max-width: 100%;
+    height: auto;
+  }
+
+  .admin-product-form section {
+    padding: 14px !important;
+    border-radius: 12px !important;
+  }
+
+  .admin-product-form button {
+    max-width: 100%;
+    min-height: 42px;
+    box-sizing: border-box;
+  }
+
+  /* دسته‌بندی‌ها: کارت به جای جدول */
+  .admin-categories-page {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .admin-categories-heading {
+    align-items: flex-start;
+    margin-bottom: 18px;
+  }
+
+  .admin-categories-title {
+    font-size: 22px;
+  }
+
+  .admin-categories-panel {
+    padding: 14px;
+    border-radius: 10px;
+    margin-bottom: 18px;
+  }
+
+  .admin-categories-section-title {
+    font-size: 17px;
+  }
+
+  .admin-categories-form-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  .admin-categories-full-width {
+    grid-column: auto;
+  }
+
+  .admin-categories-list-heading {
+    align-items: stretch;
+  }
+
+  .admin-categories-list-heading .admin-categories-section-title {
+    margin-bottom: 2px;
+  }
+
+  .admin-categories-list-heading input {
+    width: 100%;
+    max-width: none !important;
+  }
+
+  .admin-categories-desktop {
+    display: none !important;
+  }
+
+  .admin-categories-mobile {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    width: 100%;
+    min-width: 0;
+  }
+
+  .admin-categories-form-actions button {
+    flex: 1 1 auto;
+  }
+}
+
+/* ==================================================
+   واکنش‌گرایی: گوشی‌های کوچک
+================================================== */
+
+@media (max-width: 380px) {
+  /* داشبورد */
+  .admin-dashboard-stats {
+    grid-template-columns: minmax(0, 1fr) !important;
+  }
+
+  /* فرم محصول */
+  .admin-product-form section {
+    padding: 10px !important;
+  }
+
+  .admin-product-form button {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  /* کارت دسته‌بندی */
+  .admin-categories-panel {
+    padding: 11px;
+  }
+
+  .admin-category-card {
+    padding: 12px;
+  }
+
+  .admin-category-card-details {
+    gap: 12px 8px;
+  }
+
+  .admin-category-card-actions .admin-category-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-category-card-actions .admin-category-actions button:last-child {
+    grid-column: auto;
+  }
+}
+
+/* اصلاح عرض جدول محصولات در دسکتاپ */
+@media (min-width: 769px) {
+  .admin-products-desktop,
+  .admin-products-desktop .admin-table-wrapper,
+  .admin-products-desktop .table-wrapper {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    flex: 1 1 100%;
+  }
+
+  .admin-products-desktop table {
+    width: 100%;
+    min-width: 100%;
+    table-layout: auto;
+  }
+}
+
+/* اصلاح عرض صفحه محصولات در دسکتاپ */
+@media (min-width: 769px) {
+  .admin-main {
+    min-width: 0;
+  }
+
+  .admin-products-page {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .admin-products-panel {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  .admin-products-table-wrapper {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  table.admin-products-desktop-table {
+    display: table;
+    width: 100%;
+    min-width: 950px;
+    max-width: none;
+    table-layout: auto;
+    border-collapse: collapse;
+  }
+
+  .admin-products-mobile-cards {
+    display: none;
+  }
+}
+
+/* حفظ نمایش کارت‌ها در موبایل */
+@media (max-width: 768px) {
+  .admin-main {
+    flex: 1 1 100% !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin-right: 0 !important;
+    overflow-x: hidden;
+  }
+
+  .admin-products-desktop-table {
+    display: none !important;
+  }
+
+  .admin-products-mobile-cards {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+}
+

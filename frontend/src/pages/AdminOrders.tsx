@@ -115,6 +115,9 @@ interface Order {
 
   tax_amount?: string | number;
 
+  /** کارمزد «پرداخت در محل» (تومان)؛ فقط سفارش‌های COD مقدار دارند. */
+  cod_fee?: string | number;
+
   total: string | number;
 
   status: OrderStatus;
@@ -867,11 +870,11 @@ function AdminOrders() {
     >
       <style>{`
 
-        .admin-orders-page \*,
+        .admin-orders-page *,
 
-        .admin-orders-page \*::before,
+        .admin-orders-page *::before,
 
-        .admin-orders-page \*::after {
+        .admin-orders-page *::after {
 
           box-sizing: border-box;
 
@@ -2187,6 +2190,13 @@ function AdminOrders() {
                 value={formatPrice(selectedOrder.shipping_cost)}
               />
 
+              {Number(selectedOrder.cod_fee ?? 0) > 0 && (
+                <SummaryRow
+                  label="کارمزد پرداخت در محل"
+                  value={formatPrice(selectedOrder.cod_fee ?? 0)}
+                />
+              )}
+
               <div style={{ borderTop: "1px solid #dce4d7", paddingTop: 12 }}>
                 <SummaryRow
                   label="مبلغ نهایی"
@@ -2461,6 +2471,13 @@ function AdminOrders() {
                     <span>
                       مالیات ({formatPrice(selectedOrder.tax_percent ?? 0)}٪):{" "}
                       {formatPrice(selectedOrder.tax_amount)} تومان
+                    </span>
+                  )}
+
+                  {Number(selectedOrder.cod_fee ?? 0) > 0 && (
+                    <span>
+                      کارمزد پرداخت در محل:{" "}
+                      {formatPrice(selectedOrder.cod_fee ?? 0)} تومان
                     </span>
                   )}
 

@@ -23,6 +23,7 @@ import {
   toDateTimeInput,
 } from "../utils/adminFormat";
 import {
+  bannerH1Summary,
   sanitizeBannerTextLayers,
   type BannerTextLayer,
   type BannerTextScrim,
@@ -760,6 +761,27 @@ function AdminBanners({ embedded = false }: { embedded?: boolean }) {
     (card) => card.tab === activeTab,
   );
 
+  /*
+   * شمارندهٔ H1 صفحهٔ اصلی: قاعدهٔ سئو «یک H1 در هر صفحه» است. لایه‌های متن
+   * بنر می‌توانند تگ h1 داشته باشند؛ اگر مجموع آن‌ها از یک بیشتر شود یا هیچ
+   * H1 نباشد، مدیر همین‌جا هشدار می‌بیند.
+   */
+  const h1Summary = bannerH1Summary(banners);
+
+  const h1Message =
+    h1Summary.count === 1
+      ? "درست است: صفحهٔ اصلی دقیقاً یک H1 دارد."
+      : h1Summary.count === 0
+        ? "صفحهٔ اصلی هیچ H1 ندارد؛ بهتر است تیتر اصلی یکی از بنرهای فعال با تگ «تیتر اصلی (h1)» ثبت شود."
+        : "بیش از یک H1 در صفحهٔ اصلی رندر می‌شود؛ فقط یکی از بنرهای فعال را H1 نگه دارید.";
+
+  const h1Tone =
+    h1Summary.count === 1
+      ? { borderColor: "#c7e0c3", background: "#f4f8ef", color: "#385e3e" }
+      : h1Summary.count === 0
+        ? { borderColor: "#f2dfb4", background: "#fdf8ec", color: "#8a6d1f" }
+        : { borderColor: "#f3c6c6", background: "#fdf1f1", color: "#a13c3c" };
+
   const toolbar = (
     <div
       style={{
@@ -860,6 +882,48 @@ function AdminBanners({ embedded = false }: { embedded?: boolean }) {
           <span>{success}</span>
         </div>
       )}
+
+      {/* شمارندهٔ H1: هشدار «فقط یک H1 در هر صفحه». */}
+      <section
+        className="admin-card"
+        role={h1Summary.count === 1 ? "status" : "alert"}
+        aria-live="polite"
+        style={{
+          borderColor: h1Tone.borderColor,
+          background: h1Tone.background,
+          color: h1Tone.color,
+        }}
+      >
+        <div className="admin-card-head">
+          <div>
+            <h2 className="admin-card-title">
+              شمارندهٔ H1 صفحهٔ اصلی:{" "}
+              {h1Summary.count.toLocaleString("fa-IR")}
+            </h2>
+
+            <p className="admin-card-desc" style={{ color: h1Tone.color }}>
+              {h1Message} بنرهای «بالای صفحهٔ محصولات» در این شمارش نمی‌آیند.
+            </p>
+
+            {h1Summary.banners.length > 0 && (
+              <ul
+                style={{
+                  margin: "8px 0 0",
+                  paddingInlineStart: 18,
+                  fontSize: 12,
+                  lineHeight: 2,
+                }}
+              >
+                {h1Summary.banners.map((item) => (
+                  <li key={item.id}>
+                    {item.title} — {item.count.toLocaleString("fa-IR")} عدد H1
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      </section>
 
       {formOpen && (
         <section className="admin-card" ref={formRef}>

@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\Order;
 use App\Services\Orders\OrderCouponService;
+use App\Services\Orders\OrderSalesService;
 use App\Services\Orders\OrderStockService;
 use App\Support\OrderStatus;
 use App\Support\PaymentMethod;
@@ -30,8 +31,11 @@ class ReleaseAbandonedOrders extends Command
 
     protected $description = 'لغو خودکار سفارش‌های پرداخت‌نشده و بازگرداندن موجودی آن‌ها';
 
-    public function handle(OrderStockService $stock, OrderCouponService $coupons): int
-    {
+    public function handle(
+        OrderStockService $stock,
+        OrderCouponService $coupons,
+        OrderSalesService $sales
+    ): int {
         $minutes = max((int) $this->option('minutes'), 1);
         $limit = max((int) $this->option('limit'), 1);
         $deadline = now()->subMinutes($minutes);
@@ -83,7 +87,7 @@ class ReleaseAbandonedOrders extends Command
         $skipped = 0;
 
         foreach ($ids as $id) {
-            $done = DB::transaction(function () use ($id, $deadline, $stock, $coupons): bool {
+            $done = DB::transaction(function () use ($id, $deadline, $stock, $coupons, $sales): bool {
                 $order = Order::query()
                     ->whereKey($id)
                     ->lockForUpdate()
@@ -109,6 +113,9 @@ class ReleaseAbandonedOrders extends Command
 
                 $order->status = OrderStatus::CANCELLED;
                 $order->save();
+
+                // شمارندهٔ فروش محصولات هم مثل موجودی برمی‌گردد.
+                $sales->revert($order);
 
                 // سهمیهٔ کوپن سفارش رهاشده هم باید آزاد شود.
                 $coupons->release($order);

@@ -2,6 +2,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { ShoppingCart, User, LogOut, Heart } from "lucide-react";
 
 import HeaderSearch from "./HeaderSearch";
+import AccountNameMenu from "./AccountNameMenu";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 import { useWishlist } from "../context/WishlistContext";
@@ -66,13 +67,8 @@ function Header() {
             <div className="flex shrink-0 items-center gap-2.5 sm:hidden">
               {user ? (
                 <>
-                  <Link
-                    to="/account"
-                    aria-label="حساب کاربری"
-                    className="flex shrink-0 items-center justify-center text-ink-soft transition-colors hover:text-plum-500"
-                  >
-                    <User size={22} />
-                  </Link>
+                  {/* نام/آیکن حساب، منوی «سفارش‌های من» و «حساب کاربری من» را باز می‌کند. */}
+                  <AccountNameMenu name={user.name} variant="icon" />
 
                   <button
                     type="button"
@@ -161,22 +157,8 @@ function Header() {
             )}
             {user ? (
               <div className="flex items-center gap-3">
-                <Link
-                  to="/account"
-                  className="
-                    flex items-center gap-2
-                    text-ink-soft transition-colors
-                    hover:text-plum-500
-                  "
-                >
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-100 text-brand-600">
-                    <User size={20} />
-                  </div>
-
-                  <span className="whitespace-nowrap font-bold">
-                    {user.name}
-                  </span>
-                </Link>
+                {/* نام حساب در هدر، منوی «سفارش‌های من» و «حساب کاربری من» را باز می‌کند. */}
+                <AccountNameMenu name={user.name} variant="header" />
 
                 <button
                   type="button"

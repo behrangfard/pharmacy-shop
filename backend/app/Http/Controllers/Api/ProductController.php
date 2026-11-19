@@ -7,6 +7,7 @@ use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use App\Support\StorefrontCache;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -130,9 +131,16 @@ class ProductController extends Controller
      */
     public function filters(Request $request): JsonResponse
     {
-        $cacheKey = 'storefront-product-filters:'.md5(
-            (string) $request->getQueryString()
-        );
+        /*
+         * نسخهٔ کش بخشی از کلید است؛ با هر تغییر محصول/تنوع/دسته/برند نسخه
+         * عوض می‌شود و کلیدهای قبلی (که TTL کوتاه ۶۰ ثانیه دارند) دیگر خوانده
+         * نمی‌شوند. این کار از نمایش facet های کهنه پس از ویرایش دستی داده
+         * جلوگیری می‌کند، بدون پاک‌کردن تک‌تک کلیدهای بی‌شمار فیلتر.
+         */
+        $cacheKey = 'storefront-product-filters:'
+            .StorefrontCache::productsVersion()
+            .':'
+            .md5((string) $request->getQueryString());
 
         $data = Cache::remember(
             $cacheKey,

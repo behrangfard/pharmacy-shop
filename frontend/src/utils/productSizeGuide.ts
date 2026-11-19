@@ -248,7 +248,7 @@ export function normalizeSizeLabel(value: string): string {
     .replace(/[۰-۹]/g, (digit) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(digit)))
     .replace(/[٠-٩]/g, (digit) => String("٠١٢٣٤٥٦٧٨٩".indexOf(digit)))
     .replace(/سایز|size/gi, "")
-    .replace(/[\s\u200c\u200d\-_/\\]+/g, "");
+    .replace(/[\s\u200c\-_/\\\u200d]+/g, "");
 }
 
 /** آیا این سطر جدول به سایز انتخاب‌شده مربوط است؟ */

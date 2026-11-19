@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\ProductImage;
+use App\Services\Media\WebpConverter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -61,6 +62,9 @@ class AdminProductImageController extends Controller
                             'Image file could not be stored.'
                         );
                     }
+
+                    // تبدیل به WebP در صورت فعال بودن افزونهٔ تصویر سرور.
+                    $path = WebpConverter::convert($path);
 
                     $storedPaths[] = $path;
 

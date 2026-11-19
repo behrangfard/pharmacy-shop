@@ -3,6 +3,7 @@ import type { CSSProperties } from "react";
 
 import {
   bannerImageAlt,
+  bannerImageDimensions,
   hasDesktopImage,
   hasMobileImage,
   type BannerViewport,
@@ -82,11 +83,21 @@ function BannerImage({
   // متن جایگزین از فیلد alt مدیر می‌آید (سئو) و در نبود آن از عنوان بنر.
   const label = alt?.trim() || bannerImageAlt(banner);
 
+  /*
+   * ابعاد ذاتی هر تصویر از API می‌آید؛ گذاشتن width/height روی <img> باعث
+   * می‌شود مرورگر نسبت تصویر را پیش از دانلود بداند و ارتفاع بنر نپرد
+   * (کاهش CLS و بهبود LCP).
+   */
+  const desktopSize = bannerImageDimensions(banner, "desktop");
+  const mobileSize = bannerImageDimensions(banner, "mobile");
+
   const desktopImage =
     desktopSource && !desktopBroken ? (
       <img
         src={desktopSource}
         alt={label}
+        width={desktopSize?.width}
+        height={desktopSize?.height}
         loading={loading}
         fetchPriority={fetchPriority}
         decoding="async"
@@ -103,6 +114,8 @@ function BannerImage({
       <img
         src={mobileSource}
         alt={label}
+        width={mobileSize?.width}
+        height={mobileSize?.height}
         loading={loading}
         fetchPriority={fetchPriority}
         decoding="async"

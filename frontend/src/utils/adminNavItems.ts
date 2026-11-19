@@ -8,6 +8,7 @@ import {
   LayoutTemplate,
   Megaphone,
   MessageSquare,
+  MessagesSquare,
   MonitorSmartphone,
   Newspaper,
   Package,
@@ -192,6 +193,14 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
     icon: Megaphone,
     keywords:
       "پیامک sms تلگرام واتساپ واتس آپ بله ارسال پیام اطلاع رسانی پیام رسان مشتریان",
+  },
+  {
+    to: "/admin/channels",
+    permission: ADMIN_PERMISSIONS.channels,
+    label: "کانال‌های ارتباطی",
+    icon: MessagesSquare,
+    keywords:
+      "کانال ارتباطی تلگرام واتساپ واتس آپ بله ایتا اینستاگرام عضویت کانال ارسال پیام شبکه اجتماعی",
   },
   {
     to: "/admin/admins",

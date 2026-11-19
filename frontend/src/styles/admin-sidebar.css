@@ -1,0 +1,347 @@
+/* ==================================================
+   سایدبار فشرده و مرتب پنل مدیریت
+   هدف: جا شدن کامل منو بدون نیاز به اسکرول
+   و عرض کافی برای اینکه متن آیتم‌ها بریده نشود
+================================================== */
+:root {
+  --admin-sidebar-w: 264px;
+}
+
+/* عرض کمی بیشتر + حذف نوار اسکرول که باعث بریدن متن می‌شد */
+.admin-sidebar {
+  width: var(--admin-sidebar-w) !important;
+  min-width: var(--admin-sidebar-w) !important;
+  max-width: var(--admin-sidebar-w) !important;
+  padding: 14px 12px !important;
+  gap: 0 !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  scrollbar-width: none;
+}
+
+.admin-sidebar::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+/* لوگو و عنوان پنل */
+.admin-sidebar .admin-brand {
+  margin-bottom: 10px !important;
+  padding: 4px 6px !important;
+  gap: 10px !important;
+}
+
+.admin-sidebar .admin-brand-icon {
+  flex: 0 0 36px !important;
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 11px !important;
+}
+
+.admin-sidebar .admin-brand-text strong {
+  font-size: 15px !important;
+  line-height: 1.5;
+}
+
+.admin-sidebar .admin-brand-text small {
+  font-size: 10px !important;
+  line-height: 1.4;
+}
+
+/* عنوان گروه منو */
+.admin-sidebar .admin-nav-heading {
+  margin: 2px 8px 8px !important;
+  font-size: 10px !important;
+  line-height: 1.6;
+  letter-spacing: 0.3px;
+}
+
+/* ناحیه منو: اگر ارتفاع صفحه کم بود فقط همین بخش اسکرول داخلی دارد */
+.admin-sidebar .admin-nav {
+  flex: 1 1 auto;
+  min-height: 0;
+  gap: 3px !important;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+
+.admin-sidebar .admin-nav::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+/* آیتم‌های منو: کوتاه‌تر، یک‌خطی و خوانا */
+.admin-sidebar .admin-nav-link {
+  display: flex;
+  align-items: center;
+  min-height: 36px !important;
+  padding: 4px 9px !important;
+  gap: 9px !important;
+  border-radius: 10px !important;
+}
+
+.admin-sidebar .admin-nav-icon {
+  flex: 0 0 28px !important;
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 8px !important;
+}
+
+.admin-sidebar .admin-nav-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 13px !important;
+  line-height: 1.7;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.admin-sidebar .admin-nav-indicator {
+  flex: 0 0 5px;
+}
+
+/* گروه‌بندی منو: هر گروه با یک عنوان کوچک و فاصلهٔ کم */
+.admin-sidebar .admin-nav-group {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.admin-sidebar .admin-nav-group .admin-nav-heading {
+  margin: 8px 8px 4px !important;
+}
+
+.admin-sidebar .admin-nav-group:first-child .admin-nav-heading {
+  margin-top: 0 !important;
+}
+
+/* فوتر سایدبار: همیشه پایین می‌ماند و فشرده است */
+.admin-sidebar .admin-sidebar-footer {
+  flex: 0 0 auto;
+  margin-top: 8px !important;
+  padding-top: 10px !important;
+  gap: 3px !important;
+}
+
+.admin-sidebar .admin-user-card {
+  gap: 8px !important;
+  margin-bottom: 6px !important;
+  padding: 7px 8px !important;
+  border-radius: 11px !important;
+}
+
+.admin-sidebar .admin-user-avatar {
+  flex: 0 0 30px !important;
+  width: 30px !important;
+  height: 30px !important;
+  border-radius: 9px !important;
+  font-size: 13px !important;
+}
+
+.admin-sidebar .admin-user-info {
+  gap: 1px !important;
+}
+
+.admin-sidebar .admin-user-caption {
+  font-size: 9px !important;
+  line-height: 1.6;
+}
+
+.admin-sidebar .admin-user-name {
+  margin: 0 !important;
+  padding: 0 !important;
+  font-size: 12px !important;
+  line-height: 1.6;
+}
+
+.admin-sidebar .admin-user-edit {
+  flex: 0 0 26px;
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+}
+
+.admin-sidebar .admin-store-link,
+.admin-sidebar .admin-logout-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 6px 9px !important;
+  border-radius: 9px !important;
+  font-size: 12.5px !important;
+  line-height: 1.6;
+  text-align: right;
+}
+
+/* دو دکمه پایین سایدبار در یک ردیف تا ارتفاع کمتری بگیرند */
+.admin-sidebar .admin-sidebar-footer-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+
+.admin-sidebar .admin-sidebar-footer-actions .admin-store-link,
+.admin-sidebar .admin-sidebar-footer-actions .admin-logout-button {
+  justify-content: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 5px 6px !important;
+  font-size: 12px !important;
+  white-space: nowrap;
+}
+
+/* محتوای اصلی متناسب با عرض جدید سایدبار */
+.admin-main {
+  width: calc(100% - var(--admin-sidebar-w));
+  max-width: calc(100% - var(--admin-sidebar-w));
+  margin: 0 var(--admin-sidebar-w) 0 0;
+}
+
+/* ارتفاع‌های کوتاه (لپ‌تاپ‌های ۱۳ تا ۱۵ اینچ) */
+@media (min-width: 769px) and (max-height: 960px) {
+  .admin-sidebar .admin-nav-heading {
+    margin: 8px 8px 4px !important;
+    font-size: 9px !important;
+  }
+
+  .admin-sidebar .admin-brand {
+    margin-bottom: 8px !important;
+  }
+
+  .admin-sidebar .admin-nav-link {
+    min-height: 34px !important;
+    padding: 3px 9px !important;
+  }
+
+  .admin-sidebar .admin-nav-icon {
+    flex: 0 0 26px !important;
+    width: 26px !important;
+    height: 26px !important;
+  }
+}
+
+/* ارتفاع متوسط: عنوان گروه‌ها حذف می‌شود تا منو جا شود */
+@media (min-width: 769px) and (max-height: 860px) {
+  .admin-sidebar .admin-nav-heading {
+    display: none;
+  }
+
+  .admin-sidebar .admin-nav-link {
+    min-height: 32px !important;
+  }
+
+  .admin-sidebar .admin-nav-icon {
+    flex: 0 0 24px !important;
+    width: 24px !important;
+    height: 24px !important;
+  }
+
+  /* به‌جای عنوان گروه، یک خط جداکنندهٔ نازک تا گروه‌ها از هم مشخص باشند */
+  .admin-sidebar .admin-nav-group + .admin-nav-group {
+    margin-top: 2px;
+    padding-top: 2px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+}
+
+/* ارتفاع کم: فشرده‌ترین حالت بدون اسکرول */
+@media (min-width: 769px) and (max-height: 760px) {
+  .admin-sidebar .admin-nav-link {
+    min-height: 30px !important;
+  }
+
+  .admin-sidebar .admin-nav-icon {
+    flex: 0 0 22px !important;
+    width: 22px !important;
+    height: 22px !important;
+  }
+
+  .admin-sidebar .admin-brand-icon {
+    flex: 0 0 32px !important;
+    width: 32px !important;
+    height: 32px !important;
+  }
+
+  .admin-sidebar .admin-brand-text small,
+  .admin-sidebar .admin-user-caption {
+    display: none;
+  }
+
+  .admin-sidebar .admin-user-card {
+    margin-bottom: 4px !important;
+    padding: 5px 8px !important;
+  }
+}
+
+/* ارتفاع خیلی کم: فشرده‌ترین حالت برای نمایشگرهای کوچک */
+@media (min-width: 769px) and (max-height: 640px) {
+  .admin-sidebar {
+    padding: 10px 12px !important;
+  }
+
+  .admin-sidebar .admin-nav-link {
+    min-height: 28px !important;
+    padding: 2px 9px !important;
+  }
+
+  .admin-sidebar .admin-nav-icon {
+    flex: 0 0 20px !important;
+    width: 20px !important;
+    height: 20px !important;
+  }
+
+  .admin-sidebar .admin-brand {
+    margin-bottom: 6px !important;
+    padding: 2px 6px !important;
+  }
+
+  .admin-sidebar .admin-user-avatar {
+    flex: 0 0 26px !important;
+    width: 26px !important;
+    height: 26px !important;
+  }
+
+  .admin-sidebar .admin-sidebar-footer {
+    margin-top: 4px !important;
+    padding-top: 6px !important;
+  }
+
+  .admin-sidebar .admin-sidebar-footer-actions .admin-store-link,
+  .admin-sidebar .admin-sidebar-footer-actions .admin-logout-button {
+    min-height: 27px;
+    font-size: 11.5px !important;
+  }
+}
+
+/* موبایل و تبلت: کشوی منو با همان عرض، ولی آیتم‌های لمس‌پذیرتر */
+@media (max-width: 768px) {
+  .admin-sidebar {
+    width: min(var(--admin-sidebar-w), 84vw) !important;
+    min-width: min(var(--admin-sidebar-w), 84vw) !important;
+    max-width: min(var(--admin-sidebar-w), 84vw) !important;
+  }
+
+  .admin-sidebar .admin-mobile-close-button {
+    margin-top: 2px;
+    margin-bottom: 10px;
+    padding: 8px 10px;
+  }
+
+  .admin-sidebar .admin-nav-link {
+    min-height: 42px !important;
+  }
+
+  .admin-main {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+  }
+}
+

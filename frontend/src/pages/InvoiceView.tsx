@@ -36,6 +36,10 @@ type Order = {
   coupon_discount?: string | number;
   tax_percent?: string | number;
   tax_amount?: string | number;
+
+  /** کارمزد پرداخت در محل (تومان)؛ فقط برای سفارش‌های COD مقدار دارد. */
+  cod_fee?: string | number;
+
   total: string | number;
   status: string;
   payment_status: string;
@@ -402,6 +406,12 @@ function InvoiceView() {
               <span>
                 مالیات ({formatPrice(toNumber(order.tax_percent))}٪):{" "}
                 {formatPrice(toNumber(order.tax_amount))} تومان
+              </span>
+            )}
+
+            {toNumber(order.cod_fee) > 0 && (
+              <span>
+                کارمزد پرداخت در محل: {formatPrice(toNumber(order.cod_fee))} تومان
               </span>
             )}
 

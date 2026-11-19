@@ -1,0 +1,48 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# .clineignore — مسیرهایی که Cline نباید بخواند، جست‌وجو کند یا در context بگیرد.
+# سینتکس مثل .gitignore است و فقط روی ابزارهای این مخزن اثر دارد (هیچ فایلی پاک
+# نمی‌شود و رفتار سایت/بک‌اند تغییری نمی‌کند).
+# ─────────────────────────────────────────────────────────────────────────────
+
+# وابستگی‌ها (هزاران فایل، هیچ‌وقت لازم نیستند)
+node_modules/
+backend/vendor/
+vendor/
+
+# خروجی بیلد، کش و پوشه‌های تولیدشده
+frontend/dist/
+frontend/node_modules/.vite/
+backend/public/build/
+backend/public/storage/
+backend/storage/
+storage-backup-products/
+backend/public/storage-old/
+coverage/
+.phpunit.cache/
+.phpunit.result.cache
+
+# لاگ‌ها و فایل‌های موقت/پشتیبان
+*.log
+*.bak
+*.backup
+*.backup-*
+*.sqlite
+*.sqlite3
+
+# متغیرهای محیطی و رمزها — طبق AGENTS.md هیچ‌وقت خوانده/نقل نشوند.
+# فقط فایل نمونه مجاز است.
+.env
+.env.*
+!.env.example
+backend/.env
+backend/.env.*
+!backend/.env.example
+frontend/.env
+frontend/.env.*
+!frontend/.env.example
+
+# ابزارهای سیستم‌عامل و IDE
+.idea/
+.DS_Store
+Thumbs.db
+*.swp

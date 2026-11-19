@@ -61,6 +61,10 @@ type Order = {
   coupon_discount?: string | number;
   tax_percent?: string | number;
   tax_amount?: string | number;
+
+  /** کارمزد پرداخت در محل (تومان)؛ فقط برای سفارش‌های COD مقدار دارد. */
+  cod_fee?: string | number;
+
   total: string | number;
   status: string;
   payment_status: string;
@@ -277,11 +281,11 @@ export default function OrderDetail() {
           <p className="mb-5 text-sm text-discount">{error}</p>
 
           <Link
-            to="/account"
+            to="/account/orders"
             className="inline-flex items-center gap-2 rounded-xl bg-ink px-5 py-3 text-sm font-bold text-white hover:bg-ink-soft"
           >
             <ArrowRight size={18} />
-            بازگشت به حساب کاربری
+            بازگشت به سفارش‌های من
           </Link>
         </div>
       </div>
@@ -293,6 +297,7 @@ export default function OrderDetail() {
   const shippingCost = Number(order.shipping_cost ?? 0);
   const taxPercent = Number(order.tax_percent ?? 0);
   const taxAmount = Number(order.tax_amount ?? 0);
+  const codFee = Number(order.cod_fee ?? 0);
   const total = Number(order.total ?? 0);
 
   const orderStatus =
@@ -324,11 +329,11 @@ export default function OrderDetail() {
     <main className="min-h-screen bg-cream py-8 sm:py-12" dir="rtl">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <Link
-          to="/account"
+          to="/account/orders"
           className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-muted hover:text-ink"
         >
           <ArrowRight size={18} />
-          بازگشت به حساب کاربری
+          بازگشت به سفارش‌های من
         </Link>
 
         <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
@@ -779,6 +784,15 @@ export default function OrderDetail() {
                       {formatPrice(taxAmount)} تومان
                     </span>
                   </div>
+                </div>
+              )}
+
+              {codFee > 0 && (
+                <div className="flex items-center justify-between gap-3 text-sm">
+                  <span className="text-muted">کارمزد پرداخت در محل</span>
+                  <span className="whitespace-nowrap font-semibold text-ink">
+                    {formatPrice(codFee)} تومان
+                  </span>
                 </div>
               )}
 

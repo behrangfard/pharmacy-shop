@@ -26,6 +26,10 @@ type OrderData = {
   discount: string | number;
   tax_percent?: string | number;
   tax_amount?: string | number;
+
+  /** کارمزد پرداخت در محل (تومان)؛ فقط برای سفارش‌های COD مقدار دارد. */
+  cod_fee?: string | number;
+
   total: string | number;
   payment_status: string;
   payment_method?: string | null;
@@ -191,7 +195,7 @@ function Payment() {
             <p className="text-discount mt-3 font-bold">{error}</p>
 
             <Link
-              to="/account"
+              to="/account/orders"
               className="inline-flex items-center justify-center gap-2 mt-6 rounded-xl bg-brand-600 hover:bg-brand-700 text-white px-6 py-3 font-bold transition"
             >
               مشاهده سفارش‌ها
@@ -212,6 +216,7 @@ function Payment() {
   const discount = Number(order.discount ?? 0);
   const taxPercent = Number(order.tax_percent ?? 0);
   const taxAmount = Number(order.tax_amount ?? 0);
+  const codFee = Number(order.cod_fee ?? 0);
   const total = Number(order.total ?? 0);
 
   const alreadyPaid = order.payment_status === "paid";
@@ -474,6 +479,15 @@ function Payment() {
                     </span>
                     <span className="font-bold text-ink">
                       {formatPrice(taxAmount)} تومان
+                    </span>
+                  </div>
+                )}
+
+                {codFee > 0 && (
+                  <div className="flex items-center justify-between gap-4 text-sm">
+                    <span className="text-muted">کارمزد پرداخت در محل</span>
+                    <span className="font-bold text-ink">
+                      {formatPrice(codFee)} تومان
                     </span>
                   </div>
                 )}

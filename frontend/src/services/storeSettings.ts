@@ -28,6 +28,8 @@ export interface StorefrontSettings {
   free_shipping_threshold: number;
   /** سقف مبلغ سفارش «پرداخت در محل» به تومان (۰ = بدون سقف). */
   cod_max_total: number;
+  /** کارمزد «پرداخت در محل» به تومان (۰ = بدون کارمزد). */
+  cod_fee: number;
 }
 
 export const DEFAULT_STOREFRONT_SETTINGS: StorefrontSettings = {
@@ -50,6 +52,7 @@ export const DEFAULT_STOREFRONT_SETTINGS: StorefrontSettings = {
   free_shipping_enabled: false,
   free_shipping_threshold: 0,
   cod_max_total: 0,
+  cod_fee: 0,
 };
 
 interface SettingsCache {
@@ -102,6 +105,7 @@ function normalize(raw: unknown): StorefrontSettings {
     free_shipping_enabled: source.free_shipping_enabled === true,
     free_shipping_threshold: number(source.free_shipping_threshold),
     cod_max_total: number(source.cod_max_total),
+    cod_fee: number(source.cod_fee),
   };
 }
 

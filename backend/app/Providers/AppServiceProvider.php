@@ -2,6 +2,20 @@
 
 namespace App\Providers;
 
+use App\Models\AnnouncementBarItem;
+use App\Models\Banner;
+use App\Models\BannerFont;
+use App\Models\BannerSection;
+use App\Models\Brand;
+use App\Models\Category;
+use App\Models\ContactChannel;
+use App\Models\Popup;
+use App\Models\Product;
+use App\Models\ProductVariant;
+use App\Models\StoreSetting;
+use App\Models\Story;
+use App\Models\TrustBadge;
+use App\Observers\StorefrontCacheObserver;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -24,6 +38,34 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureRateLimiters();
+        $this->registerStorefrontCacheObservers();
+    }
+
+    /**
+     * پاک‌سازی خودکار کش ویترین با تغییر داده‌ها.
+     *
+     * کنترلرهای پنل هم کش را پاک می‌کنند؛ این observer حالت‌هایی را پوشش می‌دهد
+     * که داده بیرون از پنل عوض می‌شود (tinker، سیدر، کامند و سرویس‌های داخلی).
+     */
+    private function registerStorefrontCacheObservers(): void
+    {
+        foreach ([
+            Product::class,
+            ProductVariant::class,
+            Category::class,
+            Brand::class,
+            Banner::class,
+            BannerSection::class,
+            BannerFont::class,
+            AnnouncementBarItem::class,
+            Popup::class,
+            Story::class,
+            TrustBadge::class,
+            ContactChannel::class,
+            StoreSetting::class,
+        ] as $model) {
+            $model::observe(StorefrontCacheObserver::class);
+        }
     }
 
     /**

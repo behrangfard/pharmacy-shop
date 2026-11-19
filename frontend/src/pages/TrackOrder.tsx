@@ -13,12 +13,19 @@ import {
   Phone,
   Search,
   Truck,
+  UserPlus,
 } from "lucide-react";
 
 import Layout from "../components/Layout";
 import { usePrivatePageMeta } from "../hooks/usePageMeta";
 import api from "../services/api";
 import { formatJalaliDateTime, toEnglishDigits } from "../utils/jalali";
+import {
+  formatGuestAccessCode,
+  isCompleteGuestAccessCode,
+  normalizeGuestAccessCode,
+} from "../utils/guestAccessCode";
+
 import { STORAGE_KEYS } from "../utils/storageKeys";
 
 type TrackingEvent = {
@@ -67,6 +74,10 @@ type TrackingOrder = {
   coupon_discount: number;
   shipping_cost: number;
   tax_amount: number;
+
+  /** کارمزد «پرداخت در محل» (تومان)؛ فقط سفارش COD ممکن است مقدار داشته باشد. */
+  cod_fee: number;
+
   total: number;
   items: TrackingItem[];
   shipments: TrackingShipment[];
@@ -96,14 +107,6 @@ const formatPrice = (value: number) =>
 
 const formatDate = (value: string | null) =>
   value ? formatJalaliDateTime(value) : "—";
-
-/** نمایش خوانای کد پیگیری مهمان: ABCD-2345 */
-const formatAccessCode = (code: string) =>
-  code
-    .toUpperCase()
-    .replace(/[^A-Z0-9]/g, "")
-    .match(/.{1,4}/g)
-    ?.join("-") ?? "";
 
 /**
  * صفحهٔ عمومی رهگیری سفارش.
@@ -267,11 +270,9 @@ function TrackOrder() {
     if (recovering) return;
 
     const normalizedOrder = toEnglishDigits(orderNumber).trim();
-    const normalizedCode = toEnglishDigits(accessCodeInput)
-      .replace(/[^a-zA-Z0-9]/g, "")
-      .toUpperCase();
+    const normalizedCode = normalizeGuestAccessCode(accessCodeInput);
 
-    if (!normalizedOrder || normalizedCode.length < 8) {
+    if (!normalizedOrder || !isCompleteGuestAccessCode(normalizedCode)) {
       setRecoverError("شماره سفارش و کد پیگیری ۸ کاراکتری را وارد کنید.");
       return;
     }
@@ -326,7 +327,7 @@ function TrackOrder() {
     if (!savedAccessCode) return;
 
     try {
-      await navigator.clipboard.writeText(savedAccessCode);
+      await navigator.clipboard.writeText(formatGuestAccessCode(savedAccessCode));
       setCopiedAccessCode(true);
       window.setTimeout(() => setCopiedAccessCode(false), 2000);
     } catch {
@@ -340,6 +341,17 @@ function TrackOrder() {
       order.payment_status === "unpaid" &&
       !["cancelled", "canceled", "shipped", "delivered"].includes(order.status),
   );
+
+  /*
+   * نردبان ساخت حساب برای مهمان (بدهی ۱۴): بعد از ثبت سفارش یا بعد از
+   * رهگیری موفق، مهمان به ساخت حساب با همین شماره دعوت می‌شود. شماره تماس
+   * فقط برای پیش‌پرکردن فرم ثبت‌نام استفاده می‌شود و در خودکارسازی
+   * سفارش‌های قبلی به حساب جدید هیچ کار خودکاری انجام نمی‌شود (بدون
+   * تأیید مالکیت شماره، اتصال سفارش به حساب امن نیست).
+   */
+  const registerPrefillPhone = toEnglishDigits(phone).replace(/\D/g, "");
+
+  const showAccountLadder = isGuest && (registered || order !== null);
 
   const activeStep = order
     ? STATUS_STEPS.findIndex((step) => step.value === order.status)
@@ -395,7 +407,7 @@ function TrackOrder() {
                   className="rounded-xl bg-brand-50 px-3 py-1.5 font-black tracking-[0.2em] text-brand-700"
                   dir="ltr"
                 >
-                  {formatAccessCode(savedAccessCode)}
+                  {formatGuestAccessCode(savedAccessCode)}
                 </span>
               </div>
 
@@ -417,6 +429,49 @@ function TrackOrder() {
                 )}
                 {copiedAccessCode ? "کد کپی شد" : "کپی کد"}
               </button>
+            </div>
+          )}
+
+          {showAccountLadder && (
+            <div className="mt-4 rounded-2xl border border-brand-200 bg-white p-4 text-sm leading-7 shadow-sm">
+              <div className="flex items-start gap-3">
+                <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
+                  <UserPlus size={18} aria-hidden="true" />
+                </span>
+
+                <div className="min-w-0">
+                  <p className="font-black text-ink">
+                    با همین شماره حساب بسازید و سفارش‌هایتان را یک‌جا ببینید
+                  </p>
+
+                  <p className="mt-1 text-xs leading-7 text-muted">
+                    حساب کاربری با
+                    {registerPrefillPhone ? (
+                      <span className="mx-1 font-bold text-ink" dir="ltr">
+                        {registerPrefillPhone}
+                      </span>
+                    ) : (
+                      " همین شماره تماس "
+                    )}
+                    ساخته می‌شود و از «سفارش‌های من» وضعیت، فاکتور و سابقهٔ
+                    خریدها یک‌جا در دسترس است. سفارش‌های قبلی همین شماره را
+                    می‌توانید با شمارهٔ سفارش در همین صفحه رهگیری کنید.
+                  </p>
+
+                  <Link
+                    to={`/register${
+                      registerPrefillPhone
+                        ? `?phone=${encodeURIComponent(registerPrefillPhone)}`
+                        : ""
+                    }`}
+                    state={{ from: "/account/orders" }}
+                    className="mt-3 inline-flex items-center gap-2 rounded-xl bg-brand-500 px-4 py-2 text-xs font-black text-white transition hover:bg-brand-700"
+                  >
+                    ساخت حساب کاربری
+                    <CheckCircle2 size={15} aria-hidden="true" />
+                  </Link>
+                </div>
+              </div>
             </div>
           )}
 
@@ -837,6 +892,13 @@ function TrackOrder() {
                       <dd className="font-bold">
                         {formatPrice(order.tax_amount)}
                       </dd>
+                    </div>
+                  )}
+
+                  {order.cod_fee > 0 && (
+                    <div className="flex justify-between">
+                      <dt className="text-muted">کارمزد پرداخت در محل</dt>
+                      <dd className="font-bold">{formatPrice(order.cod_fee)}</dd>
                     </div>
                   )}
 

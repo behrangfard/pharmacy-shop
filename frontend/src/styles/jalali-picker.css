@@ -1,0 +1,405 @@
+/* ==================================================
+   انتخابگر تاریخ شمسی (تقویم جلالی) در پنل مدیریت
+================================================== */
+.admin-jalali {
+  position: relative;
+  min-width: 0;
+}
+
+.admin-jalali-control {
+  position: relative;
+}
+
+.admin-jalali-trigger {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-inline-end: 34px;
+  font-family: inherit;
+  text-align: right;
+  cursor: pointer;
+}
+
+.admin-jalali-trigger svg {
+  flex: 0 0 auto;
+  color: #648767;
+}
+
+.admin-jalali-trigger.is-open {
+  border-color: #648767;
+  box-shadow: 0 0 0 3px #e8efe2;
+}
+
+.admin-jalali-trigger:disabled {
+  background: #f9fafb;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.admin-jalali-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.admin-jalali-clear {
+  position: absolute;
+  inset-inline-end: 8px;
+  top: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 19px;
+  height: 19px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: #eef2ee;
+  color: #6b7280;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  transform: translateY(-50%);
+}
+
+.admin-jalali-clear:hover {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.admin-jalali-popover {
+  position: absolute;
+  top: calc(100% + 6px);
+  inset-inline-start: 0;
+  z-index: 60;
+  width: 296px;
+  padding: 12px;
+  border: 1px solid #dfe7d8;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 20px 44px rgba(15, 23, 42, 0.16);
+}
+
+.admin-jalali-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.admin-jalali-nav {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+  color: #4b5563;
+  cursor: pointer;
+}
+
+.admin-jalali-nav:hover {
+  border-color: #648767;
+  color: #648767;
+}
+
+.admin-jalali-title {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.admin-jalali-select {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 5px 6px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+  color: #111827;
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.admin-jalali-select:focus {
+  border-color: #648767;
+  box-shadow: 0 0 0 2px #e8efe2;
+  outline: none;
+}
+
+.admin-jalali-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 3px;
+}
+
+.admin-jalali-weekdays {
+  margin-bottom: 4px;
+}
+
+.admin-jalali-weekday {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+  color: #9ca3af;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.admin-jalali-day {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 30px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: #374151;
+  font-family: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+  transition:
+    background-color 0.12s ease,
+    color 0.12s ease;
+}
+
+.admin-jalali-day:hover {
+  background: #eef2ee;
+  color: #2f5132;
+}
+
+.admin-jalali-day.is-empty {
+  cursor: default;
+}
+
+.admin-jalali-day.is-today {
+  border-color: #b7cdb6;
+}
+
+.admin-jalali-day.is-selected {
+  border-color: #648767;
+  background: #648767;
+  color: #fff;
+  font-weight: 700;
+}
+
+.admin-jalali-time {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed #e5e7eb;
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.admin-jalali-time-label {
+  font-weight: 700;
+}
+
+.admin-jalali-time .admin-jalali-select {
+  flex: 0 0 68px;
+}
+
+.admin-jalali-footer {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.admin-jalali-action {
+  flex: 1 1 auto;
+  padding: 6px 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+  color: #4b5563;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.admin-jalali-action:hover {
+  border-color: #648767;
+  color: #648767;
+}
+
+.admin-jalali-action.is-primary {
+  border-color: #648767;
+  background: #648767;
+  color: #fff;
+}
+
+.admin-jalali-action.is-primary:hover {
+  background: #567257;
+  color: #fff;
+}
+
+.admin-jalali-action.is-danger {
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
+.admin-jalali-action.is-danger:hover {
+  border-color: #fecaca;
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+@media (max-width: 420px) {
+  .admin-jalali-popover {
+    width: min(296px, calc(100vw - 28px));
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   نوار اطلاع‌رسانی بالای هدر (تبلیغات و تخفیف‌های روزانه)
+   ارتفاع از تنظیمات پنل می‌آید: دسکتاپ با --ab-height و موبایل با
+   --ab-height-mobile (این متغیرها inline روی همان عنصر ست می‌شوند).
+--------------------------------------------------------------------------- */
+.announcement-bar {
+  position: relative;
+  width: 100%;
+  height: var(--ab-height-mobile, 40px);
+  overflow: hidden;
+  background-color: #385e3e;
+  color: #f7f8f2;
+}
+
+@media (min-width: 768px) {
+  .announcement-bar {
+    height: var(--ab-height, 44px);
+  }
+}
+
+.announcement-bar-inner {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  /* فضای سمت نشانگرها تا متن زیر نقطه‌ها نرود (در RTL، پایان خط = چپ) */
+  padding-inline: 12px 46px;
+}
+
+.announcement-bar-slide {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  animation: announcement-bar-fade-in 0.45s ease;
+}
+
+.announcement-bar-slide[data-animation="slide"] {
+  animation-name: announcement-bar-slide-in;
+}
+
+.announcement-bar-slide[data-animation="none"] {
+  animation: none;
+}
+
+.announcement-bar-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  color: inherit;
+  text-decoration: none;
+}
+
+.announcement-bar-link:hover .announcement-bar-text {
+  text-decoration: underline;
+}
+
+.announcement-bar-text {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: inherit;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.announcement-bar-media {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.announcement-bar-dots {
+  position: absolute;
+  inset-inline-end: 10px;
+  top: 50%;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transform: translateY(-50%);
+}
+
+.announcement-bar-dot {
+  width: 5px;
+  height: 5px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background-color: currentColor;
+  opacity: 0.35;
+  cursor: pointer;
+  transition:
+    width 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.announcement-bar-dot.is-active {
+  width: 14px;
+  opacity: 1;
+}
+
+@keyframes announcement-bar-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes announcement-bar-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .announcement-bar-slide {
+    animation: none;
+  }
+}
+

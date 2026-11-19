@@ -39,6 +39,46 @@ export function productCardImageUrl(product: WishlistProduct): string | null {
 }
 
 /**
+ * متن جایگزین تصویر کارت.
+ *
+ * اولویت: alt ثبت‌شدهٔ تصویر اصلی در پنل، بعد نام محصول. تا وقتی مدیر alt
+ * تصویر را پر نکرده، رفتار قبلی (نام محصول) حفظ می‌شود.
+ */
+export function productCardImageAlt(product: WishlistProduct): string {
+  const primaryImage =
+    product.images?.find((image) => image.is_primary) ?? product.images?.[0];
+
+  const alt = primaryImage?.alt?.trim();
+
+  return alt && alt.length > 0 ? alt : product.name;
+}
+
+/**
+ * ابعاد ذاتی تصویر اصلی کارت (اگر API فرستاده باشد). کارت نسبت ثابت ۴:۵
+ * دارد؛ این ابعاد فقط به مرورگر کمک می‌کند پیش از دانلود نسبت را بداند.
+ */
+export function productCardImageSize(
+  product: WishlistProduct,
+): { width: number; height: number } | null {
+  const primaryImage =
+    product.images?.find((image) => image.is_primary) ?? product.images?.[0];
+
+  const width = primaryImage?.width;
+  const height = primaryImage?.height;
+
+  if (
+    typeof width !== "number" ||
+    typeof height !== "number" ||
+    width < 1 ||
+    height < 1
+  ) {
+    return null;
+  }
+
+  return { width: Math.round(width), height: Math.round(height) };
+}
+
+/**
  * تصویر دوم کارت برای افکت هاور.
  *
  * تصویر اصلی همان است که در حالت عادی دیده می‌شود؛ از میان بقیه تصاویر،
@@ -267,10 +307,13 @@ function SizeChips({
 }
 
 interface CardMediaProps {
-  product: WishlistProduct;
   primaryUrl: string | null;
   secondaryUrl: string | null;
   imageClassName: string;
+  /** متن جایگزین از alt پنل (یا نام محصول). */
+  imageAlt: string;
+  /** ابعاد ذاتی تصویر اصلی؛ برای رزرو فضا پیش از بارگذاری. */
+  imageSize?: { width: number; height: number } | null;
 }
 
 /**
@@ -281,10 +324,11 @@ interface CardMediaProps {
  * ارتفاع کارت هنگام لود تصویر نپرد.
  */
 function CardMedia({
-  product,
   primaryUrl,
   secondaryUrl,
   imageClassName,
+  imageAlt,
+  imageSize,
 }: CardMediaProps) {
   const [primaryFailed, setPrimaryFailed] = useState(false);
 
@@ -304,7 +348,9 @@ function CardMedia({
     <>
       <img
         src={url}
-        alt={product.name}
+        alt={imageAlt}
+        width={imageSize?.width}
+        height={imageSize?.height}
         loading="lazy"
         decoding="async"
         className={`${imageClassName} ${
@@ -467,6 +513,8 @@ function GridCard({
 }: Props & { showWishlistButton: boolean; onQuickView: () => void }) {
   const imageUrl = productCardImageUrl(product);
   const hoverImageUrl = productCardHoverImageUrl(product);
+  const imageAlt = productCardImageAlt(product);
+  const imageSize = productCardImageSize(product);
   const sizeChips = productCardSizeChips(product);
 
   return (
@@ -497,9 +545,10 @@ function GridCard({
             {/* نسبت ثابت ۴:۵ → ارتفاع کارت هنگام لود تصویر نمی‌پرد */}
             <div className="group/image relative aspect-[4/5] w-full overflow-hidden rounded-2xl bg-cream-deep transition-colors duration-300 group-hover:bg-brand-50">
               <CardMedia
-                product={product}
                 primaryUrl={imageUrl}
                 secondaryUrl={hoverImageUrl}
+                imageAlt={imageAlt}
+                imageSize={imageSize}
                 imageClassName="absolute inset-0 h-full w-full object-contain p-3 transition-[opacity,transform] duration-500 ease-out group-hover/image:scale-[1.03] motion-reduce:transition-none sm:p-4"
               />
 
@@ -615,6 +664,8 @@ function HomeCard({
 }: Props & { showWishlistButton: boolean; onQuickView: () => void }) {
   const imageUrl = productCardImageUrl(product);
   const hoverImageUrl = productCardHoverImageUrl(product);
+  const imageAlt = productCardImageAlt(product);
+  const imageSize = productCardImageSize(product);
   const sizeChips = productCardSizeChips(product);
 
   return (
@@ -644,9 +695,10 @@ function HomeCard({
             "
           >
             <CardMedia
-              product={product}
               primaryUrl={imageUrl}
               secondaryUrl={hoverImageUrl}
+              imageAlt={imageAlt}
+              imageSize={imageSize}
               imageClassName="absolute inset-0 h-full w-full object-contain p-4 transition-[opacity,transform] duration-500 ease-out group-hover/image:scale-[1.03] motion-reduce:transition-none"
             />
           </div>

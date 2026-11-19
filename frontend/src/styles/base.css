@@ -1,0 +1,86 @@
+/* ==================================================
+   نشانگر ماوس روی دکمه‌ها
+
+   Tailwind v4 برخلاف نسخهٔ ۳ دیگر برای دکمه‌ها `cursor: pointer` نمی‌گذارد؛
+   به همین دلیل دکمه‌های بدون کلاس مشخص (مثل ردیف «پشتیبانی» فوتر) هنگام
+   بردن ماوس، نشانگر دست نمی‌گرفتند. این قاعده فقط دکمه‌های فعال را شامل
+   می‌شود و کلاس‌های صریح مثل `cursor-default` همچنان اولویت دارند.
+================================================== */
+
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
+}
+
+
+/* ==================================================
+   تنظیمات عمومی
+================================================== */
+
+:root {
+  font-family: Vazirmatn, Tahoma, Arial, sans-serif;
+  direction: rtl;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+/*
+  جلوگیری از سرریز افقی در عرض‌های خیلی باریک (۳۲۰px و متن‌های بلندتر).
+  «clip» برخلاف «hidden» رفتار اسکرول را تغییر نمی‌دهد و position: sticky
+  هدر را نمی‌شکند.
+*/
+html,
+body {
+  overflow-x: clip;
+}
+
+/*
+  آفست اسکرول برای رد شدن از پشتهٔ چسبان (نوار اطلاع‌رسانی + هدر).
+  مقدار پیش‌فرض محافظه‌کارانه است؛ Layout.tsx ارتفاع واقعی همان پشته را با
+  ResizeObserver اندازه می‌گیرد و همین متغیر را به‌روزرسانی می‌کند.
+*/
+:root {
+  --sticky-header-offset: 132px;
+}
+
+html {
+  scroll-padding-top: var(--sticky-header-offset);
+}
+
+/*
+  هیچ عنصر فوکوس‌شده‌ای نباید زیر هدر چسبان پنهان بماند (WCAG 2.4.11
+  Focus Not Obscured). با scroll-margin هنگام فوکوس باکیبورد، مرورگر
+  عنصر را پایین‌تر از هدر اسکرول می‌کند.
+*/
+:focus-visible {
+  scroll-margin-top: var(--sticky-header-offset);
+}
+
+body {
+  margin: 0;
+  background: #f8fafc;
+  color: #0f172a;
+  font-family: Vazirmatn, Tahoma, Arial, sans-serif;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+img {
+  max-width: 100%;
+}
+

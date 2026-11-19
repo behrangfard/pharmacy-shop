@@ -9,9 +9,12 @@ use App\Models\Product;
 use App\Models\ProductColor;
 use App\Models\ProductPackItem;
 use App\Models\ProductVariant;
+use App\Models\StockMovement;
 use App\Models\StoreSetting;
+use App\Services\Inventory\StockLedger;
 use App\Services\Notifications\AdminNotificationService;
 use App\Services\Orders\OrderCouponService;
+use App\Services\Orders\OrderSalesService;
 use App\Services\Orders\OrderStockService;
 use App\Support\GuestAccessCode;
 use App\Support\OrderStatus;
@@ -28,7 +31,9 @@ class OrderController extends Controller
     public function __construct(
         private readonly AdminNotificationService $notifications,
         private readonly OrderStockService $stock,
-        private readonly OrderCouponService $coupons
+        private readonly OrderCouponService $coupons,
+        private readonly OrderSalesService $sales,
+        private readonly StockLedger $ledger
     ) {
     }
 
@@ -152,6 +157,15 @@ class OrderController extends Controller
                 $discount = 0;
                 $taxableAmount = 0;
                 $orderItems = [];
+
+                /*
+                 * تغییرهای موجودی برای ثبت در دفتر گردش موجودی. شناسهٔ سفارش
+                 * هنگام کاهش موجودی هنوز ساخته نشده، پس ردیف‌ها همین‌جا جمع
+                 * می‌شوند و پس از ساخت سفارش (در همان تراکنش) ثبت می‌شوند.
+                 *
+                 * @var list<array{product_id: int, variant: ProductVariant|null, quantity: int, stock_after: int}> $stockMovements
+                 */
+                $stockMovements = [];
 
                 foreach ($validated['items'] as $item) {
                     $product = Product::query()
@@ -367,8 +381,22 @@ class OrderController extends Controller
 
                     if ($variant) {
                         $variant->decrement('stock', $quantity);
+
+                        $stockMovements[] = [
+                            'product_id' => $product->id,
+                            'variant' => $variant,
+                            'quantity' => -$quantity,
+                            'stock_after' => (int) $variant->stock,
+                        ];
                     } else {
                         $product->decrement('stock', $quantity);
+
+                        $stockMovements[] = [
+                            'product_id' => $product->id,
+                            'variant' => null,
+                            'quantity' => -$quantity,
+                            'stock_after' => (int) $product->stock,
+                        ];
                     }
                 }
 
@@ -472,16 +500,27 @@ class OrderController extends Controller
                     2
                 );
 
+                /*
+                 * کارمزد «پرداخت در محل»: فقط برای COD و بر اساس
+                 * config('payment.cod_fee') (صفر = بدون کارمزد). مبلغ در خود
+                 * سفارش ذخیره می‌شود تا با تغییر تنظیمات، فاکتورهای قبلی عوض
+                 * نشوند.
+                 */
+                $codFee = $paymentMethod === PaymentMethod::COD
+                    ? round(max((float) config('payment.cod_fee', 0), 0), 2)
+                    : 0.0;
+
                 $total = round(
-                    $subtotal - $discount + $shippingCost + $taxAmount,
+                    $subtotal - $discount + $shippingCost + $taxAmount + $codFee,
                     2
                 );
 
                 /*
                  * سقف سفارش «پرداخت در محل»: چون هیچ پرداخت اولیه‌ای انجام
-                 * نمی‌شود، مبلغ نهایی بیش از حد مجاز پذیرفته نیست. مقدار صفر
-                 * در config یعنی بدون سقف. این بررسی داخل تراکنش است، پس با
-                 * رد شدن سفارش، موجودی و سهمیهٔ کوپن هم برمی‌گردد.
+                 * نمی‌شود، مبلغ نهایی (شامل کارمزد COD) بیش از حد مجاز پذیرفته
+                 * نیست. مقدار صفر در config یعنی بدون سقف. این بررسی داخل
+                 * تراکنش است، پس با رد شدن سفارش، موجودی و سهمیهٔ کوپن هم
+                 * برمی‌گردد.
                  */
                 $codMaxTotal = (float) config('payment.cod_max_total', 0);
 
@@ -520,6 +559,7 @@ class OrderController extends Controller
                     'coupon_discount' => $couponDiscount,
                     'tax_percent' => $vatPercent,
                     'tax_amount' => $taxAmount,
+                    'cod_fee' => $codFee,
                     'total' => $total,
                     'status' => $paymentMethod === PaymentMethod::COD
                         ? OrderStatus::PROCESSING
@@ -537,6 +577,30 @@ class OrderController extends Controller
                 foreach ($orderItems as $orderItem) {
                     $order->items()->create($orderItem);
                 }
+
+                /*
+                 * دفتر گردش موجودی: کاهش موجودی هر قلم با شناسهٔ سفارش ثبت
+                 * می‌شود تا در گزارش پنل معلوم باشد کدام سفارش موجودی را کم
+                 * کرده است. اگر تراکنش برگردد، این ردیف‌ها هم برمی‌گردند.
+                 */
+                foreach ($stockMovements as $movement) {
+                    $this->ledger->record(
+                        $movement['product_id'],
+                        $movement['variant'],
+                        $movement['quantity'],
+                        StockMovement::TYPE_ORDER,
+                        $movement['stock_after'],
+                        $order,
+                        null,
+                        'ثبت سفارش '.$order->order_number,
+                    );
+                }
+
+                /*
+                 * شمارندهٔ فروش محصولات در همان تراکنش بالا می‌رود تا با موجودی
+                 * و اقلام سفارش هم‌یشه هم‌خوان بماند؛ لغو سفارش‌ها آن را برمی‌گرداند.
+                 */
+                $this->sales->record($order);
 
                 return $order->load(
                     'items.product.images',
@@ -812,6 +876,9 @@ class OrderController extends Controller
 
             $order->status = 'cancelled';
             $order->save();
+
+            // فروش ثبت‌شدهٔ این سفارش هم باید از شمارندهٔ محصولات کم شود.
+            $this->sales->revert($order);
 
             /*
              * تخفیف کوپن با لغو سفارش مصرف‌شده نمی‌ماند؛ همان تراکنش سهمیهٔ

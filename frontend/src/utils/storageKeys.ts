@@ -25,6 +25,8 @@ export const STORAGE_KEYS = {
   storefrontAnnouncementBar: "behrang-shop-storefront-announcement-bar",
   /** کش نشان‌های اعتماد و مجوزهای فوتر (اینماد، ساماندهی و ...). */
   storefrontTrustBadges: "behrang-shop-storefront-trust-badges",
+  /** کش کانال‌های ارتباطی فروشگاه (تلگرام، واتس‌اپ، بله، ایتا، اینستاگرام). */
+  storefrontContactChannels: "behrang-shop-storefront-contact-channels",
   /** کش استوری‌های صفحهٔ اول (دایره‌های بالای دسته‌بندی‌ها). */
   storefrontStories: "behrang-shop-storefront-stories",
   /** استوری‌هایی که کاربر دیده است (برای خاکستری شدن حلقهٔ دایره). */

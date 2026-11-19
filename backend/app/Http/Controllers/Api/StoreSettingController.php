@@ -45,6 +45,13 @@ class StoreSettingController extends Controller
                  * استفاده می‌کند؛ اعتبارسنجی نهایی سمت سرور انجام می‌شود.
                  */
                 'cod_max_total' => max(0, (int) config('payment.cod_max_total', 0)),
+
+                /*
+                 * کارمزد پرداخت در محل (تومان؛ صفر = بدون کارمزد). چک‌اوت این
+                 * عدد را به مبلغ نهایی COD اضافه و نمایش می‌دهد؛ محاسبهٔ نهایی
+                 * همیشه سمت سرور انجام می‌شود.
+                 */
+                'cod_fee' => max(0, (int) config('payment.cod_fee', 0)),
             ],
         ]);
     }

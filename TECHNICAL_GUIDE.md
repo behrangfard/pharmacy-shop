@@ -1,7 +1,7 @@
-# راهنمای فنی جامع پروژه «بهرنگ شاپ»
+﻿# راهنمای فنی جامع پروژه «بهرنگ شاپ»
 
-> **نسخهٔ سند:** 1.11
-> **تاریخ:** ۲۳ آبان ۱۴۰۵ / 2026-11-14
+> **نسخهٔ سند:** 1.20
+> **تاریخ:** ۲۸ آبان ۱۴۰۵ / 2026-11-18
 > **مخاطب:** توسعه‌دهندهٔ جدید، بازبین خارجی، دستیار هوش مصنوعی
 > **دامنه:** کل مونوریپو (`backend/` + `frontend/`)
 
@@ -59,25 +59,29 @@
 «بهرنگ شاپ» یک فروشگاه اینترنتی پوشاک زیر است با معماری **جدا‌شدهٔ SPA + API**:
 
 - **بک‌اند:** Laravel 13 (PHP 8.4 در محیط توسعه) با احراز هویت **Sanctum Bearer Token**
-  و ۲۴۵ مسیر API؛ ۱۸۵ مسیر آن مخصوص پنل مدیریت است.
+  و ۲۵۳ مسیر API؛ ۱۸۸ مسیر آن مخصوص پنل مدیریت است.
 - **فرانت‌اند:** React 19 + TypeScript + Vite + Tailwind CSS 4 (بدون Next.js)،
   راست‌به‌چپ و فارسی، شامل فروشگاه عمومی و پنل مدیریت در همان SPA.
-- **داده:** MySQL در محیط توسعه (پیش‌فرض `.env.example` روی SQLite است)،
-  ۶۸ مایگریشن، ۴۲ مدل، ۵۶ کنترلر.
+- **داده:** MySQL در محیط توسعه (`.env.example` هم روی MySQL است)،
+  ۷۲ مایگریشن، ۴۳ مدل، ۶۰ کنترلر.
 - **پرداخت:** دو روش: **پرداخت آزمایشی (demo)** در محیط local (در `production`
   به‌صورت سخت‌گیرانه غیرفعال می‌شود) و **پرداخت در محل (COD)** که مستقل از
   درگاه است و وجه هنگام تحویل دریافت/ثبت می‌شود.
 - **پنل مدیریت:** ۴ نقش (`super_admin`, `product_manager`, `order_manager`, `support`)
-  و ۱۷ مجوز صفحه‌محور؛ هم API و هم منو/مسیرهای فرانت با همان مجوزها محدود می‌شوند.
+  و ۱۸ مجوز صفحه‌محور؛ هم API و هم منو/مسیرهای فرانت با همان مجوزها محدود می‌شوند.
 - **قابلیت‌های فروشگاه:** دسته‌بندی/برند/سایز/رنگ/پک، فیلتر فست‌محور، سبد خرید
   مهمان (localStorage)، علاقه‌مندی (مهمان + انتقال به حساب)، سفارش با
   Idempotency-Key، کد تخفیف، مرجوعی، حمل‌ونقل چندلایه، مقالات، صفحات ثابت،
   بنر/اسلایدر، نوار اطلاع‌رسانی، استوری، پاپ‌آپ کمپینی، نشان اعتماد،
+  کانال‌های ارتباطی (عضویت/پیام در تلگرام، واتس‌اپ، بله، ایتا، اینستاگرام)،
   پیام‌رسانی (پیامک/تلگرام/بله/واتساپ)، چت پشتیبانی، حسابداری و انبار.
 - **PWA:** manifest + service worker دستی (`public/sw.js`) با نسخهٔ کش
   خودکار در هر build + صفحهٔ آفلاین.
-- **تست:** ۳۹۲ تست PHPUnit در ۵۵ فایل (فقط بک‌اند). فرانت‌اند تست واحد ندارد
-  و ESLint هم پیکربندی نشده است؛ تنها گارد فرانت `tsc --noEmit` و build است.
+- **تست و لینت:** بک‌اند ۴۸۹ تست PHPUnit (۲۴۷۳ assertion) در ۶۷ فایل Feature و
+  ۱ فایل Unit؛ فرانت‌اند ۵۹ تست Vitest + Testing Library در ۱۰ فایل
+  (`npm run test`) و لینت با **oxlint** (`npm run lint`، ۰ خطا). ESLint نصب نشد
+  چون TypeScript 7 API کامپایلر جاوااسکریپت ندارد و `typescript-eslint` با آن
+  سازگار نیست.
 - **مستندات موجود:** `AGENTS.md` (قواعد اجباری کار برای هر دستیار/توسعه‌دهنده)،
   `SITE_GUIDE.md` (راهنمای فارسی خودِ سایت برای کاربر/مدیر) و `Start.txt`
   (تاریخچهٔ کارها). این فایل، سند فنی برای تحویل به توسعه‌دهنده یا هوش مصنوعی است.
@@ -97,6 +101,7 @@
 | مسیریابی فرانت | `react-router-dom` **7.18** (BrowserRouter + lazy routes) |
 | بیلد فرانت | Vite **8.3** + `@vitejs/plugin-react` 6.1 |
 | زبان فرانت | TypeScript **7.0** (`tsc --noEmit` در script `typecheck`) |
+| تست و لینت فرانت | Vitest **5.1** + Testing Library 16 + `user-event` + jsdom 31؛ لینت با oxlint **1.93** (ESLint با TypeScript 7 نصب نمی‌شود) |
 | استایل | Tailwind CSS **4.3** با پلاگین رسمی Vite (بدون config کلاسیک) |
 | کتابخانه‌های UI | `lucide-react` (آیکون)، `leaflet` 1.9 (نقشهٔ انتخاب آدرس)، فونت `@fontsource/vazirmatn` |
 | کلاینت HTTP | Axios 1.20 با دو نمونهٔ جدا (`api` و `adminApi`) |
@@ -106,13 +111,13 @@
 | پورت‌ها | API: `8000`، توسعهٔ فرانت: `5173`، پیش‌نمایش build: `4173` |
 | زبان رابط کاربری | فارسی و RTL؛ هیچ لایهٔ i18n وجود ندارد (متن‌ها inline هستند) |
 | تاریخ شمسی | `backend/app/Support/JalaliDate.php` و `frontend/src/utils/jalali.ts` |
-| تعداد مسیرها | ۲۴۹ (۲۶ گروه) — ۱۸۵ مسیر زیر `/api/v1/admin` |
-| تعداد مایگریشن‌ها | ۷۱ |
-| تعداد مدل‌ها | ۴۲ |
+| تعداد مسیرها | ۲۵۰ (۲۷ گروه) — ۱۸۹ مسیر زیر `/api/v1/admin` |
+| تعداد مایگریشن‌ها | ۷۵ |
+| تعداد مدل‌ها | ۴۴ |
 | تعداد کنترلرها (پوشهٔ Api) | ۵۸ |
-| تست‌ها | ۶۱ فایل Feature (+۱ Unit)، ۴۴۷ متد تست و ۲۳۰۸ assertion |
-| حجم کد فرانت | `frontend/src`: ۱۵۲ فایل، حدود ۸۵٬۲۰۰ خط (شامل ~۶٬۴۰۰ خط `index.css`) |
-| حجم کد بک‌اند | `backend/app`: ۱۳۷ فایل، حدود ۲۰٬۹۰۰ خط |
+| تست‌ها | بک‌اند: ۶۸ فایل Feature (+۱ Unit)، ۴۹۵ تست و ۲۴۸۹ assertion — فرانت: ۱۱ فایل Vitest، ۶۴ تست |
+| حجم کد فرانت | `frontend/src`: ۱۸۷ فایل `.ts/.tsx`، حدود ۸۴٬۶۰۰ خط + ۱۶ فایل CSS با ۶٬۴۳۴ خط (`index.css` ۱۰۵ خط + `styles/` ۱۵ فایل) |
+| حجم کد بک‌اند | `backend/app`: ۱۴۵ فایل، حدود ۲۱٬۹۰۰ خط |
 
 > نسخه‌های بالا از `composer.json` / `package.json` و `php artisan --version`
 > گرفته شده‌اند؛ اگر این سند قدیمی شد، همان دو فایل منبع حقیقت هستند.
@@ -139,6 +144,7 @@
 │  Services: Messaging / Shipping / Accounting / Products / Orders / Support    │
 │  Support: AdminRole، OrderStatus، JalaliDate، BannerText، Spreadsheet│
 │  Cache: database (فست فیلتر ۶۰ ثانیه، تنظیمات فروشگاه ۱۰ دقیقه)       │
+│  Observers: StorefrontCacheObserver (پاک‌سازی خودکار کش ویترین)       │
 └──────┬───────────────┬────────────────┬───────────────┬──────────────┘
        │               │                │               │
        ▼               ▼                ▼               ▼
@@ -170,19 +176,21 @@
 |---|---|
 | `app/Http/Controllers/Api/` | ۵۶ کنترلر؛ کنترلرهای عمومی (`ProductController`, `OrderController`, `AuthController`, …) و ادمین (`Admin*Controller`) در همین پوشه‌اند |
 | `app/Http/Middleware/` | `AdminMiddleware` (بررسی نقش مدیر) و `EnsureAdminPermission` (بررسی مجوز صفحه‌ای) |
-| `app/Models/` | ۴۲ مدل Eloquent (بدون Repository؛ منطق در کنترلرها/مدل‌ها) |
-| `app/Services/` | `Messaging/` (درایورهای SMS/تلگرام/واتساپ/بله + قالب‌ها)، `Shipping/` (استعلام و قوانین ارسال)، `Accounting/`، `Products/`، `Notifications/`، `Orders/` (`OrderStockService`: بازگرداندن موجودی)، `Support/` |
-| `app/Support/` | کلاس‌های کمکی دامنه: `AdminRole`، `OrderStatus`، `PaymentMethod`، `LegalPages` (متن و جایگزینی متغیر صفحات رسمی)، `JalaliDate`، `BannerText`، `SupportChannels`، `Spreadsheet/` (خواندن/نوشتن CSV-Excel برای ایمپورت محصول) |
-| `app/Console/Commands/` | `birthday:greetings` (تبریک تولد)، `orders:release-abandoned` (لغو خودکار سفارش پرداخت‌نشده)، `pages:legal` (نصب صفحات رسمی سایت) و `catalog:hide-legacy` (مخفی‌سازی کاتالوگ قدیمی با `--restore`) |
+| `app/Models/` | ۴۴ مدل Eloquent (بدون Repository؛ منطق در کنترلرها/مدل‌ها) |
+| `app/Services/` | `Messaging/` (درایورهای SMS/تلگرام/واتساپ/بله + قالب‌ها)، `Shipping/` (استعلام و قوانین ارسال)، `Accounting/`، `Products/`، `Inventory/` (`StockLedger`: ثبت دفتر گردش موجودی)، `Notifications/`، `Orders/` (`OrderStockService`: بازگرداندن موجودی، `OrderCouponService`: آزادسازی سهمیهٔ کوپن، `OrderSalesService`: شمارندهٔ فروش محصول)، `Support/` |
+| `app/Observers/` | `StorefrontCacheObserver` — پاک‌سازی خودکار کش ویترین با تغییر ۱۳ مدل محتوا/کاتالوگ/تنظیمات |
+| `app/Support/` | کلاس‌های کمکی دامنه: `AdminRole`، `OrderStatus`، `PaymentMethod`، `LegalPages` (متن و جایگزینی متغیر صفحات رسمی)، `StorefrontCache` (کلیدها و پاک‌سازی کش ویترین)، `JalaliDate`، `BannerText`، `SupportChannels`، `Media/ImageDimensions` (خواندن ابعاد ذاتی تصویر با `getimagesize`، بدون نیاز به GD)، `Spreadsheet/` (خواندن/نوشتن CSV-Excel برای ایمپورت محصول) |
+| `app/Services/Media/` | `WebpConverter` — تبدیل JPG/PNG به WebP با GD/Imagick و بازگشت امن به فایل اصلی در نبود افزونه |
+| `app/Console/Commands/` | `birthday:greetings` (تبریک تولد)، `orders:release-abandoned` (لغو خودکار سفارش پرداخت‌نشده)، `orders:backfill-guest-access-codes` (ساخت کد پیگیری برای سفارش مهمان قدیمی)، `products:sync-sales-count` (بازسازی شمارندهٔ فروش از سفارش‌ها)، `pages:legal` (نصب صفحات رسمی سایت)، `images:webp` (تبدیل تصاویر به WebP) و `catalog:hide-legacy` (مخفی‌سازی کاتالوگ قدیمی با `--restore`) |
 | `routes/api.php` | تمام مسیرهای API با `prefix('v1')` |
 | `routes/web.php` | مسیر ریشهٔ ساده (`/`) |
 | `routes/console.php` | زمان‌بندی: `birthday:greetings` هر ۱۵ دقیقه و `orders:release-abandoned` هر ۱۰ دقیقه، هر دو با `withoutOverlapping` |
 | `bootstrap/app.php` | ثبت alias میدلویرها (`admin`, `admin.permission`) و پاسخ JSON برای `api/*` |
-| `config/payment.php` | منطق demo/disabled پرداخت + سقف مبلغ COD (`cod_max_total`) |
+| `config/payment.php` | منطق demo/disabled پرداخت + سقف مبلغ و کارمزد COD (`cod_max_total`، `cod_fee`) |
 | `config/cors.php` | دامنه‌های مجاز از `CORS_ALLOWED_ORIGINS` |
-| `database/migrations/` | ۷۰ مایگریشن |
+| `database/migrations/` | ۷۵ مایگریشن |
 | `database/seeders/` | `AdminUserSeeder`، `StoreSeeder`، `LegalPagesSeeder`، `DatabaseSeeder` |
-| `tests/Feature/` | ۶۰ فایل تست (۴۲۸ تست) + ۱ تست واحد — پوشش اصلی: محصولات، سفارش‌ها، مهمان و دسترسی مهمان، رهگیری، بازیابی رمز، ادمین، محتوا، پشتیبانی |
+| `tests/Feature/` | ۶۸ فایل تست (۴۹۵ تست) + ۱ تست واحد — پوشش اصلی: محصولات، سفارش‌ها، مهمان و دسترسی مهمان، رهگیری، بازیابی رمز، ادمین، محتوا، پشتیبانی، کانال‌های ارتباطی، گردش موجودی، کش ویترین، تصاویر/سئوی مدیا |
 | `storage/app/public/` | `banners/`، `banner-fonts/`، `product-images/`، `products/`، `stories/` و پوشه‌های ساخته‌شده در زمان آپلود |
 | `public/` | `index.php`، `storage` (symlink)، `robots.txt`، `favicon.ico`؛ پوشهٔ باقی‌ماندهٔ `storage-old/` |
 
@@ -191,22 +199,30 @@
 | مسیر | محتوا |
 |---|---|
 | `src/App.tsx` | تعریف همهٔ مسیرها؛ همهٔ صفحه‌ها با `lazy()` و `Suspense` |
-| `src/pages/` | ۴۹ صفحه: ۲۱ صفحهٔ فروشگاه (از جمله `ForgotPassword`, `ResetPassword`, `TrackOrder`) + ۲۸ صفحهٔ ادمین (از جمله `AdminDashboard`, `AdminProductForm`, `AdminShipping`, `InvoiceView`) |
-| `src/components/` | ۴۴ کامپوننت عمومی + پوشهٔ `accounting/` (۷ فایل) |
+| `src/pages/` | ۵۱ صفحه: ۲۲ صفحهٔ فروشگاه (از جمله `ForgotPassword`, `ResetPassword`, `TrackOrder`, `AccountOrders`) + ۲۹ صفحهٔ ادمین (از جمله `AdminDashboard`, `AdminProductForm`, `AdminShipping`, `AdminChannels`, `InvoiceView`) |
+| `src/components/` | ۶۷ فایل: کامپوننت‌های عمومی + پوشهٔ `accounting/` (۷ فایل) + پوشهٔ `admin/shipping/` (۱۱ فایل: `shippingShared` + ۱۰ تب/فرم صفحهٔ ارسال) |
 | `src/context/` | `AuthContext`, `AdminAuthContext`, `CartContext`, `WishlistContext` |
-| `src/hooks/` | `useStoreSettings`, `useHeaderFooter`, `useSitePages`, `useBannerFonts`, `useStories`, `useTrustBadges`, `usePageMeta`, `useRecentlyViewed` |
-| `src/services/` | لایهٔ تماس با API (axios) — `api.ts`، `productFilters.ts`، `popups.ts`، `support.ts`، `wishlist.ts`، … |
-| `src/utils/` | `storageKeys.ts` (کلیدهای localStorage + مهاجرت از کلیدهای قدیمی)، `theme.ts`، `seo.ts`، `structuredData.ts`، `price.ts`، `jalali.ts`، `adminPermissions.ts`، `adminNavItems.ts`، `images.ts`، `banner*.ts`، `supportChat.ts` |
-| `src/index.css` | ۶٬۴۲۲ خط: توکن‌های طراحی، تم‌ها، کلاس‌های عمومی و استایل‌های سراسری |
+| `src/hooks/` | `useStoreSettings`, `useHeaderFooter`, `useSitePages`, `useBannerFonts`, `useStories`, `useTrustBadges`, `useContactChannels`, `usePageMeta`, `useRecentlyViewed`, `useMediaQuery` (پاسخ زندهٔ `matchMedia` برای رندر تک‌نسخه‌ای دسکتاپ/موبایل) |
+| `src/services/` | لایهٔ تماس با API (axios) — `api.ts`، `productFilters.ts`، `popups.ts`، `support.ts`، `contactChannels.ts`، `wishlist.ts`، … |
+| `src/utils/` | `storageKeys.ts` (کلیدهای localStorage + مهاجرت از کلیدهای قدیمی)، `guestAccessCode.ts` (نرمال/قالب کد پیگیری مهمان)، `theme.ts`، `seo.ts`، `structuredData.ts`، `price.ts`، `jalali.ts`، `adminPermissions.ts`، `adminNavItems.ts`، `images.ts`، `banner*.ts`، `supportChat.ts` |
+| `src/test/` | `setup.ts` مشترک تست‌ها (jest-dom + پاک‌سازی DOM و localStorage بعد از هر تست) |
+| `src/**/*.test.ts(x)` | تست‌های Vitest کنار همان ماژول: `utils/guestAccessCode`، `utils/storageKeys`، `utils/jalali`، `utils/orderDisplay`، `utils/bannerText`، `components/Button`، `components/AccountNameMenu`، `services/contactChannels`، `components/StoreChannelsSection`، `pages/AccountOrders`، `services/api` |
+| `src/index.css` | هستهٔ استایل (۱۰۵ خط): `@import "tailwindcss"`، فونت وزیرمتن و بلوک `@theme` با توکن‌های رنگ/شعاع |
+| `src/styles/` | ۱۵ فایل CSS به ترتیب سند: `base`، `admin-screens`، `admin-responsive`، `admin-page-widths`، `admin-sidebar-icons`، `admin-responsive-wide`، `storefront`، `admin-components`، `admin-sidebar`، `support-widget`، `support-inbox`، `admin-sidebar-custom`، `jalali-picker`، `theme-preview`، `storefront-extras` (بزرگ‌ترین ۸۱۹ خط) |
 | `public/` | `manifest.webmanifest`، `sw.js`، `offline.html`، `icons/`، `images/` |
 | `scripts/` | `generate-sitemap.mjs` (در `npm run build`) و `generate-pwa-icons.mjs` |
 | `vite.config.ts` | پلاگین Tailwind، پلاگین نسخه‌دهی خودکار `sw.js`، پورت ۵۱۷۳/۴۱۷۳ و `host: true` برای تست روی موبایل |
+| `vitest.config.ts` | پیکربندی تست فرانت (محیط jsdom، setup مشترک، الگوی `src/**/*.test.{ts,tsx}`) |
+| `.oxlintrc.json` | پیکربندی لینتر **oxlint** (جایگزین ESLint — TypeScript 7 با `typescript-eslint` سازگار نیست)؛ قواعد hooks خطا و بقیه هشدار |
 
 ### مستندات ریشه
 
 | فایل | کاربرد |
 |---|---|
 | `AGENTS.md` | قواعد اجباری کار در مخزن (برای دستیارهای هوش مصنوعی و توسعه‌دهنده) |
+| `.clineignore` | مسیرهای خارج از دسترس ابزارهای هوش مصنوعی: وابستگی‌ها، `dist`، `storage`، لاگ‌ها و فایل‌های `.env` (سرعت و جلوگیری از افشای رمز) |
+| `.vscode/settings.json` | تنظیمات **محلی** VS Code (پوشه در `.gitignore` است): `files.watcherExclude` و `search.exclude` برای `node_modules`، `vendor`، `dist`، `backend/storage`، به‌همراه `search.followSymlinks: false` و خاموش‌کردن دریافت خودکار تایپ‌ها |
+| `.vscode/extensions.json` | فهرست افزونه‌های پیشنهادی این مخزن (Tailwind، Cline، Cline RTL) و افزونه‌های بی‌ربط (`unwantedRecommendations`: ESLint در حالی که لینتر پروژه oxlint است، HTMLHint، Code Runner، Blazor/Dotnet، IntelliCode، Bracket Pair Colorizer 2) — فقط پیشنهاد غیرفعال‌سازی، بدون حذف خودکار |
 | `SITE_GUIDE.md` | راهنمای فارسی رفتار سایت و پنل (برای مدیر فروشگاه) |
 | `Start.txt` | تاریخچهٔ تغییرات و تصمیم‌های اجرایی |
 | `TECHNICAL_GUIDE.md` | همین سند (فنی، مخصوص تحویل/بازبینی) |
@@ -252,8 +268,10 @@ npm run dev                   # http://localhost:5173
 | برنامه | `APP_NAME`, `APP_ENV`, `APP_KEY`, `APP_DEBUG`, `APP_URL`, `FRONTEND_URL` (آدرس SPA برای لینک بازیابی رمز)، `APP_LOCALE`, `APP_FALLBACK_LOCALE` |
 | دیتابیس | `DB_CONNECTION`, `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, `DB_PASSWORD` |
 | زیرساخت | `SESSION_DRIVER`, `SESSION_LIFETIME`, `CACHE_STORE`, `QUEUE_CONNECTION`, `FILESYSTEM_DISK`, `BROADCAST_CONNECTION` |
+| تصاویر | `MEDIA_WEBP` (پیش‌فرض `true`؛ تبدیل خودکار JPG/PNG به WebP در بارگذاری)، `MEDIA_WEBP_QUALITY` (۸۲)، `MEDIA_WEBP_MAX_WIDTH` (۱۹۲۰؛ ۰ = بدون تغییر اندازه) |
+| عمر توکن API | `SANCTUM_EXPIRATION` (دقیقه؛ پیش‌فرض `43200` = ۳۰ روز؛ `0` = بدون انقضا) |
 | CORS | `CORS_ALLOWED_ORIGINS` (پیش‌فرض: `http://localhost:5173,http://localhost:4173`) |
-| پرداخت | `PAYMENT_MODE` (`demo`/`disabled`), `PAYMENT_DEMO_ENABLED`, `COD_MAX_TOTAL` (سقف مبلغ سفارش پرداخت در محل به تومان؛ ۰ = بدون سقف) |
+| پرداخت | `PAYMENT_MODE` (`demo`/`disabled`), `PAYMENT_DEMO_ENABLED`, `COD_MAX_TOTAL` (سقف مبلغ سفارش پرداخت در محل به تومان؛ ۰ = بدون سقف), `COD_FEE` (کارمزد ثابت سفارش پرداخت در محل به تومان؛ ۰ = بدون کارمزد) |
 | مدیر اولیه | `ADMIN_NAME`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` |
 | پیام‌رسانی | `MESSAGING_TIMEOUT`, `MESSAGING_AUDIENCE_LIMIT` |
 | پیامک | `SMS_ENABLED`, `SMS_DRIVER` (`kavenegar`/`smsir`/`custom`), `SMS_API_KEY`, `SMS_SENDER`, `SMS_BASE_URL`, `SMS_DEFAULT_RECIPIENT` |
@@ -274,10 +292,13 @@ npm run dev                   # http://localhost:5173
 | `npm run dev` | `frontend` | سرور توسعهٔ Vite (پورت ۵۱۷۳، روی شبکه هم باز) |
 | `npm run build` | `frontend` | `vite build` + تولید sitemap در `dist/` |
 | `npm run typecheck` | `frontend` | `tsc --noEmit` |
+| `npm run test` | `frontend` | اجرای تست‌های Vitest (۶۴ تست در ۱۱ فایل فعلی) |
+| `npm run test:watch` | `frontend` | اجرای تست‌ها در حالت watch |
+| `npm run lint` | `frontend` | لینت کل سورس با oxlint (۰ هشدار/خطا فعلی) |
 | `npm run preview` | `frontend` | پیش‌نمایش build روی ۴۱۷۳ |
 | `npm run sitemap` | `frontend` | فقط تولید sitemap |
 | `npm run icons` | `frontend` | تولید آیکون‌های PWA |
-| `php artisan test` | `backend` | اجرای ۳۸۲ تست PHPUnit |
+| `php artisan test` | `backend` | اجرای ۴۹۵ تست PHPUnit (۲۴۸۹ assertion) |
 | `php artisan migrate` | `backend` | اجرای مایگریشن‌ها |
 | `php artisan db:seed` | `backend` | اجرای سیدرها |
 | `php artisan storage:link` | `backend` | لینک عمومی storage |
@@ -286,9 +307,13 @@ npm run dev                   # http://localhost:5173
 | `php artisan queue:work` | `backend` | پردازش صف (در صورت فعال بودن صف پیام‌ها) |
 | `php artisan birthday:greetings [--date=YYYY-MM-DD] [--force] [--dry-run]` | `backend` | اجرای دستی/آزمایشی تبریک تولد |
 | `php artisan orders:release-abandoned [--minutes=60] [--limit=200] [--dry-run]` | `backend` | لغو دستی سفارش‌های پرداخت‌نشدهٔ قدیمی و آزادسازی موجودی |
+| `php artisan orders:backfill-guest-access-codes [--limit=0] [--dry-run]` | `backend` | ساخت کد پیگیری برای سفارش‌های مهمانِ قبل از نسخهٔ ۱.۱۱؛ اجرای دوباره بی‌خطر است (کد موجود بازنویسی نمی‌شود) |
 | `php artisan catalog:hide-legacy [--restore]` | `backend` | مخفی/بازگردانی کاتالوگ قدیمی |
 | `php artisan pages:legal [--force]` | `backend` | ساخت صفحات رسمی/اعتماد (درباره ما، تماس، قوانین، حریم خصوصی، مرجوعی)؛ `--force` متن پیش‌فرض را بازنویسی می‌کند |
-| `php artisan route:list` | `backend` | فهرست کامل ۲۴۹ مسیر |
+| `php artisan products:sync-sales-count [--dry-run] [--chunk=200]` | `backend` | بازسازی `products.sales_count` از مجموع اقلام سفارش‌های لغونشده (اول با `--dry-run`) |
+| `php artisan images:webp [--apply] [--path=...]` | `backend` | گزارش/تبدیل تصاویر JPG/PNG به WebP و به‌روزرسانی مسیرهای دیتابیس (نیازمند `ext-gd`/`ext-imagick`؛ پیش‌فرض فقط گزارش) |
+| `php artisan images:migrate-legacy [--apply]` | `backend` | گزارش/انتقال مسیرهای قدیمی `products/` به `product-images/{id}/` و شمارش باقی‌مانده‌های `public/storage-old` (پیش‌فرض فقط گزارش؛ هیچ فایلی حذف نمی‌شود) |
+| `php artisan route:list` | `backend` | فهرست کامل ۲۵۰ مسیر |
 
 ### پیشنهاد تنظیمات production
 
@@ -306,6 +331,10 @@ php artisan view:cache
 - `COD_MAX_TOTAL` سقف مبلغ سفارش «پرداخت در محل» است؛ خالی/۰ یعنی بدون سقف.
   همین عدد در `GET /store-settings` هم برگردانده می‌شود و چک‌اوت گزینهٔ COD را
   برای مبالغ بیشتر غیرفعال می‌کند (اعتبارسنجی نهایی سمت سرور).
+- `COD_FEE` کارمزد ثابت سفارش «پرداخت در محل» (تومان؛ ۰ = بدون کارمزد) است.
+  مبلغ در لحظهٔ ثبت سفارش به `total` اضافه و در ستون `orders.cod_fee` ذخیره
+  می‌شود؛ سقف `COD_MAX_TOTAL` هم شامل همین کارمزد است و چک‌اوت عدد را از
+  `GET /store-settings` می‌خواند.
 - `CORS_ALLOWED_ORIGINS` باید دامنهٔ واقعی فرانت را داشته باشد.
 - `APP_DEBUG=false` و `APP_ENV=production` الزامی است.
 
@@ -319,8 +348,19 @@ php artisan view:cache
   (ایمیل + رمز). خروجی: `{ message, user, token }`.
 - توکن‌ها از نوع **Sanctum Personal Access Token** با نام `behrang-shop` هستند و
   فرانت آن را در هدر `Authorization: Bearer <token>` می‌فرستد.
-- `sanctum.expiration = null` است؛ یعنی توکن‌ها **منقضی نمی‌شوند** تا زمانی که
-  کاربر خارج شود یا رمزش را عوض کند (تغییر رمز همهٔ توکن‌ها را حذف می‌کند).
+- `sanctum.expiration` از `SANCTUM_EXPIRATION` می‌آید و پیش‌فرض **۴۳۲۰۰ دقیقه
+  (۳۰ روز)** است؛ مقدار `0` یعنی بدون انقضا (فقط برای اشکال‌زدایی). پس از پایان
+  عمر توکن، هر مسیر `auth:sanctum` پاسخ **۴۰۱** می‌دهد. تغییر رمز همچنان همهٔ
+  توکن‌ها را حذف می‌کند.
+- **رفتار فرانت در ۴۰۱:** اینترسپتور `api` (و `adminApi`) در
+  `frontend/src/services/api.ts` توکن منقضی را از `localStorage` پاک می‌کند، نشانهٔ
+  یک‌بارمصرف «نشست منقضی شده» را در `sessionStorage` می‌گذارد و رویداد
+  `behrang-shop:session-expired` (یا `behrang-shop:admin-session-expired`) را
+  می‌فرستد؛ `AuthContext`/`AdminAuthContext` با شنیدن آن کاربر را `null`
+  می‌کنند تا گاردهای مسیر، کاربر را به `/login` (یا `/admin/login`) بفرستند.
+  صفحهٔ ورود پیام «نشست شما به پایان رسیده است» را از همان نشانه می‌خواند
+  (`consumeSessionExpiredNotice`). تست: `TokenExpirationTest` (بک‌اند) و
+  `services/api.test.ts` (فرانت).
 - ورود ادمین از همان endpoint انجام می‌شود؛ تفاوت در `role = admin` کاربر است.
   فرانت توکن ادمین را جداگانه در `behrang-shop-admin-token` نگه می‌دارد تا
   نشست مشتری و مدیر با هم قاطی نشود (`services/api.ts`).
@@ -385,6 +425,7 @@ php artisan view:cache
 | `coupons.manage` | ✅ | — | ✅ | — |
 | `customers.manage` | ✅ | — | ✅ | ✅ |
 | `messaging.manage` | ✅ | — | — | ✅ |
+| `channels.manage` | ✅ | — | — | ✅ |
 | `accounting.manage` | ✅ | — | ✅ | — |
 | `reports.view` | ✅ | — | ✅ | — |
 | `settings.manage` | ✅ | — | — | — |
@@ -401,8 +442,10 @@ php artisan view:cache
 
 ### مدل تهدید و نکات امنیتی
 
-- توکن‌ها بدون انقضا در `localStorage` ذخیره می‌شوند → ریسک XSS به‌طور کامل
-  پوشش داده نمی‌شود (هیچ CSP مشخصی در فرانت تعریف نشده است).
+- توکن‌ها در `localStorage` ذخیره می‌شوند → ریسک XSS به‌طور کامل پوشش داده
+  نمی‌شود (هیچ CSP مشخصی در فرانت تعریف نشده است). از نسخهٔ ۱.۱۷ عمر توکن
+  محدود است (`SANCTUM_EXPIRATION`، پیش‌فرض ۳۰ روز)، ولی **refresh token وجود
+  ندارد** و کاربر پس از انقضا باید دوباره وارد شود.
 - ثبت‌نام/ورود **rate limit (۱۵ درخواست در دقیقه per IP) و قفل حساب (۵ تلاش
   ناموفق در ۱۵ دقیقه) دارند**، ولی CAPTCHA ندارند. ستون `email_verified_at` وجود
   دارد ولی در ثبت‌نام هرگز پر نمی‌شود و هیچ مسیر/میدلویری آن را الزام نمی‌کند
@@ -416,7 +459,7 @@ php artisan view:cache
 
 ## ۷) مدل داده
 
-۶۷ مایگریشن و ۴۲ مدل. جدول‌ها را می‌توان به شش حوزه تقسیم کرد.
+۷۲ مایگریشن و ۴۳ مدل. جدول‌ها را می‌توان به شش حوزه تقسیم کرد.
 
 ### ۷.۱ کاتالوگ و محصول
 
@@ -425,7 +468,7 @@ php artisan view:cache
 | `categories` | درختی (`parent_id`)، `slug`، `is_active`، `sort_order` |
 | `brands` | `slug`، `is_active`، `sort_order` |
 | `products` | `category_id` (الزامی، `restrictOnDelete`)، `brand_id` (nullable)، `name`، `slug`، `sku`، `price`، `compare_price`، `discount_percent`، `stock`، `weight`، `thumbnail`، `is_active/is_featured/is_new`، `views_count`، `sales_count`، `is_taxable`، `cost_price`، `is_returnable`، `meta_title/meta_description` |
-| `product_images` | چند تصویر برای هر محصول + تصویر اصلی |
+| `product_images` | چند تصویر برای هر محصول + تصویر اصلی (`alt` قابل ویرایش از پنل) + `width`/`height` ذاتی که هنگام ذخیره از فایل پر می‌شود (رزرو فضا و کاهش CLS) |
 | `product_variants` | تنوع‌ها؛ فیلد `size` برای فیلتر سایز و `is_active` |
 | `product_colors` | پالت رنگ محصول، `is_active`، `sort_order` |
 | `product_pack_items` | اقلام «پک» (چند‌تایی) با رنگ‌های انتخابی |
@@ -441,7 +484,7 @@ php artisan view:cache
 
 | جدول | نکات کلیدی |
 |---|---|
-| `orders` | `user_id` (**nullable** برای سفارش مهمان)، `guest_token` (UUID مرورگر مهمان + یکتایی با `idempotency_key`)، `guest_access_code` (کد پیگیری ۸ کاراکتری یکتا برای بازیابی دسترسی مهمان؛ در پاسخ‌های عادی مخفی است)، `order_number` یکتا، `subtotal/shipping_cost/discount/total`، `status`، `payment_status`، `payment_method` (`online`/`cod`)، `paid_at`، اطلاعات گیرنده، `notes`، فیلدهای مالیات، `stock_restored_at`، `idempotency_key`، `sales_channel` (پیش‌فرض `other`)، فیلدهای کد تخفیف و حمل‌ونقل |
+| `orders` | `user_id` (**nullable** برای سفارش مهمان)، `guest_token` (UUID مرورگر مهمان + یکتایی با `idempotency_key`)، `guest_access_code` (کد پیگیری ۸ کاراکتری یکتا برای بازیابی دسترسی مهمان؛ در پاسخ‌های عادی مخفی است)، `order_number` یکتا، `subtotal/shipping_cost/discount/total`، `cod_fee` (کارمزد ثابت COD، فقط سفارش‌های `cod`؛ ۰ = بدون کارمزد)، `status`، `payment_status`، `payment_method` (`online`/`cod`)، `paid_at`، اطلاعات گیرنده، `notes`، فیلدهای مالیات، `stock_restored_at`، `idempotency_key`، `sales_channel` (پیش‌فرض `other`)، فیلدهای کد تخفیف و حمل‌ونقل |
 | `order_items` | محصول، تنوع، رنگ، تعداد، قیمت واحد، `cost_price`، اطلاعات پک |
 | `coupons` | `code` یکتا، `type` (`percent`/`fixed`)، `value`، `min_order_total`، `max_discount`، `usage_limit`/`used_count`، `starts_at`/`expires_at`، `is_active` |
 | `return_requests` | درخواست مرجوعی با وضعیت و دلیل |
@@ -465,7 +508,7 @@ php artisan view:cache
 
 | جدول | نکات کلیدی |
 |---|---|
-| `banners` | بنر/اسلایدر + تصویر موبایل + لایه‌های متنی |
+| `banners` | بنر/اسلایدر + تصویر موبایل + لایه‌های متنی + `image_alt` (سئو) + ابعاد ذاتی `image_width/image_height` و `mobile_image_width/mobile_image_height` (هنگام ذخیره از فایل پر می‌شود) |
 | `banner_sections` | موقعیت/چیدمان اسلایدر، تنظیمات اندازه، گردی گوشه، انیمیشن |
 | `banner_fonts` | فونت‌های آپلودی برای لایه‌های متنی بنر |
 | `announcement_bar_items` | آیتم‌های نوار بالای هدر (متن/تصویر/ویدیو) + تنظیمات نمایش |
@@ -474,6 +517,7 @@ php artisan view:cache
 | `stories` | استوری‌های صفحهٔ اول + تصویر و لینک |
 | `popups` | کمپین پاپ‌آپ: محتوا (عنوان/توضیح/تصویر/CTA/کد تخفیف)، ظاهر (`theme`, `layout`, `image_position`)، هدف‌گیری (`display_pages`, `devices`)، زمان‌بندی (`starts_at`, `ends_at`, `countdown_to`)، قواعد نمایش (`delay_seconds`, `auto_close_seconds`, `frequency`, `close_on_backdrop`, `show_close`)، `is_active`, `sort_order` |
 | `trust_badges` | نمادها و مجوزها (اینماد، ساماندهی، …) برای فوتر |
+| `contact_channels` | کانال‌های ارتباطی فروشگاه: `key` یکتای `telegram`/`whatsapp`/`bale`/`eitaa`/`instagram`، `title`، `description`، `join_url`/`join_label` (عضویت در کانال)، `chat_url`/`chat_label` (ارسال پیام)، `sort_order`، `is_active` |
 | `store_settings` | تنظیمات کلید/مقدار فروشگاه (تماس، مالیات، ارسال، هدر/فوتر، صفحهٔ ارسال، …) — `StoreSetting::DEFAULTS` منبع پیش‌فرض‌هاست |
 
 **مقادیر مجاز پاپ‌آپ** (`App\Models\Popup`):
@@ -498,6 +542,7 @@ php artisan view:cache
 | `purchase_invoices` / `purchase_invoice_items` | فاکتور خرید + اقلام + وضعیت پرداخت |
 | `expenses` | هزینه‌ها |
 | `cheques` | چک‌ها + وضعیت (دریافت/خرج/برگشتی) |
+| `stock_movements` | دفتر «گردش موجودی»: `product_id`/`variant_id`، `type` (`order`, `order_restored`, `purchase`, `purchase_reversed`, `manual`, `import`)، `quantity` (تغییر خالص: کاهش منفی)، `stock_after` (موجودی پس از تغییر)، `order_id`/`purchase_invoice_id` (مرجع اختیاری)، `user_id` (عامل تغییر)، `note` |
 
 ### ۷.۶ پلتفرم
 
@@ -564,8 +609,9 @@ php artisan view:cache
 | `GET /articles`, `GET /articles/{slug}` | مقالات منتشرشده |
 | `GET /pages`, `GET /pages/{slug}` | صفحات ثابت |
 | `GET /trust-badges` | نشان‌های اعتماد |
+| `GET /contact-channels` | کانال‌های ارتباطی فعال (لینک عضویت/پیام؛ ۱۰ دقیقه کش) |
 | `GET /header-footer` | متن/لینک‌های هدر و فوتر |
-| `GET /store-settings`, `GET /store-settings/tax` | تنظیمات عمومی و مالیات (شامل `cod_max_total`) |
+| `GET /store-settings`, `GET /store-settings/tax` | تنظیمات عمومی و مالیات (شامل `cod_max_total` و `cod_fee`) |
 | `GET /shipping-info` | محتوای صفحهٔ روش‌های ارسال |
 | `POST /coupons/check` | اعتبارسنجی کد تخفیف (برای مهمان، فیلد اختیاری `phone` مبنای سقف شخصی است) |
 | `GET /support/config` | تنظیمات ویجت چت |
@@ -630,6 +676,7 @@ php artisan view:cache
 | `pages` | ۶ | `AdminPageController` | CRUD + وضعیت |
 | `articles` | ۷ | `AdminArticleController` | CRUD + کاور + وضعیت |
 | `trust-badges` | ۶ | `AdminTrustBadgeController` | CRUD + تصویر + وضعیت |
+| `channels` | ۳ | `AdminContactChannelController` | فهرست پنج کانال ثابت، ذخیره و تغییر وضعیت (نیازمند `channels.manage`) |
 | `header-footer` | ۲ | `HeaderFooterController` | خواندن/ذخیرهٔ تنظیمات |
 | `settings` | ۲ | `AdminStoreSettingController` | خواندن/ذخیرهٔ `store_settings` |
 | `shipping` | ۲۷ | `AdminShippingController` | روش‌ها، مناطق، قوانین، مرسوله‌ها، استعلام هزینه، صفحهٔ ارسال، تاریخچه |
@@ -638,7 +685,7 @@ php artisan view:cache
 | `support` | ۵ | `AdminSupportController` | گفتگوها، پاسخ، تغییر وضعیت، آمار |
 | `notifications` | ۳ | `AdminNotificationController` | فهرست، خواندن یکی/همه |
 | `admins` | ۴ | `AdminUserController` | مدیریت مدیران و نقش‌ها (نیازمند `admins.manage`) |
-| `reports` | ۱ | `AdminReportController` | گزارش فروش |
+| `reports` | ۲ | `AdminReportController` | گزارش فروش + گردش موجودی (`GET /admin/reports/stock-movements` با فیلتر نوع/محصول/تنوع و صفحه‌بندی) |
 
 > فهرست دقیق و کامل مسیرها با `php artisan route:list` یا فایل
 > `routes/api.php` قابل مشاهده است. در این سند فقط گروه‌بندی و مسئولیت‌ها آمده
@@ -652,7 +699,11 @@ php artisan view:cache
 - **آپلود تصویر:** هر بخش endpoint جدا دارد (`/banners/image`، `/popups/image`،
   `/stories/image`، `/articles/cover`، `/trust-badges/image`،
   `/products/{id}/images`، `/products/size-guide-image`). فایل‌ها در دیسک
-  `public` ذخیره و از `/storage/...` سرو می‌شوند.
+  `public` ذخیره و از `/storage/...` سرو می‌شوند. تصاویر JPG/PNG وقتی افزونهٔ
+  `gd`/`imagick` سرور فعال باشد به WebP تبدیل می‌شوند
+  (`App\Services\Media\WebpConverter`، `config/media.php`) و اگر GD/Imagick نباشد
+  فایل اصلی دست‌نخورده می‌ماند. پاسخ آپلود بنر `path`, `url`, `width`, `height`
+  برمی‌گرداند.
 - **سفارش:** هدر `Idempotency-Key` با UUID **الزامی** است؛ درخواست تکراری همان
   سفارش قبلی را برمی‌گرداند. تکرار دقیق یک ترکیب (محصول + تنوع + رنگ + پک) در
   دو ردیف، `422` می‌دهد.
@@ -721,8 +772,11 @@ php artisan view:cache
   «شماره سفارش + کد پیگیری» (throttle ۱۰ در دقیقه به ازای IP، مقایسهٔ
   `hash_equals`، پاسخ یکسان برای هر خطا) همان شناسهٔ مرورگر قبلی برگردانده
   می‌شود تا فاکتور و لغو سفارش در مرورگر جدید هم کار کند. سفارش کاربر
-  ثبت‌شده کد ندارد و سفارش‌های مهمانِ پیش از مایگریشن این ستون قابل بازیابی
-  نیستند (تست: `tests/Feature/GuestOrderRecoveryTest.php`).
+  ثبت‌شده کد ندارد و برای سفارش‌های مهمانِ پیش از این مایگریشن، کامند
+  `php artisan orders:backfill-guest-access-codes` کد می‌سازد (idempotent؛
+  `--dry-run`/`--limit` دارد و کد موجود را بازنویسی نمی‌کند). تست‌ها:
+  `tests/Feature/GuestOrderRecoveryTest.php` و
+  `tests/Feature/GuestAccessCodeBackfillTest.php`.
 - **پرداخت در محل (COD):** سفارش با `payment_method = cod` مستقیماً با
   `status = processing` و `payment_status = unpaid` ساخته می‌شود؛ `pay()` برای
   آن `422` می‌دهد. ادمین می‌تواند بدون تسویه اولیه وضعیت را تا `delivered`
@@ -735,12 +789,42 @@ php artisan view:cache
   محاسبهٔ نهایی `total` و داخل تراکنش ثبت سفارش انجام می‌شود، پس با رد شدن،
   موجودی و `used_count` کوپن هم برمی‌گردند. همین عدد در `GET /store-settings`
   برگردانده می‌شود و چک‌اوت گزینهٔ COD را غیرفعال و علت را نشان می‌دهد.
+- **کارمزد COD:** `config('payment.cod_fee')` (از `COD_FEE`) مبلغ ثابتی است که
+  فقط به سفارش `cod` اضافه می‌شود؛ ۰ یعنی بدون کارمزد. مبلغ در ثبت سفارش سمت
+  سرور محاسبه، به `total` اضافه و در `orders.cod_fee` ذخیره می‌شود تا فاکتورهای
+  قدیمی با تغییر تنظیمات عوض نشوند. `GET /store-settings` همان عدد را
+  برمی‌گرداند و چک‌اوت ردیف کارمزد و مبلغ قابل پرداخت را نشان می‌دهد؛ بررسی
+  سقف `COD_MAX_TOTAL` هم شامل کارمزد است. تست: `CodOrderTest`.
+- **دفتر گردش موجودی (`stock_movements`):** هر تغییر موجودی محصول/تنوع یک ردیف
+  در `App\Services\Inventory\StockLedger::record` می‌سازد و `quantity` همیشه
+  تغییر خالص است (کاهش منفی) و `stock_after` موجودی پس از تغییر. محل‌های
+  صدازدن: `OrderController@store` (با `order_id`)، `OrderStockService::restore`
+  (بازگردانی موجودی در هر سه مسیر لغو)، `PurchaseInvoiceService` (ثبت/ویرایش/
+  حذف فاکتور خرید)، `AdminProductController` (ویرایش دستی و موجودی اولیه) و
+  `ProductImportService` (ایمپورت). ردیف‌ها داخل همان تراکنش عملیات ثبت
+  می‌شوند و مقدار صفر ثبت نمی‌شود. گزارش پنل:
+  `GET /admin/reports/stock-movements?days=30&type=&product_id=&variant_id=&page=`
+  با خلاصهٔ افزایش/کاهش و صفحه‌بندی (تست: `StockMovementTest`).
+- **کش ویترین:** پاک‌سازی فقط با کنترلرهای پنل انجام نمی‌شود؛
+  `App\Observers\StorefrontCacheObserver` روی محصول/تنوع، دسته، برند، بنر و
+  بخش بنر، فونت بنر، نوار اطلاع‌رسانی، پاپ‌آپ، استوری، نشان اعتماد، کانال
+  ارتباطی و `store_settings` ثبت شده و `StorefrontCache` را صدا می‌زند. تغییر
+  فقط `views_count`/`sales_count` محصول کش را پاک نمی‌کند. کلید فیلترهای محصول
+  بر اساس رشتهٔ کوئری ساخته می‌شود، پس به‌جای پاک‌کردن تک‌تک کلیدها نسخهٔ کلید
+  (`storefront:products:filters-version`) عوض می‌شود. تست:
+  `StorefrontCacheObserverTest`.
 - `sales_channel` پیش‌فرض `other` است (برای تفکیک کانال فروش).
 
-> ⚠️ **نکتهٔ مهم برای بازبین:** `products.sales_count` با ثبت سفارش به‌طور
-> خودکار زیاد نمی‌شود؛ فقط از داده/سیدر می‌آید و در پنل هم قابل ویرایش نیست
-> (تست `AdminProductValidationTest`). مرتب‌سازی «پرفروش‌ترین» به همین ستون
-> وابسته است. اگر «پرفروش» باید واقعی باشد، این یک شکاف عملکردی است.
+- **شمارندهٔ فروش (`products.sales_count`):** با ثبت سفارش، مجموع `quantity`
+  هر محصول در همان تراکنش به `sales_count` اضافه می‌شود
+  (`App\Services\Orders\OrderSalesService::record`). هر مسیری که سفارش را لغو
+  کند (لغو مشتری، لغو مدیر، کامند `orders:release-abandoned`) همان متد
+  `revert` را صدا می‌زند و عدد را برمی‌گرداند؛ کاهش با شرط `sales_count >=
+  quantity` انجام می‌شود تا هرگز منفی نشود. مرجوعی/بازپرداخت موجودی را برنمی-
+  گرداند، پس شمارنده هم تغییر نمی‌کند. برای هم‌خوان‌کردن دادهٔ قدیمی، کامند
+  `php artisan products:sync-sales-count` (با `--dry-run`) شمارنده را از مجموع
+  اقلام سفارش‌های لغونشده بازمی‌سازد. پنل هیچ‌جا اجازهٔ ویرایش دستی این ستون را
+  نمی‌دهد (تست `AdminProductValidationTest`). تست: `ProductSalesCountTest`.
 
 ### ۹.۲ کد تخفیف
 
@@ -851,6 +935,55 @@ php artisan view:cache
   `--date=YYYY-MM-DD`، `--force` و `--dry-run` (فقط نمایش گیرندگان) برای
   اجرای دستی/تست وجود دارد.
 
+### ۹.۸ کانال‌های ارتباطی فروشگاه
+
+- **مدل داده:** `contact_channels` پنج ردیف ثابت دارد (`telegram`، `whatsapp`،
+  `bale`، `eitaa`، `instagram`) که مایگریشن می‌سازد؛ پنل فقط همان ردیف‌ها را
+  ویرایش می‌کند (ساخت/حذف لازم نیست) و کلید پلتفرم تغییر نمی‌کند.
+- **دو لینک مستقل:** `join_url` برای «عضویت در کانال/دنبال‌کردن صفحه» و
+  `chat_url` برای «ارسال پیام به اکانت فروشگاه». هر کدام برچسب دکمهٔ خودش
+  (`join_label`/`chat_label`) را دارد و برچسب خالی در فرانت با متن پیش‌فرض
+  (`services/contactChannels.ts`) پر می‌شود.
+- **نرمال‌سازی سمت سرور:** `App\Support\ContactLinks` مقدار ورودی پنل را به لینک
+  کامل تبدیل می‌کند: لینک کامل حفظ می‌شود، دامنهٔ بدون پروتکل `https://` می‌گیرد
+  و نام کاربری (`@behrangshop`) با پایهٔ همان پلتفرم (`t.me`، `ble.ir`،
+  `eitaa.com`، `instagram.com`) ساخته می‌شود. برای واتساپ شمارهٔ موبایل (با
+  ارقام فارسی/عربی و `+98`) به `https://wa.me/98...` تبدیل می‌شود و برای
+  اینستاگرام لینک پیام به `https://ig.me/m/<username>` می‌رود. مقدار نامعتبر
+  `422` با پیام فارسی می‌دهد (تست: `ContactChannelTest`).
+- **نمایش:** `GET /contact-channels` فقط ردیف‌های `is_active` را که دست‌کم یک
+  لینک دارند برمی‌گرداند (کش ۱۰ دقیقه‌ای `storefront.contact-channels.v1` که با
+  هر نوشتن در پنل پاک می‌شود). فرانت با `hooks/useContactChannels.ts` کش
+  `behrang-shop-storefront-contact-channels` را نشان می‌دهد و بخش
+  `components/StoreChannelsSection.tsx` در صفحه‌های `/register` و `/account`
+  رندر می‌شود؛ اگر هیچ کانالی لینک نداشته باشد، بخش کلاً ظاهر نمی‌شود.
+- **چیدمان (۱.۱۴):** `/register` دوستونه شد — فرم در ستون اصلی (فیلدها در
+  `sm:grid-cols-2`) و ستون باریک چسبان (`lg:sticky`) با بخش کانال‌ها و کارت
+  «چرا حساب بسازم؟». در `/account` بخش کانال‌ها بالای ستون کنار (قبل از کارت
+  سبد خرید) قرار گرفت و فرم «تغییر رمز عبور» به‌صورت تاشو با `aria-expanded`
+  بسته است تا صفحه کوتاه‌تر شود. خودِ `StoreChannelsSection` از شبکهٔ کارت‌های
+  دوستونه به **فهرست ردیفی** تغییر کرد (آیکن پلتفرم، عنوان/توضیح `truncate`،
+  دو دکمهٔ آیکنی هم‌اندازه با `sr-only` + `title` و پانویس راهنمای آیکن‌ها) تا
+  در ستون باریک متن‌ها هم‌تراز بمانند.
+- **صفحهٔ مستقل سفارش‌ها (۱.۱۵):** فهرست «سفارش‌های من» از پایینِ `/account`
+  حذف شد و به `/account/orders` رفت (`pages/AccountOrders.tsx` + تابع‌های
+  نمایش مشترک `utils/orderDisplay.ts` که از `Account.tsx` منتقل شدند: برچسب‌ها،
+  رنگ وضعیت‌ها، تصویر کوچک و قواعد «ادامهٔ پرداخت/لغو» — همان شروط سرور در
+  `pay()` و لغو). کارت‌ها از تبلت به بالا **دوستونه** (`md:grid-cols-2`)
+  چیده می‌شوند تا اسکرول کم شود. نام صاحب حساب
+  (`components/AccountNameMenu.tsx`) یک منوی بازشو با دو میان‌بر
+  «سفارش‌های من» و «حساب کاربری من» است و در **دو جا** استفاده می‌شود: هدر سایت
+  (دسکتاپ: آواتار + نام + فلش؛ موبایل: فقط آیکن کاربر با `variant="icon"`) و
+  سربرگ کارت پروفایل `/account` (`variant="page"`). منو با Escape، کلیک بیرون یا
+  تغییر مسیر بسته می‌شود و شناسهٔ `aria-controls` با `useId` یکتا می‌ماند چون
+  ممکن است دو نمونه هم‌زمان در صفحه باشند؛ در حالت آیکنی منو با `start-0` به
+  سمت داخل صفحه باز می‌شود تا در موبایل از لبه بیرون نزند.
+- **واتساپ:** لینک ارسال پیام در فرانت با پارامتر `text` و یک پیام آماده
+  (`CONTACT_CHANNEL_GREETING`) باز می‌شود تا گفتگو با متن خالی شروع نشود.
+- **تفکیک از پیام‌رسانی خودکار:** این بخش فقط لینک/دکمهٔ ارتباط است؛ ارسال و
+  دریافت پیام خودکار همچنان از `Services/Messaging` و وب‌هوک‌های
+  `SupportWebhookController` و با توکن ربات‌ها در `.env` انجام می‌شود (۹.۷).
+
 ---
 
 ## ۱۰) فرانت‌اند
@@ -872,7 +1005,8 @@ php artisan view:cache
 | `/login`, `/register` | ورود/ثبت‌نام |
 | `/forgot-password`, `/reset-password/:token` | فرم فراموشی رمز و تعیین رمز جدید (لینک ایمیل) |
 | `/track-order` | رهگیری عمومی سفارش (شماره سفارش + تلفن، بدون ورود) |
-| `/account`, `/account/orders/:orderNumber` | حساب کاربری و جزئیات سفارش |
+| `/account`, `/account/orders/:orderNumber` | حساب کاربری (اطلاعات، آدرس‌ها، تغییر رمز) و جزئیات سفارش |
+| `/account/orders` | «سفارش‌های من»: کارت‌های دوستونه سفارش‌ها + ادامهٔ پرداخت/لغو سفارش پرداخت‌نشده |
 | `/account/orders/:orderNumber/invoice` | فاکتور/رسید چاپی مشتری (چاپ مرورگر → Save as PDF؛ بدون هدر/فوتر سایت) |
 | `*` | صفحهٔ ۴۰۴ با جست‌وجو |
 
@@ -882,7 +1016,7 @@ php artisan view:cache
 `categories`, `brands`, `orders`, `returns`, `coupons`, `customers`,
 `customers/:customerId`, `wishlist`, `admins`, `messaging`, `support`,
 `accounting`, `shipping`, `content`, `banners`, `announcement-bar`,
-`trust-badges`, `stories`, `popups`, `header-footer`, `articles`,
+`trust-badges`, `channels`, `stories`, `popups`, `header-footer`, `articles`,
 `reports`, `settings`, `reviews`.
 
 همهٔ صفحه‌ها `lazy()` هستند و `Suspense` یک fallback سادهٔ «در حال بارگذاری
@@ -900,13 +1034,26 @@ php artisan view:cache
 **کلیدهای localStorage** (همه در `utils/storageKeys.ts` با پیشوند
 `behrang-shop-` و مهاجرت خودکار از `pharmacy-shop-*`):
 توکن/کاربر مشتری و مدیر، سبد خرید، علاقه‌مندی، کش دسته‌ها/برندها/تنظیمات/
-هدر‌فوتر/نوار اطلاع‌رسانی/نشان‌ها/استوری‌ها/صفحات/پاپ‌آپ‌ها، وضعیت دیده‌شدن
-استوری و پاپ‌آپ، توکن چت پشتیبانی، چیدمان سایدبار و داشبورد ادمین، تم،
-تاریخچهٔ جست‌وجو، بازدیدهای اخیر و وضعیت بستن پیشنهاد PWA.
+هدر‌فوتر/نوار اطلاع‌رسانی/نشان‌ها/کانال‌های ارتباطی/استوری‌ها/صفحات/پاپ‌آپ‌ها،
+وضعیت دیده‌شدن استوری و پاپ‌آپ، توکن چت پشتیبانی، چیدمان سایدبار و داشبورد
+ادمین، تم، تاریخچهٔ جست‌وجو، بازدیدهای اخیر و وضعیت بستن پیشنهاد PWA.
 
 **الگوی کش محتوا:** هر hook (مثل `useStoreSettings` یا `useHeaderFooter`)
 ابتدا مقدار کش‌شده را نشان می‌دهد و در پس‌زمینه تازه‌سازی می‌کند؛ به همین دلیل
 تغییرات پنل ممکن است با کمی تأخیر دیده شوند.
+
+**کد پیگیری مهمان در فرانت:** شناسهٔ مرورگر مهمان در
+`behrang-shop-guest-token` است؛ نمایش/اعتبارسنجی کد با
+`utils/guestAccessCode.ts` (`normalizeGuestAccessCode`، `formatGuestAccessCode`
+به شکل `ABCD-2345` و `isCompleteGuestAccessCode`) انجام می‌شود و همان منطق
+نرمال‌سازی بک‌اند (`App\Support\GuestAccessCode`) را آینه می‌کند.
+
+### ۱۰.۲.۱ تست و لینت
+
+- `npm run test` → `vitest run` با محیط jsdom، setup مشترک `src/test/setup.ts`
+  و الگوی `src/**/*.test.{ts,tsx}` (تست‌ها کنار ماژول خودشان‌اند).
+- `npm run lint` → oxlint با `.oxlintrc.json`؛ `npm run lint:fix` برای اصلاح
+  خودکار. این پروژه ESLint ندارد (ناسازگاری با TypeScript 7).
 
 ### ۱۰.۳ UI و طراحی
 
@@ -914,6 +1061,12 @@ php artisan view:cache
 - تم‌ها: **sage** (پیش‌فرض) و **ocean** با متغیرهای CSS در `index.css`؛
   انتخاب کاربر در `behrang-shop-storefront-theme` ذخیره و با `initTheme()`
   در `main.tsx` اعمال می‌شود.
+- **CSS ماژولار:** استایل‌های سراسری در `src/styles/*.css` هستند و در
+  `src/main.tsx` *به همان ترتیب سند* ایمپورت می‌شوند (اول `index.css` که
+  Tailwind و `@theme` را دارد). Tailwind یوتیلیتی‌ها را تهٔ همان فایل تولید
+  می‌کند و همهٔ قواعد سفارشی unlayered هستند (بالاتر از `@layer utilities`)؛
+  پس جابه‌جا کردن ترتیب *فایل‌ها* بی‌خطر است ولی ترتیب قواعد *درون* هر فایل
+  را باید حفظ کرد، چون بازنویسی‌ها به آبشار وابسته‌اند.
 - برای جلوگیری از فلش سفید قبل از بارگذاری CSS، در `index.html` یک استایل
   inline برای `background-color` تعریف شده است.
 - اعداد و مبالغ با `utils/price.ts` و تاریخ‌ها با `utils/jalali.ts` قالب‌بندی
@@ -938,6 +1091,21 @@ php artisan view:cache
 - سئو: `usePageMeta` (عنوان/توضیح/canonical)، `utils/seo.ts`،
   `utils/structuredData.ts` (JSON-LD محصول/مقاله) و تولید sitemap در
   `npm run build`.
+- **تصاویر (سئو و Core Web Vitals):** متن جایگزین بنرها از فیلد `image_alt` پنل
+  و در نبود آن از عنوان بنر می‌آید (`bannerImageAlt`)؛ کارت محصول اولویت را به
+  `alt` تصویر اصلی ثبت‌شده در پنل می‌دهد و در نبود آن نام محصول را می‌گذارد
+  (`productCardImageAlt`). ابعاد ذاتی تصویر بنر و گالری محصول هنگام ذخیره در
+  دیتابیس پر می‌شود و فروشگاه همان `width`/`height` را روی `<img>` می‌گذارد
+  (`bannerImageDimensions` / `productCardImageSize`) تا ارتفاع پیش از بارگذاری
+  رزرو شود (CLS)؛ کارت محصول علاوه بر این نسبت ثابت `aspect-[4/5]` دارد.
+- **حذف تکرار DOM صفحهٔ اصلی:** `hooks/useMediaQuery.ts` با
+  `(min-width: 768px)` یک نسخه از هیرو/بنر چندستونه/بنر موبایل را رندر می‌کند
+  (قبلاً هر دو نسخه در DOM بودند و متن بنر دو بار تکرار می‌شد)؛ نوار هم فقط
+  تصویر و متن نمای فعلی را می‌سازد.
+- **شمارندهٔ H1 در پنل بنرها:** `bannerH1Summary` در `utils/bannerText.ts`
+  مجموع تیترهای `h1` بنرهای فعال صفحهٔ اصلی را می‌شمارد و پنل سه حالت را نشان
+  می‌دهد: بدون H1 (هشدار)، دقیقاً یک H1 (درست) و بیش از یکی (خطا). بنرهای
+  `products_top` در این شمارش نمی‌آیند.
 
 ---
 
@@ -971,12 +1139,14 @@ php artisan view:cache
 |---|---|
 | ظاهر کلی، رنگ‌ها، فاصله‌ها، تم | `frontend/src/index.css` + `frontend/src/utils/theme.ts` |
 | فیلتر صفحهٔ محصولات | `frontend/src/components/ProductFilterPanel.tsx` + `frontend/src/pages/Products.tsx` + `backend/app/Http/Controllers/Api/ProductController.php` |
-| منطق ثبت سفارش/موجودی/کد تخفیف | `backend/app/Http/Controllers/Api/OrderController.php` + `Services/Orders/OrderStockService.php`, `OrderCouponService.php` |
+| منطق ثبت سفارش/موجودی/کد تخفیف | `backend/app/Http/Controllers/Api/OrderController.php` + `Services/Orders/OrderStockService.php`, `OrderCouponService.php`, `OrderSalesService.php` |
 | بازیابی رمز عبور | `PasswordResetController` + `App\Notifications\ResetPasswordNotification` + `pages/ForgotPassword.tsx`, `ResetPassword.tsx` + `config('app.frontend_url')` |
 | سفارش مهمان، رهگیری، دسترسی و بازیابی مهمان | `OrderController@store/show/cancel` (`X-Guest-Token` + `findOwnedOrder`) + `OrderTrackingController` (`track`/`recoverAccess`) + `App\Support\GuestAccessCode` + `pages/TrackOrder.tsx` (کد پیگیری + بازیابی دسترسی), `InvoiceView.tsx`, `Checkout.tsx` + هدر خودکار مهمان در `services/api.ts` |
 | روش‌های پرداخت، سقف COD و تسویهٔ COD | `backend/app/Support/PaymentMethod.php` + `config/payment.php` (`cod_max_total`) + `OrderController` + `AdminOrderController@updatePaymentStatus` + `frontend/src/pages/Checkout.tsx`, `Payment.tsx`, `OrderDetail.tsx`, `AdminOrders.tsx` + `services/storeSettings.ts` |
+| نشست و انقضای توکن | `backend/config/sanctum.php` (`SANCTUM_EXPIRATION`) + اینترسپتور ۴۰۱ در `frontend/src/services/api.ts` + `context/AuthContext.tsx`, `context/AdminAuthContext.tsx` + پیام در `pages/Login.tsx` |
 | وضعیت‌ها و برچسب‌های سفارش | `backend/app/Support/OrderStatus.php` |
 | نقش‌ها و مجوزهای مدیر | `backend/app/Support/AdminRole.php` + `frontend/src/utils/adminPermissions.ts` |
+| کانال‌های ارتباطی (تلگرام، واتس‌اپ، بله، ایتا، اینستاگرام) | `backend/app/Support/ContactLinks.php` + `ContactChannelController`/`AdminContactChannelController` + `frontend/src/services/contactChannels.ts` + `components/StoreChannelsSection.tsx` + `pages/AdminChannels.tsx` |
 | منوی سایدبار ادمین | `frontend/src/utils/adminNavItems.ts` + `components/AdminLayout.tsx` |
 | پاپ‌آپ‌ها | `backend/app/Models/Popup.php` + `AdminPopupController` + `frontend/src/components/StorefrontPopup.tsx` + `pages/AdminPopups.tsx` |
 | بنر/اسلایدر و فونت‌ها | `AdminBannerController`, `AdminBannerSectionController`, `components/AdminBanner*`, `components/Banner*` |
@@ -992,6 +1162,7 @@ php artisan view:cache
 | کلیدهای localStorage | `frontend/src/utils/storageKeys.ts` |
 | PWA (manifest/sw/آفلاین) | `frontend/public/manifest.webmanifest`, `sw.js`, `offline.html` + `vite.config.ts` |
 | سئو و JSON-LD | `frontend/src/utils/seo.ts`, `structuredData.ts`, `hooks/usePageMeta.ts` |
+| تصاویر: تبدیل WebP، ابعاد ذاتی و یکپارچه‌سازی مسیرها | `backend/app/Services/Media/WebpConverter.php`, `backend/app/Support/Media/ImageDimensions.php`, `backend/config/media.php` + کامندهای `images:webp` و `images:migrate-legacy` |
 | تست‌های بک‌اند | `backend/tests/Feature/` (الگو: `RefreshDatabase` + `Sanctum::actingAs`) |
 
 ---
@@ -1031,11 +1202,17 @@ php artisan view:cache
 
 ### کیفیت
 
-- قبل از تحویل: `php artisan test` + `npm run typecheck` + `npm run build`.
+- قبل از تحویل: `php artisan test` + `npm run lint` + `npm run test` +
+  `npm run typecheck` + `npm run build`.
 - برای هر قابلیت ادمین، یک تست Feature جدید در `backend/tests/Feature/`
   با الگوی موجود اضافه کنید.
-- فرانت تست ندارد؛ بنابراین تغییرات UI باید دستی در سه اندازه (موبایل،
-  تبلت، دسکتاپ) و در هر دو تم `sage`/`ocean` بررسی شوند.
+- برای منطق خالص فرانت (نرمال‌سازی ورودی، کلیدهای storage، فرمت‌ها) تست
+  `*.test.ts` کنار همان ماژول بنویسید؛ برای کامپوننت‌ها از `@testing-library/react`.
+  تست‌های فعلی: `utils/guestAccessCode`، `utils/storageKeys`، `utils/jalali`،
+  `components/Button`. تغییرات UI همچنان باید دستی در سه اندازه (موبایل، تبلت،
+  دسکتاپ) و در هر دو تم `sage`/`ocean` بررسی شوند.
+- ESLint در دسترس نیست (TypeScript 7 API کامپایلر جاوااسکریپت ندارد)؛ لینتر
+  پروژه **oxlint** است و قواعد جدید را در `.oxlintrc.json` اضافه کنید.
 - پکیج جدید فقط در صورت ضرورت و با هماهنگی (پروژه عمداً سبک نگه داشته شده).
 
 ---
@@ -1044,20 +1221,20 @@ php artisan view:cache
 
 | # | مورد | توضیح | پیشنهاد |
 |---|---|---|---|
-| ۱ | فایل‌های بسیار بزرگ | `index.css` (~۶٬۴۰۰ خط)، `AdminShipping` (~۴٬۴۰۰)، `AdminProductForm` (~۳٬۴۰۰)، `AdminDashboard` (~۲٬۶۰۰)، `AdminOrders` (~۲٬۶۰۰)، `ProductDetail` (~۲٬۴۰۰) | شکستن به کامپوننت/هوک و فایل‌های CSS ماژولار |
-| ۲ | نبود تست فرانت و لینت | فقط `tsc` و build | افزودن Vitest + Testing Library و ESLint/Prettier |
-| ۳ | `sales_count` واقعی نیست | با سفارش افزایش نمی‌یابد؛ «پرفروش» گمراه‌کننده است | افزایش در ثبت/تحویل سفارش یا محاسبهٔ زنده از `order_items` |
-| ۴ | توکن بدون انقضا | `sanctum.expiration = null` + نگه‌داری در localStorage | تعیین انقضا/refresh و بررسی CSP |
-| ۵ | تصاویر روی دیسک محلی | بدون CDN/بهینه‌سازی؛ دو پوشهٔ قدیمی `products/` و `product-images/` و باقی‌ماندهٔ `public/storage-old/` | یکپارچه‌سازی مسیرها + بهینه‌سازی/WebP + پاک‌سازی |
-| ۶ | کش دستی | فراموشی `cache:clear` بعد از تغییر دستی داده، تا ۱۰ دقیقه محتوای کهنه نشان می‌دهد | پاک‌سازی خودکار در مدل‌ها (observer) |
-| ۷ | بدون درگاه واقعی | پرداخت آنلاین فقط demo است (در production بسته) و COD دستی تسویه می‌شود | اتصال درگاه واقعی؛ سقف مبلغ COD در ۱.۱۰ اضافه شد، اما هزینهٔ اضافی COD ندارد |
+| ۱ | فایل‌های بسیار بزرگ | **بخشی انجام شد (۱.۲۰):** `index.css` (۶٬۴۲۱ خط) به هستهٔ ۱۰۵ خطی + ۱۵ فایل `src/styles/*.css` (بزرگ‌ترین ۸۱۹) و `AdminShipping` (۴٬۴۲۲ خط) به `pages/AdminShipping.tsx` (۱۴۴ خط) + ۱۱ فایل `components/admin/shipping/` (بزرگ‌ترین ۷۵۹) شکسته شد؛ خروجی CSS بیلد از نظر ساختار (`@media`/`@layer`) و مجموعهٔ قواعد با قبل یکسان است. باقی‌مانده: `AdminProductForm` (~۳٬۴۰۰)، `AdminOrders` (~۲٬۷۰۰)، `AdminDashboard` (~۲٬۶۰۰)، `ProductDetail` (~۲٬۴۰۰)، `AdminMessaging` (~۲٬۲۰۰)، `AdminCustomers` (~۲٬۲۰۰) | ادامهٔ مرحله‌ای: هر تغییر یک فایل، بدون تغییر رفتار و با تأیید `tsc`/`lint`/`test`/`build` |
+| ۲ | تست فرانت و لینت | **انجام شد (۱.۱۲، ۱.۱۳، ۱.۱۵ و ۱.۱۷):** Vitest + Testing Library (۱۰ فایل، ۵۹ تست) و لینت با oxlint (۰ خطا)؛ ESLint به‌خاطر نبود API کامپایلر در TypeScript 7 نصب نشد و Prettier عمداً اضافه نشد تا کل سورس بازقالب‌بندی نشود | افزودن تست برای فرم‌های حساس باقی‌مانده (چک‌اوت/پرداخت) |
+| ۳ | `sales_count` واقعی | **انجام شد (۱.۱۶):** `App\Services\Orders\OrderSalesService` در ثبت سفارش اضافه و در سه مسیر لغو (مشتری، مدیر، `orders:release-abandoned`) برمی‌گرداند؛ کاهش با شرط مثبت‌بودن. کامند `products:sync-sales-count` دادهٔ قدیمی را از `order_items` هم‌خوان می‌کند | اجرای یک‌بارهٔ کامند روی دادهٔ واقعی (با هماهنگی، طبق قاعدهٔ ۷ AGENTS.md) |
+| ۴ | عمر توکن | **انجام شد (۱.۱۷):** `sanctum.expiration` از `SANCTUM_EXPIRATION` (پیش‌فرض ۳۰ روز)، اینترسپتور ۴۰۱ نشست را پاک و پیام «نشست منقضی شده» می‌دهد؛ `TokenExpirationTest` + `api.test.ts` | refresh token و CSP همچنان باز است |
+| ۵ | تصاویر روی دیسک محلی | **بخشی انجام شد (۱.۱۹):** ابعاد ذاتی بنر/گالری محصول در دیتابیس ذخیره می‌شود (`ImageDimensions`)، تصویر اصلی کارت `alt` پنل را می‌خواند، آپلود بنر/محصول در صورت فعال بودن `gd`/`imagick` به WebP تبدیل می‌شود (`WebpConverter`) و کامند `images:migrate-legacy` مسیرهای قدیمی `products/` را (با تأیید، `--apply`) به `product-images/{id}/` منتقل می‌کند. در محیط فعلی افزونهٔ GD/Imagick نصب نیست، پس WebP فقط بعد از فعال‌سازی آن روی سرور کار می‌کند | پاک‌سازی نهایی: ۵ فایل باقی‌ماندهٔ `storage/app/public/products/` و ۶ فایل `backend/public/storage-old/` — حذف نیاز به تأیید مالک دارد (قاعدهٔ ۷ AGENTS.md)؛ سپس اجرای `php artisan images:webp --apply` روی سرور با GD فعال |
+| ۶ | کش دستی | **انجام شد (۱.۱۸):** `StorefrontCacheObserver` روی ۱۳ مدل ویترین ثبت شد و `StorefrontCache` کلیدهای دسته/برند/محصول/بنر/فونت/نوار/پاپ‌آپ/استوری/نشان/کانال/تنظیمات را پاک می‌کند؛ کلید فیلترها نسخه‌دار شد | — |
+| ۷ | بدون درگاه واقعی | پرداخت آنلاین فقط demo است (در production بسته) و COD دستی تسویه می‌شود | اتصال درگاه واقعی؛ سقف مبلغ COD در ۱.۱۰ و کارمزد ثابت آن در ۱.۱۸ اضافه شد |
 | ۸ | بدون i18n | متن‌های فارسی در JSX/کنترلرها تکرار شده‌اند | استخراج فرهنگ لغت در صورت نیاز به چند‌زبانه |
 | ۹ | اسکرول صفحهٔ محصولات | پس از بازطراحی فیلتر، لایه‌های اسکرول داخلی حذف شدند و فقط `max-h` سایدبار به‌عنوان محافظ باقی مانده | بررسی دوره‌ای در ارتفاع‌های کم |
 | ۱۰ | لودر شبکهٔ محصولات | **انجام شد (۱.۹):** ۱۲ کارت اسکلتی با `animate-pulse` و `aria-busy` جای `Loader2` در `/products` | — |
-| ۱۱ | تاریخچهٔ موجودی | جدول ledger برای تغییرات موجودی وجود ندارد؛ فقط عدد `stock` به‌روز می‌شود | افزودن `stock_movements` برای رهگیری |
+| ۱۱ | تاریخچهٔ موجودی | **انجام شد (۱.۱۸):** جدول `stock_movements` + سرویس `StockLedger` در ثبت سفارش، بازگردانی موجودی، فاکتور خرید، ویرایش دستی و ایمپورت؛ گزارش `GET /admin/reports/stock-movements` در `/admin/reports` | — |
 | ۱۲ | ناسازگاری نمونهٔ env | **انجام شد (۱.۱۰):** `.env.example` روی MySQL (`pharmacy_shop`) هم‌راستا شد و `COD_MAX_TOTAL` اضافه شد | — |
 | ۱۳ | بدون CAPTCHA در احراز هویت | rate limit (۱۵/دقیقه per IP) و قفل حساب (۵ تلاش ناموفق/۱۵ دقیقه) اضافه شده؛ هنوز CAPTCHA یا محافظت لایهٔ CDN نیست | افزودن CAPTCHA فقط در صورت مشاهدهٔ حملهٔ واقعی |
-| ۱۴ | محدودیت‌های سفارش مهمان | مهمان با شناسهٔ مرورگر سفارش خودش را می‌بیند، فاکتور می‌گیرد و سفارش پرداخت‌نشده را لغو می‌کند؛ مرجوعی و پرداخت آنلاین همچنان فقط برای حساب کاربر است. بازیابی دسترسی با پاک‌شدن `localStorage` حل شد (**۱.۱۱**): `POST /orders/recover` با «شماره سفارش + کد پیگیری» شناسهٔ مرورگر قبلی را برمی‌گرداند | هدایت مهمان به ساخت حساب (نردبان ثبت‌نام پس از سفارش) در صورت نیاز |
+| ۱۴ | محدودیت‌های سفارش مهمان | مهمان با شناسهٔ مرورگر سفارش خودش را می‌بیند، فاکتور می‌گیرد و سفارش پرداخت‌نشده را لغو می‌کند؛ مرجوعی و پرداخت آنلاین همچنان فقط برای حساب کاربر است. بازیابی دسترسی با پاک‌شدن `localStorage` حل شد (**۱.۱۱**): `POST /orders/recover` با «شماره سفارش + کد پیگیری» شناسهٔ مرورگر قبلی را برمی‌گرداند. **نردبان ساخت حساب (۱.۱۹):** بعد از ثبت سفارش و در `/track-order` کارت «با همین شماره حساب بسازید» نمایش داده می‌شود و `/register?phone=...` فرم را پیش‌پر می‌کند؛ اتصال خودکار سفارش‌های قبلی به حساب جدید عمداً انجام نمی‌شود چون تأیید مالکیت شماره (OTP) وجود ندارد | افزودن تأیید شماره با OTP تا بتوان سفارش‌های مهمان همان شماره را پس از ثبت‌نام به حساب وصل کرد |
 
 موارد بالا «باگ» نیستند؛ نقطه‌های تصمیم برای ادامهٔ کار هستند. اگر بازبین
 خارجی روی یکی از آن‌ها تمرکز کرد، ابتدا با مالک پروژه هماهنگ شود.
@@ -1129,6 +1306,8 @@ php artisan test
 
 # --- فرانت (از داخل frontend) ---
 cd ..\frontend
+npm run lint
+npm run test
 npx tsc --noEmit
 npm run build
 (Get-ChildItem src -Recurse -File -Include *.ts,*.tsx).Count
@@ -1137,7 +1316,8 @@ node -p "require('./package.json').dependencies.react"
 
 ### چک‌لیست پایان هر تغییر
 
-1. گارد مربوطه سبز شد؟ بک‌اند: `php artisan test` — فرانت: `npx tsc --noEmit` و `npm run build`.
+1. گارد مربوطه سبز شد؟ بک‌اند: `php artisan test` — فرانت: `npm run lint`،
+   `npm run test`، `npx tsc --noEmit` و `npm run build`.
 2. جدول همگام‌سازی بالای سند را چک کردی و بخش(های) مربوطه را ویرایش کردی؟
 3. آمار بخش ۲ (مسیر/مایگریشن/مدل/کنترلر/تست و نسخه‌ها) هنوز درست است؟
 4. env یا `config/*` عوض شد؟ بخش ۵ و ۱۱ و `backend/.env.example` هم به‌روز شد؟
@@ -1162,6 +1342,16 @@ node -p "require('./package.json').dependencies.react"
 | 1.9 | 2026-11-14 | اسکلت لودینگ شبکهٔ محصولات `/products`: ۱۲ کارت `animate-pulse` با `aria-busy`/`sr-only` جای `Loader2`؛ بستن بدهی فنی ۱۰ |
 | 1.10 | 2026-11-14 | آزادسازی سهمیهٔ کوپن با لغو/بازپرداخت (`OrderCouponService` + تست‌ها)، سقف مبلغ COD از `COD_MAX_TOTAL`/`cod_max_total` با نمایش در چک‌اوت، هم‌راستا شدن `.env.example` با MySQL و بستن بدهی فنی ۱۲ (۴۳۶ تست) |
 | 1.11 | 2026-11-14 | «کد پیگیری مهمان»: ستون `orders.guest_access_code`، تولید کد در ثبت سفارش مهمان، مسیر عمومی `POST /orders/recover` (شماره سفارش + کد) برای بازیابی دسترسی در مرورگر جدید، نمایش/کپی کد و فرم بازیابی در `/track-order` و بستن بخش «بازیابی دسترسی» بدهی فنی ۱۴ (۴۴۷ تست) |
+| 1.12 | 2026-11-14 | کامند `orders:backfill-guest-access-codes` برای سفارش‌های مهمان قدیمی (+۱۰ تست، ۴۵۷ تست) و راه‌اندازی تست/لینت فرانت: Vitest 5 + Testing Library (۴ فایل، ۱۷ تست)، `vitest.config.ts`، `src/test/setup.ts`، helper مشترک `utils/guestAccessCode.ts` و لینت با **oxlint** (ESLint با TypeScript 7 سازگار نیست)؛ بستن بدهی فنی ۲ و اصلاح آمار |
+| 1.13 | 2026-11-15 | **کانال‌های ارتباطی فروشگاه:** جدول `contact_channels` (۵ ردیف ثابت)، `App\Support\ContactLinks` برای نرمال‌سازی لینک/نام کاربری/شمارهٔ واتس‌اپ، `GET /contact-channels` کش‌دار و `admin/channels` (فهرست/ذخیره/وضعیت) با مجوز جدید `channels.manage`؛ بخش «همراه ما باشید» در `/register` و `/account`، صفحهٔ `/admin/channels` + آیتم سایدبار و تست‌های `ContactChannelTest` و Vitest (۴۶۵ تست بک‌اند، ۲۶ تست فرانت) |
+| 1.14 | 2026-11-15 | **چیدمان صفحه‌های حساب:** `/register` دوستونه (فرم با فیلدهای دوستونه + ستون چسبان کانال‌ها و مزایا)، `/account` کانال‌ها بالای ستون کنار و فرم تغییر رمز تاشو، و بازطراحی `StoreChannelsSection` به فهرست ردیفی هم‌تراز با دکمه‌های آیکنی (`sr-only`/`title`) و پانویس راهنما |
+| 1.15 | 2026-11-15 | **صفحهٔ مستقل سفارش‌ها:** فهرست «سفارش‌های من» از `/account` حذف و به `/account/orders` منتقل شد؛ کارت‌های فشردهٔ دوستونه (`md:grid-cols-2`) با ادامهٔ پرداخت/لغو، تابع‌های نمایش مشترک در `utils/orderDisplay.ts`، منوی بازشو روی نام صاحب حساب (`components/AccountNameMenu.tsx`) با میان‌بر «سفارش‌های من»/«حساب کاربری من»، تغییر لینک‌های بازگشت `OrderDetail`/`Payment` به فهرست سفارش‌ها و ۱۹ تست جدید (۴۵ تست فرانت) |
+| 1.16 | 2026-11-17 | **شمارندهٔ فروش واقعی:** سرویس `App\Services\Orders\OrderSalesService` (record/revert) در ثبت سفارش و سه مسیر لغو (مشتری، مدیر، `orders:release-abandoned`) وصل شد؛ کامند `products:sync-sales-count` برای هم‌خوان‌کردن دادهٔ قدیمی از `order_items` و تست `ProductSalesCountTest` (۷ تست، ۴۷۲ تست بک‌اند)؛ بستن بدهی فنی ۳ |
+| 1.17 | 2026-11-17 | **انقضای توکن و مدیریت نشست منقضی:** `sanctum.expiration` از `SANCTUM_EXPIRATION` (پیش‌فرض ۴۳۲۰۰ دقیقه/۳۰ روز، `0` = بدون انقضا) به‌جای `null`؛ اینترسپتور ۴۰۱ در `services/api.ts` توکن مشتری/مدیر را پاک می‌کند، رویداد `behrang-shop:session-expired`/`-admin-session-expired` می‌فرستد و `AuthContext`/`AdminAuthContext` نشست را می‌بندند؛ پیام یک‌بارمصرف «نشست شما به پایان رسیده است» در `/login`؛ تست `TokenExpirationTest` (۳ تست) و ۳ تست جدید `api.test.ts` + رفع ناپایداری تست `AccountOrders` (۴۷۵ تست بک‌اند، ۵۹ تست فرانت)؛ بستن بدهی فنی ۴ |
+| 1.18 | 2026-11-17 | **کش خودکار ویترین + دفتر گردش موجودی + کارمزد COD:** `StorefrontCacheObserver` روی ۱۳ مدل ویترین/کاتالوگ/تنظیمات + `StorefrontCache` نسخه‌دار کلید فیلترها (بستن بدهی ۶)؛ جدول `stock_movements` + سرویس `Inventory\StockLedger` در ثبت سفارش، بازگردانی موجودی، فاکتور خرید، ویرایش دستی و ایمپورت + گزارش ادمین `GET /admin/reports/stock-movements` و بخش «گردش موجودی» در `/admin/reports` (بستن بدهی ۱۱)؛ کارمزد ثابت سفارش COD از `COD_FEE` با ستون `orders.cod_fee` و نمایش در چک‌اوت/`store-settings`؛ +۱۴ تست بک‌اند (۴۸۹ تست بک‌اند، ۵۹ تست فرانت) |
+| 1.19 | 2026-11-17 | **سئوی تصاویر + حذف تکرار DOM + نردبان حساب مهمان + یکپارچه‌سازی مسیر تصاویر:** ستون‌های ابعاد ذاتی (`banners.image_width/image_height/mobile_image_width/mobile_image_height`, `product_images.width/height`) با `App\Support\Media\ImageDimensions` و هوک `saving` مدل‌ها؛ `width`/`height` روی `<img>` بنر و کارت محصول (CLS)؛ `alt` تصویر اصلی محصول از پنل (`productCardImageAlt`)؛ `WebpConverter` + `config/media.php` + `MEDIA_WEBP*` و تبدیل آپلود بنر/محصول به WebP در صورت فعال بودن GD/Imagick؛ کامندهای `images:webp` و `images:migrate-legacy` (dry-run پیش‌فرض، `--apply` برای اجرا) و انتقال واقعی ۱ مسیر قدیمی؛ `hooks/useMediaQuery.ts` و رندر تک‌نسخه‌ای هیرو/بنر (حذف متن تکراری DOM)؛ شمارندهٔ H1 در پنل بنرها (`bannerH1Summary`) با تست `bannerText.test.ts`؛ کارت «ساخت حساب با همین شماره» در `/track-order` و پیش‌پرکردن `/register` (بستن بخش هدایت مهمان در بدهی ۱۴)؛ ۶ تست بک‌اند (`ImageMediaTest`) و ۵ تست فرانت |
+| 1.20 | 2026-11-18 | **شکستن فایل‌های بزرگ (بدهی ۱ — مرحلهٔ اول):** `index.css` (۶٬۴۲۱ خط) به هستهٔ ۱۰۵ خطی (`@import "tailwindcss"` + فونت + `@theme`) و ۱۵ فایل `src/styles/*.css` با ترتیب سند تقسیم شد و در `main.tsx` به همان ترتیب ایمپورت می‌شود (تأیید: هش بیلد CSS و ساختار ۴۳ بلوک `@media`/`@supports`/`@layer` و ۱٬۸۲۳ انتخابگر با قبل یکسان)؛ `AdminShipping.tsx` (۴٬۴۲۲ خط) به `pages/AdminShipping.tsx` (۱۴۴ خط) + `components/admin/shipping/` (۱۱ فایل: `shippingShared` با انواع/کمکی‌ها/`NoticeBox`/`Field` و ۱۰ تب) شکسته شد؛ بدون تغییر رفتار (tsc/lint/۶۴ تست/build سبز) |
+
 
 ---
 

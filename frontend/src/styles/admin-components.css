@@ -1,0 +1,515 @@
+/* ==================================================
+   کامپوننت‌های مشترک صفحه‌های جدید پنل مدیریت
+================================================== */
+
+.admin-page {
+  width: 100%;
+  min-width: 0;
+  color: #111827;
+}
+
+.admin-page-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 24px;
+}
+
+.admin-page-eyebrow {
+  display: inline-block;
+  margin-bottom: 8px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #f0f5ec;
+  color: #6b8e6b;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.admin-page-title {
+  margin: 0 0 8px;
+  font-size: 26px;
+  color: #111827;
+}
+
+.admin-page-subtitle {
+  margin: 0;
+  max-width: 700px;
+  color: #6b7280;
+  font-size: 15px;
+  line-height: 2;
+  text-align: justify;
+}
+
+.admin-alert {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: 14px;
+}
+
+.admin-alert-error {
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
+.admin-alert-success {
+  background: #ecfdf5;
+  color: #047857;
+  border: 1px solid #a7f3d0;
+}
+
+.admin-card {
+  margin-bottom: 20px;
+  padding: 20px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.admin-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.admin-card-title {
+  margin: 0;
+  font-size: 18px;
+  color: #111827;
+}
+
+.admin-card-desc {
+  margin: 6px 0 0;
+  color: #6b7280;
+  font-size: 13px;
+  line-height: 1.9;
+}
+
+.admin-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.admin-form-grid-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.admin-full {
+  grid-column: 1 / -1;
+}
+
+.admin-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  min-width: 0;
+}
+
+.admin-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #374151;
+}
+
+.admin-input,
+.admin-select,
+.admin-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 9px;
+  background: #fff;
+  color: #111827;
+  font-size: 14px;
+  outline: none;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
+}
+
+.admin-input:focus,
+.admin-select:focus,
+.admin-textarea:focus {
+  border-color: #648767;
+  box-shadow: 0 0 0 3px #e8efe2;
+}
+
+.admin-textarea {
+  min-height: 92px;
+  resize: vertical;
+  line-height: 1.9;
+}
+
+.admin-help {
+  color: #9ca3af;
+  font-size: 11.5px;
+  line-height: 1.7;
+}
+
+.admin-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #374151;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.admin-checkbox input {
+  width: 17px;
+  height: 17px;
+  accent-color: #648767;
+}
+
+.admin-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.admin-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 9px 16px;
+  border: 1px solid #d1d5db;
+  border-radius: 9px;
+  background: #fff;
+  color: #374151;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.admin-btn:hover:not(:disabled) {
+  background: #f9fafb;
+  border-color: #9ca3af;
+}
+
+.admin-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.admin-btn-primary {
+  background: #648767;
+  border-color: #648767;
+  color: #fff;
+}
+
+.admin-btn-primary:hover:not(:disabled) {
+  background: #527354;
+  border-color: #527354;
+  color: #fff;
+}
+
+.admin-btn-danger {
+  background: #fff;
+  border-color: #fecaca;
+  color: #b91c1c;
+}
+
+.admin-btn-danger:hover:not(:disabled) {
+  background: #fef2f2;
+  border-color: #fca5a5;
+}
+
+.admin-btn-sm {
+  padding: 6px 11px;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.admin-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid #eef0f2;
+  border-radius: 10px;
+}
+
+.admin-table {
+  width: 100%;
+  min-width: 680px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.admin-table th {
+  padding: 11px 12px;
+  border-bottom: 1px solid #e5e7eb;
+  background: #f8faf7;
+  color: #4b5563;
+  font-weight: 700;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.admin-table td {
+  padding: 11px 12px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #1f2937;
+  vertical-align: middle;
+}
+
+.admin-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.admin-table tbody tr:hover {
+  background: #fbfcf9;
+}
+
+/* فهرست درخواست‌های مرجوعی: هر ردیف در یک خط و ستون‌ها هم‌تراز */
+.admin-returns-table th,
+.admin-returns-table td {
+  padding: 10px;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.admin-returns-table th:last-child,
+.admin-returns-table td:last-child {
+  text-align: center;
+}
+
+.admin-returns-ltr {
+  direction: ltr;
+  text-align: right;
+  unicode-bidi: isolate;
+}
+
+.admin-returns-customer {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 12px;
+  max-width: 100%;
+}
+
+.admin-returns-name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.admin-returns-phone {
+  color: #9ca3af;
+  font-size: 11.5px;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+.admin-returns-reason {
+  display: inline-block;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.admin-empty {
+  padding: 26px;
+  color: #9ca3af;
+  font-size: 13px;
+  text-align: center;
+}
+
+.admin-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.admin-badge-green {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.admin-badge-red {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.admin-badge-amber {
+  background: #fffbeb;
+  color: #b45309;
+}
+
+.admin-badge-blue {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.admin-badge-gray {
+  background: #f3f4f6;
+  color: #4b5563;
+}
+
+.admin-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.admin-stat {
+  padding: 16px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+}
+
+.admin-stat-label {
+  display: block;
+  margin-bottom: 8px;
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.admin-stat-value {
+  color: #31443a;
+  font-size: 21px;
+  font-weight: 800;
+}
+
+.admin-stat-hint {
+  display: block;
+  margin-top: 6px;
+  color: #9ca3af;
+  font-size: 11px;
+}
+
+.admin-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.admin-toolbar-spacer {
+  margin-inline-start: auto;
+}
+
+.admin-row-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* فاکتور چاپی */
+.invoice-print {
+  padding: 22px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  color: #111827;
+}
+
+.invoice-print h2 {
+  margin: 0 0 4px;
+  font-size: 20px;
+}
+
+.invoice-print-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 22px;
+  margin: 12px 0 18px;
+  color: #4b5563;
+  font-size: 12.5px;
+}
+
+.invoice-print table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.invoice-print th,
+.invoice-print td {
+  padding: 9px 8px;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: right;
+}
+
+.invoice-print-totals {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  margin-top: 14px;
+  font-size: 13px;
+}
+
+.invoice-print-totals strong {
+  font-size: 15px;
+}
+
+.invoice-print-footer {
+  margin-top: 18px;
+  padding-top: 12px;
+  border-top: 1px dashed #d1d5db;
+  color: #6b7280;
+  font-size: 11.5px;
+  line-height: 2;
+}
+
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+
+  #invoice-print-area,
+  #invoice-print-area * {
+    visibility: visible !important;
+  }
+
+  #invoice-print-area {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    margin: 0;
+    padding: 16px;
+    border: none;
+    box-shadow: none;
+  }
+
+  .admin-print-hide {
+    display: none !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .admin-form-grid,
+  .admin-form-grid-3 {
+    grid-template-columns: 1fr;
+  }
+}
+
