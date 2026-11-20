@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductColor;
 use App\Models\ProductPackItem;
@@ -50,7 +51,21 @@ class AdminProductController extends Controller
         }
 
         if ($request->filled('category_id')) {
-            $query->where('category_id', $request->integer('category_id'));
+            $categoryId = $request->integer('category_id');
+
+            /*
+             * صفحهٔ دسته‌بندی‌ها با include_children محصولات زیردسته‌ها را هم
+             * نشان می‌دهد؛ بدون این پرچم فقط محصولات مستقیم همان دسته
+             * برگردانده می‌شوند.
+             */
+            if ($request->boolean('include_children')) {
+                $query->whereIn(
+                    'category_id',
+                    $this->categoryTreeIds($categoryId)
+                );
+            } else {
+                $query->where('category_id', $categoryId);
+            }
         }
 
         if ($request->filled('brand_id')) {
@@ -338,6 +353,56 @@ class AdminProductController extends Controller
             'success' => true,
             'message' => 'وضعیت محصول به‌روزرسانی شد.',
             'data' => $product->fresh(),
+        ]);
+    }
+
+    /**
+     * انتقال گروهی محصولات انتخاب‌شده به یک دسته‌بندی.
+     *
+     * در صفحهٔ دسته‌بندی‌ها برای «افزودن محصول به دسته» و «انتقال به دستهٔ
+     * دیگر» استفاده می‌شود. محصولات یکی‌یکی به‌روزرسانی می‌شوند (نه
+     * update گروهی) تا رویداد مدل اجرا و کش ویترین پاک شود.
+     */
+    public function assignCategory(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'category_id' => ['required', 'integer', 'exists:categories,id'],
+            'product_ids' => ['required', 'array', 'min:1', 'max:200'],
+            'product_ids.*' => ['integer', 'distinct', 'exists:products,id'],
+        ], [
+            'category_id.exists' => 'دسته‌بندی انتخاب‌شده معتبر نیست.',
+            'product_ids.required' => 'حداقل یک محصول را انتخاب کنید.',
+            'product_ids.max' => 'حداکثر ۲۰۰ محصول در هر بار قابل انتقال است.',
+            'product_ids.*.exists' => 'یکی از محصولات انتخاب‌شده معتبر نیست.',
+        ]);
+
+        $categoryId = (int) $validated['category_id'];
+        $moved = 0;
+
+        DB::transaction(function () use ($validated, $categoryId, &$moved) {
+            $products = Product::query()
+                ->whereIn('id', $validated['product_ids'])
+                ->get();
+
+            foreach ($products as $product) {
+                if ((int) $product->category_id === $categoryId) {
+                    continue;
+                }
+
+                $product->update(['category_id' => $categoryId]);
+                $moved++;
+            }
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => $moved === 0
+                ? 'محصولات انتخاب‌شده از قبل در این دسته‌بندی بودند.'
+                : 'محصولات انتخاب‌شده به این دسته‌بندی منتقل شدند.',
+            'data' => [
+                'category_id' => $categoryId,
+                'moved' => $moved,
+            ],
         ]);
     }
 
@@ -1027,6 +1092,35 @@ class AdminProductController extends Controller
                 'url' => Storage::disk('public')->url($path),
             ],
         ], 201);
+    }
+
+    /**
+     * شناسهٔ یک دسته‌بندی به‌همراه همهٔ زیردسته‌های آن.
+     *
+     * @return list<int>
+     */
+    private function categoryTreeIds(int $categoryId): array
+    {
+        $rows = Category::query()->get(['id', 'parent_id']);
+
+        $ids = [$categoryId];
+        $pending = [$categoryId];
+
+        while ($pending !== []) {
+            $current = array_pop($pending);
+
+            foreach ($rows as $row) {
+                if (
+                    (int) $row->parent_id === $current
+                    && ! in_array((int) $row->id, $ids, true)
+                ) {
+                    $ids[] = (int) $row->id;
+                    $pending[] = (int) $row->id;
+                }
+            }
+        }
+
+        return $ids;
     }
 
     /**

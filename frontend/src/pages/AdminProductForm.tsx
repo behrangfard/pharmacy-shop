@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 
 import AdminProductSizeGuideEditor from "../components/AdminProductSizeGuideEditor";
 import { adminApi } from "../services/api";
@@ -488,6 +488,9 @@ function AdminProductForm() {
 
   const navigate = useNavigate();
 
+  /** برای پیش‌انتخاب دسته‌بندی هنگام «افزودن محصول» از صفحهٔ دسته‌بندی‌ها. */
+  const location = useLocation();
+
   const isEdit = Boolean(id);
 
 
@@ -670,7 +673,26 @@ function AdminProductForm() {
 
           setBrands(Array.isArray(brandData) ? brandData : []);
 
-          setForm({ ...emptyForm });
+          /*
+           * «افزودن محصول جدید» از صفحهٔ دسته‌بندی‌ها با
+           * `/admin/products/new?category_id=...` باز می‌شود؛ اگر آن دسته
+           * معتبر باشد، همان از ابتدا انتخاب می‌ماند.
+           */
+          const presetCategoryId =
+            new URLSearchParams(location.search).get("category_id") ?? "";
+
+          const categoryList = Array.isArray(categoryData)
+            ? (categoryData as Category[])
+            : [];
+
+          const hasPresetCategory = categoryList.some(
+            (category) => String(category.id) === presetCategoryId,
+          );
+
+          setForm({
+            ...emptyForm,
+            category_id: hasPresetCategory ? presetCategoryId : "",
+          });
 
           setVariants([]);
 
@@ -720,7 +742,7 @@ function AdminProductForm() {
 
     };
 
-  }, [id, isEdit]);
+  }, [id, isEdit, location.search]);
 
 
 

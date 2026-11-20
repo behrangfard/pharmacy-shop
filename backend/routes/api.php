@@ -318,6 +318,12 @@ Route::prefix('v1')->group(function () {
                         [AdminProductImportController::class, 'import']
                     );
 
+                    // انتقال گروهی محصولات به یک دسته‌بندی (صفحهٔ دسته‌بندی‌ها)
+                    Route::post(
+                        '/products/assign-category',
+                        [AdminProductController::class, 'assignCategory']
+                    );
+
                     // تصویر راهنمای سایز اختصاصی محصول (مستقل از شناسهٔ محصول)
                     Route::post(
                         '/products/size-guide-image',

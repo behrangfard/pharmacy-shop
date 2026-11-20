@@ -1,7 +1,7 @@
 ﻿# راهنمای فنی جامع پروژه «بهرنگ شاپ»
 
-> **نسخهٔ سند:** 1.24
-> **تاریخ:** ۲۹ آبان ۱۴۰۵ / 2026-11-19
+> **نسخهٔ سند:** 1.25
+> **تاریخ:** ۳۰ آبان ۱۴۰۵ / 2026-11-20
 > **مخاطب:** توسعه‌دهندهٔ جدید، بازبین خارجی، دستیار هوش مصنوعی
 > **دامنه:** کل مونوریپو (`backend/` + `frontend/`)
 
@@ -59,7 +59,7 @@
 «بهرنگ شاپ» یک فروشگاه اینترنتی پوشاک زیر است با معماری **جدا‌شدهٔ SPA + API**:
 
 - **بک‌اند:** Laravel 13 (PHP 8.4 در محیط توسعه) با احراز هویت **Sanctum Bearer Token**
-  و ۲۵۳ مسیر API؛ ۱۸۸ مسیر آن مخصوص پنل مدیریت است.
+  و ۲۵۱ مسیر API؛ ۱۹۰ مسیر آن مخصوص پنل مدیریت است.
 - **فرانت‌اند:** React 19 + TypeScript + Vite + Tailwind CSS 4 (بدون Next.js)،
   راست‌به‌چپ و فارسی، شامل فروشگاه عمومی و پنل مدیریت در همان SPA.
 - **داده:** MySQL در محیط توسعه (`.env.example` هم روی MySQL است)،
@@ -77,8 +77,8 @@
   پیام‌رسانی (پیامک/تلگرام/بله/واتساپ)، چت پشتیبانی، حسابداری و انبار.
 - **PWA:** manifest + service worker دستی (`public/sw.js`) با نسخهٔ کش
   خودکار در هر build + صفحهٔ آفلاین.
-- **تست و لینت:** بک‌اند ۴۸۹ تست PHPUnit (۲۴۷۳ assertion) در ۶۷ فایل Feature و
-  ۱ فایل Unit؛ فرانت‌اند ۵۹ تست Vitest + Testing Library در ۱۰ فایل
+- **تست و لینت:** بک‌اند ۵۰۴ تست PHPUnit (۲۵۲۴ assertion) در ۶۹ فایل Feature و
+  ۱ فایل Unit؛ فرانت‌اند ۷۷ تست Vitest + Testing Library در ۱۳ فایل
   (`npm run test`) و لینت با **oxlint** (`npm run lint`، ۰ خطا). ESLint نصب نشد
   چون TypeScript 7 API کامپایلر جاوااسکریپت ندارد و `typescript-eslint` با آن
   سازگار نیست.
@@ -111,11 +111,11 @@
 | پورت‌ها | API: `8000`، توسعهٔ فرانت: `5173`، پیش‌نمایش build: `4173` |
 | زبان رابط کاربری | فارسی و RTL؛ هیچ لایهٔ i18n وجود ندارد (متن‌ها inline هستند) |
 | تاریخ شمسی | `backend/app/Support/JalaliDate.php` و `frontend/src/utils/jalali.ts` |
-| تعداد مسیرها | ۲۵۰ (۲۷ گروه) — ۱۸۹ مسیر زیر `/api/v1/admin` |
+| تعداد مسیرها | ۲۵۱ (۲۷ گروه) — ۱۹۰ مسیر زیر `/api/v1/admin` |
 | تعداد مایگریشن‌ها | ۷۶ |
 | تعداد مدل‌ها | ۴۴ |
 | تعداد کنترلرها (پوشهٔ Api) | ۵۸ |
-| تست‌ها | بک‌اند: ۶۸ فایل Feature (+۱ Unit)، ۴۹۷ تست و ۲۴۹۷ assertion — فرانت: ۱۲ فایل Vitest، ۶۸ تست |
+| تست‌ها | بک‌اند: ۶۹ فایل Feature (+۱ Unit)، ۵۰۴ تست و ۲۵۲۴ assertion — فرانت: ۱۳ فایل Vitest، ۷۷ تست |
 | حجم کد فرانت | `frontend/src`: ۱۸۸ فایل `.ts/.tsx`، حدود ۸۴٬۷۵۰ خط + ۱۶ فایل CSS با ۶٬۴۳۴ خط (`index.css` ۱۰۵ خط + `styles/` ۱۵ فایل) |
 | حجم کد بک‌اند | `backend/app`: ۱۴۵ فایل، حدود ۲۱٬۹۰۰ خط |
 
@@ -200,7 +200,7 @@
 |---|---|
 | `src/App.tsx` | تعریف همهٔ مسیرها؛ همهٔ صفحه‌ها با `lazy()` و `Suspense` |
 | `src/pages/` | ۵۱ صفحه: ۲۲ صفحهٔ فروشگاه (از جمله `ForgotPassword`, `ResetPassword`, `TrackOrder`, `AccountOrders`) + ۲۹ صفحهٔ ادمین (از جمله `AdminDashboard`, `AdminProductForm`, `AdminShipping`, `AdminChannels`, `InvoiceView`) |
-| `src/components/` | ۷۲ فایل: کامپوننت‌های عمومی + پوشهٔ `accounting/` (۷ فایل) + پوشهٔ `admin/shipping/` (۱۱ فایل: `shippingShared` + ۱۰ تب/فرم صفحهٔ ارسال) + پوشهٔ `admin/dashboard/` (۵ فایل: `dashboardShared`، `dashboardStyles`، `SalesTrendChart`، `SalesChannelsChart`، `useDashboardLayout`) |
+| `src/components/` | ۷۳ فایل: کامپوننت‌های عمومی + پوشهٔ `accounting/` (۷ فایل) + پوشهٔ `admin/shipping/` (۱۱ فایل: `shippingShared` + ۱۰ تب/فرم صفحهٔ ارسال) + پوشهٔ `admin/dashboard/` (۵ فایل: `dashboardShared`، `dashboardStyles`، `SalesTrendChart`، `SalesChannelsChart`، `useDashboardLayout`) + پوشهٔ `admin/categories/` (۱ فایل: `CategoryProductsPanel` — محصولات هر دسته با افزودن/انتقال/حذف) |
 | `src/context/` | `AuthContext`, `AdminAuthContext`, `CartContext`, `WishlistContext` |
 | `src/hooks/` | `useStoreSettings`, `useHeaderFooter`, `useSitePages`, `useBannerFonts`, `useStories`, `useTrustBadges`, `useContactChannels`, `usePageMeta`, `useRecentlyViewed`, `useMediaQuery` (پاسخ زندهٔ `matchMedia` برای رندر تک‌نسخه‌ای دسکتاپ/موبایل) |
 | `src/services/` | لایهٔ تماس با API (axios) — `api.ts`، `productFilters.ts`، `popups.ts`، `support.ts`، `contactChannels.ts`، `wishlist.ts`، … |
@@ -658,7 +658,7 @@ php artisan view:cache
 | گروه | تعداد مسیر | کنترلر | نمونهٔ کار |
 |---|:--:|---|---|
 | `dashboard` | ۲ | `AdminController` | آمار کلی + روند فروش |
-| `products` | ۱۳ | `AdminProductController`, `AdminProductImageController`, `AdminProductImportController` | CRUD، تصاویر/ترتیب/اصلی، تغییر وضعیت، ایمپورت گروهی و دانلود قالب |
+| `products` | ۱۴ | `AdminProductController`, `AdminProductImageController`, `AdminProductImportController` | CRUD، تصاویر/ترتیب/اصلی، تغییر وضعیت، ایمپورت گروهی و دانلود قالب، انتقال گروهی به دسته‌بندی (`POST /admin/products/assign-category`) |
 | `categories` | ۶ | `AdminCategoryController` | CRUD + وضعیت |
 | `brands` | ۶ | `AdminBrandController` | CRUD + وضعیت |
 | `orders` | ۵ | `AdminOrderController` | فهرست/جزئیات، تغییر وضعیت، اطلاعات ارسال، ثبت دریافت وجه COD |
@@ -696,6 +696,14 @@ php artisan view:cache
 - **ایمپورت محصول:** `GET /admin/products/import/template` قالب CSV/Excel
   می‌دهد و `POST /admin/products/import` فایل را می‌خواند
   (`app/Support/Spreadsheet/`).
+- **دسته‌بندی و محصول:** فهرست `GET /admin/products` با پارامتر `category_id`
+  فقط محصولات مستقیم همان دسته را می‌دهد و با `include_children=1` محصولات همهٔ
+  زیردسته‌ها را هم برمی‌گرداند (صفحهٔ `/admin/categories` از همین استفاده می‌کند).
+  انتقال/افزودن محصول به دسته با `POST /admin/products/assign-category` و بدنهٔ
+  `{ category_id, product_ids[] }` انجام می‌شود (حداکثر ۲۰۰ شناسه در هر بار،
+  محصولات یکی‌یکی به‌روزرسانی می‌شوند تا `StorefrontCacheObserver` اجرا شود).
+  `products.category_id` اجباری است؛ بنابراین «حذف از دسته» به‌صورت انتقال به
+  دستهٔ دیگر انجام می‌شود و حذف کامل محصول همان `DELETE /admin/products/{id}` است.
 - **آپلود تصویر:** هر بخش endpoint جدا دارد (`/banners/image`، `/popups/image`،
   `/stories/image`، `/articles/cover`، `/trust-badges/image`،
   `/products/{id}/images`، `/products/size-guide-image`). فایل‌ها در دیسک
@@ -1002,6 +1010,27 @@ php artisan view:cache
 - **تفکیک از پیام‌رسانی خودکار:** این بخش فقط لینک/دکمهٔ ارتباط است؛ ارسال و
   دریافت پیام خودکار همچنان از `Services/Messaging` و وب‌هوک‌های
   `SupportWebhookController` و با توکن ربات‌ها در `.env` انجام می‌شود (۹.۷).
+
+### ۹.۹ محصول و دسته‌بندی در پنل
+
+- **حذف محصول:** `DELETE /admin/products/{product}` فقط وقتی مجاز است که محصول
+  در هیچ `order_items`ی نیامده باشد؛ در غیر این صورت پاسخ `409` با پیام فارسی
+  برمی‌گردد تا سابقهٔ سفارش‌ها خراب نشود. تصاویر، تنوع‌ها و راهنمای سایز همان
+  محصول در همان تراکنش حذف و فایل‌های تصویر از دیسک `public` پاک می‌شوند.
+- **اجباری‌بودن دسته:** ستون `products.category_id` غیرقابل‌تهی و
+  `restrictOnDelete` است؛ پس محصول «بدون دسته» وجود ندارد. در صفحهٔ
+  `/admin/categories` برای خارج‌کردن محصول از یک دسته، از «انتقال به دستهٔ دیگر»
+  استفاده می‌شود و برای حذف کامل، دکمهٔ «حذف محصول» (همان مسیر بالا).
+- **نمایش محصولات دسته:** کلیک روی شمارندهٔ «محصولات» هر ردیف، پنل
+  `CategoryProductsPanel` را باز می‌کند؛ با `include_children=1` محصولات
+  زیردسته‌ها هم نمایش داده می‌شوند و جست‌وجو سمت سرور است (هر بار تا ۱۰۰ محصول).
+- **افزودن/انتقال گروهی:** `POST /admin/products/assign-category` حداکثر ۲۰۰
+  شناسه را در یک تراکنش جابه‌جا می‌کند و محصولات هم‌اکنون در مقصد را رد می‌کند
+  (`data.moved`). تمام تغییرها مدل‌محور هستند تا `StorefrontCacheObserver`
+  اجرا و کش ویترین پاک شود.
+- **محصول جدید در دسته:** لینک «+ محصول جدید» فرم را با
+  `/admin/products/new?category_id=...` باز می‌کند و `AdminProductForm` فقط اگر
+  آن شناسه در فهرست دسته‌ها باشد، همان را از ابتدا انتخاب می‌کند.
 
 ---
 
@@ -1388,6 +1417,7 @@ node -p "require('./package.json').dependencies.react"
 | 1.22 | 2026-11-19 | **موجودی هر رنگ + ارزش افزودهٔ کارت محصول:** ستون nullable `product_colors.stock` (مایگریشن `2026_11_19_120000`) با فیلد «موجودی این رنگ» در فرم محصول پنل (`colors.*.stock`، `NULL` = ثبت نشده) — فقط اطلاعاتی و بدون دخالت در موجودی سفارش؛ `utils/price.ts::calculateVatAmount` + نمایش «ارزش افزوده (٪): مبلغ» زیر قیمت `ProductCard` (grid/home) بر اساس `vat_enabled`/`vat_percent` فروشگاه و `is_taxable` کالا؛ ۲ تست بک‌اند (`ProductColorTest`) و ۴ تست فرانت (`price.test.ts`) — ۴۹۷ تست بک‌اند و ۶۸ تست فرانت سبز |
 | 1.23 | 2026-11-19 | **جست‌وجوی سراسری پنل + فرم تمام‌عرض محصول:** دیالوگ جست‌وجوی `AdminLayout` بازنویسی شد — فهرست نتایج از `utils/adminSearchIndex.ts` (آیتم‌های منوی مجاز + زیرصفحهٔ «افزودن محصول»)، ناحیهٔ نتایج مستقل اسکرول‌شونده، نمایش «والد/گروه» و برچسب «زیرمنو» برای هر نتیجه، جست‌وجو با نرمال‌سازی فارسی (ي/ك، نیم‌فاصله، کشیده، ارقام) و پیمایش با ↑↓/Enter/Esc؛ عنوان گروه‌ها به `ADMIN_SIDEBAR_GROUP_LABELS` در `adminSidebarLayout.ts` منتقل شد. فرم محصول (`AdminProductForm`) تمام‌عرض شد، نوار دکمهٔ چسبان گرفت و «ذخیره تغییرات و ادامه» پس از ذخیره در همان صفحه می‌ماند (پیام موفقیت + لینک فهرست)؛ «ذخیره و بازگشت به فهرست» جدا شد و «ثبت محصول و ادامه» محصول تازه را در صفحهٔ ویرایش باز می‌کند — ۹ تست فرانت `adminSearchIndex.test.ts` (۷۷ تست فرانت سبز) |
 | 1.24 | 2026-11-19 | **رفع خطای تکراری‌بودن رنگ (`SQLSTATE[23000] ... Duplicate entry`) در «ذخیره و ادامه»:** `AdminProductController::syncColors` ردیف بدون شناسه را با رنگ هم‌نام موجود به‌روزرسانی می‌کند (کلید `colorNameKey`: ی/ي، ک/ك، نیم‌فاصله، کشیده، اعراب)، شناسهٔ رنگ محصول دیگر را با `422` رد می‌کند و خطای یکتایی را به پیام اعتبارسنجی تبدیل می‌کند؛ `AdminProductForm::syncSavedRowIds` پس از هر ذخیرهٔ بدون خروج شناسهٔ رنگ/تنوع‌های تازه را از پاسخ سرور برمی‌گرداند — ۳ تست بک‌اند جدید در `ProductColorTest` (۵۰۰ تست بک‌اند، ۷۷ تست فرانت سبز) |
+| 1.25 | 2026-11-20 | **حذف محصول از فهرست + مدیریت محصولات داخل دسته‌بندی:** دکمهٔ «حذف» (با تأیید و نمایش پیام `409` سفارش‌دار) در `AdminProducts`؛ شمارندهٔ «محصولات» هر دسته در `/admin/categories` پنل `components/admin/categories/CategoryProductsPanel` را باز می‌کند: فهرست/جست‌وجوی محصولات دسته (+`include_children=1` برای زیردسته‌ها)، دیالوگ «افزودن محصول» با انتخاب چندتایی از سایر دسته‌ها، «انتقال به دستهٔ...»، «حذف محصول» و «+ محصول جدید» با پیش‌انتخاب دسته در فرم (`?category_id=`). API جدید `POST /admin/products/assign-category` (حداکثر ۲۰۰ شناسه، به‌روزرسانی مدل‌محور برای اجرای `StorefrontCacheObserver`) و پارامتر `include_children` در `GET /admin/products`؛ ۴ تست بک‌اند جدید در `AdminCategoryProductsTest` (۵۰۴ تست بک‌اند، ۷۷ تست فرانت سبز) |
 
 
 

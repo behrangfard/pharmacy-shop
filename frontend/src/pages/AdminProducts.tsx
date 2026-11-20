@@ -301,6 +301,37 @@ function AdminProducts() {
     }
   }
 
+  async function deleteProduct(product: Product) {
+    const confirmed = window.confirm(
+      `آیا از حذف کامل محصول «${product.name}» اطمینان دارید؟\n\nاین عملیات قابل بازگشت نیست. اگر محصول در سفارش‌ها استفاده شده باشد، حذف انجام نمی‌شود.`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setBusyId(product.id);
+    setError("");
+    setNotice("");
+
+    try {
+      await adminApi.delete(`/admin/products/${product.id}`);
+
+      setNotice(`محصول «${product.name}» با موفقیت حذف شد.`);
+      await loadProducts();
+    } catch (err: unknown) {
+      const apiError = err as {
+        response?: { data?: { message?: string } };
+      };
+
+      setError(
+        apiError.response?.data?.message || "حذف محصول با خطا مواجه شد.",
+      );
+    } finally {
+      setBusyId(null);
+    }
+  }
+
   function clearFilters() {
     setSearchInput("");
     setSearch("");
@@ -1009,6 +1040,26 @@ function AdminProducts() {
                                 ? "غیرفعال‌سازی"
                                 : "فعال‌سازی"}
                           </button>
+
+                          <button
+                            type="button"
+                            className="products-button"
+                            disabled={busyId === product.id}
+                            onClick={() => void deleteProduct(product)}
+                            style={{
+                              ...buttonStyle,
+                              background: colors.red,
+                              color: colors.redText,
+                              borderColor: "#f0d5cd",
+                              opacity: busyId === product.id ? 0.6 : 1,
+                              cursor:
+                                busyId === product.id
+                                  ? "not-allowed"
+                                  : "pointer",
+                            }}
+                          >
+                            حذف
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -1331,6 +1382,24 @@ function AdminProducts() {
                         : product.is_active
                           ? "غیرفعال‌سازی"
                           : "فعال‌سازی"}
+                    </button>
+
+                    <button
+                      type="button"
+                      className="products-button"
+                      disabled={busyId === product.id}
+                      onClick={() => void deleteProduct(product)}
+                      style={{
+                        ...buttonStyle,
+                        flex: "0 1 90px",
+                        minHeight: 42,
+                        background: colors.red,
+                        color: colors.redText,
+                        borderColor: "#f0d5cd",
+                        opacity: busyId === product.id ? 0.6 : 1,
+                      }}
+                    >
+                      حذف
                     </button>
                   </div>
                 </article>

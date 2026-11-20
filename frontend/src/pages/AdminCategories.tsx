@@ -1,5 +1,6 @@
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { adminApi } from "../services/api";
+import CategoryProductsPanel from "../components/admin/categories/CategoryProductsPanel";
 
 interface Category {
   id: number;
@@ -112,9 +113,15 @@ export default function AdminCategories() {
   const [actionId, setActionId] = useState<number | null>(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [expandedCategoryId, setExpandedCategoryId] = useState<number | null>(
+    null,
+  );
 
-  const loadCategories = useCallback(async () => {
-    setLoading(true);
+  const loadCategories = useCallback(async (silent = false) => {
+    if (!silent) {
+      setLoading(true);
+    }
+
     setError("");
 
     try {
@@ -129,7 +136,9 @@ export default function AdminCategories() {
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
-      setLoading(false);
+      if (!silent) {
+        setLoading(false);
+      }
     }
   }, []);
 
@@ -163,6 +172,22 @@ export default function AdminCategories() {
       );
     });
   }, [categories, search]);
+
+  const categoryOptions = useMemo(
+    () => categories.map((category) => ({ id: category.id, name: category.name })),
+    [categories],
+  );
+
+  function toggleProducts(category: Category) {
+    setExpandedCategoryId((current) =>
+      current === category.id ? null : category.id,
+    );
+  }
+
+  function handleProductsMessage(message: string) {
+    setError("");
+    setSuccess(message);
+  }
 
   function updateField<K extends keyof CategoryForm>(
     field: K,
@@ -666,72 +691,130 @@ export default function AdminCategories() {
                   </thead>
 
                   <tbody>
-                    {filteredCategories.map((category) => (
-                      <tr key={category.id}>
-                        <td className="admin-category-name">
-                          <span className="admin-category-name-dot" />
-                          {category.name}
-                        </td>
-                        <td className="admin-category-slug" dir="ltr">
-                          {category.slug || "—"}
-                        </td>
-                        <td>{category.parent?.name ?? "—"}</td>
-                        <td>
-                          <span className="admin-category-count">
-                            {formatNumber(category.products_count)}
-                          </span>
-                        </td>
-                        <td>
-                          <span className="admin-category-count admin-category-count-lilac">
-                            {formatNumber(category.children_count)}
-                          </span>
-                        </td>
-                        <td>{renderStatus(category)}</td>
-                        <td>{renderCategoryActions(category)}</td>
-                      </tr>
-                    ))}
+                    {filteredCategories.map((category) => {
+                      const expanded = expandedCategoryId === category.id;
+
+                      return (
+                        <Fragment key={category.id}>
+                          <tr>
+                            <td className="admin-category-name">
+                              <span className="admin-category-name-dot" />
+                              {category.name}
+                            </td>
+                            <td className="admin-category-slug" dir="ltr">
+                              {category.slug || "—"}
+                            </td>
+                            <td>{category.parent?.name ?? "—"}</td>
+                            <td>
+                              <button
+                                type="button"
+                                className={`admin-category-count admin-category-count-button${
+                                  expanded ? " admin-category-count-button-open" : ""
+                                }`}
+                                onClick={() => toggleProducts(category)}
+                                aria-expanded={expanded}
+                                aria-controls={`category-products-${category.id}`}
+                                title="نمایش محصولات این دسته‌بندی"
+                              >
+                                {formatNumber(category.products_count)}
+                                <span aria-hidden="true">
+                                  {expanded ? "▴" : "▾"}
+                                </span>
+                              </button>
+                            </td>
+                            <td>
+                              <span className="admin-category-count admin-category-count-lilac">
+                                {formatNumber(category.children_count)}
+                              </span>
+                            </td>
+                            <td>{renderStatus(category)}</td>
+                            <td>{renderCategoryActions(category)}</td>
+                          </tr>
+
+                          {expanded && (
+                            <tr className="admin-category-products-row">
+                              <td
+                                colSpan={7}
+                                id={`category-products-${category.id}`}
+                              >
+                                <CategoryProductsPanel
+                                  category={category}
+                                  categories={categoryOptions}
+                                  onChanged={() =>
+                                    void loadCategories(true)
+                                  }
+                                  onMessage={handleProductsMessage}
+                                />
+                              </td>
+                            </tr>
+                          )}
+                        </Fragment>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
             </div>
 
             <div className="admin-categories-mobile">
-              {filteredCategories.map((category) => (
-                <article key={category.id} className="admin-category-card">
-                  <div className="admin-category-card-header">
-                    <div className="admin-category-card-title">
-                      <span className="admin-category-card-id">
-                        شناسه: {formatNumber(category.id)}
-                      </span>
-                      <h3>{category.name}</h3>
-                    </div>
-                    {renderStatus(category)}
-                  </div>
+              {filteredCategories.map((category) => {
+                const expanded = expandedCategoryId === category.id;
 
-                  <div className="admin-category-card-details">
-                    <div className="admin-category-detail">
-                      <span>اسلاگ</span>
-                      <strong dir="ltr">{category.slug || "—"}</strong>
+                return (
+                  <article key={category.id} className="admin-category-card">
+                    <div className="admin-category-card-header">
+                      <div className="admin-category-card-title">
+                        <span className="admin-category-card-id">
+                          شناسه: {formatNumber(category.id)}
+                        </span>
+                        <h3>{category.name}</h3>
+                      </div>
+                      {renderStatus(category)}
                     </div>
-                    <div className="admin-category-detail">
-                      <span>دسته‌بندی والد</span>
-                      <strong>{category.parent?.name ?? "دسته اصلی"}</strong>
-                    </div>
-                    <div className="admin-category-stat">
-                      <span>محصولات</span>
-                      <strong>{formatNumber(category.products_count)}</strong>
-                    </div>
-                    <div className="admin-category-stat">
-                      <span>زیردسته‌ها</span>
-                      <strong>{formatNumber(category.children_count)}</strong>
-                    </div>
-                  </div>
 
-                  <div className="admin-category-card-actions">
-                    {renderCategoryActions(category)}
-                  </div>
-                </article>
-              ))}
+                    <div className="admin-category-card-details">
+                      <div className="admin-category-detail">
+                        <span>اسلاگ</span>
+                        <strong dir="ltr">{category.slug || "—"}</strong>
+                      </div>
+                      <div className="admin-category-detail">
+                        <span>دسته‌بندی والد</span>
+                        <strong>{category.parent?.name ?? "دسته اصلی"}</strong>
+                      </div>
+                      <div className="admin-category-stat">
+                        <span>محصولات</span>
+                        <strong>{formatNumber(category.products_count)}</strong>
+                      </div>
+                      <div className="admin-category-stat">
+                        <span>زیردسته‌ها</span>
+                        <strong>{formatNumber(category.children_count)}</strong>
+                      </div>
+                    </div>
+
+                    <div className="admin-category-card-actions">
+                      {renderCategoryActions(category)}
+
+                      <button
+                        type="button"
+                        className="admin-category-button admin-category-button-products"
+                        onClick={() => toggleProducts(category)}
+                        aria-expanded={expanded}
+                      >
+                        {expanded ? "بستن محصولات" : "نمایش محصولات"}
+                      </button>
+                    </div>
+
+                    {expanded && (
+                      <CategoryProductsPanel
+                        category={category}
+                        categories={categoryOptions}
+                        onChanged={() => void loadCategories(true)}
+                        onMessage={handleProductsMessage}
+                      />
+                    )}
+                  </article>
+                );
+              })}
             </div>
           </>
         )}
