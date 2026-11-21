@@ -201,7 +201,11 @@ export function useDashboardLayout({ userId, can }: UseDashboardLayoutParams) {
 
   /** بخش‌های منوی پنل که همین مدیر به آن‌ها دسترسی دارد (خود داشبورد منهای می‌شود). */
   const navShortcutTargets = ADMIN_NAV_ITEMS.filter(
-    (item) => item.to !== "/admin" && can(item.permission),
+    (item) =>
+      item.to !== "/admin" &&
+      (item.permissions ?? [item.permission]).some((permission) =>
+        can(permission),
+      ),
   );
 
   const handleBlockDragStart = (

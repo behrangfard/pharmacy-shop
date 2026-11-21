@@ -5,6 +5,8 @@ import { FileText, Images, LayoutTemplate, PanelsTopLeft } from "lucide-react";
 import AdminBanners from "./AdminBanners";
 import AdminPagesPanel from "../components/AdminPagesPanel";
 import AdminSliderPanel from "../components/AdminSliderPanel";
+import { useAdminAuth } from "../context/AdminAuthContext";
+import { ADMIN_PERMISSIONS } from "../utils/adminPermissions";
 
 /** تب‌های بخش مدیریت محتوا. */
 type ContentTab = "banners" | "slider" | "pages";
@@ -14,24 +16,29 @@ const TABS: {
   label: string;
   description: string;
   icon: typeof Images;
+  /** داشتن هر یک از این مجوزها برای دیدن تب کافی است. */
+  permissions: string[];
 }[] = [
   {
     key: "banners",
     label: "بنرها",
     description: "بنرهای دسکتاپ، موبایل و سایر بنرهای سایت",
     icon: Images,
+    permissions: [ADMIN_PERMISSIONS.banners],
   },
   {
     key: "slider",
     label: "اسلایدر",
     description: "ترتیب، ارتفاع و وضعیت اسلایدهای بالای صفحهٔ اول",
     icon: PanelsTopLeft,
+    permissions: [ADMIN_PERMISSIONS.banners],
   },
   {
     key: "pages",
     label: "صفحات سایت",
     description: "درباره ما، تماس با ما، قوانین و صفحات دلخواه",
     icon: FileText,
+    permissions: [ADMIN_PERMISSIONS.pages],
   },
 ];
 
@@ -50,7 +57,20 @@ function resolveTab(value: string | null): ContentTab {
  */
 function AdminContent() {
   const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = resolveTab(searchParams.get("tab"));
+  const { can } = useAdminAuth();
+
+  /*
+   * هر تب مجوز خودش را دارد؛ کسی که فقط مجوز «صفحات سایت» دارد نباید تب
+   * بنر را ببیند و اگر آدرس تب غیرمجاز را باز کند، به اولین تب مجاز می‌رود.
+   */
+  const allowedTabs = TABS.filter((tab) =>
+    tab.permissions.some((permission) => can(permission)),
+  );
+  const requestedTab = resolveTab(searchParams.get("tab"));
+  const activeTab = allowedTabs.some((tab) => tab.key === requestedTab)
+    ? requestedTab
+    : (allowedTabs[0]?.key ?? "banners");
+
   const editBannerId = Number(searchParams.get("edit")) || null;
 
   const switchTab = useCallback(
@@ -87,7 +107,7 @@ function AdminContent() {
           </p>
         </div>
 
-        <div className="hidden h-14 w-14 items-center justify-center rounded-2xl bg-[#f4f8ef] text-[#648767] sm:flex">
+        <div className="hidden h-14 w-14 items-center justify-center rounded-2xl bg-brand-50 text-brand-500 sm:flex">
           <LayoutTemplate size={26} aria-hidden="true" />
         </div>
       </header>
@@ -97,7 +117,7 @@ function AdminContent() {
         aria-label="بخش‌های مدیریت محتوا"
         className="mb-5 flex flex-wrap gap-2"
       >
-        {TABS.map((tab) => {
+        {allowedTabs.map((tab) => {
           const selected = activeTab === tab.key;
           const Icon = tab.icon;
 
@@ -111,8 +131,8 @@ function AdminContent() {
               title={tab.description}
               className={`flex items-center gap-2 rounded-xl border-2 px-4 py-2.5 text-sm font-bold transition ${
                 selected
-                  ? "border-[#648767] bg-[#f4f8ef] text-[#385e3e]"
-                  : "border-[#e3ebdc] bg-white text-[#6b7a67] hover:border-[#a8bea1]"
+                  ? "border-brand-500 bg-brand-50 text-brand-700"
+                  : "border-brand-200 bg-white text-muted hover:border-brand-300"
               }`}
             >
               <Icon size={16} aria-hidden="true" />

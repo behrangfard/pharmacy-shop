@@ -469,8 +469,8 @@ function AdminPopups() {
         </button>
       </div>
 
-      {error && <div className="admin-alert admin-alert-error">{error}</div>}
-      {success && <div className="admin-alert admin-alert-success">{success}</div>}
+      {error && <div className="admin-alert admin-alert-error" role="alert">{error}</div>}
+      {success && <div className="admin-alert admin-alert-success" role="status">{success}</div>}
 
       <div className="admin-stats">
         <div className="admin-stat">
@@ -1055,7 +1055,7 @@ function AdminPopups() {
               <div
                 className={`overflow-hidden rounded-2xl border shadow-sm ${
                   form.theme === "dark"
-                    ? "border-[#24382c] bg-[#16241c] text-white"
+                    ? "border-brand-800 bg-brand-900 text-white"
                     : form.theme === "brand"
                       ? "border-brand-500 bg-brand-500 text-white"
                       : "border-line bg-white text-ink"

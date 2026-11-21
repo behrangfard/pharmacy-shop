@@ -3271,3 +3271,33 @@ drag & drop، گارد ذخیره‌نشده، `ConfirmDialog`)، بستهٔ ۴ 
 **باقی‌مانده:** انتقال ۲۳ `window.confirm` دیگر به `ConfirmDialog` در بستهٔ ۴؛
 گسترش `MediaCleaner` به مقاله/پاپ‌آپ/استوری.
 
+
+## ۲۳) بازنگری پنل مدیریت — بستهٔ ۴: توکن رنگ، مجوز محتوا، نقش پیام‌ها
+
+**هدف:** پنل هم مثل فروشگاه رنگ را از توکن بگیرد (نه هگز دستی)، بخش محتوا با
+مجوز درست باز شود و پیام‌های وضعیت برای صفحه‌خوان خوانده شوند.
+
+**انجام‌شده:**
+- **توکن رنگ:** ۶۶ هگز دستی در `AdminBanners` (۴۹)، `AdminPermissionGuard` (۹)،
+  `AdminContent` (۸)، `AdminStories` (۷) و `AdminPopups` (۲) به توکن تبدیل شد:
+  `#f4f8ef → bg-brand-50`، `#9aa894 → text-muted-soft` (کنتراست AA)،
+  `#dfe7d8 → border-line-strong`، `#fff9ec/#f0d9a8/#8a5a00 → gold-50/gold-100/gold`،
+  `#b91c1c → text-discount`، `#16241c → bg-brand-900` و در استایل‌های درون‌خطی
+  `var(--color-*)`. حالا بلوک `html[data-theme="ocean"]` روی این صفحات هم اثر
+  دارد. پالت رنگ متن بنر (انتخاب کاربر) عمداً هگز ماند.
+- **مجوز محتوا:** `hasAnyAdminPermission` در `adminPermissions.ts` +
+  `permissions?: string[]` در `AdminNavItem`، `AdminPermissionGuard` و
+  `useDashboardLayout`؛ «مدیریت محتوا» با `banners.manage` **یا** `pages.manage`
+  دیده می‌شود و در `AdminContent` تب غیرمجاز پنهان است و تب پیش‌فرض اولین تب
+  مجاز می‌شود. بک‌اند تغییر نیاز نداشت: مسیرهای بنر/صفحه از قبل جدا با
+  `admin.permission` محافظت می‌شوند (اصل کمترین دسترسی حفظ شد).
+- **نقش پیام‌ها:** `role="alert"` برای خطا و `role="status"` برای موفقیت در
+  `AdminPopups` (۲) و `AdminWishlist` (۴) که بی‌نقش مانده بودند.
+
+**تأیید:** `tsc` تمیز، `oxlint` ۰ خطا/۱۹۹ فایل، `npm run build` موفق (۲.۶۹s).
+بک‌اند تغییر نداشت، پس تست Laravel دوباره اجرا نشد (آخرین اجرا: ۵۲۴ پاس).
+
+**باقی‌مانده:** توکنی‌کردن بقیهٔ صفحات سنگین پنل (فهرست و تعداد در ردیف ۱۵
+بخش ۱۴ `TECHNICAL_GUIDE.md`)؛ انتقال ۳۲ `window.confirm` باقی‌مانده به
+`ConfirmDialog`؛ شکستن فایل‌های بزرگ (`AdminProductForm`، `AdminOrders`).
+

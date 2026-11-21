@@ -489,7 +489,7 @@ function AdminStories() {
               <span className="admin-label">تصویر دایره (کاور)</span>
 
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
-                <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full border border-dashed border-[#dfe7d8] bg-[#f8faf5]">
+                <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full border border-dashed border-line-strong bg-cream-deep">
                   {coverPreview ? (
                     <img
                       src={coverPreview}
@@ -497,7 +497,7 @@ function AdminStories() {
                       className="h-full w-full object-cover"
                     />
                   ) : (
-                    <span className="inline-flex flex-col items-center gap-1 text-[11px] text-[#9aa894]">
+                    <span className="inline-flex flex-col items-center gap-1 text-[11px] text-muted-soft">
                       <ImagePlus size={20} aria-hidden="true" />
                       بدون تصویر
                     </span>
@@ -583,7 +583,7 @@ function AdminStories() {
             {form.slides.map((slide, index) => (
               <div
                 key={index}
-                className="rounded-xl border border-[#dfe7d8] bg-[#f8faf5] p-3"
+                className="rounded-xl border border-line-strong bg-cream-deep p-3"
               >
                 <div className="mb-2 flex items-center justify-between gap-2">
                   <span className="text-xs font-black text-brand-800">
@@ -621,7 +621,7 @@ function AdminStories() {
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-[auto_1fr]">
-                  <div className="flex h-24 w-20 items-center justify-center overflow-hidden rounded-lg border border-dashed border-[#dfe7d8] bg-white">
+                  <div className="flex h-24 w-20 items-center justify-center overflow-hidden rounded-lg border border-dashed border-line-strong bg-white">
                     {getStorageUrl(slide.image || null) ? (
                       <img
                         src={getStorageUrl(slide.image) ?? undefined}
@@ -629,7 +629,7 @@ function AdminStories() {
                         className="h-full w-full object-cover"
                       />
                     ) : (
-                      <span className="inline-flex flex-col items-center gap-1 text-[11px] text-[#9aa894]">
+                      <span className="inline-flex flex-col items-center gap-1 text-[11px] text-muted-soft">
                         <ImagePlus size={18} aria-hidden="true" />
                         بدون تصویر
                       </span>

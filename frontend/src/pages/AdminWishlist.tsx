@@ -434,7 +434,7 @@ function AnalyticsTab({
   if (error && !overview) {
     return (
       <div className="admin-card">
-        <div className="admin-alert admin-alert-error">
+        <div className="admin-alert admin-alert-error" role="alert">
           <AlertCircle size={16} />
           {error}
         </div>
@@ -979,7 +979,7 @@ function ProductsTab() {
       </div>
 
       {error && (
-        <div className="admin-alert admin-alert-error">
+        <div className="admin-alert admin-alert-error" role="alert">
           <AlertCircle size={16} />
           {error}
         </div>
@@ -1286,7 +1286,7 @@ function CustomersTab({
       </div>
 
       {error && (
-        <div className="admin-alert admin-alert-error">
+        <div className="admin-alert admin-alert-error" role="alert">
           <AlertCircle size={16} />
           {error}
         </div>
@@ -1480,7 +1480,7 @@ function CustomerItemsSheet({
           )}
 
           {error && (
-            <div className="admin-alert admin-alert-error">
+            <div className="admin-alert admin-alert-error" role="alert">
               <AlertCircle size={16} />
               {error}
             </div>

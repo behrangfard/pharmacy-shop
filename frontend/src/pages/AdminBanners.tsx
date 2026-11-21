@@ -1112,10 +1112,10 @@ function AdminBanners({
 
   const h1Tone =
     h1Summary.count === 1
-      ? { borderColor: "#c7e0c3", background: "#f4f8ef", color: "#385e3e" }
+      ? { borderColor: "var(--color-brand-300)", background: "var(--color-brand-50)", color: "var(--color-brand-700)" }
       : h1Summary.count === 0
-        ? { borderColor: "#f2dfb4", background: "#fdf8ec", color: "#8a6d1f" }
-        : { borderColor: "#f3c6c6", background: "#fdf1f1", color: "#a13c3c" };
+        ? { borderColor: "var(--color-gold-100)", background: "var(--color-gold-50)", color: "var(--color-gold)" }
+        : { borderColor: "var(--color-blush-100)", background: "var(--color-blush-50)", color: "var(--color-discount-700)" };
 
   const toolbar = (
     <div
@@ -1191,8 +1191,8 @@ function AdminBanners({
               onClick={() => switchTab(tab)}
               className={`rounded-xl border-2 px-4 py-2 text-sm font-bold transition ${
                 selected
-                  ? "border-[#648767] bg-[#f4f8ef] text-[#385e3e]"
-                  : "border-[#e3ebdc] bg-white text-[#6b7a67] hover:border-[#a8bea1]"
+                  ? "border-brand-500 bg-brand-50 text-brand-700"
+                  : "border-brand-200 bg-white text-muted hover:border-brand-300"
               }`}
             >
               {TAB_LABELS[tab]}
@@ -1321,7 +1321,7 @@ function AdminBanners({
                 </label>
 
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
-                  <div className="flex h-24 w-40 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-dashed border-[#dfe7d8] bg-[#f8faf5]">
+                  <div className="flex h-24 w-40 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-dashed border-line-strong bg-cream-deep">
                     {imagePreview && !previewBroken ? (
                       <img
                         src={imagePreview}
@@ -1330,7 +1330,7 @@ function AdminBanners({
                         onError={() => setPreviewBroken(true)}
                       />
                     ) : (
-                      <span className="inline-flex flex-col items-center gap-1 text-[11px] text-[#9aa894]">
+                      <span className="inline-flex flex-col items-center gap-1 text-[11px] text-muted-soft">
                         <ImagePlus size={20} aria-hidden="true" />
                         {imagePreview ? "تصویر پیدا نشد" : "بدون تصویر"}
                       </span>
@@ -1397,7 +1397,7 @@ function AdminBanners({
 
                     {previewBroken && imagePreview && (
                       <p
-                        className="text-[11px] leading-6 text-[#b91c1c]"
+                        className="text-[11px] leading-6 text-discount"
                         dir="rtl"
                       >
                         تصویر از نشانی{" "}
@@ -1408,15 +1408,15 @@ function AdminBanners({
                       </p>
                     )}
 
-                    <p className="text-[11px] leading-6 text-[#9aa894]">
+                    <p className="text-[11px] leading-6 text-muted-soft">
                       مسیر فایل بارگذاری‌شده (مثل{" "}
                       <span dir="ltr">banners/banner.jpg</span>) یا آدرس کامل
                       تصویر را می‌توانید وارد کنید. حداکثر ۵ مگابایت با فرمت
                       JPG، PNG یا WebP.
                     </p>
 
-                    <div className="rounded-xl border border-[#e6ecdf] bg-[#f8faf5] p-3">
-                      <p className="text-[11px] font-bold leading-6 text-[#4b5f4a]">
+                    <div className="rounded-xl border border-line bg-cream-deep p-3">
+                      <p className="text-[11px] font-bold leading-6 text-ink-soft">
                         بنر اسلایدر اصلی در تمام عرض صفحه و با نسبت تصویر خودش
                         (بدون برش) نمایش داده می‌شود؛ ابعاد پیشنهادی:
                       </p>
@@ -1425,7 +1425,7 @@ function AdminBanners({
                         {BANNER_SIZE_HINTS.map((item) => (
                           <span
                             key={item.label}
-                            className="inline-flex items-center gap-1 rounded-full border border-[#dfe7d8] bg-white px-2.5 py-1 text-[11px] text-[#4b5f4a]"
+                            className="inline-flex items-center gap-1 rounded-full border border-line-strong bg-white px-2.5 py-1 text-[11px] text-ink-soft"
                           >
                             {item.label}:
                             <span dir="ltr" className="font-bold">
@@ -1435,7 +1435,7 @@ function AdminBanners({
                         ))}
                       </div>
 
-                      <p className="mt-2 text-[11px] leading-6 text-[#9aa894]">
+                      <p className="mt-2 text-[11px] leading-6 text-muted-soft">
                         «نوار تبلیغاتی» تصویر را با همان نسبت خودش و بدون برش
                         نشان می‌دهد؛ برای هماهنگی کارت‌ها تصویرهای هم‌ارتفاع
                         بگذارید.
@@ -1452,7 +1452,7 @@ function AdminBanners({
                   </label>
 
                   <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
-                  <div className="flex h-24 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-dashed border-[#dfe7d8] bg-[#f8faf5]">
+                  <div className="flex h-24 w-20 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-dashed border-line-strong bg-cream-deep">
                     {mobileImagePreview && !mobilePreviewBroken ? (
                       <img
                         src={mobileImagePreview}
@@ -1461,7 +1461,7 @@ function AdminBanners({
                         onError={() => setMobilePreviewBroken(true)}
                       />
                     ) : (
-                      <span className="inline-flex flex-col items-center gap-1 text-[11px] text-[#9aa894]">
+                      <span className="inline-flex flex-col items-center gap-1 text-[11px] text-muted-soft">
                         <ImagePlus size={20} aria-hidden="true" />
                         {mobileImagePreview ? "تصویر پیدا نشد" : "بدون تصویر"}
                       </span>
@@ -1527,7 +1527,7 @@ function AdminBanners({
                       placeholder="banners/banner-mobile.jpg"
                     />
 
-                    <p className="text-[11px] leading-6 text-[#9aa894]">
+                    <p className="text-[11px] leading-6 text-muted-soft">
                       این تصویر مستقل از تصویر دسکتاپ است و فقط روی موبایل
                       (عرض کمتر از ۷۶۸ پیکسل) نمایش داده می‌شود. ابعاد پیشنهادی
                       موبایل:{" "}
@@ -1539,7 +1539,7 @@ function AdminBanners({
                     </p>
 
                     {!form.mobile_image.trim() && (
-                      <p className="rounded-lg border border-[#f0d9a8] bg-[#fff9ec] px-3 py-2 text-[11px] leading-6 text-[#8a5a00]">
+                      <p className="rounded-lg border border-gold-100 bg-gold-50 px-3 py-2 text-[11px] leading-6 text-gold">
                         ⚠️ تصویر موبایل ثبت نشده است؛ این بنر روی گوشی نمایش
                         داده نمی‌شود (تصویر دسکتاپ جای آن نمی‌نشیند).
                       </p>
@@ -1578,14 +1578,14 @@ function AdminBanners({
                 </select>
 
                 {editingPositionOutsideTab && (
-                  <p className="rounded-lg border border-[#f0d9a8] bg-[#fff9ec] px-3 py-2 text-[11px] leading-6 text-[#8a5a00]">
+                  <p className="rounded-lg border border-gold-100 bg-gold-50 px-3 py-2 text-[11px] leading-6 text-gold">
                     این بنر در بخش «{positionLabels[form.position]}» است. تب
                     فعلی فقط فهرست را فیلتر می‌کند؛ ذخیره، محل نمایش را عوض
                     نمی‌کند.
                   </p>
                 )}
 
-                <p className="text-[11px] leading-6 text-[#9aa894]">
+                <p className="text-[11px] leading-6 text-muted-soft">
                   {activeTab === "desktop"
                     ? "این بنر فقط در دسکتاپ دیده می‌شود؛ بنرهای موبایل در تب «بنرهای موبایل» ثبت می‌شوند. «بنر بالای صفحه» تصویر بزرگ بالای صفحهٔ اول است و با ثبت بیش از یک بنر فعال، اسلایدر خودکار فعال می‌شود."
                     : activeTab === "mobile"
@@ -1788,11 +1788,11 @@ function AdminBanners({
 
               <div className="flex items-center gap-3">
                 <span
-                  className="inline-block h-16 w-28 border border-[#c9d8c2] bg-gradient-to-t from-[#648767] to-[#a8bea1]"
+                  className="inline-block h-16 w-28 border border-brand-300 bg-gradient-to-t from-brand-500 to-brand-300"
                   style={{ borderRadius: `${bannerRadius}px` }}
                   aria-hidden="true"
                 />
-                <span className="text-xs font-bold text-[#3f5140]">
+                <span className="text-xs font-bold text-ink">
                   {bannerRadius}px
                 </span>
               </div>
@@ -2010,8 +2010,8 @@ function AdminBanners({
                                 height: 46,
                                 objectFit: "cover",
                                 borderRadius: 8,
-                                border: "1px solid #e5e7eb",
-                                background: "#f8faf5",
+                                border: "1px solid var(--color-line)",
+                                background: "var(--color-cream-deep)",
                               }}
                             />
                           </a>
@@ -2022,12 +2022,12 @@ function AdminBanners({
                               flexDirection: "column",
                               gap: 2,
                               fontSize: 11,
-                              color: banner.image ? "#b91c1c" : "#9ca3af",
+                              color: banner.image ? "var(--color-discount)" : "var(--color-muted-soft)",
                             }}
                           >
                             {banner.image ? "تصویر یافت نشد" : "—"}
                             {banner.image && (
-                              <span dir="ltr" style={{ color: "#9ca3af" }}>
+                              <span dir="ltr" style={{ color: "var(--color-muted-soft)" }}>
                                 {banner.image}
                               </span>
                             )}
@@ -2039,7 +2039,7 @@ function AdminBanners({
                             marginTop: 4,
                             fontSize: 10,
                             fontWeight: 700,
-                            color: banner.mobile_image ? "#3f6b45" : "#9ca3af",
+                            color: banner.mobile_image ? "var(--color-brand-600)" : "var(--color-muted-soft)",
                           }}
                         >
                           {banner.mobile_image ? "موبایل ✓" : "موبایل: —"}
@@ -2048,7 +2048,7 @@ function AdminBanners({
                       <td>
                         {banner.title || "—"}
                         {banner.subtitle && (
-                          <div style={{ fontSize: 11, color: "#9ca3af" }}>
+                          <div style={{ fontSize: 11, color: "var(--color-muted-soft)" }}>
                             {banner.subtitle}
                           </div>
                         )}

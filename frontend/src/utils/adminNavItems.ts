@@ -37,6 +37,11 @@ import { ADMIN_PERMISSIONS } from "./adminPermissions";
 export type AdminNavItem = {
   to: string;
   permission: string;
+  /**
+   * اگر بخش با چند نوع محتوا کار می‌کند (مثل «مدیریت محتوا» که بنر و صفحات
+   * سایت را یک‌جا دارد)، داشتن «یکی» از این مجوزها برای دیدن منو کافی است.
+   */
+  permissions?: string[];
   label: string;
   /** فقط برای مسیرهایی مثل /admin که نباید زیرمسیرها را فعال کنند. */
   end?: boolean;
@@ -106,6 +111,7 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
   {
     to: "/admin/content",
     permission: ADMIN_PERMISSIONS.banners,
+    permissions: [ADMIN_PERMISSIONS.banners, ADMIN_PERMISSIONS.pages],
     label: "مدیریت محتوا",
     icon: LayoutTemplate,
     keywords:

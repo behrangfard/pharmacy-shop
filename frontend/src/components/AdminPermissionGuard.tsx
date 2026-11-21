@@ -6,7 +6,12 @@ import { useAdminAuth } from "../context/AdminAuthContext";
 
 type AdminPermissionGuardProps = {
   /** مجوز لازم برای دیدن این صفحه (مثلاً "products.manage"). */
-  permission: string;
+  permission?: string;
+  /**
+   * اگر صفحه با «هر یک» از این مجوزها باز شود؛ برای بخش‌های چندمحتوایی مثل
+   * «مدیریت محتوا» که هم با مجوز بنرها و هم با مجوز صفحات کار می‌کند.
+   */
+  permissions?: string[];
   /** نام فارسی بخش برای پیام «دسترسی محدود». */
   section?: string;
   children: ReactNode;
@@ -20,12 +25,20 @@ type AdminPermissionGuardProps = {
  */
 function AdminPermissionGuard({
   permission,
+  permissions,
   section,
   children,
 }: AdminPermissionGuardProps) {
   const { can, roleLabel } = useAdminAuth();
 
-  if (can(permission)) {
+  const required =
+    permissions && permissions.length > 0
+      ? permissions
+      : permission
+        ? [permission]
+        : [];
+
+  if (required.length === 0 ? can() : required.some((item) => can(item))) {
     return <>{children}</>;
   }
 
@@ -40,8 +53,8 @@ function AdminPermissionGuard({
           max-width: 620px;
           margin: 24px auto;
           padding: 28px;
-          background: #ffffff;
-          border: 1px solid var(--admin-line, #e6ece2);
+          background: var(--color-white);
+          border: 1px solid var(--color-line);
           border-radius: 18px;
           box-shadow: 0 6px 24px rgba(31, 55, 35, 0.04);
           text-align: right;
@@ -53,18 +66,18 @@ function AdminPermissionGuard({
           width: 46px;
           height: 46px;
           border-radius: 14px;
-          color: #a9601f;
-          background: #fdf4e8;
+          color: var(--color-gold);
+          background: var(--color-gold-50);
         }
         .admin-denied h1 {
           margin: 4px 0 0;
           font-size: clamp(19px, 2.4vw, 23px);
           font-weight: 900;
-          color: #22331f;
+          color: var(--color-ink);
         }
         .admin-denied p {
           margin: 0;
-          color: var(--admin-muted, #6f7d6f);
+          color: var(--color-muted);
           font-size: 13px;
           line-height: 2;
         }
@@ -75,15 +88,15 @@ function AdminPermissionGuard({
           margin-top: 8px;
           padding: 10px 16px;
           border-radius: 11px;
-          color: #fff;
-          background: #527b54;
+          color: var(--color-white);
+          background: var(--color-brand-600);
           font-size: 12.5px;
           font-weight: 800;
           text-decoration: none;
           transition: background 0.15s ease;
         }
         .admin-denied-link:hover {
-          background: #416943;
+          background: var(--color-brand-700);
         }
       `}</style>
 

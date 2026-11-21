@@ -68,3 +68,22 @@ export function hasAdminPermission(
     ? user.permissions.includes(permission)
     : false;
 }
+
+/**
+ * آیا کاربر دست‌کم یکی از این مجوزها را دارد؟
+ *
+ * برای بخش‌هایی که با چند نوع محتوا کار می‌کنند (مثل «مدیریت محتوا» که هم
+ * بنر و اسلایدر دارد و هم صفحات سایت) استفاده می‌شود؛ فهرست خالی یعنی «فقط
+ * نقش مدیر کافی است».
+ */
+export function hasAnyAdminPermission(
+  user: AuthUser | null | undefined,
+  permissions?: readonly string[],
+): boolean {
+  if (!user || user.role !== "admin") return false;
+  if (!permissions || permissions.length === 0) return true;
+
+  return permissions.some((permission) =>
+    hasAdminPermission(user, permission),
+  );
+}

@@ -242,7 +242,10 @@ function App() {
                     path="content"
                     element={
                       <AdminPermissionGuard
-                        permission={ADMIN_PERMISSIONS.banners}
+                        permissions={[
+                          ADMIN_PERMISSIONS.banners,
+                          ADMIN_PERMISSIONS.pages,
+                        ]}
                         section="مدیریت محتوا"
                       >
                         <AdminContent />

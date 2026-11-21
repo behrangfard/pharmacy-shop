@@ -42,7 +42,7 @@ import { usePageMeta } from "../hooks/usePageMeta";
 import { NO_INDEX_ROBOTS, SITE_NAME } from "../utils/seo";
 import {
   ADMIN_PERMISSIONS,
-  hasAdminPermission,
+  hasAnyAdminPermission,
 } from "../utils/adminPermissions";
 import { ADMIN_NAV_ITEMS } from "../utils/adminNavItems";
 import {
@@ -124,7 +124,10 @@ function AdminLayout() {
 
   /* فقط بخش‌هایی که نقش مدیر به آن‌ها دسترسی دارد در منو و جست‌وجو می‌آیند. */
   const visibleNavItems = useMemo(
-    () => navItems.filter((item) => hasAdminPermission(user, item.permission)),
+    () =>
+      navItems.filter((item) =>
+        hasAnyAdminPermission(user, item.permissions ?? [item.permission]),
+      ),
     [user],
   );
 
