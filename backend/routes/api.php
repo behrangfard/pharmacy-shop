@@ -768,7 +768,8 @@ Route::prefix('v1')->group(function () {
             Route::middleware('admin.permission:'.AdminRole::BRANDS_MANAGE)
                 ->group(function () {
                     Route::get('/brands', [AdminBrandController::class, 'index']);
-                    Route::post('/brands', [AdminBrandController::class, 'store']);
+            Route::post('/brands/image', [AdminBrandController::class, 'uploadLogo']);
+            Route::post('/brands', [AdminBrandController::class, 'store']);
 
                     Route::get('/brands/{brand}', [AdminBrandController::class, 'show']);
 

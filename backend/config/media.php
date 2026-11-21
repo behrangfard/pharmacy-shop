@@ -26,6 +26,7 @@ return [
             'product-images',
             'products',
             'banners',
+            'brands',
             'popups',
             'stories',
             'article-covers',
@@ -52,6 +53,9 @@ return [
         'directories' => [
             'banners' => [
                 ['table' => 'banners', 'columns' => ['image', 'mobile_image']],
+            ],
+            'brands' => [
+                ['table' => 'brands', 'columns' => ['logo']],
             ],
             'article-covers' => [
                 ['table' => 'articles', 'columns' => ['cover_image']],

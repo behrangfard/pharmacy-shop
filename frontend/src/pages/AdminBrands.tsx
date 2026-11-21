@@ -1,7 +1,8 @@
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, ChangeEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 import { adminApi } from "../services/api";
 import { getAdminErrorMessage, formatAdminNumber } from "../utils/adminFormat";
+import { getStorageUrl } from "../utils/images";
 
 interface Brand {
   id: number;
@@ -42,6 +43,10 @@ function AdminBrands() {
   const [actionId, setActionId] = useState<number | null>(null);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [uploading, setUploading] = useState(false);
+
+  // پیش‌نمایش لوگو از مسیر ذخیره‌شده در فرم (هم مسیر آپلود، هم URL دستی).
+  const logoPreview = getStorageUrl(form.logo);
 
   const loadBrands = useCallback(async () => {
     setLoading(true);
@@ -186,6 +191,45 @@ function AdminBrands() {
     }
   }
 
+  /**
+   * بارگذاری لوگو در پوشهٔ `brands/` سرور؛ مسیر برگشتی در فیلد فرم می‌نشیند و
+   * با «ذخیره» به برند وصل می‌شود (پس‌زمینهٔ آپلود بی‌مصرف در پنل نمی‌ماند).
+   */
+  async function handleLogoUpload(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+
+    // ورودی پاک می‌شود تا انتخاب دوبارهٔ همان فایل هم رویداد بدهد.
+    event.target.value = "";
+
+    if (!file || uploading) return;
+
+    setUploading(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+
+      const response = await adminApi.post("/admin/brands/image", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      const path = response.data?.data?.path;
+
+      if (typeof path !== "string" || path === "") {
+        throw new Error("مسیر لوگوی بارگذاری‌شده برنگشت.");
+      }
+
+      updateField("logo", path);
+      setSuccess("لوگو بارگذاری شد؛ با ذخیرهٔ برند نهایی می‌شود.");
+    } catch (err) {
+      setError(getAdminErrorMessage(err));
+    } finally {
+      setUploading(false);
+    }
+  }
+
   return (
     <div dir="rtl" className="admin-page">
       <header className="admin-page-head">
@@ -268,7 +312,7 @@ function AdminBrands() {
 
             <div className="admin-field">
               <label className="admin-label" htmlFor="brand-logo">
-                مسیر یا نشانی لوگو
+                لوگوی برند
               </label>
               <input
                 id="brand-logo"
@@ -279,6 +323,59 @@ function AdminBrands() {
                 maxLength={2048}
                 placeholder="/storage/brands/logo.png"
               />
+
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  marginTop: 8,
+                  flexWrap: "wrap",
+                }}
+              >
+                <label
+                  className="admin-btn admin-btn-sm"
+                  style={{ cursor: "pointer" }}
+                >
+                  {uploading ? "در حال بارگذاری..." : "بارگذاری تصویر"}
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    onChange={(event) => void handleLogoUpload(event)}
+                    style={{ display: "none" }}
+                    disabled={uploading}
+                  />
+                </label>
+
+                {form.logo && (
+                  <button
+                    type="button"
+                    className="admin-btn admin-btn-sm admin-btn-danger"
+                    onClick={() => updateField("logo", "")}
+                    disabled={uploading}
+                  >
+                    حذف لوگو
+                  </button>
+                )}
+
+                <span style={{ fontSize: 12, color: "var(--color-muted)" }}>
+                  PNG/JPG/WebP تا ۲ مگابایت — لوگو در بخش «برندها» صفحهٔ اصلی
+                  دیده می‌شود.
+                </span>
+              </div>
+
+              {logoPreview && (
+                <img
+                  src={logoPreview}
+                  alt="پیش‌نمایش لوگوی برند"
+                  style={{
+                    marginTop: 8,
+                    height: 56,
+                    width: "auto",
+                    objectFit: "contain",
+                  }}
+                />
+              )}
             </div>
 
             <div className="admin-field">
@@ -360,7 +457,9 @@ function AdminBrands() {
           <div>
             <h2 className="admin-card-title">فهرست برندها</h2>
             <p className="admin-card-desc">
-              {formatAdminNumber(brands.length)} برند ثبت شده است.
+              {formatAdminNumber(brands.length)} برند ثبت شده است. برندهای «فعال» که
+              حداقل یک محصول دارند در بخش «برندهایی که می‌فروشیم» صفحهٔ اصلی
+              نمایش داده می‌شوند؛ ترتیب همان «ترتیب نمایش» است.
             </p>
           </div>
         </div>

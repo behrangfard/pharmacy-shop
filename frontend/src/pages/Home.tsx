@@ -20,6 +20,7 @@ import BannerImage from "../components/BannerImage";
 import BannerTextLayers from "../components/BannerTextLayers";
 import Layout from "../components/Layout";
 import LatestArticles from "../components/LatestArticles";
+import BrandsShowcase from "../components/BrandsShowcase";
 import RecentlyViewed from "../components/RecentlyViewed";
 import StoryStrip from "../components/StoryStrip";
 import { ButtonLink } from "../components/Button";
@@ -1391,6 +1392,9 @@ function Home() {
           </div>
         </div>
       </section>
+
+      {/* برندهایی که می‌فروشیم؛ فقط وقتی برند فعالِ دارای محصول وجود داشته باشد */}
+      <BrandsShowcase />
 
       {/* بازدیدهای اخیر؛ فقط وقتی کاربر قبلاً محصولی دیده باشد */}
       {recentlyViewed.items.length > 0 && (

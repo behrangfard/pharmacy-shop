@@ -8,7 +8,9 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -198,5 +200,68 @@ class AdminBrandTest extends TestCase
         $this->getJson('/api/v1/brands')
             ->assertOk()
             ->assertJsonPath('data.0.slug', 'cached-brand');
+    }
+
+    public function test_admin_can_upload_brand_logo(): void
+    {
+        $this->admin();
+
+        Storage::fake('public');
+
+        // GD روی این محیط نصب نیست؛ از یک PNG واقعی کوچک استفاده می‌شود
+        // (قاعدهٔ `image` همچنان هدر فایل را بررسی می‌کند).
+        $png = base64_decode(
+            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+            true
+        );
+
+        $response = $this->post(
+            '/api/v1/admin/brands/image',
+            ['image' => UploadedFile::fake()->createWithContent('logo.png', $png)],
+            ['Accept' => 'application/json']
+        )->assertCreated()
+            ->assertJsonPath('success', true);
+
+        $path = $response->json('data.path');
+
+        $this->assertIsString($path);
+        $this->assertStringStartsWith('brands/', $path);
+        Storage::disk('public')->assertExists($path);
+        $this->assertNotEmpty($response->json('data.url'));
+    }
+
+    public function test_brand_logo_upload_rejects_non_image_files(): void
+    {
+        $this->admin();
+
+        Storage::fake('public');
+
+        $this->postJson('/api/v1/admin/brands/image', [
+            'image' => UploadedFile::fake()->create(
+                'catalog.pdf',
+                40,
+                'application/pdf'
+            ),
+        ])->assertStatus(422);
+    }
+
+    public function test_public_brand_index_exposes_logo_and_product_count(): void
+    {
+        $brand = Brand::query()->create([
+            'name' => 'Showcase Brand',
+            'slug' => 'showcase-brand',
+            'logo' => '/storage/brands/showcase.png',
+            'is_active' => true,
+            'sort_order' => 3,
+        ]);
+
+        $this->createProduct($brand);
+
+        $this->getJson('/api/v1/brands')
+            ->assertOk()
+            ->assertJsonPath('data.0.slug', 'showcase-brand')
+            ->assertJsonPath('data.0.logo', '/storage/brands/showcase.png')
+            ->assertJsonPath('data.0.products_count', 1)
+            ->assertJsonPath('data.0.sort_order', 3);
     }
 }
