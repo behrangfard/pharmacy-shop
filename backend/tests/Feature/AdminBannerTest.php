@@ -351,6 +351,44 @@ class AdminBannerTest extends TestCase
         ])->assertStatus(422);
     }
 
+    public function test_admin_can_duplicate_banner_inactive_at_end_of_section(): void
+    {
+        $this->admin();
+
+        $original = Banner::query()->create([
+            'title' => 'اسلاید اصلی',
+            'image' => 'banners/original.jpg',
+            'mobile_image' => 'banners/original-mobile.jpg',
+            'position' => 'home_hero',
+            'sort_order' => 3,
+            'is_active' => true,
+        ]);
+
+        $response = $this->postJson("/api/v1/admin/banners/{$original->id}/duplicate")
+            ->assertCreated()
+            ->assertJsonPath('data.is_active', false)
+            ->assertJsonPath('data.image', 'banners/original.jpg')
+            ->assertJsonPath('data.position', 'home_hero');
+
+        $this->assertStringContainsString('(کپی)', (string) $response->json('data.title'));
+        // کپی انتهای همان بخش می‌نشیند، نه ابتدای اسلایدر.
+        $this->assertSame(4, (int) $response->json('data.sort_order'));
+        $this->assertSame(2, Banner::query()->count());
+    }
+
+    public function test_guest_cannot_duplicate_banner(): void
+    {
+        $banner = Banner::query()->create([
+            'image' => 'banners/original.jpg',
+            'position' => 'home_hero',
+        ]);
+
+        $this->postJson("/api/v1/admin/banners/{$banner->id}/duplicate")
+            ->assertUnauthorized();
+
+        $this->assertSame(1, Banner::query()->count());
+    }
+
     public function test_guest_cannot_manage_banners(): void
     {
         $this->postJson('/api/v1/admin/banners', [

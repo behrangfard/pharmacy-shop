@@ -250,6 +250,36 @@ class AdminBannerController extends Controller
         ]);
     }
 
+    /**
+     * ساخت کپی از یک بنر.
+     *
+     * چرا: برای اسلایدهای مشابه (تصویر یکسان، متن/لینک متفاوت) مدیر مجبور بود
+     * همهٔ فیلدها و لایه‌های متن را دستی دوباره وارد کند. کپی «غیرفعال» و
+     * انتهای همان بخش ساخته می‌شود تا ناگهان در سایت منتشر نشود؛ تصویر مشترک
+     * است و `MediaCleaner` با بررسی ارجاع، آن را با حذف یکی از دو بنر پاک
+     * نمی‌کند.
+     */
+    public function duplicate(Banner $banner): JsonResponse
+    {
+        $copy = $banner->replicate();
+
+        $copy->title = $banner->title ? $banner->title . ' (کپی)' : 'کپی بنر';
+        $copy->is_active = false;
+        $copy->sort_order = 1 + (int) Banner::query()
+            ->where('position', $banner->position)
+            ->max('sort_order');
+
+        $copy->save();
+
+        $this->forgetStorefrontCache();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'کپی بنر ساخته شد (غیرفعال، انتهای همین بخش).',
+            'data' => $copy->fresh(),
+        ], 201);
+    }
+
     public function updateStatus(Request $request, Banner $banner): JsonResponse
     {
         $validated = $request->validate([

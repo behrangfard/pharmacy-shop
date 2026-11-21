@@ -14,6 +14,7 @@ import AdminBannerSectionCard, {
   type AdminBannerSectionKind,
 } from "../components/AdminBannerSectionCard";
 import AdminBannerTextEditor from "../components/AdminBannerTextEditor";
+import ConfirmDialog from "../components/ConfirmDialog";
 import JalaliDatePicker from "../components/JalaliDatePicker";
 import { useAdminBannerFonts } from "../hooks/useBannerFonts";
 import { adminApi } from "../services/api";
@@ -279,6 +280,50 @@ interface AdminBannersProps {
   onEditRequestHandled?: () => void;
 }
 
+/** وضعیت زمان‌بندی بنر برای برچسب فهرست پنل. */
+type BannerScheduleState = "active" | "inactive" | "scheduled" | "expired";
+
+const SCHEDULE_LABELS: Record<BannerScheduleState, string> = {
+  active: "فعال",
+  inactive: "غیرفعال",
+  scheduled: "زمان‌بندی‌شده",
+  expired: "منقضی",
+};
+
+/** فعال/غیرفعال + بازهٔ زمانی: «فعال» فقط یعنی همین حالا در سایت دیده می‌شود. */
+function bannerScheduleState(banner: Banner): BannerScheduleState {
+  if (!banner.is_active) return "inactive";
+
+  const now = Date.now();
+  const startsAt = banner.starts_at ? Date.parse(banner.starts_at) : Number.NaN;
+  const endsAt = banner.ends_at ? Date.parse(banner.ends_at) : Number.NaN;
+
+  if (!Number.isNaN(startsAt) && startsAt > now) return "scheduled";
+  if (!Number.isNaN(endsAt) && endsAt < now) return "expired";
+
+  return "active";
+}
+
+/** جست‌وجوی سادهٔ مدیر در عنوان/زیرعنوان/لینک/مسیر تصویر بنر. */
+function matchesBannerQuery(banner: Banner, query: string): boolean {
+  const needle = query.trim().toLowerCase();
+
+  if (needle === "") return true;
+
+  return [banner.title, banner.subtitle, banner.link, banner.image].some(
+    (value) => (value ?? "").toLowerCase().includes(needle),
+  );
+}
+
+/** درخواست تأیید مشترک پنل (به‌جای window.confirm). */
+type ConfirmRequest = {
+  title: string;
+  description: string;
+  confirmLabel: string;
+  tone: "default" | "danger";
+  action: () => void | Promise<void>;
+};
+
 /**
  * دورریختن تصاویر آپلودشده‌ای که به هیچ بنری وصل نشدند (بستن/انصراف از فرم).
  * بی‌صدا و بی‌انتظار: اگر درخواست شکست بخورد، کامند `media:prune` بعداً همین
@@ -321,6 +366,21 @@ function AdminBanners({
   const [previewBroken, setPreviewBroken] = useState(false);
   const [mobilePreviewBroken, setMobilePreviewBroken] = useState(false);
   const [brokenImages, setBrokenImages] = useState<Record<number, boolean>>({});
+
+  // فهرست: جست‌وجو، فیلتر وضعیت و جابه‌جایی با کشیدن (drag & drop).
+  const [listQuery, setListQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<
+    BannerScheduleState | "all"
+  >("all");
+  const [dragId, setDragId] = useState<number | null>(null);
+  const [dragOverId, setDragOverId] = useState<number | null>(null);
+  const [reordering, setReordering] = useState(false);
+
+  // دیالوگ تأیید مشترک + گارد تغییرات ذخیره‌نشدهٔ فرم.
+  const [confirmRequest, setConfirmRequest] = useState<ConfirmRequest | null>(
+    null,
+  );
+  const [formDirty, setFormDirty] = useState(false);
 
   // تنظیمات بخش‌های بنر صفحهٔ اول (هیرو و چندستونه): چیدمان، ابعاد، تعداد
   // تصاویر، عنوان و فعال/غیرفعال.
@@ -454,6 +514,7 @@ function AdminBanners({
     value: BannerForm[K],
   ) {
     setForm((current) => ({ ...current, [field]: value }));
+    setFormDirty(true);
   }
 
   function scrollToForm() {
@@ -469,11 +530,32 @@ function AdminBanners({
     discardBannerImages(paths);
   }
 
+  /**
+   * اجرای یک کار (بستن فرم، ویرایش بنر دیگر، افزودن بنر) با محافظت از تغییرات
+   * ذخیره‌نشده: اگر فرم باز و تغییرکرده باشد، اول تأیید می‌گیرد.
+   */
+  function requestFormExit(action: () => void) {
+    if (!formOpen || !formDirty) {
+      action();
+      return;
+    }
+
+    setConfirmRequest({
+      title: "تغییرات ذخیره نشده‌اند",
+      description:
+        "تغییرات این فرم ذخیره نشده است. با ادامه، تغییرات از بین می‌رود.",
+      confirmLabel: "ادامه بدون ذخیره",
+      tone: "danger",
+      action,
+    });
+  }
+
   function resetForm() {
     discardPendingUploads();
     setForm(initialForm);
     setEditingId(null);
     setFormOpen(false);
+    setFormDirty(false);
 
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -515,6 +597,7 @@ function AdminBanners({
     setForm({ ...initialForm, position });
     setEditingId(null);
     setFormOpen(true);
+    setFormDirty(false);
 
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -554,6 +637,7 @@ function AdminBanners({
       ends_at: toDateTimeInput(banner.ends_at),
     });
     setFormOpen(true);
+    setFormDirty(false);
 
     scrollToForm();
   }
@@ -851,11 +935,8 @@ function AdminBanners({
     }
   }
 
-  async function deleteBanner(banner: Banner) {
-    if (!window.confirm("این بنر حذف شود؟")) {
-      return;
-    }
-
+  /** حذف واقعی بنر (بعد از تأیید دیالوگ)؛ فایل تصویر را سرور هم پاک می‌کند. */
+  async function performDeleteBanner(banner: Banner) {
     setActionId(banner.id);
     setError("");
     setSuccess("");
@@ -869,6 +950,99 @@ function AdminBanners({
       setError(getAdminErrorMessage(err));
     } finally {
       setActionId(null);
+    }
+  }
+
+  /**
+   * درخواست حذف بنر با دیالوگ خود پنل (به‌جای window.confirm) تا در RTL و
+   * موبایل درست دیده شود و متن تأیید نام بنر را نشان دهد.
+   */
+  function deleteBanner(banner: Banner) {
+    setConfirmRequest({
+      title: "حذف بنر",
+      description: banner.title
+        ? `بنر «${banner.title}» حذف شود؟ این کار برگشت‌پذیر نیست.`
+        : "این بنر حذف شود؟ این کار برگشت‌پذیر نیست.",
+      confirmLabel: "حذف بنر",
+      tone: "danger",
+      action: () => performDeleteBanner(banner),
+    });
+  }
+
+  /**
+   * کپی بنر؛ تصویر و لایه‌های متن همان بنر می‌مانند و نسخهٔ کپی غیرفعال و در
+   * انتهای همان بخش ساخته می‌شود تا ناگهان در سایت منتشر نشود.
+   */
+  async function duplicateBanner(banner: Banner) {
+    setActionId(banner.id);
+    setError("");
+    setSuccess("");
+
+    try {
+      const response = await adminApi.post(
+        `/admin/banners/${banner.id}/duplicate`,
+      );
+
+      setSuccess(response.data?.message ?? "کپی بنر ساخته شد.");
+      await refreshAll();
+    } catch (err) {
+      setError(getAdminErrorMessage(err));
+    } finally {
+      setActionId(null);
+    }
+  }
+
+  /**
+   * جابه‌جایی بنر با کشیدن (drag & drop) داخل همان بخش.
+   *
+   * ترتیب جدید همان بخش با `PUT /admin/banners/order` ذخیره می‌شود؛ کشیدن
+   * بین بخش‌ها نادیده گرفته می‌شود چون سرور فقط شناسه‌های همان position را
+   * می‌پذیرد. در حالت فیلتر/جست‌وجو کشیدن غیرفعال است تا ترتیب پنهان‌شده‌ها
+   * جابه‌جا نشود.
+   */
+  async function moveBanner(draggedId: number, targetId: number) {
+    if (draggedId === targetId || reordering) return;
+
+    const dragged = banners.find((banner) => banner.id === draggedId);
+    const target = banners.find((banner) => banner.id === targetId);
+
+    if (!dragged || !target || dragged.position !== target.position) return;
+
+    const group = banners
+      .filter((banner) => banner.position === dragged.position)
+      .sort((a, b) => a.sort_order - b.sort_order || a.id - b.id)
+      .map((banner) => banner.id);
+
+    const from = group.indexOf(draggedId);
+    const to = group.indexOf(targetId);
+
+    if (from < 0 || to < 0) return;
+
+    group.splice(to, 0, ...group.splice(from, 1));
+
+    setReordering(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const response = await adminApi.put("/admin/banners/order", {
+        position: dragged.position,
+        ids: group,
+      });
+
+      const updated = (response.data?.data ?? []) as Banner[];
+      const byId = new Map(updated.map((banner) => [banner.id, banner]));
+
+      setBanners((current) =>
+        current.map((banner) => byId.get(banner.id) ?? banner),
+      );
+      setSuccess("ترتیب بنرها ذخیره شد.");
+    } catch (err) {
+      setError(getAdminErrorMessage(err));
+    } finally {
+      setReordering(false);
+      setDragId(null);
+      setDragOverId(null);
     }
   }
 
@@ -896,6 +1070,19 @@ function AdminBanners({
   const tabBanners = banners.filter((banner) =>
     POSITIONS_BY_TAB[activeTab].includes(banner.position),
   );
+
+  // فیلتر و جست‌وجو روی فهرست همان تب؛ ترتیب دسته‌ای (drag & drop) فقط وقتی
+  // فعال است که فیلتری اعمال نشده باشد.
+  const filteredBanners = tabBanners.filter((banner) => {
+    if (statusFilter !== "all" && bannerScheduleState(banner) !== statusFilter) {
+      return false;
+    }
+
+    return matchesBannerQuery(banner, listQuery);
+  });
+
+  const listFiltered = statusFilter !== "all" || listQuery.trim() !== "";
+  const canDrag = !listFiltered && !reordering && !saving;
 
   /**
    * فرم ویرایش بنری باز است که در تب فعال نیست (تب عوض شده یا از تب اسلایدر
@@ -942,7 +1129,7 @@ function AdminBanners({
       <button
         type="button"
         className="admin-btn admin-btn-primary"
-        onClick={() => openCreateForm(DEFAULT_POSITION_BY_TAB[activeTab])}
+        onClick={() => requestFormExit(() => openCreateForm(DEFAULT_POSITION_BY_TAB[activeTab]))}
       >
         <span className="inline-flex items-center gap-1.5">
           <Plus size={15} aria-hidden="true" />
@@ -1091,7 +1278,7 @@ function AdminBanners({
             <button
               type="button"
               className="admin-btn admin-btn-sm"
-              onClick={resetForm}
+              onClick={() => requestFormExit(resetForm)}
               disabled={saving}
             >
               بستن فرم
@@ -1528,7 +1715,7 @@ function AdminBanners({
               <button
                 type="button"
                 className="admin-btn"
-                onClick={resetForm}
+                onClick={() => requestFormExit(resetForm)}
                 disabled={saving}
               >
                 انصراف
@@ -1656,7 +1843,7 @@ function AdminBanners({
               }
               onLayout={(layout) => selectSectionLayout(card.position, layout)}
               onSave={() => void saveSection(card.position)}
-              onAdd={() => openCreateForm(card.position)}
+              onAdd={() => requestFormExit(() => openCreateForm(card.position))}
             />
           );
         })
@@ -1688,7 +1875,7 @@ function AdminBanners({
           <button
             type="button"
             className="admin-btn admin-btn-sm"
-            onClick={() => openCreateForm(DEFAULT_POSITION_BY_TAB[activeTab])}
+            onClick={() => requestFormExit(() => openCreateForm(DEFAULT_POSITION_BY_TAB[activeTab]))}
           >
             <span className="inline-flex items-center gap-1.5">
               <Plus size={14} aria-hidden="true" />
@@ -1697,10 +1884,60 @@ function AdminBanners({
           </button>
         </div>
 
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <input
+            className="admin-input"
+            style={{ maxWidth: 260 }}
+            value={listQuery}
+            onChange={(event) => setListQuery(event.target.value)}
+            placeholder="جست‌وجو در عنوان، متن یا لینک..."
+            aria-label="جست‌وجو در بنرها"
+          />
+
+          <select
+            className="admin-input"
+            style={{ maxWidth: 190 }}
+            value={statusFilter}
+            onChange={(event) =>
+              setStatusFilter(event.target.value as BannerScheduleState | "all")
+            }
+            aria-label="فیلتر وضعیت بنرها"
+          >
+            <option value="all">همهٔ وضعیت‌ها</option>
+            <option value="active">فعال</option>
+            <option value="inactive">غیرفعال</option>
+            <option value="scheduled">زمان‌بندی‌شده</option>
+            <option value="expired">منقضی</option>
+          </select>
+
+          {listFiltered && (
+            <span className="text-xs text-slate-500">
+              {filteredBanners.length} از {tabBanners.length} بنر
+            </span>
+          )}
+
+          {listFiltered && (
+            <button
+              type="button"
+              className="admin-btn admin-btn-sm"
+              onClick={() => {
+                setListQuery("");
+                setStatusFilter("all");
+              }}
+            >
+              پاک‌کردن فیلتر
+            </button>
+          )}
+        </div>
+
         {loading ? (
           <p className="admin-empty">در حال دریافت بنرها...</p>
         ) : tabBanners.length === 0 ? (
           <p className="admin-empty">در این بخش هنوز بنری ثبت نشده است.</p>
+        ) : filteredBanners.length === 0 ? (
+          <p className="admin-empty">
+            بنری با این فیلتر/جست‌وجو پیدا نشد.
+          </p>
         ) : (
           <div className="admin-table-wrap">
             <table className="admin-table">
@@ -1717,12 +1954,39 @@ function AdminBanners({
               </thead>
 
               <tbody>
-                {tabBanners.map((banner) => {
+                {filteredBanners.map((banner) => {
                   const busy = actionId === banner.id;
                   const imageUrl = getStorageUrl(banner.image);
 
                   return (
-                    <tr key={banner.id}>
+                    <tr
+                      key={banner.id}
+                      draggable={canDrag}
+                      onDragStart={() => setDragId(banner.id)}
+                      onDragOver={(event) => {
+                        if (dragId === null) return;
+                        event.preventDefault();
+                        setDragOverId(banner.id);
+                      }}
+                      onDragLeave={() =>
+                        setDragOverId((current) =>
+                          current === banner.id ? null : current,
+                        )
+                      }
+                      onDrop={(event) => {
+                        event.preventDefault();
+                        if (dragId !== null) void moveBanner(dragId, banner.id);
+                      }}
+                      onDragEnd={() => {
+                        setDragId(null);
+                        setDragOverId(null);
+                      }}
+                      className={
+                        dragOverId === banner.id && dragId !== null
+                          ? "bg-amber-50"
+                          : undefined
+                      }
+                    >
                       <td>
                         {imageUrl && !brokenImages[banner.id] ? (
                           <a
@@ -1798,7 +2062,74 @@ function AdminBanners({
                             )} تا ${formatAdminDate(banner.ends_at, true)}`
                           : "همیشگی"}
                       </td>
-                      <td>{banner.sort_order}</td>
+                      <td>
+                        <div className="flex items-center gap-1">
+                          <span
+                            title={
+                              canDrag
+                                ? "برای جابه‌جایی، ردیف را بکشید یا از ↑/↓ استفاده کنید"
+                                : "برای مرتب‌سازی دستی، فیلتر/جست‌وجو را بردارید"
+                            }
+                            style={{ cursor: canDrag ? "grab" : "default" }}
+                          >
+                            {canDrag ? "⋮⋮ " : ""}
+                            {banner.sort_order}
+                          </span>
+
+                          {/* دکمه‌های ↑/↓ برای موبایل و صفحه‌کلید: کشیدن HTML5
+                              روی مرورگر موبایل قابل اتکا نیست. */}
+                          {canDrag &&
+                            (() => {
+                              const group = banners
+                                .filter(
+                                  (item) => item.position === banner.position,
+                                )
+                                .sort(
+                                  (a, b) =>
+                                    a.sort_order - b.sort_order || a.id - b.id,
+                                );
+                              const index = group.findIndex(
+                                (item) => item.id === banner.id,
+                              );
+                              const previous =
+                                index > 0 ? group[index - 1] : null;
+                              const next =
+                                index >= 0 && index < group.length - 1
+                                  ? group[index + 1]
+                                  : null;
+
+                              return (
+                                <>
+                                  <button
+                                    type="button"
+                                    className="admin-btn admin-btn-sm"
+                                    disabled={!previous || reordering}
+                                    onClick={() =>
+                                      previous &&
+                                      void moveBanner(banner.id, previous.id)
+                                    }
+                                    aria-label="انتقال به بالا"
+                                    title="انتقال به بالا"
+                                  >
+                                    ↑
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="admin-btn admin-btn-sm"
+                                    disabled={!next || reordering}
+                                    onClick={() =>
+                                      next && void moveBanner(banner.id, next.id)
+                                    }
+                                    aria-label="انتقال به پایین"
+                                    title="انتقال به پایین"
+                                  >
+                                    ↓
+                                  </button>
+                                </>
+                              );
+                            })()}
+                        </div>
+                      </td>
                       <td>
                         <span
                           className={`admin-badge ${
@@ -1809,13 +2140,37 @@ function AdminBanners({
                         >
                           {banner.is_active ? "فعال" : "غیرفعال"}
                         </span>
+
+                        {/* وضعیت زمان‌بندی: «فعال» یعنی همین حالا؛ بنر خارج از
+                            بازه در سایت دیده نمی‌شود و برچسب جدا می‌گیرد. */}
+                        {bannerScheduleState(banner) === "scheduled" && (
+                          <span
+                            className="admin-badge admin-badge-amber"
+                            style={{ marginInlineStart: 4 }}
+                            title="زمان شروع نمایش این بنر هنوز نرسیده است."
+                          >
+                            {SCHEDULE_LABELS.scheduled}
+                          </span>
+                        )}
+
+                        {bannerScheduleState(banner) === "expired" && (
+                          <span
+                            className="admin-badge admin-badge-gray"
+                            style={{ marginInlineStart: 4 }}
+                            title="بازهٔ نمایش این بنر تمام شده است."
+                          >
+                            {SCHEDULE_LABELS.expired}
+                          </span>
+                        )}
                       </td>
                       <td>
                         <div className="admin-row-actions">
                           <button
                             type="button"
                             className="admin-btn admin-btn-sm"
-                            onClick={() => startEditing(banner)}
+                            onClick={() =>
+                              requestFormExit(() => startEditing(banner))
+                            }
                             disabled={busy || saving}
                           >
                             ویرایش
@@ -1836,8 +2191,18 @@ function AdminBanners({
 
                           <button
                             type="button"
+                            className="admin-btn admin-btn-sm"
+                            onClick={() => void duplicateBanner(banner)}
+                            disabled={busy || saving}
+                            title="کپی این بنر (غیرفعال، انتهای همین بخش)"
+                          >
+                            کپی
+                          </button>
+
+                          <button
+                            type="button"
                             className="admin-btn admin-btn-sm admin-btn-danger"
-                            onClick={() => void deleteBanner(banner)}
+                            onClick={() => deleteBanner(banner)}
                             disabled={busy || saving}
                           >
                             حذف
@@ -1852,6 +2217,19 @@ function AdminBanners({
           </div>
         )}
       </section>
+      <ConfirmDialog
+        open={confirmRequest !== null}
+        title={confirmRequest?.title ?? ""}
+        description={confirmRequest?.description}
+        confirmLabel={confirmRequest?.confirmLabel}
+        tone={confirmRequest?.tone ?? "default"}
+        onCancel={() => setConfirmRequest(null)}
+        onConfirm={() => {
+          const action = confirmRequest?.action;
+          setConfirmRequest(null);
+          if (action) void action();
+        }}
+      />
     </div>
   );
 }

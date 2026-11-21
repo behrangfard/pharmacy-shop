@@ -613,6 +613,12 @@ Route::prefix('v1')->group(function () {
                         [AdminBannerController::class, 'discardImages']
                     );
 
+                    // کپی بنر (غیرفعال، انتهای همان بخش).
+                    Route::post(
+                        '/banners/{banner}/duplicate',
+                        [AdminBannerController::class, 'duplicate']
+                    );
+
                     // بخش‌های بنر (چیدمان بخش چندستونهٔ صفحهٔ اول)
                     Route::get(
                         '/banner-sections',
