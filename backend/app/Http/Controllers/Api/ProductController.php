@@ -183,6 +183,7 @@ class ProductController extends Controller
                         ->orderBy('id');
                 },
                 'packItems',
+                'variantColors',
             ])
             ->withAvg([
                 'reviews as average_rating' => function ($q) {

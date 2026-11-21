@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import {
   ArrowLeft,
@@ -593,6 +593,200 @@ function BannerGrid({
   );
 }
 
+/**
+ * کاروسل افقی «محصولات ویژه» در صفحهٔ اول.
+ *
+ * شبکهٔ چهارستونه با ۱۲ محصول سه ردیف می‌شد و بخش ویژه با «جدیدترین
+ * محصولات» قاطی می‌شد؛ این ریل همهٔ کارت‌ها را در یک ردیف نگه می‌دارد:
+ * اسکرول افقی با لمس/تراک‌پد، اسکرول نرم و دو دکمهٔ قبلی/بعدی که فقط وقتی
+ * جهت مربوطه محتوا دارد دیده می‌شوند. کارت‌ها نسخهٔ «rail» هستند (بدون چیپ
+ * سایز و بدون خط ارزش افزوده) تا ارتفاعشان کم بماند.
+ */
+function FeaturedProductsRail({
+  products,
+  label,
+}: {
+  products: Product[];
+  label: string;
+}) {
+  const scrollRef = useRef<HTMLDivElement | null>(null);
+  const [canScrollPrev, setCanScrollPrev] = useState(false);
+  const [canScrollNext, setCanScrollNext] = useState(false);
+
+  /*
+   * همهٔ محاسبات از مستطیل کارت‌ها انجام می‌شود، نه از `scrollLeft`:
+   * در چیدمان راست‌به‌چپ مقدار `scrollLeft` بین مرورگرها علامت متفاوتی دارد
+   * (منفی یا مثبت) و همین باعث می‌شد دکمه‌ها یک‌طرفه شوند و اسکرول نکنند.
+   */
+  const syncArrows = useCallback(() => {
+    const container = scrollRef.current;
+
+    if (!container) {
+      return;
+    }
+
+    const items = Array.from(container.children) as HTMLElement[];
+
+    if (items.length === 0) {
+      setCanScrollPrev(false);
+      setCanScrollNext(false);
+
+      return;
+    }
+
+    const isRtl = getComputedStyle(container).direction === "rtl";
+    const bounds = container.getBoundingClientRect();
+    const first = items[0].getBoundingClientRect();
+    const last = items[items.length - 1].getBoundingClientRect();
+
+    /* مقدار مثبت یعنی محتوا از آن لبه بیرون زده و اسکرول در آن جهت ممکن است */
+    const beforeStart = isRtl
+      ? first.right - bounds.right
+      : bounds.left - first.left;
+    const afterEnd = isRtl
+      ? bounds.left - last.left
+      : last.right - bounds.right;
+
+    setCanScrollPrev(beforeStart > 4);
+    setCanScrollNext(afterEnd > 4);
+  }, []);
+
+  useEffect(() => {
+    syncArrows();
+
+    const container = scrollRef.current;
+
+    if (!container) {
+      return;
+    }
+
+    /* با تغییر عرض پنجره/چرخش گوشی، عرض کارت‌ها و در نتیجه دکمه‌ها عوض می‌شود */
+    const handleResize = () => syncArrows();
+
+    window.addEventListener("resize", handleResize);
+
+    const observer =
+      typeof ResizeObserver === "undefined"
+        ? null
+        : new ResizeObserver(handleResize);
+
+    observer?.observe(container);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      observer?.disconnect();
+    };
+  }, [products.length, syncArrows]);
+
+  /**
+   * یک قدم جابه‌جایی: کارت قبلی/بعدی با `scrollIntoView` در لبهٔ ابتدای ریل
+   * تراز می‌شود. `scrollIntoView` جهت راست‌به‌چپ را خودش می‌فهمد، پس برخلاف
+   * `scrollBy` روی همهٔ مرورگرها و در موبایل کار می‌کند.
+   */
+  const scrollByStep = (direction: -1 | 1) => {
+    const container = scrollRef.current;
+
+    if (!container) {
+      return;
+    }
+
+    const items = Array.from(container.children) as HTMLElement[];
+
+    if (items.length === 0) {
+      return;
+    }
+
+    const isRtl = getComputedStyle(container).direction === "rtl";
+    const bounds = container.getBoundingClientRect();
+
+    /* فاصلهٔ لبهٔ ابتدای هر کارت از لبهٔ ابتدای ریل */
+    const startGap = (element: HTMLElement) => {
+      const rect = element.getBoundingClientRect();
+
+      return isRtl ? bounds.right - rect.right : rect.left - bounds.left;
+    };
+
+    let currentIndex = items.findIndex((item) => startGap(item) >= -4);
+
+    if (currentIndex === -1) {
+      currentIndex = 0;
+    }
+
+    const targetIndex = Math.min(
+      Math.max(currentIndex + direction, 0),
+      items.length - 1,
+    );
+
+    items[targetIndex].scrollIntoView({
+      behavior: "smooth",
+      inline: "start",
+      block: "nearest",
+    });
+  };
+
+  return (
+    <div className="relative">
+      {/*
+        دکمه‌ها روی لبهٔ ریل می‌نشینند و در موبایل هم دیده می‌شوند (کوچک‌تر)؛
+        وقتی آن سمت محتوا نداشته باشد با `opacity-0` پنهان و از کلیک خارج می‌شوند.
+      */}
+      <button
+        type="button"
+        onClick={() => scrollByStep(-1)}
+        disabled={!canScrollPrev}
+        className={`absolute -right-2 top-1/2 z-20 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-line bg-white/95 text-brand-600 shadow-md backdrop-blur-sm transition hover:border-brand-300 hover:text-brand-700 hover:shadow-lg active:scale-95 sm:-right-3 sm:h-10 sm:w-10 ${
+          canScrollPrev ? "opacity-100" : "cursor-default opacity-30"
+        }`}
+        aria-label="محصول ویژهٔ قبلی"
+      >
+        <ChevronRight size={18} />
+      </button>
+
+      <button
+        type="button"
+        onClick={() => scrollByStep(1)}
+        disabled={!canScrollNext}
+        className={`absolute -left-2 top-1/2 z-20 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-line bg-white/95 text-brand-600 shadow-md backdrop-blur-sm transition hover:border-brand-300 hover:text-brand-700 hover:shadow-lg active:scale-95 sm:-left-3 sm:h-10 sm:w-10 ${
+          canScrollNext ? "opacity-100" : "cursor-default opacity-30"
+        }`}
+        aria-label="محصول ویژهٔ بعدی"
+      >
+        <ChevronLeft size={18} />
+      </button>
+
+      {/*
+        گرید تک‌ردیفه (`grid-flow-col`) به‌جای `flex`: همهٔ کارت‌ها به ارتفاع
+        بلندترین کارت کشیده می‌شوند و ارتفاعشان دقیقاً یکسان می‌ماند. عرض هر
+        کارت با `auto-cols` تعیین می‌شود: موبایل ۷۰٪ (یک کارت + پیش‌نمایش
+        بعدی)، تبلت ۴۴٪ و دسکتاپ ۴ کارت در یک ردیف.
+      */}
+      <div
+        ref={scrollRef}
+        onScroll={syncArrows}
+        role="region"
+        aria-label={`کاروسل ${label}`}
+        aria-roledescription="carousel"
+        tabIndex={0}
+        className="
+          grid grid-flow-col grid-rows-1 items-stretch
+          auto-cols-[70%] sm:auto-cols-[44%]
+          lg:auto-cols-[calc((100%-3rem)/4)]
+          gap-3 overflow-x-auto scroll-smooth
+          snap-x snap-mandatory px-1 pb-2 pt-2
+          focus-visible:outline-none focus-visible:ring-2
+          focus-visible:ring-brand-400
+          sm:gap-4
+          [scrollbar-width:none] [&::-webkit-scrollbar]:hidden
+        "
+      >
+        {products.map((product) => (
+          <ProductCard key={product.id} product={product} variant="rail" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function Home() {
   const recentlyViewed = useRecentlyViewed();
 
@@ -1124,28 +1318,27 @@ function Home() {
             </ButtonLink>
           </div>
 
-          <div className="grid grid-cols-1 items-stretch gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
-            {featuredProducts.map((product) => (
-              <ProductCard key={product.id} product={product} variant="home" />
-            ))}
-
-            {featuredProducts.length === 0 && (
-              <div className="col-span-full py-12 text-center">
-                {featuredError ? (
-                  <div className="rounded-2xl border border-blush-100 bg-blush-50 p-6 text-discount">
-                    <div className="mb-3 font-black">
-                      خطا در دریافت محصولات ویژه
-                    </div>
-                    <div className="text-sm">{featuredError}</div>
+          {featuredProducts.length > 0 ? (
+            <FeaturedProductsRail
+              products={featuredProducts}
+              label="محصولات ویژه"
+            />
+          ) : (
+            <div className="py-12 text-center">
+              {featuredError ? (
+                <div className="rounded-2xl border border-blush-100 bg-blush-50 p-6 text-discount">
+                  <div className="mb-3 font-black">
+                    خطا در دریافت محصولات ویژه
                   </div>
-                ) : (
-                  <div className="text-muted">
-                    در حال دریافت محصولات ویژه...
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+                  <div className="text-sm">{featuredError}</div>
+                </div>
+              ) : (
+                <div className="text-muted">
+                  در حال دریافت محصولات ویژه...
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </section>
 
@@ -1174,7 +1367,7 @@ function Home() {
             </ButtonLink>
           </div>
 
-          <div className="grid grid-cols-1 items-stretch gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-4">
+          <div className="grid grid-cols-2 items-stretch gap-3 sm:gap-6 lg:grid-cols-4">
             {newestProducts.map((product) => (
               <ProductCard key={product.id} product={product} variant="home" />
             ))}

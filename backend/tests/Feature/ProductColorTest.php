@@ -7,6 +7,7 @@ use App\Models\Order;
 use App\Models\Product;
 use App\Models\ProductColor;
 use App\Models\ProductPackItem;
+use App\Models\ProductVariantColor;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -653,5 +654,165 @@ class ProductColorTest extends TestCase
             'color_name' => null,
             'pack_colors' => null,
         ]);
+    }
+
+    /**
+     * ماتریس «موجودی هر رنگ در هر سایز»: ایندکس‌های ارسالی فرم باید به
+     * شناسهٔ واقعی تنوع/رنگ (حتی تنوع تازه‌ساخته در همان درخواست) نگاشت شوند
+     * و موجودی رسمی تنوع دست‌نخورده بماند.
+     */
+    public function test_admin_can_save_size_color_matrix(): void
+    {
+        $this->actingAsAdmin();
+
+        $response = $this->postJson('/api/v1/admin/products', $this->productPayload([
+            'variants' => [
+                ['name' => 'سایز M', 'size' => 'M', 'sku' => 'MATRIX-M', 'stock' => 5, 'is_active' => true],
+                ['name' => 'سایز L', 'size' => 'L', 'sku' => 'MATRIX-L', 'stock' => 4, 'is_active' => true],
+            ],
+            'colors' => [
+                ['name' => 'مشکی', 'hex' => '#111111'],
+                ['name' => 'سفید', 'hex' => '#ffffff'],
+            ],
+            'variant_colors' => [
+                ['variant_index' => 0, 'color_index' => 0, 'stock' => 2],
+                ['variant_index' => 0, 'color_index' => 1, 'stock' => 3],
+                ['variant_index' => 1, 'color_index' => 0, 'stock' => 0],
+            ],
+        ]));
+
+        $response->assertCreated();
+
+        $productId = (int) $response->json('data.id');
+
+        $product = Product::query()->findOrFail($productId);
+        $medium = $product->variants()->where('size', 'M')->firstOrFail();
+        $large = $product->variants()->where('size', 'L')->firstOrFail();
+        $black = ProductColor::query()->where('product_id', $productId)->where('name', 'مشکی')->firstOrFail();
+        $white = ProductColor::query()->where('product_id', $productId)->where('name', 'سفید')->firstOrFail();
+
+        $this->assertDatabaseHas('product_variant_colors', [
+            'product_id' => $productId,
+            'variant_id' => $medium->id,
+            'color_id' => $black->id,
+            'stock' => 2,
+        ]);
+
+        $this->assertDatabaseHas('product_variant_colors', [
+            'product_id' => $productId,
+            'variant_id' => $medium->id,
+            'color_id' => $white->id,
+            'stock' => 3,
+        ]);
+
+        $this->assertDatabaseHas('product_variant_colors', [
+            'product_id' => $productId,
+            'variant_id' => $large->id,
+            'color_id' => $black->id,
+            'stock' => 0,
+        ]);
+
+        // ماتریس اطلاعاتی است؛ موجودی رسمی تنوع تغییر نمی‌کند.
+        $this->assertSame(5, (int) $medium->fresh()->stock);
+
+        $row = collect($response->json('data.variant_colors'))->first(
+            fn (array $item): bool => (int) $item['variant_id'] === (int) $medium->id
+                && (int) $item['color_id'] === (int) $black->id
+        );
+
+        $this->assertSame(2, (int) ($row['stock'] ?? -1));
+    }
+
+    public function test_admin_update_replaces_size_color_matrix(): void
+    {
+        $this->actingAsAdmin();
+
+        $created = $this->postJson('/api/v1/admin/products', $this->productPayload([
+            'variants' => [
+                ['name' => 'سایز M', 'size' => 'M', 'sku' => 'MATRIX2-M', 'stock' => 5, 'is_active' => true],
+            ],
+            'colors' => [
+                ['name' => 'مشکی', 'hex' => '#111111'],
+                ['name' => 'سفید', 'hex' => '#ffffff'],
+            ],
+            'variant_colors' => [
+                ['variant_index' => 0, 'color_index' => 0, 'stock' => 2],
+                ['variant_index' => 0, 'color_index' => 1, 'stock' => 1],
+            ],
+        ]));
+
+        $created->assertCreated();
+
+        $productId = (int) $created->json('data.id');
+
+        $this->assertSame(
+            2,
+            ProductVariantColor::query()->where('product_id', $productId)->count()
+        );
+
+        $variant = Product::query()->findOrFail($productId)->variants()->firstOrFail();
+        $black = ProductColor::query()->where('product_id', $productId)->where('name', 'مشکی')->firstOrFail();
+        $white = ProductColor::query()->where('product_id', $productId)->where('name', 'سفید')->firstOrFail();
+
+        $this->putJson('/api/v1/admin/products/'.$productId, [
+            'variants' => [
+                ['id' => $variant->id, 'name' => $variant->name, 'size' => 'M', 'sku' => $variant->sku, 'stock' => 5, 'is_active' => true],
+            ],
+            'colors' => [
+                ['id' => $black->id, 'name' => 'مشکی', 'hex' => '#111111'],
+                ['id' => $white->id, 'name' => 'سفید', 'hex' => '#ffffff'],
+            ],
+            'variant_colors' => [
+                ['variant_index' => 0, 'color_index' => 0, 'stock' => 9],
+            ],
+        ])->assertOk();
+
+        $rows = ProductVariantColor::query()->where('product_id', $productId)->get();
+
+        $this->assertCount(1, $rows);
+        $this->assertSame(9, (int) $rows->first()->stock);
+        $this->assertSame((int) $black->id, (int) $rows->first()->color_id);
+    }
+
+    public function test_public_product_page_exposes_size_color_matrix(): void
+    {
+        $this->actingAsAdmin();
+
+        $created = $this->postJson('/api/v1/admin/products', $this->productPayload([
+            'variants' => [
+                ['name' => 'سایز M', 'size' => 'M', 'sku' => 'MATRIX3-M', 'stock' => 5, 'is_active' => true],
+            ],
+            'colors' => [
+                ['name' => 'مشکی', 'hex' => '#111111'],
+                ['name' => 'سفید', 'hex' => '#ffffff'],
+            ],
+            'variant_colors' => [
+                ['variant_index' => 0, 'color_index' => 0, 'stock' => 4],
+                ['variant_index' => 0, 'color_index' => 1, 'stock' => 1],
+            ],
+        ]));
+
+        $created->assertCreated();
+
+        $slug = (string) $created->json('data.slug');
+
+        $response = $this->getJson('/api/v1/products/'.$slug);
+
+        $response->assertOk();
+
+        $matrix = collect($response->json('data.variant_colors'));
+
+        $this->assertCount(2, $matrix);
+
+        $black = ProductColor::query()
+            ->where('product_id', (int) $created->json('data.id'))
+            ->where('name', 'مشکی')
+            ->firstOrFail();
+
+        $row = $matrix->first(
+            fn (array $item): bool => (int) $item['color_id'] === (int) $black->id
+        );
+
+        $this->assertSame(4, (int) ($row['stock'] ?? -1));
     }
 }

@@ -53,6 +53,14 @@ class ProductVariant extends Model
     }
 
     /**
+     * موجودی اطلاعاتی این سایز به تفکیک رنگ (ماتریس سایز×رنگ پنل).
+     */
+    public function variantColors(): HasMany
+    {
+        return $this->hasMany(ProductVariantColor::class, 'variant_id');
+    }
+
+    /**
      * سایز را برای مقایسه یکسان می‌کند: ارقام فارسی/عربی به لاتین،
      * حذف پیشوند «سایز/Size»، یکسان‌سازی فاصله‌ها و حروف بزرگ لاتین.
      */

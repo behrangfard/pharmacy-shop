@@ -44,8 +44,9 @@ import { useCart } from "../context/CartContext";
 import { useWishlist } from "../context/WishlistContext";
 import type { WishlistProduct } from "../services/wishlist";
 import { recordProductView } from "../services/recentlyViewed";
-import { calculateProductPrice } from "../utils/price";
+import { calculateProductPrice, calculateVatAmount } from "../utils/price";
 import { formatJalaliDateTime } from "../utils/jalali";
+import { useStoreSettings } from "../hooks/useStoreSettings";
 import { usePageMeta } from "../hooks/usePageMeta";
 import { SITE_NAME, plainText, type PageMeta } from "../utils/seo";
 import {
@@ -125,6 +126,8 @@ interface Product {
   variants?: ProductVariant[];
   /** پالت رنگ محصول؛ مشتری یکی از آن‌ها را انتخاب می‌کند. */
   colors?: ProductColor[];
+  /** ماتریس «موجودی هر رنگ در هر سایز» (اطلاعاتی، از پنل مدیریت). */
+  variant_colors?: { variant_id: number; color_id: number; stock: number }[];
   /** قطعات پک چندعددی؛ هر قطعه می‌تواند رنگ جداگانه داشته باشد. */
   pack_items?: ProductPackItem[];
   /** راهنمای سایز اختصاصی همین محصول (از پنل مدیریت) */
@@ -201,6 +204,16 @@ function ProductDetail() {
   const { slug } = useParams<{ slug: string }>();
   const [searchParams] = useSearchParams();
   const { addToCart } = useCart();
+
+  /*
+   * درصد ارزش افزوده از تنظیمات فروشگاه می‌آید (همان منبع کارت محصول و
+   * چک‌اوت)؛ اگر مالیات خاموش باشد یا درصد صفر، خط ارزش افزوده نمایش داده
+   * نمی‌شود.
+   */
+  const { vat_enabled, vat_percent } = useStoreSettings();
+  const vatPercent = vat_enabled
+    ? Math.min(Math.max(Number(vat_percent) || 0, 0), 100)
+    : 0;
   const {
     isWishlisted,
     toggle: toggleWishlist,
@@ -650,6 +663,24 @@ function ProductDetail() {
     : Number(product?.stock ?? 0);
 
   /*
+   * موجودی ثبت‌شدهٔ رنگِ انتخابی در همین سایز (ماتریس اطلاعاتی پنل مدیریت).
+   *
+   * اگر مدیر چیزی برای این ترکیب ثبت نکرده باشد null می‌ماند و هیچ خطی
+   * نمایش داده نمی‌شود؛ عدد صفر یعنی «این رنگ در این سایز تمام شده» و
+   * دکمهٔ خرید برای این ترکیب غیرفعال می‌شود.
+   */
+  const selectedColorStock =
+    selectedVariant && selectedColor
+      ? product?.variant_colors?.find(
+          (row) =>
+            row.variant_id === selectedVariant.id &&
+            row.color_id === selectedColor.id,
+        )?.stock ?? null
+      : null;
+
+  const combinationSoldOut = selectedColorStock === 0;
+
+  /*
    * شرط فعال بودن «افزودن به سبد خرید»: موجودی داشته باشد، اگر تنوع دارد
    * یکی انتخاب شده باشد و اگر رنگ دارد رنگ‌ها (یا رنگ قطعات پک) انتخاب شده
    * باشند. علاقه‌مندی به این شرط وابسته نیست و همیشه نمایش داده می‌شود.
@@ -657,7 +688,8 @@ function ProductDetail() {
   const canAddToCart =
     currentStock > 0 &&
     (!hasVariants || Boolean(selectedVariant)) &&
-    colorsReady;
+    colorsReady &&
+    !combinationSoldOut;
 
   const currentBasePrice =
     selectedVariant?.price != null
@@ -678,6 +710,11 @@ function ProductDetail() {
     finalPrice,
     hasDiscount,
   } = currentPrice;
+
+  /* ارزش افزودهٔ همین مبلغ نهایی؛ فقط نمایشی و هم‌فرمول چک‌اوت. */
+  const vatAmount = calculateVatAmount(finalPrice, vatPercent);
+  const showVat =
+    vatPercent > 0 && vatAmount > 0 && Boolean(product?.is_taxable);
 
   // Product gallery
   const sortedImages = [...(product?.images || [])].sort(
@@ -1766,6 +1803,36 @@ function ProductDetail() {
                 {hasDiscount && (
                   <p className="mt-1 text-[11px] font-bold text-stock">
                     {discountAmount.toLocaleString("fa-IR")} تومان صرفه‌جویی
+                  </p>
+                )}
+
+                {/* ارزش افزودهٔ همین کالا؛ همان عددی که چک‌اوت محاسبه می‌کند */}
+                {showVat && (
+                  <p className="mt-1 text-[11px] font-medium text-muted-soft">
+                    ارزش افزوده ({vatPercent.toLocaleString("fa-IR")}٪):{" "}
+                    {vatAmount.toLocaleString("fa-IR")} تومان
+                  </p>
+                )}
+
+                {/*
+                 * موجودی ثبت‌شدهٔ رنگِ انتخابی در این سایز (ماتریس اطلاعاتی
+                 * پنل)؛ فقط وقتی مدیر عددی برای این ترکیب ثبت کرده باشد
+                 * نمایش داده می‌شود.
+                 */}
+                {selectedColorStock !== null && (
+                  <p className="mt-1 text-[11px] font-medium text-muted-soft">
+                    موجودی رنگ «{selectedColor?.name ?? selectedColorName}» در
+                    این سایز:{" "}
+                    {selectedColorStock > 0
+                      ? `${selectedColorStock.toLocaleString("fa-IR")} عدد`
+                      : "تمام شده"}
+                  </p>
+                )}
+
+                {combinationSoldOut && (
+                  <p className="mt-1.5 rounded-lg bg-blush-50 px-2.5 py-1.5 text-[11px] font-bold text-discount">
+                    این رنگ در این سایز موجود نیست؛ رنگ یا سایز دیگری را انتخاب
+                    کنید.
                   </p>
                 )}
 

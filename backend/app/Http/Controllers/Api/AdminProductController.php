@@ -122,6 +122,7 @@ class AdminProductController extends Controller
             'sizeGuide',
             'colors',
             'packItems',
+            'variantColors',
         ]);
 
         return response()->json([
@@ -152,6 +153,10 @@ class AdminProductController extends Controller
         $sizeGuide = $validated['size_guide'] ?? null;
         unset($validated['size_guide']);
 
+        $hasVariantColors = array_key_exists('variant_colors', $validated);
+        $variantColors = $validated['variant_colors'] ?? [];
+        unset($validated['variant_colors']);
+
         // موجودی اختیاری است؛ پیش‌فرض ستون دیتابیس صفر است.
         $validated['stock'] = $validated['stock'] ?? 0;
 
@@ -169,7 +174,9 @@ class AdminProductController extends Controller
             $hasPackItems,
             $packItems,
             $hasSizeGuide,
-            $sizeGuide
+            $sizeGuide,
+            $hasVariantColors,
+            $variantColors
         ) {
             $product = Product::create($validated);
 
@@ -190,12 +197,21 @@ class AdminProductController extends Controller
                 );
             }
 
-            if ($variants !== []) {
-                $this->syncVariants($product, $variants);
-            }
+            $variantIdByIndex = $variants !== []
+                ? $this->syncVariants($product, $variants)
+                : [];
 
-            if ($hasColors) {
-                $this->syncColors($product, $colors);
+            $colorIdByIndex = $hasColors
+                ? $this->syncColors($product, $colors)
+                : [];
+
+            if ($hasVariantColors) {
+                $this->syncVariantColors(
+                    $product,
+                    $variantColors,
+                    $variantIdByIndex,
+                    $colorIdByIndex,
+                );
             }
 
             if ($hasPackItems) {
@@ -217,6 +233,7 @@ class AdminProductController extends Controller
             'sizeGuide',
             'colors',
             'packItems',
+            'variantColors',
         ]);
 
         return response()->json([
@@ -253,6 +270,11 @@ class AdminProductController extends Controller
 
         unset($validated['size_guide']);
 
+        $hasVariantColors = array_key_exists('variant_colors', $validated);
+        $variantColors = $validated['variant_colors'] ?? [];
+
+        unset($validated['variant_colors']);
+
         if (array_key_exists('slug', $validated)) {
             $slugInput = trim((string) ($validated['slug'] ?? ''));
 
@@ -276,7 +298,9 @@ class AdminProductController extends Controller
             $hasPackItems,
             $packItems,
             $hasSizeGuide,
-            $sizeGuide
+            $sizeGuide,
+            $hasVariantColors,
+            $variantColors
         ) {
             $lockedProduct = Product::query()
                 ->whereKey($product->id)
@@ -302,12 +326,21 @@ class AdminProductController extends Controller
                 );
             }
 
-            if ($hasVariants) {
-                $this->syncVariants($lockedProduct, $variants);
-            }
+            $variantIdByIndex = $hasVariants
+                ? $this->syncVariants($lockedProduct, $variants)
+                : [];
 
-            if ($hasColors) {
-                $this->syncColors($lockedProduct, $colors);
+            $colorIdByIndex = $hasColors
+                ? $this->syncColors($lockedProduct, $colors)
+                : [];
+
+            if ($hasVariantColors) {
+                $this->syncVariantColors(
+                    $lockedProduct,
+                    $variantColors,
+                    $variantIdByIndex,
+                    $colorIdByIndex,
+                );
             }
 
             if ($hasPackItems) {
@@ -327,6 +360,7 @@ class AdminProductController extends Controller
             'sizeGuide',
             'colors',
             'packItems',
+            'variantColors',
         ]);
 
         return response()->json([
@@ -654,6 +688,16 @@ class AdminProductController extends Controller
             ],
 
             ...$this->colorRules(),
+
+            /*
+             * ماتریس «موجودی هر رنگ در هر سایز»؛ ایندکس‌ها به فهرست تنوع‌ها و
+             * رنگ‌های همین درخواست اشاره می‌کنند. اختیاری است تا ویرایش جزئی
+             * (مثل تغییر دسته) ماتریس ذخیره‌شده را پاک نکند.
+             */
+            'variant_colors' => ['sometimes', 'array'],
+            'variant_colors.*.variant_index' => ['required', 'integer', 'min:0'],
+            'variant_colors.*.color_index' => ['required', 'integer', 'min:0'],
+            'variant_colors.*.stock' => ['required', 'integer', 'min:0'],
             ...$this->packItemRules(),
             ...$this->sizeGuideRules(),
         ];
@@ -1125,11 +1169,14 @@ class AdminProductController extends Controller
 
     /**
      * Create or update variants without physically deleting omitted records.
+     *
+     * @return array<int, int> شناسهٔ ذخیره‌شدهٔ هر تنوع به ترتیب ایندکس ورودی
      */
-    private function syncVariants(Product $product, array $variants): void
+    private function syncVariants(Product $product, array $variants): array
     {
         $usedSkus = [];
         $submittedIds = [];
+        $variantIdByIndex = [];
 
         foreach ($variants as $index => $variantData) {
             $variantId = $variantData['id'] ?? null;
@@ -1248,6 +1295,7 @@ class AdminProductController extends Controller
             // Critical: include newly created IDs too, otherwise the cleanup
             // query below would immediately deactivate the variants just added.
             $submittedIds[] = $savedVariantId;
+            $variantIdByIndex[$index] = $savedVariantId;
         }
 
         // Omitted variants are deactivated, never deleted.
@@ -1260,6 +1308,8 @@ class AdminProductController extends Controller
         $deactivateQuery->update([
             'is_active' => false,
         ]);
+
+        return $variantIdByIndex;
     }
 
     /**
@@ -1273,10 +1323,12 @@ class AdminProductController extends Controller
      * موجودی رسمی محصول/تنوع که سفارش‌ها از آن کم می‌کنند دست نمی‌زند.
      *
      * @param  array<int, array<string, mixed>>  $colors
+     * @return array<int, int> شناسهٔ ذخیره‌شدهٔ هر رنگ به ترتیب ایندکس ورودی
      */
-    private function syncColors(Product $product, array $colors): void
+    private function syncColors(Product $product, array $colors): array
     {
         $keptIds = [];
+        $colorIdByIndex = [];
         $usedNames = [];
         $position = 0;
 
@@ -1360,6 +1412,7 @@ class AdminProductController extends Controller
             if ($existing) {
                 $existing->update($data);
                 $keptIds[] = (int) $existing->id;
+                $colorIdByIndex[$index] = (int) $existing->id;
 
                 continue;
             }
@@ -1383,6 +1436,7 @@ class AdminProductController extends Controller
             }
 
             $keptIds[] = (int) $created->id;
+            $colorIdByIndex[$index] = (int) $created->id;
             $existingByName[$nameKey] = $created;
         }
 
@@ -1395,6 +1449,53 @@ class AdminProductController extends Controller
         $deleteQuery->delete();
 
         $product->unsetRelation('colors');
+
+        return $colorIdByIndex;
+    }
+
+    /**
+     * ذخیرهٔ ماتریس «موجودی هر رنگ در هر سایز».
+     *
+     * اطلاعاتی است: موجودی رسمی سفارش‌ها همچنان روی محصول/تنوع می‌ماند و این
+     * ردیف‌ها فقط برای مدیریت و نمایش در پنل و صفحهٔ محصول استفاده می‌شوند.
+     * ایندکس‌های ارسالی فرم به شناسهٔ واقعی تنوع/رنگ نگاشت می‌شوند تا ردیف‌های
+     * تازه‌ساخته هم در همان ذخیره ثبت شوند.
+     *
+     * @param  array<int, array<string, mixed>>  $variantColors
+     * @param  array<int, int>  $variantIdByIndex
+     * @param  array<int, int>  $colorIdByIndex
+     */
+    private function syncVariantColors(
+        Product $product,
+        array $variantColors,
+        array $variantIdByIndex,
+        array $colorIdByIndex,
+    ): void {
+        $product->variantColors()->delete();
+
+        $rows = [];
+
+        foreach ($variantColors as $row) {
+            $variantId = $variantIdByIndex[(int) ($row['variant_index'] ?? -1)] ?? null;
+            $colorId = $colorIdByIndex[(int) ($row['color_index'] ?? -1)] ?? null;
+
+            if ($variantId === null || $colorId === null) {
+                continue;
+            }
+
+            $rows[$variantId.':'.$colorId] = [
+                'product_id' => (int) $product->id,
+                'variant_id' => $variantId,
+                'color_id' => $colorId,
+                'stock' => max(0, (int) ($row['stock'] ?? 0)),
+            ];
+        }
+
+        if ($rows !== []) {
+            $product->variantColors()->createMany(array_values($rows));
+        }
+
+        $product->unsetRelation('variantColors');
     }
 
     /**

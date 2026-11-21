@@ -81,6 +81,15 @@ class Product extends Model
     }
 
     /**
+     * ماتریس «موجودی هر رنگ در هر سایز» (فقط اطلاعاتی؛ موجودی رسمی روی
+     * محصول/تنوع است و سفارش‌ها از آن کم می‌کنند).
+     */
+    public function variantColors(): HasMany
+    {
+        return $this->hasMany(ProductVariantColor::class);
+    }
+
+    /**
      * قطعات پک چندعددی این محصول.
      */
     public function packItems(): HasMany

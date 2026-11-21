@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * یک رنگ از پالت رنگ محصول.
@@ -58,5 +59,13 @@ class ProductColor extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    /**
+     * موجودی اطلاعاتی این رنگ در هر سایز (ماتریس سایز×رنگ پنل).
+     */
+    public function variantColors(): HasMany
+    {
+        return $this->hasMany(ProductVariantColor::class, 'color_id');
     }
 }

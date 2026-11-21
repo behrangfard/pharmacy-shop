@@ -102,6 +102,17 @@ interface ProductColorForm {
   is_active: boolean;
 }
 
+/**
+ * یک ردیف ماتریس «موجودی هر رنگ در هر سایز».
+ *
+ * موجودی اطلاعاتی است؛ موجودی رسمی سفارش‌ها همان `stock` محصول/تنوع است.
+ */
+interface ProductVariantColorData {
+  variant_id: number;
+  color_id: number;
+  stock: number;
+}
+
 interface ProductPackItemData {
   id: number;
   name: string;
@@ -169,6 +180,9 @@ interface Product {
 
   /** پالت رنگ محصول؛ مشتری یکی از آن‌ها را انتخاب می‌کند. */
   colors?: ProductColorData[];
+
+  /** ماتریس موجودی سایز×رنگ (فقط اطلاعاتی) */
+  variant_colors?: ProductVariantColorData[];
 
   /** قطعات پک چندعددی؛ هر قطعه می‌تواند رنگ جداگانه داشته باشد. */
   pack_items?: ProductPackItemData[];
@@ -353,6 +367,15 @@ const sectionStyle = {
 
 };
 
+/** خانهٔ جدول ماتریس سایز×رنگ در پنل. */
+const matrixCellStyle = {
+  border: "1px solid #e5e7eb",
+  padding: "6px 8px",
+  fontSize: 12,
+  textAlign: "center" as const,
+  whiteSpace: "nowrap" as const,
+};
+
 
 
 function readProduct(product: Product): ProductFormData {
@@ -506,6 +529,13 @@ function AdminProductForm() {
 
   /** پالت رنگ محصول (انتخاب رنگ توسط مشتری). */
   const [colors, setColors] = useState<ProductColorForm[]>([]);
+  /**
+   * ماتریس «موجودی هر رنگ در هر سایز»؛ کلید = `indexتنوع:indexرنگ`.
+   * مقدار خالی یعنی «ثبت نشده» و عدد صفر یعنی «تمام شده».
+   */
+  const [variantColorMatrix, setVariantColorMatrix] = useState<
+    Record<string, string>
+  >({});
 
   /** آیا این محصول یک پک چندعددی است؟ */
   const [isPack, setIsPack] = useState(false);
@@ -628,6 +658,32 @@ function AdminProductForm() {
               is_active: color.is_active,
             })),
           );
+
+          /*
+           * ماتریس سایز×رنگ با شناسهٔ تنوع/رنگ ذخیره شده است؛ به ایندکس
+           * ردیف‌های همان لحظهٔ بارگذاری برگردانده می‌شود تا فرم بتواند با
+           * همان ساختار جدول نمایش/ویرایش کند.
+           */
+          const loadedVariants = productData.variants ?? [];
+          const loadedColors = productData.colors ?? [];
+          const loadedMatrix: Record<string, string> = {};
+
+          (productData.variant_colors ?? []).forEach((row) => {
+            const variantIndex = loadedVariants.findIndex(
+              (variant) => variant.id === row.variant_id,
+            );
+            const colorIndex = loadedColors.findIndex(
+              (color) => color.id === row.color_id,
+            );
+
+            if (variantIndex >= 0 && colorIndex >= 0) {
+              loadedMatrix[`${variantIndex}:${colorIndex}`] = String(
+                row.stock ?? 0,
+              );
+            }
+          });
+
+          setVariantColorMatrix(loadedMatrix);
 
           const loadedPackItems = (productData.pack_items ?? []).map(
             (item) => ({
@@ -822,6 +878,18 @@ function AdminProductForm() {
     );
   }
 
+  /** ثبت موجودی یک خانه از ماتریس سایز×رنگ. */
+  function updateVariantColorStock(
+    variantIndex: number,
+    colorIndex: number,
+    value: string,
+  ) {
+    setVariantColorMatrix((current) => ({
+      ...current,
+      [`${variantIndex}:${colorIndex}`]: value,
+    }));
+  }
+
   /**
    * افزودن رنگ جدید؛ اگر رنگ از فهرست پیشنهادی انتخاب شود نام و کد رنگ
    * خودکار پر می‌شوند.
@@ -854,6 +922,27 @@ function AdminProductForm() {
     setColors((current) =>
       current.filter((_, colorIndex) => colorIndex !== index),
     );
+
+    /*
+     * ایندکس رنگ‌ها در ماتریس سایز×رنگ پس از حذف این ردیف جابه‌جا می‌شود؛
+     * مقدارهای همان رنگ حذف و بقیه یک واحد به چپ منتقل می‌شوند.
+     */
+    setVariantColorMatrix((current) => {
+      const next: Record<string, string> = {};
+
+      for (const [key, value] of Object.entries(current)) {
+        const [variantPart, colorPart] = key.split(":");
+        const colorIndex = Number(colorPart);
+
+        if (colorIndex === index) continue;
+
+        const shifted = colorIndex > index ? colorIndex - 1 : colorIndex;
+
+        next[`${variantPart}:${shifted}`] = value;
+      }
+
+      return next;
+    });
 
     if (!removed) return;
 
@@ -1459,23 +1548,58 @@ function AdminProductForm() {
       }
     }
 
-    const variantsPayload = variants
-      .filter((variant) => Boolean(variant.id) || variant.is_active)
-      .map((variant) => ({
-      ...(variant.id ? { id: variant.id } : {}),
-      name: variant.name.trim(),
-      size: variant.size.trim() || null,
-      sku: variant.sku.trim(),
-      price: variant.price.trim() === "" ? null : Number(variant.price),
-      compare_price: variant.compare_price.trim() === "" ? null : Number(variant.compare_price),
-      stock: Number(variant.stock),
-      image: variant.image.trim() || null,
-      is_active: variant.is_active,
-    }));
+    /*
+     * ایندکس ردیف فرم → ایندکس همان ردیف در آرایهٔ ارسالی؛ ماتریس سایز×رنگ
+     * با همین ایندکس‌ها در سرور به شناسهٔ واقعی تنوع/رنگ نگاشت می‌شود.
+     */
+    const variantIndexMap = new Map<number, number>();
+    const variantsPayload: Array<{
+      id?: number;
+      name: string;
+      size: string | null;
+      sku: string;
+      price: number | null;
+      compare_price: number | null;
+      stock: number;
+      image: string | null;
+      is_active: boolean;
+    }> = [];
 
-    const colorsPayload = colors
-      .filter((color) => color.name.trim() !== "")
-      .map((color) => ({
+    variants.forEach((variant, index) => {
+      if (!variant.id && !variant.is_active) return;
+
+      variantIndexMap.set(index, variantsPayload.length);
+      variantsPayload.push({
+        ...(variant.id ? { id: variant.id } : {}),
+        name: variant.name.trim(),
+        size: variant.size.trim() || null,
+        sku: variant.sku.trim(),
+        price: variant.price.trim() === "" ? null : Number(variant.price),
+        compare_price:
+          variant.compare_price.trim() === ""
+            ? null
+            : Number(variant.compare_price),
+        stock: Number(variant.stock),
+        image: variant.image.trim() || null,
+        is_active: variant.is_active,
+      });
+    });
+
+    const colorIndexMap = new Map<number, number>();
+    const colorsPayload: Array<{
+      id?: number;
+      name: string;
+      hex: string | null;
+      image: string | null;
+      stock: number | null;
+      is_active: boolean;
+    }> = [];
+
+    colors.forEach((color, index) => {
+      if (color.name.trim() === "") return;
+
+      colorIndexMap.set(index, colorsPayload.length);
+      colorsPayload.push({
         ...(color.id ? { id: color.id } : {}),
         name: color.name.trim(),
         hex: color.hex.trim() || null,
@@ -1483,7 +1607,34 @@ function AdminProductForm() {
         /* خالی یعنی «ثبت نشده»؛ عدد صفر یعنی «تمام شده» */
         stock: color.stock.trim() === "" ? null : Number(color.stock),
         is_active: color.is_active,
-      }));
+      });
+    });
+
+    /*
+     * ماتریس سایز×رنگ؛ خانهٔ خالی ارسال نمی‌شود و عدد صفر حفظ می‌شود
+     * («این رنگ در این سایز تمام شده»).
+     */
+    const variantColorsPayload = Object.entries(variantColorMatrix).flatMap(
+      ([key, value]) => {
+        if (value.trim() === "") return [];
+
+        const [variantIndex, colorIndex] = key.split(":").map(Number);
+        const mappedVariantIndex = variantIndexMap.get(variantIndex);
+        const mappedColorIndex = colorIndexMap.get(colorIndex);
+
+        if (mappedVariantIndex === undefined || mappedColorIndex === undefined) {
+          return [];
+        }
+
+        return [
+          {
+            variant_index: mappedVariantIndex,
+            color_index: mappedColorIndex,
+            stock: Math.max(0, Math.floor(Number(value) || 0)),
+          },
+        ];
+      },
+    );
 
     const packItemsPayload = isPack
       ? packItems
@@ -1499,6 +1650,8 @@ function AdminProductForm() {
       variants: variantsPayload,
 
       colors: colorsPayload,
+
+      variant_colors: variantColorsPayload,
 
       pack_items: packItemsPayload,
 
@@ -3062,6 +3215,140 @@ function AdminProductForm() {
             </div>
           )}
 
+        </section>
+
+        {/* ماتریس موجودی سایز × رنگ */}
+        <section style={sectionStyle}>
+          <h2 style={{ margin: "0 0 6px", fontSize: "17px" }}>
+            موجودی هر رنگ در هر سایز
+          </h2>
+
+          <p style={{ color: "#6b7280", fontSize: 13, lineHeight: 1.9, marginTop: 0 }}>
+            برای هر سایز مشخص کنید از هر رنگ چند عدد موجود است. این عدد
+            اطلاعاتی است؛ موجودی رسمی سفارش‌ها همچنان از «موجودی تنوع» و
+            «موجودی» بالای صفحه کم می‌شود. خانهٔ خالی یعنی «ثبت نشده» و عدد
+            صفر یعنی «این رنگ در این سایز تمام شده».
+          </p>
+
+          {variants.length === 0 || colors.length === 0 ? (
+            <p
+              style={{
+                color: "#9a3412",
+                background: "#fff7ed",
+                border: "1px solid #fed7aa",
+                borderRadius: 9,
+                padding: "10px 12px",
+                fontSize: 13,
+                margin: 0,
+              }}
+            >
+              برای ثبت این ماتریس اول حداقل یک تنوع (سایز) و یک رنگ اضافه کنید.
+            </p>
+          ) : (
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 420 }}>
+                <thead>
+                  <tr>
+                    <th
+                      scope="col"
+                      style={{
+                        ...matrixCellStyle,
+                        textAlign: "right",
+                        background: "#f6f8f4",
+                      }}
+                    >
+                      سایز / رنگ
+                    </th>
+
+                    {colors.map((color, colorIndex) => (
+                      <th
+                        key={color.id ?? `new-color-${colorIndex}`}
+                        scope="col"
+                        style={{ ...matrixCellStyle, background: "#f6f8f4" }}
+                      >
+                        <span
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 6,
+                          }}
+                        >
+                          <span
+                            aria-hidden="true"
+                            style={{
+                              width: 12,
+                              height: 12,
+                              borderRadius: 999,
+                              border: "1px solid #d1d5db",
+                              background: isValidHex(color.hex)
+                                ? color.hex
+                                : "#e5e7eb",
+                            }}
+                          />
+                          {color.name.trim() || `رنگ ${colorIndex + 1}`}
+                        </span>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {variants.map((variant, variantIndex) => (
+                    <tr key={variant.id ?? `new-variant-${variantIndex}`}>
+                      <th
+                        scope="row"
+                        style={{
+                          ...matrixCellStyle,
+                          textAlign: "right",
+                          fontWeight: 700,
+                        }}
+                      >
+                        {variant.name.trim() || `تنوع ${variantIndex + 1}`}
+                        {!variant.is_active && (
+                          <span
+                            style={{ color: "#9ca3af", fontSize: 11, marginRight: 6 }}
+                          >
+                            (غیرفعال)
+                          </span>
+                        )}
+                      </th>
+
+                      {colors.map((color, colorIndex) => (
+                        <td key={colorIndex} style={matrixCellStyle}>
+                          <input
+                            type="number"
+                            inputMode="numeric"
+                            min={0}
+                            step={1}
+                            value={
+                              variantColorMatrix[
+                                `${variantIndex}:${colorIndex}`
+                              ] ?? ""
+                            }
+                            onChange={(event) =>
+                              updateVariantColorStock(
+                                variantIndex,
+                                colorIndex,
+                                event.target.value,
+                              )
+                            }
+                            placeholder="—"
+                            disabled={!variant.is_active || !color.is_active}
+                            style={{
+                              ...fieldStyle,
+                              width: 78,
+                              textAlign: "center",
+                              direction: "ltr",
+                            }}
+                          />
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </section>
 
         <section style={sectionStyle}>
