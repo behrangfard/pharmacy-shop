@@ -257,7 +257,7 @@ function ArticleDetail() {
         </nav>
 
         {loading && (
-          <div className="animate-pulse space-y-4 rounded-3xl border border-brand-75 bg-white p-5">
+          <div className="animate-pulse space-y-4 rounded-3xl border border-brand-75 bg-surface p-5">
             <div className="h-56 rounded-2xl bg-brand-50" />
             <div className="h-6 w-2/3 rounded-lg bg-brand-75" />
             <div className="h-4 w-1/3 rounded-lg bg-brand-75" />
@@ -282,7 +282,7 @@ function ArticleDetail() {
         )}
 
         {!loading && !error && article && (
-          <article className="overflow-hidden rounded-3xl border border-brand-100 bg-white">
+          <article className="overflow-hidden rounded-3xl border border-brand-100 bg-surface">
             {cover && (
               <img
                 src={cover}

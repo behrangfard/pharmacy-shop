@@ -204,7 +204,7 @@ function Account() {
     return (
       <Layout>
         <main className="max-w-4xl mx-auto px-6 py-16">
-          <div className="bg-white rounded-3xl border border-line shadow-sm p-10 text-center">
+          <div className="bg-surface rounded-3xl border border-line shadow-sm p-10 text-center">
             <div className="w-16 h-16 mx-auto rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center">
               <User size={30} />
             </div>
@@ -250,7 +250,7 @@ function Account() {
 
         <div className="grid gap-6 md:grid-cols-3">
           <div className="space-y-6 md:col-span-2 md:row-start-1">
-            <div className="bg-white rounded-3xl border border-line shadow-sm p-5 sm:p-7">
+            <div className="bg-surface rounded-3xl border border-line shadow-sm p-5 sm:p-7">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-6 border-b border-line">
                 <div className="flex items-center gap-4">
                   <div className="w-16 h-16 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center">
@@ -493,7 +493,7 @@ function Account() {
 
             <AddressBookSection />
 
-            <div className="bg-white rounded-3xl border border-line shadow-sm p-5 sm:p-7">
+            <div className="bg-surface rounded-3xl border border-line shadow-sm p-5 sm:p-7">
               <button
                 type="button"
                 onClick={() => setShowPasswordForm((current) => !current)}
@@ -616,7 +616,7 @@ function Account() {
 
             <Link
               to="/cart"
-              className="block bg-white rounded-3xl border border-line shadow-sm p-6 hover:border-brand-200 hover:shadow-md transition"
+              className="block bg-surface rounded-3xl border border-line shadow-sm p-6 hover:border-brand-200 hover:shadow-md transition"
             >
               <div className="w-12 h-12 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center">
                 <ShoppingCart size={24} />

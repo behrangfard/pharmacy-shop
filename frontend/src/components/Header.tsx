@@ -1,5 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import { ShoppingCart, User, LogOut, Heart } from "lucide-react";
+import ColorModeToggle from "./ColorModeToggle";
 
 import HeaderSearch from "./HeaderSearch";
 import AccountNameMenu from "./AccountNameMenu";
@@ -38,7 +39,7 @@ function Header() {
   return (
     // چسبان‌بودن (sticky) و لایهٔ z در Layout اعمال می‌شود، جایی که نوار
     // اطلاع‌رسانی بالای هدر قرار می‌گیرد؛ این‌جا فقط ظاهر هدر ساخته می‌شود.
-    <header className="border-b border-line bg-white/95 shadow-sm backdrop-blur-md">
+    <header className="border-b border-line bg-surface/95 shadow-sm backdrop-blur-md">
       <div className="mx-auto max-w-7xl px-3 py-3 sm:px-6 sm:py-4">
         <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-6">
           {/* Logo */}
@@ -90,6 +91,8 @@ function Header() {
                 </button>
               )}
 
+              <ColorModeToggle />
+
               <Link
                 to="/wishlist"
                 className="relative flex shrink-0 items-center justify-center text-blush-400 transition-colors hover:text-plum-500"
@@ -98,7 +101,7 @@ function Header() {
                 <Heart size={23} />
 
                 {wishlistCount > 0 && (
-                  <span className="absolute end-0 top-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-blush-100 px-1 text-[10px] font-bold leading-none text-blush-600 ring-2 ring-white">
+                  <span className="absolute end-0 top-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-blush-100 px-1 text-[10px] font-bold leading-none text-blush-600 ring-2 ring-surface">
                     {wishlistCount.toLocaleString("fa-IR")}
                   </span>
                 )}
@@ -112,7 +115,7 @@ function Header() {
                 <ShoppingCart size={25} />
 
                 {cartCount > 0 && (
-                  <span className="absolute end-0 top-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-plum-200 px-1 text-[10px] font-bold leading-none text-plum-700 ring-2 ring-white">
+                  <span className="absolute end-0 top-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-plum-200 px-1 text-[10px] font-bold leading-none text-plum-700 ring-2 ring-surface">
                     {cartCount.toLocaleString("fa-IR")}
                   </span>
                 )}
@@ -180,7 +183,7 @@ function Header() {
                 className="
                   flex items-center gap-2 whitespace-nowrap
                   rounded-xl border border-line-soft
-                  bg-white px-4 py-2.5
+                  bg-surface px-4 py-2.5
                   font-bold text-ink-soft
                   transition-all hover:border-brand-300
                   hover:bg-brand-50
@@ -190,6 +193,8 @@ function Header() {
                 <span>ورود</span>
               </button>
             )}
+
+            <ColorModeToggle variant="boxed" />
 
             <Link
               to="/wishlist"

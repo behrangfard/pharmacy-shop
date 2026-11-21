@@ -281,7 +281,7 @@ export default function AddressMapPicker({
             type="button"
             onClick={handleLocate}
             disabled={locating}
-            className="inline-flex items-center gap-2 rounded-xl border border-line bg-white px-3 py-2 text-xs font-bold text-ink-soft transition hover:border-brand-200 hover:text-brand-700 disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2 text-xs font-bold text-ink-soft transition hover:border-brand-200 hover:text-brand-700 disabled:opacity-60"
           >
             {locating ? (
               <Loader2 size={15} className="animate-spin" />
@@ -296,7 +296,7 @@ export default function AddressMapPicker({
               type="button"
               onClick={handleResolve}
               disabled={resolving}
-              className="inline-flex items-center gap-2 rounded-xl border border-line bg-white px-3 py-2 text-xs font-bold text-ink-soft transition hover:border-brand-200 hover:text-brand-700 disabled:opacity-60"
+              className="inline-flex items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2 text-xs font-bold text-ink-soft transition hover:border-brand-200 hover:text-brand-700 disabled:opacity-60"
             >
               {resolving ? (
                 <Loader2 size={15} className="animate-spin" />

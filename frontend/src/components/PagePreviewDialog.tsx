@@ -66,7 +66,7 @@ function PagePreviewDialog({
         aria-modal="true"
         aria-labelledby="page-preview-title"
         dir="rtl"
-        className="flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-line bg-white shadow-2xl"
+        className="flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-2xl"
       >
         <header className="flex items-start justify-between gap-3 border-b border-line-soft px-4 py-4 sm:px-6">
           <div className="flex items-start gap-3">
@@ -100,7 +100,7 @@ function PagePreviewDialog({
 
         <div className="flex-1 overflow-y-auto bg-cream px-3 py-4 sm:px-6 sm:py-6">
           {loading || !page ? (
-            <div className="rounded-2xl border border-line bg-white p-5">
+            <div className="rounded-2xl border border-line bg-surface p-5">
               <div className="h-4 w-32 animate-pulse rounded bg-brand-100" />
               <div className="mt-4 h-6 w-2/3 animate-pulse rounded bg-brand-100" />
               <div className="mt-5 space-y-2">
@@ -110,7 +110,7 @@ function PagePreviewDialog({
               </div>
             </div>
           ) : (
-            <article className="rounded-2xl border border-line bg-white px-4 py-5 shadow-sm sm:px-7 sm:py-7">
+            <article className="rounded-2xl border border-line bg-surface px-4 py-5 shadow-sm sm:px-7 sm:py-7">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1 text-[11px] font-bold text-brand-600">
                   <Eye size={12} aria-hidden="true" />

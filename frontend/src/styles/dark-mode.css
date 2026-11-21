@@ -1,0 +1,169 @@
+/*
+  حالت تاریک فروشگاه — Dark Mode
+  -------------------------------
+  رنگ‌های سایت از توکن‌های `@theme` (index.css) می‌آیند. این فایل فقط همان
+  متغیرها را داخل پوستهٔ فروشگاه (`.sf-theme`) بازتعریف می‌کند؛ بنابراین:
+
+  - پنل مدیریت (که کلاس `.sf-theme` ندارد) هیچ تغییری نمی‌بیند.
+  - تم رنگ (`data-theme="ocean"`) و حالت تاریک روی هم کار می‌کنند؛ حالت تاریک
+    فقط روشنایی/تیرگی را جابه‌جا می‌کند، نه خانوادهٔ رنگ.
+  - `--color-white` عمداً دست‌نخورده می‌ماند چون `text-white` روی دکمه‌های
+    توپُر باید سفید بماند؛ سطوح کارت‌ها از `--color-surface` می‌آیند.
+
+  نگاشت‌ها با معیار کنتراست انتخاب شده‌اند: متن اصلی #e9f0e7 روی سطح #151d19
+  ≈ ۱۳:۱، متن کم‌رنگ #a7b5ab ≈ ۷:۱ و سبز برند #a5d6ac ≈ ۹:۱.
+*/
+html[data-mode="dark"] .sf-theme {
+  color-scheme: dark;
+
+  --color-surface: #151d19;
+  --color-surface-soft: #1b2420;
+  --color-cream: #0f1613;
+  --color-cream-deep: #131b17;
+
+  --color-line: #2a352e;
+  --color-line-soft: #232e27;
+  --color-line-strong: #3a473f;
+
+  --color-ink: #e9f0e7;
+  --color-ink-soft: #c3d2c6;
+  --color-muted: #a7b5ab;
+  --color-muted-soft: #93a199;
+
+  --color-brand-50: #1a2a1f;
+  --color-brand-75: #1d2f22;
+  --color-brand-100: #213527;
+  --color-brand-200: #2b4533;
+  --color-brand-250: #2f4a36;
+  --color-brand-300: #3f6448;
+  --color-brand-400: #79a981;
+  --color-brand-500: #8bc094;
+  --color-brand-550: #97cba0;
+  --color-brand-600: #a5d6ac;
+  --color-brand-700: #b9e4be;
+  --color-brand-800: #cdeed0;
+  --color-brand-900: #e3f7e5;
+
+  --color-gold: #e6b862;
+  --color-gold-50: #2a2214;
+  --color-gold-100: #3a2f1b;
+
+  --color-stock: #6fd695;
+  --color-stock-700: #93e6af;
+  --color-save: #a8d8a2;
+
+  --color-discount: #f292a2;
+  --color-discount-700: #f7b0bb;
+
+  --color-blush-50: #2a1b20;
+  --color-blush-100: #38252b;
+  --color-blush-200: #452d35;
+  --color-blush-400: #d8a5b6;
+  --color-blush-500: #e2b3c2;
+  --color-blush-600: #ecc4d0;
+
+  --color-plum-50: #241f2e;
+  --color-plum-100: #2c2539;
+  --color-plum-200: #3b3150;
+  --color-plum-300: #4a3d63;
+  --color-plum-500: #b9a6d8;
+  --color-plum-600: #c7b7e3;
+  --color-plum-700: #d6c9ec;
+
+  --color-info: #9cc3de;
+  --color-info-100: #1c2c38;
+  --color-info-200: #24384a;
+}
+
+/*
+  دکمه‌ها و بج‌های «توپُر» با متن سفید.
+  چون مقیاس brand در حالت تاریک روشن شد (تا متن سبز روی زمینهٔ تیره خوانا
+  باشد)، پرکنندهٔ همین دکمه‌ها باید دستی تیره بماند؛ وگرنه متن سفید روی سبز
+  روشن محو می‌شود.
+*/
+html[data-mode="dark"] .sf-theme .bg-brand-500,
+html[data-mode="dark"] .sf-theme .hover\:bg-brand-500:hover {
+  background-color: #3f6146;
+}
+
+html[data-mode="dark"] .sf-theme .bg-brand-600,
+html[data-mode="dark"] .sf-theme .hover\:bg-brand-600:hover {
+  background-color: #35563c;
+}
+
+html[data-mode="dark"] .sf-theme .bg-brand-700,
+html[data-mode="dark"] .sf-theme .hover\:bg-brand-700:hover {
+  background-color: #2c4832;
+}
+
+html[data-mode="dark"] .sf-theme .bg-brand-800,
+html[data-mode="dark"] .sf-theme .hover\:bg-brand-800:hover {
+  background-color: #253d2a;
+}
+
+html[data-mode="dark"] .sf-theme .bg-brand-900,
+html[data-mode="dark"] .sf-theme .hover\:bg-brand-900:hover {
+  background-color: #1f3324;
+}
+
+html[data-mode="dark"] .sf-theme .bg-gold,
+html[data-mode="dark"] .sf-theme .hover\:bg-gold:hover {
+  background-color: #8a641f;
+}
+
+html[data-mode="dark"] .sf-theme .bg-stock,
+html[data-mode="dark"] .sf-theme .hover\:bg-stock:hover {
+  background-color: #2f7d4f;
+}
+
+html[data-mode="dark"] .sf-theme .bg-save,
+html[data-mode="dark"] .sf-theme .hover\:bg-save:hover {
+  background-color: #4b7048;
+}
+
+html[data-mode="dark"] .sf-theme .bg-discount,
+html[data-mode="dark"] .sf-theme .hover\:bg-discount:hover {
+  background-color: #b5475a;
+}
+
+/* پردهٔ بک‌دراپ پاپ‌آپ/مودال‌ها: ink در حالت تاریک روشن می‌شود، پس پرده دستی تیره. */
+html[data-mode="dark"] .sf-theme .bg-ink\/50,
+html[data-mode="dark"] .sf-theme .bg-ink\/40,
+html[data-mode="dark"] .sf-theme .bg-ink\/60 {
+  background-color: rgb(0 0 0 / 0.62);
+}
+
+/*
+  اسکلت بارگذاری و تصاویر روی زمینهٔ تیره سایه/خط اضافه می‌گیرند تا کارت‌ها
+  در تاریکی محو نشوند.
+*/
+html[data-mode="dark"] .sf-theme img,
+html[data-mode="dark"] .sf-theme video {
+  color-scheme: normal;
+}
+
+html[data-mode="dark"] .sf-theme .animate-pulse {
+  background-color: #1b2420;
+}
+
+/* نوار بالای هدر و فوتر با سطح کارت هم‌رنگ می‌شوند تا لایه‌بندی دیده شود. */
+html[data-mode="dark"] .sf-theme .store-header,
+html[data-mode="dark"] .sf-theme .store-footer {
+  background-color: var(--color-surface);
+}
+
+/* چاپ فاکتور و هر خروجی کاغذی همیشه روشن بماند. */
+@media print {
+  html[data-mode="dark"] .sf-theme {
+    --color-surface: #ffffff;
+    --color-cream: #ffffff;
+    --color-cream-deep: #ffffff;
+    --color-ink: #111827;
+    --color-ink-soft: #374151;
+    --color-muted: #4b5563;
+    --color-muted-soft: #6b7280;
+    --color-line: #e5e7eb;
+    --color-line-soft: #eef0f2;
+    --color-line-strong: #d1d5db;
+  }
+}

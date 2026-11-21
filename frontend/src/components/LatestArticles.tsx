@@ -43,7 +43,7 @@ function LatestArticles() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6">
         <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 text-xs font-bold text-brand-600 shadow-sm">
+            <div className="inline-flex items-center gap-2 rounded-full bg-surface px-3 py-1.5 text-xs font-bold text-brand-600 shadow-sm">
               <BookOpen size={14} aria-hidden="true" />
               مجلهٔ بهرنگ شاپ
             </div>
@@ -59,7 +59,7 @@ function LatestArticles() {
 
           <Link
             to="/articles"
-            className="inline-flex items-center gap-2 self-start rounded-xl border border-brand-100 bg-white px-4 py-2.5 text-xs font-bold text-ink-soft transition-colors hover:bg-brand-50 sm:self-auto"
+            className="inline-flex items-center gap-2 self-start rounded-xl border border-brand-100 bg-surface px-4 py-2.5 text-xs font-bold text-ink-soft transition-colors hover:bg-brand-50 sm:self-auto"
           >
             همهٔ مقاله‌ها
             <ArrowLeft size={15} aria-hidden="true" />
@@ -71,7 +71,7 @@ function LatestArticles() {
             {[0, 1, 2].map((item) => (
               <div
                 key={item}
-                className="h-72 animate-pulse rounded-3xl border border-brand-75 bg-white"
+                className="h-72 animate-pulse rounded-3xl border border-brand-75 bg-surface"
               />
             ))}
           </div>

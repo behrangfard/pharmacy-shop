@@ -85,7 +85,7 @@ function RecentlyViewed({
             >
               <Link
                 to={`/product/${item.slug}`}
-                className="block h-full rounded-2xl border border-line bg-white p-2 transition duration-200 hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-md"
+                className="block h-full rounded-2xl border border-line bg-surface p-2 transition duration-200 hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-md"
               >
                 <div className="relative mb-2 aspect-square overflow-hidden rounded-xl bg-cream-deep">
                   {image ? (
@@ -131,7 +131,7 @@ function RecentlyViewed({
                 onClick={() => remove(item.id)}
                 aria-label={`حذف ${item.name} از بازدیدهای اخیر`}
                 title="حذف از بازدیدهای اخیر"
-                className="absolute left-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-white/95 text-muted-soft shadow-sm ring-1 ring-line transition hover:bg-blush-50 hover:text-discount"
+                className="absolute left-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-surface/95 text-muted-soft shadow-sm ring-1 ring-line transition hover:bg-blush-50 hover:text-discount"
               >
                 <X size={12} />
               </button>

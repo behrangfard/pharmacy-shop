@@ -52,7 +52,7 @@ function SizeGuide() {
         <header className="overflow-hidden rounded-3xl border border-brand-100 bg-gradient-to-l from-brand-75 via-cream to-plum-50 p-6 sm:p-9">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <div className="inline-flex items-center gap-2 rounded-full bg-white px-3.5 py-1.5 text-xs font-bold text-brand-600 shadow-sm">
+              <div className="inline-flex items-center gap-2 rounded-full bg-surface px-3.5 py-1.5 text-xs font-bold text-brand-600 shadow-sm">
                 <Sparkles size={14} aria-hidden="true" />
                 سایز درست، راحتی بیشتر
               </div>
@@ -68,14 +68,14 @@ function SizeGuide() {
               </p>
             </div>
 
-            <div className="flex h-20 w-20 shrink-0 items-center justify-center self-start rounded-3xl bg-white/80 text-plum-500 shadow-sm sm:self-center">
+            <div className="flex h-20 w-20 shrink-0 items-center justify-center self-start rounded-3xl bg-surface/80 text-plum-500 shadow-sm sm:self-center">
               <Ruler size={38} aria-hidden="true" />
             </div>
           </div>
         </header>
 
         {/* محتوا */}
-        <section className="mt-6 rounded-3xl border border-brand-100 bg-white p-4 sm:p-7">
+        <section className="mt-6 rounded-3xl border border-brand-100 bg-surface p-4 sm:p-7">
           <SizeGuideContent initialTab="bra" />
         </section>
 

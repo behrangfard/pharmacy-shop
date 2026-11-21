@@ -100,7 +100,7 @@ function PageView() {
         </nav>
 
         {loading && (
-          <div className="rounded-3xl border border-brand-100 bg-white p-10 text-center text-sm font-bold text-muted">
+          <div className="rounded-3xl border border-brand-100 bg-surface p-10 text-center text-sm font-bold text-muted">
             در حال دریافت صفحه...
           </div>
         )}
@@ -110,7 +110,7 @@ function PageView() {
             role="alert"
             className="rounded-3xl border border-blush-100 bg-blush-50 p-8 text-center"
           >
-            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-discount">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-surface text-discount">
               <FileText size={22} aria-hidden="true" />
             </div>
 
@@ -127,7 +127,7 @@ function PageView() {
         )}
 
         {!loading && page && (
-          <article className="rounded-3xl border border-brand-100 bg-white px-5 py-7 shadow-sm sm:px-10 sm:py-10">
+          <article className="rounded-3xl border border-brand-100 bg-surface px-5 py-7 shadow-sm sm:px-10 sm:py-10">
             <header className="border-b border-brand-75 pb-5">
               <span className="inline-flex items-center gap-1.5 rounded-full bg-brand-50 px-3 py-1 text-[11px] font-bold text-brand-600">
                 <FileText size={13} aria-hidden="true" />

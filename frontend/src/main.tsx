@@ -8,6 +8,7 @@ import WishlistProvider from "./context/WishlistContext";
 import { prefetchCategories } from "./services/categories";
 import { migrateLegacyStorage } from "./utils/storageKeys";
 import { initTheme } from "./utils/theme";
+import { initColorMode } from "./utils/colorMode";
 import { registerServiceWorker } from "./pwa";
 
 // هستهٔ استایل (Tailwind + توکن‌ها). بقیهٔ استایل‌ها به ترتیب سند و به‌صورت
@@ -29,10 +30,15 @@ import "./styles/admin-sidebar-custom.css";
 import "./styles/jalali-picker.css";
 import "./styles/theme-preview.css";
 import "./styles/storefront-extras.css";
+import "./styles/dark-mode.css";
 
 // تم انتخاب‌شدهٔ فروشگاه (?theme= یا localStorage) پیش از رندر اعمال می‌شود
 // تا اولین نقاشی صفحه با رنگ درست انجام شود.
 initTheme();
+
+// حالت روشن/تاریک (?mode= یا localStorage یا تنظیم سیستم‌عامل) هم پیش از رندر
+// اعمال می‌شود تا صفحه با رنگ درست نقاشی شود و «فلش سفید» نداشته باشیم.
+initColorMode();
 
 // کلیدهای قدیمی localStorage یک‌بار به کلیدهای جدید منتقل می‌شوند.
 migrateLegacyStorage();

@@ -52,7 +52,7 @@ const variantClasses = {
     "bg-stock text-white shadow-sm hover:bg-stock-700 hover:shadow-md focus-visible:ring-stock",
 
   outline:
-    "border border-brand-200 bg-white text-brand-700 shadow-sm hover:border-brand-400 hover:bg-cream hover:shadow-md focus-visible:ring-brand-400",
+    "border border-brand-200 bg-surface text-brand-700 shadow-sm hover:border-brand-400 hover:bg-cream hover:shadow-md focus-visible:ring-brand-400",
 
   ghost:
     "bg-transparent text-ink-soft hover:bg-brand-100 focus-visible:ring-brand-400",

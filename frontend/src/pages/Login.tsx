@@ -75,7 +75,7 @@ function Login() {
         dir="rtl"
         className="min-h-[70vh] bg-cream flex items-center justify-center p-6"
       >
-        <div className="w-full max-w-md bg-white rounded-3xl shadow-sm border border-line p-8">
+        <div className="w-full max-w-md bg-surface rounded-3xl shadow-sm border border-line p-8">
           <div className="text-center mb-8">
             <div className="w-16 h-16 mx-auto rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center">
               <LogIn size={30} />

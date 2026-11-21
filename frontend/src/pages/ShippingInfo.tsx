@@ -111,7 +111,7 @@ function ShippingInfo() {
         <header className="overflow-hidden rounded-3xl border border-brand-100 bg-gradient-to-l from-brand-75 via-cream to-plum-50 p-6 sm:p-9">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <div className="inline-flex items-center gap-2 rounded-full bg-white px-3.5 py-1.5 text-xs font-bold text-brand-600 shadow-sm">
+              <div className="inline-flex items-center gap-2 rounded-full bg-surface px-3.5 py-1.5 text-xs font-bold text-brand-600 shadow-sm">
                 <Sparkles size={14} aria-hidden="true" />
                 ارسال مطمئن به سراسر ایران
               </div>
@@ -127,13 +127,13 @@ function ShippingInfo() {
               )}
             </div>
 
-            <div className="flex h-20 w-20 shrink-0 items-center justify-center self-start rounded-3xl bg-white/80 text-plum-500 shadow-sm sm:self-center">
+            <div className="flex h-20 w-20 shrink-0 items-center justify-center self-start rounded-3xl bg-surface/80 text-plum-500 shadow-sm sm:self-center">
               <Truck size={38} aria-hidden="true" />
             </div>
           </div>
 
           {info.free_shipping.enabled && info.free_shipping.threshold > 0 && (
-            <div className="mt-5 flex items-start gap-3 rounded-2xl border border-brand-100 bg-white/80 px-4 py-3">
+            <div className="mt-5 flex items-start gap-3 rounded-2xl border border-brand-100 bg-surface/80 px-4 py-3">
               <Wallet
                 size={18}
                 className="mt-0.5 shrink-0 text-brand-550"
@@ -151,7 +151,7 @@ function ShippingInfo() {
         </header>
 
         {/* روش‌های ارسال */}
-        <section className="mt-6 rounded-3xl border border-brand-100 bg-white p-4 sm:p-7">
+        <section className="mt-6 rounded-3xl border border-brand-100 bg-surface p-4 sm:p-7">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="flex items-center gap-2 font-black text-brand-800">
               <span className="h-6 w-1 rounded-full bg-brand-400" />
@@ -189,7 +189,7 @@ function ShippingInfo() {
               {info.methods.map((method) => (
                 <article
                   key={method.id}
-                  className="flex flex-col rounded-2xl border border-line bg-white p-5 transition-colors hover:border-brand-250"
+                  className="flex flex-col rounded-2xl border border-line bg-surface p-5 transition-colors hover:border-brand-250"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex items-center gap-2.5">
@@ -273,7 +273,7 @@ function ShippingInfo() {
 
         {/* اطلاعات ارسال */}
         {info.notes.length > 0 && (
-          <section className="mt-6 rounded-3xl border border-brand-100 bg-white p-4 sm:p-7">
+          <section className="mt-6 rounded-3xl border border-brand-100 bg-surface p-4 sm:p-7">
             <h2 className="flex items-center gap-2 font-black text-brand-800">
               <span className="h-6 w-1 rounded-full bg-brand-400" />
               اطلاعات ارسال
@@ -304,14 +304,14 @@ function ShippingInfo() {
 
         {/* متن تکمیلی از پنل */}
         {info.content.trim() !== "" && (
-          <section className="mt-6 rounded-3xl border border-brand-100 bg-white p-4 sm:p-7">
+          <section className="mt-6 rounded-3xl border border-brand-100 bg-surface p-4 sm:p-7">
             <RichTextContent content={info.content} />
           </section>
         )}
 
 
         {/* پشتیبانی */}
-        <section className="mt-6 rounded-3xl border border-brand-100 bg-white p-5 sm:p-6">
+        <section className="mt-6 rounded-3xl border border-brand-100 bg-surface p-5 sm:p-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-start gap-3">
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand-100 text-brand-550">

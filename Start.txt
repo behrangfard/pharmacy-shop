@@ -3301,3 +3301,37 @@ drag & drop، گارد ذخیره‌نشده، `ConfirmDialog`)، بستهٔ ۴ 
 بخش ۱۴ `TECHNICAL_GUIDE.md`)؛ انتقال ۳۲ `window.confirm` باقی‌مانده به
 `ConfirmDialog`؛ شکستن فایل‌های بزرگ (`AdminProductForm`، `AdminOrders`).
 
+
+## ۲۴) حالت تاریک فروشگاه با کلید هدر — ۲۰۲۶-۱۱-۲۱
+
+**هدف:** کلید روشن/تاریک برای سایت فروشگاهی، داخل هدر؛ بدون دست‌زدن به پنل.
+
+**انجام‌شده:**
+- `frontend/src/utils/colorMode.ts`: صفت `data-mode="dark"` روی `<html>`؛
+  اولویت `?mode=` ← localStorage (`behrang-shop-color-mode`) ←
+  `prefers-color-scheme`. تا اولین انتخاب کاربر، تغییر تنظیم سیستم‌عامل زنده
+  دنبال می‌شود؛ `meta theme-color` هم‌گام می‌شود و `color-scheme` فقط داخل
+  `.sf-theme` ست می‌شود تا کنترل‌های بومی پنل تیره نشوند.
+- `frontend/src/styles/dark-mode.css`: فقط توکن‌های `@theme` داخل `.sf-theme`
+  (پوستهٔ Layout فروشگاه) بازتعریف می‌شوند → پنل مدیریت دست‌نخورده و تم
+  «اقیانوس» با تاریکی ترکیب می‌شود. دکمه‌های توپر brand/gold/stock/save/discount
+  و پردهٔ `bg-ink/*` دستی تیره ماندند تا `text-white` خوانا بماند؛ بلوک
+  `@media print` فاکتور را همیشه روشن نگه می‌دارد.
+- توکن‌های جدید `--color-surface`/`--color-surface-soft` در `@theme`؛ ۲۳۳ مورد
+  `bg-white`/`ring-white` در ۴۴ فایل فروشگاه به `bg-surface`/`ring-surface`
+  تبدیل شد (فاکتور چاپی و پنل مستثنی)؛ ۱۴ پس‌زمینهٔ سفید CSS فروشگاه
+  (`storefront.css`، `storefront-extras.css`، `support-widget.css`) به
+  `var(--color-surface)` رفت.
+- `components/ColorModeToggle.tsx` (آیکن ماه/خورشید، `aria-pressed`، رویداد
+  `behrang:colormode` برای هم‌گام‌ماندن آیکن) در دو جای هدر: نوار آیکن موبایل و
+  دکمهٔ جعبه‌ای دسکتاپ.
+- پورتال‌های بیرون از Layout (`QuickViewModal`، `StorefrontPopup`،
+  `StoryViewer`) ریشه‌شان `sf-theme` گرفتند.
+
+**تأیید:** `tsc` تمیز، `oxlint` ۰ خطا، `npm run build` موفق (۳.۸۴s).
+بک‌اند تغییر نداشت.
+
+**باقی‌مانده:** بازبینی چشمی کنتراست صفحه‌های سنگین (Home/ProductDetail) در
+حالت تاریک؛ سفیدهای لفظی `theme-preview.css`/`jalali-picker.css` هنوز توکنی
+نشده‌اند (ابزار پیش‌نمایش تم و تقویم).
+

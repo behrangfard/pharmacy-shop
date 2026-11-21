@@ -366,7 +366,7 @@ function HeroBannerCarousel({
                       )}
 
                       {banner.button_label && (
-                        <span className="mt-4 inline-flex items-center gap-2 rounded-full bg-white/95 px-5 py-2 text-xs font-bold text-brand-700">
+                        <span className="mt-4 inline-flex items-center gap-2 rounded-full bg-surface/95 px-5 py-2 text-xs font-bold text-brand-700">
                           {banner.button_label}
                           <ArrowLeft size={14} />
                         </span>
@@ -388,8 +388,8 @@ function HeroBannerCarousel({
             aria-label="بنر قبلی"
             className="
               absolute right-3 top-1/2 z-20 -translate-y-1/2
-              rounded-full bg-white/85 p-2 text-brand-700 shadow
-              transition hover:bg-white active:scale-95
+              rounded-full bg-surface/85 p-2 text-brand-700 shadow
+              transition hover:bg-surface active:scale-95
             "
           >
             <ChevronRight size={20} />
@@ -401,8 +401,8 @@ function HeroBannerCarousel({
             aria-label="بنر بعدی"
             className="
               absolute left-3 top-1/2 z-20 -translate-y-1/2
-              rounded-full bg-white/85 p-2 text-brand-700 shadow
-              transition hover:bg-white active:scale-95
+              rounded-full bg-surface/85 p-2 text-brand-700 shadow
+              transition hover:bg-surface active:scale-95
             "
           >
             <ChevronLeft size={20} />
@@ -418,8 +418,8 @@ function HeroBannerCarousel({
                 aria-current={index === activeIndex}
                 className={`h-2 rounded-full transition-all duration-300 ${
                   index === activeIndex
-                    ? "w-7 bg-white"
-                    : "w-2 bg-white/60 hover:bg-white/90"
+                    ? "w-7 bg-surface"
+                    : "w-2 bg-surface/60 hover:bg-surface/90"
                 }`}
               />
             ))}
@@ -461,7 +461,7 @@ function CategoryCard({
       to={to}
       className={`
         group flex h-full min-w-0 flex-col items-start gap-4
-        overflow-hidden rounded-2xl border border-line bg-white p-5 text-right
+        overflow-hidden rounded-2xl border border-line bg-surface p-5 text-right
         transition-all duration-200 hover:shadow-lg active:scale-[0.98]
         focus-visible:outline-none focus-visible:ring-2
         focus-visible:ring-brand-400 focus-visible:ring-offset-2
@@ -734,7 +734,7 @@ function FeaturedProductsRail({
         type="button"
         onClick={() => scrollByStep(-1)}
         disabled={!canScrollPrev}
-        className={`absolute -right-2 top-1/2 z-20 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-line bg-white/95 text-brand-600 shadow-md backdrop-blur-sm transition hover:border-brand-300 hover:text-brand-700 hover:shadow-lg active:scale-95 sm:-right-3 sm:h-10 sm:w-10 ${
+        className={`absolute -right-2 top-1/2 z-20 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-line bg-surface/95 text-brand-600 shadow-md backdrop-blur-sm transition hover:border-brand-300 hover:text-brand-700 hover:shadow-lg active:scale-95 sm:-right-3 sm:h-10 sm:w-10 ${
           canScrollPrev ? "opacity-100" : "cursor-default opacity-30"
         }`}
         aria-label="محصول ویژهٔ قبلی"
@@ -746,7 +746,7 @@ function FeaturedProductsRail({
         type="button"
         onClick={() => scrollByStep(1)}
         disabled={!canScrollNext}
-        className={`absolute -left-2 top-1/2 z-20 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-line bg-white/95 text-brand-600 shadow-md backdrop-blur-sm transition hover:border-brand-300 hover:text-brand-700 hover:shadow-lg active:scale-95 sm:-left-3 sm:h-10 sm:w-10 ${
+        className={`absolute -left-2 top-1/2 z-20 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-line bg-surface/95 text-brand-600 shadow-md backdrop-blur-sm transition hover:border-brand-300 hover:text-brand-700 hover:shadow-lg active:scale-95 sm:-left-3 sm:h-10 sm:w-10 ${
           canScrollNext ? "opacity-100" : "cursor-default opacity-30"
         }`}
         aria-label="محصول ویژهٔ بعدی"
@@ -1101,7 +1101,7 @@ function Home() {
       )}
 
       {/* Benefits */}
-      <section className="border-b border-line bg-white">
+      <section className="border-b border-line bg-surface">
         <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div className="flex min-w-0 items-center gap-4 rounded-2xl border border-line bg-cream p-4 transition hover:border-brand-300 hover:bg-brand-50">
@@ -1294,7 +1294,7 @@ function Home() {
         )}
 
       {/* Featured Products */}
-      <section className="bg-white py-12 sm:py-14">
+      <section className="bg-surface py-12 sm:py-14">
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <div className="mb-8 flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-0">
@@ -1398,7 +1398,7 @@ function Home() {
           <div className="mx-auto max-w-7xl px-4 sm:px-6">
             <RecentlyViewed
               limit={8}
-              className="rounded-3xl border border-line bg-white/70 p-4 sm:p-5"
+              className="rounded-3xl border border-line bg-surface/70 p-4 sm:p-5"
             />
           </div>
         </section>
@@ -1408,7 +1408,7 @@ function Home() {
       <LatestArticles />
 
       {/* Bottom CTA */}
-      <section className="bg-white py-12 sm:py-14">
+      <section className="bg-surface py-12 sm:py-14">
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <div
             className="
@@ -1419,7 +1419,7 @@ function Home() {
             "
           >
             <div className="relative z-10">
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-sm font-bold">
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-surface/10 px-3 py-1.5 text-sm font-bold">
                 <Sparkles size={15} />
                 استایل جدید خودت را پیدا کن
               </div>
@@ -1440,7 +1440,7 @@ function Home() {
               size="lg"
               className="
                 relative z-10 whitespace-nowrap
-                !rounded-xl !bg-white !text-brand-550
+                !rounded-xl !bg-surface !text-brand-550
                 transition-all duration-150
                 hover:!bg-brand-50
                 active:scale-95
@@ -1452,7 +1452,7 @@ function Home() {
               </span>
             </ButtonLink>
 
-            <div className="pointer-events-none absolute -bottom-24 -left-16 h-64 w-64 rounded-full bg-white/10" />
+            <div className="pointer-events-none absolute -bottom-24 -left-16 h-64 w-64 rounded-full bg-surface/10" />
             <div className="pointer-events-none absolute -right-20 -top-28 h-72 w-72 rounded-full bg-plum-200/15" />
           </div>
         </div>

@@ -258,7 +258,7 @@ function WishlistButton({
         ${
           active
             ? "border-brand-300 bg-brand-100 text-brand-600"
-            : "border-white bg-white/90 text-muted-soft hover:border-brand-300 hover:text-brand-600"
+            : "border-white bg-surface/90 text-muted-soft hover:border-brand-300 hover:text-brand-600"
         }
         ${className}
       `}
@@ -293,7 +293,7 @@ function SizeChips({
           className={
             chip.available
               ? "inline-flex h-5 min-w-6 items-center justify-center rounded-md border border-line bg-cream px-1 text-[10px] font-bold text-ink-soft sm:h-6 sm:min-w-7 sm:text-xs"
-              : "inline-flex h-5 min-w-6 items-center justify-center rounded-md border border-line-soft bg-white px-1 text-[10px] font-bold text-muted-soft line-through sm:h-6 sm:min-w-7 sm:text-xs"
+              : "inline-flex h-5 min-w-6 items-center justify-center rounded-md border border-line-soft bg-surface px-1 text-[10px] font-bold text-muted-soft line-through sm:h-6 sm:min-w-7 sm:text-xs"
           }
         >
           {chip.label}
@@ -572,7 +572,7 @@ function GridCard({
     <article
       className={`
         group relative flex h-full flex-col rounded-2xl border
-        border-line bg-white shadow-sm transition-all duration-300
+        border-line bg-surface shadow-sm transition-all duration-300
         hover:-translate-y-1 hover:border-brand-300 hover:shadow-lg
         sm:rounded-card ${className}
       `}
@@ -606,7 +606,7 @@ function GridCard({
               )}
 
               {product.stock <= 0 && (
-                <div className="absolute inset-0 flex items-center justify-center bg-white/60 backdrop-blur-[1px]">
+                <div className="absolute inset-0 flex items-center justify-center bg-surface/60 backdrop-blur-[1px]">
                   <span className="rounded-xl bg-ink px-3 py-2 text-xs font-bold text-white sm:px-4 sm:text-sm">
                     ناموجود
                   </span>
@@ -690,7 +690,7 @@ function GridCard({
         onClick={onQuickView}
         aria-label={`نمایش سریع ${product.name}`}
         title="نمایش سریع"
-        className="absolute left-4 top-14 z-10 flex h-8 w-8 items-center justify-center rounded-xl border border-white bg-white/90 text-muted-soft backdrop-blur-sm transition-all hover:border-brand-300 hover:text-brand-600 sm:left-6 sm:top-[68px] sm:h-9 sm:w-9"
+        className="absolute left-4 top-14 z-10 flex h-8 w-8 items-center justify-center rounded-xl border border-white bg-surface/90 text-muted-soft backdrop-blur-sm transition-all hover:border-brand-300 hover:text-brand-600 sm:left-6 sm:top-[68px] sm:h-9 sm:w-9"
       >
         <Eye size={16} />
       </button>
@@ -724,7 +724,7 @@ function HomeCard({
       className={`
         group relative flex h-full min-w-0 flex-col
         rounded-2xl border border-line
-        bg-white p-3 shadow-sm
+        bg-surface p-3 shadow-sm
         transition-all duration-300 ease-out
         hover:-translate-y-1 hover:border-brand-300
         hover:shadow-[0_14px_36px_rgba(61,92,63,0.10)]
@@ -769,7 +769,7 @@ function HomeCard({
           onClick={onQuickView}
           aria-label={`نمایش سریع ${product.name}`}
           title="نمایش سریع"
-          className="absolute left-2 top-12 z-10 flex h-8 w-8 items-center justify-center rounded-xl border border-white bg-white/90 text-muted-soft backdrop-blur-sm transition-all hover:border-brand-300 hover:text-brand-600 sm:top-14 sm:h-9 sm:w-9"
+          className="absolute left-2 top-12 z-10 flex h-8 w-8 items-center justify-center rounded-xl border border-white bg-surface/90 text-muted-soft backdrop-blur-sm transition-all hover:border-brand-300 hover:text-brand-600 sm:top-14 sm:h-9 sm:w-9"
         >
           <Eye size={15} />
         </button>
@@ -861,7 +861,7 @@ function RailCard({
     <article
       className={`
         group relative flex h-full w-full snap-start flex-col
-        rounded-2xl border border-line bg-white p-3 shadow-sm
+        rounded-2xl border border-line bg-surface p-3 shadow-sm
         transition-all duration-300 ease-out
         hover:-translate-y-1 hover:border-brand-300
         hover:shadow-[0_14px_36px_rgba(61,92,63,0.10)]
@@ -891,7 +891,7 @@ function RailCard({
           )}
 
           {product.stock <= 0 && (
-            <div className="absolute inset-0 flex items-center justify-center bg-white/60 backdrop-blur-[1px]">
+            <div className="absolute inset-0 flex items-center justify-center bg-surface/60 backdrop-blur-[1px]">
               <span className="rounded-xl bg-ink px-3 py-1.5 text-xs font-bold text-white">
                 ناموجود
               </span>
@@ -913,7 +913,7 @@ function RailCard({
         onClick={onQuickView}
         aria-label={`نمایش سریع ${product.name}`}
         title="نمایش سریع"
-        className="absolute left-2 top-[46px] z-10 flex h-8 w-8 items-center justify-center rounded-xl border border-white bg-white/90 text-muted-soft backdrop-blur-sm transition-all hover:border-brand-300 hover:text-brand-600"
+        className="absolute left-2 top-[46px] z-10 flex h-8 w-8 items-center justify-center rounded-xl border border-white bg-surface/90 text-muted-soft backdrop-blur-sm transition-all hover:border-brand-300 hover:text-brand-600"
       >
         <Eye size={15} />
       </button>

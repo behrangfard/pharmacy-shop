@@ -201,7 +201,7 @@ function StoryViewer({
       role="dialog"
       aria-modal="true"
       aria-label={`استوری ${story.title}`}
-      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/85 backdrop-blur-sm sm:p-4"
+      className="sf-theme fixed inset-0 z-[80] flex items-center justify-center bg-black/85 backdrop-blur-sm sm:p-4"
     >
       <div
         className="relative flex h-full w-full max-w-[440px] flex-col overflow-hidden bg-neutral-950 text-white sm:h-[min(92vh,860px)] sm:rounded-3xl sm:shadow-2xl"
@@ -247,10 +247,10 @@ function StoryViewer({
           {slides.map((item, index) => (
             <span
               key={`${item.image}-${index}`}
-              className="h-0.5 flex-1 overflow-hidden rounded-full bg-white/30"
+              className="h-0.5 flex-1 overflow-hidden rounded-full bg-surface/30"
             >
               <span
-                className="block h-full rounded-full bg-white"
+                className="block h-full rounded-full bg-surface"
                 style={{
                   width:
                     index < slideIndex
@@ -285,7 +285,7 @@ function StoryViewer({
           <button
             type="button"
             onClick={() => setPaused((current) => !current)}
-            className="rounded-full p-2 text-white/80 transition hover:bg-white/15 hover:text-white"
+            className="rounded-full p-2 text-white/80 transition hover:bg-surface/15 hover:text-white"
             aria-label={paused ? "ادامهٔ پخش" : "توقف موقت"}
           >
             {paused ? <Play size={17} /> : <Pause size={17} />}
@@ -295,7 +295,7 @@ function StoryViewer({
             ref={closeButtonRef}
             type="button"
             onClick={handleClose}
-            className="rounded-full p-2 text-white/80 transition hover:bg-white/15 hover:text-white"
+            className="rounded-full p-2 text-white/80 transition hover:bg-surface/15 hover:text-white"
             aria-label="بستن استوری"
           >
             <X size={19} />
@@ -330,7 +330,7 @@ function StoryViewer({
                 href={slide.link}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-xs font-black text-ink transition hover:bg-white/90"
+                className="inline-flex items-center gap-2 rounded-full bg-surface px-4 py-2 text-xs font-black text-ink transition hover:bg-surface/90"
               >
                 مشاهده محصولات
                 <span aria-hidden="true">↗</span>
@@ -339,7 +339,7 @@ function StoryViewer({
               <Link
                 to={slide.link}
                 onClick={handleClose}
-                className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-xs font-black text-ink transition hover:bg-white/90"
+                className="inline-flex items-center gap-2 rounded-full bg-surface px-4 py-2 text-xs font-black text-ink transition hover:bg-surface/90"
               >
                 مشاهده محصولات
                 <span aria-hidden="true">←</span>

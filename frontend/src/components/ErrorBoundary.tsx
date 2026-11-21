@@ -56,7 +56,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
         dir="rtl"
         className="flex min-h-screen items-center justify-center bg-cream px-4 py-16"
       >
-        <div className="w-full max-w-lg rounded-3xl border border-brand-100 bg-white p-7 text-center shadow-sm sm:p-9">
+        <div className="w-full max-w-lg rounded-3xl border border-brand-100 bg-surface p-7 text-center shadow-sm sm:p-9">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-blush-50 text-discount">
             <AlertTriangle size={26} aria-hidden="true" />
           </div>
@@ -92,7 +92,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
 
             <a
               href="/"
-              className="inline-flex items-center gap-2 rounded-xl border border-line bg-white px-5 py-2.5 text-sm font-bold text-ink-soft transition-colors hover:border-brand-250 hover:text-brand-600"
+              className="inline-flex items-center gap-2 rounded-xl border border-line bg-surface px-5 py-2.5 text-sm font-bold text-ink-soft transition-colors hover:border-brand-250 hover:text-brand-600"
             >
               <Home size={16} aria-hidden="true" />
               بازگشت به صفحهٔ اصلی

@@ -107,7 +107,7 @@ function Cart() {
     return (
       <Layout>
         <section className="mx-auto max-w-5xl px-6 py-16">
-          <div className="rounded-3xl border border-line bg-white p-8 text-center sm:p-12">
+          <div className="rounded-3xl border border-line bg-surface p-8 text-center sm:p-12">
             <div
               className="
                 mx-auto flex h-20 w-20 items-center justify-center
@@ -203,7 +203,7 @@ function Cart() {
                   key={getCartKey(item)}
                   className="
                     overflow-hidden rounded-2xl border
-                    border-line bg-white p-4 sm:p-5
+                    border-line bg-surface p-4 sm:p-5
                   "
                 >
                   <div className="flex flex-col gap-5 sm:flex-row">
@@ -326,7 +326,7 @@ function Cart() {
                           <div
                             className="
                               inline-flex items-center overflow-hidden
-                              rounded-xl border border-line bg-white
+                              rounded-xl border border-line bg-surface
                             "
                           >
                             <button
@@ -408,7 +408,7 @@ function Cart() {
 
           {/* Order Summary */}
           <aside className="lg:sticky lg:top-6">
-            <div className="rounded-2xl border border-line bg-white p-5 sm:p-6">
+            <div className="rounded-2xl border border-line bg-surface p-5 sm:p-6">
               <h2 className="text-lg font-black text-ink">خلاصه سفارش</h2>
 
               <div className="mt-6 space-y-4">

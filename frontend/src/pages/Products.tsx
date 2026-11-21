@@ -999,7 +999,7 @@ function Products() {
   return (
     <Layout>
       <main className="min-h-screen bg-cream">
-        <section className="border-b border-line bg-white">
+        <section className="border-b border-line bg-surface">
           <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10">
             <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
               <div>
@@ -1050,7 +1050,7 @@ function Products() {
         <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
           <div className="flex flex-col gap-6 lg:flex-row">
             <aside className="hidden w-64 flex-shrink-0 lg:block">
-              <div className="sticky top-6 max-h-[calc(100vh-3rem)] overflow-y-auto overscroll-contain rounded-2xl border border-line bg-white p-3.5 shadow-sm">
+              <div className="sticky top-6 max-h-[calc(100vh-3rem)] overflow-y-auto overscroll-contain rounded-2xl border border-line bg-surface p-3.5 shadow-sm">
                 <div className="mb-3 flex items-center gap-2 border-b border-line pb-3">
                   <div className="flex h-8 w-8 flex-none items-center justify-center rounded-lg bg-brand-100 text-brand-550">
                     <SlidersHorizontal size={16} />
@@ -1071,7 +1071,7 @@ function Products() {
             </aside>
 
             <div className="min-w-0 flex-1">
-              <div className="mb-5 rounded-2xl border border-line bg-white p-3 shadow-sm sm:p-4">
+              <div className="mb-5 rounded-2xl border border-line bg-surface p-3 shadow-sm sm:p-4">
                 <div className="flex flex-col gap-2 sm:flex-row">
                   <div className="relative flex-1">
                     <Search
@@ -1084,7 +1084,7 @@ function Products() {
                       value={search}
                       onChange={(event) => setSearch(event.target.value)}
                       placeholder="جستجوی محصول..."
-                      className="h-11 w-full rounded-xl border border-line bg-cream pl-9 pr-10 text-[13px] outline-none transition focus:border-brand-500 focus:bg-white focus:ring-4 focus:ring-brand-100"
+                      className="h-11 w-full rounded-xl border border-line bg-cream pl-9 pr-10 text-[13px] outline-none transition focus:border-brand-500 focus:bg-surface focus:ring-4 focus:ring-brand-100"
                     />
 
                     {search && (
@@ -1106,7 +1106,7 @@ function Products() {
                     <Filter size={17} />
                     فیلتر و مرتب‌سازی
                     {activeFilterCount > 0 && (
-                      <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-white px-1.5 text-[11px] font-black text-brand-700">
+                      <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-surface px-1.5 text-[11px] font-black text-brand-700">
                         {activeFilterCount.toLocaleString("fa-IR")}
                       </span>
                     )}
@@ -1117,7 +1117,7 @@ function Products() {
                       value={sort}
                       onChange={(event) => setSort(event.target.value)}
                       aria-label="مرتب‌سازی محصولات"
-                      className="h-11 w-full appearance-none rounded-xl border border-line bg-white px-3 pl-9 text-[13px] font-bold outline-none transition focus:border-brand-500"
+                      className="h-11 w-full appearance-none rounded-xl border border-line bg-surface px-3 pl-9 text-[13px] font-bold outline-none transition focus:border-brand-500"
                     >
                       {SORT_OPTIONS.map(([value, label]) => (
                         <option key={value} value={value}>
@@ -1262,7 +1262,7 @@ function Products() {
                     <div
                       key={index}
                       aria-hidden="true"
-                      className="overflow-hidden rounded-2xl border border-line bg-white shadow-sm"
+                      className="overflow-hidden rounded-2xl border border-line bg-surface shadow-sm"
                     >
                       <div className="aspect-square animate-pulse bg-brand-50" />
 
@@ -1278,7 +1278,7 @@ function Products() {
               )}
 
               {!loading && error && (
-                <div className="rounded-3xl border border-blush-100 bg-white p-8 text-center shadow-sm">
+                <div className="rounded-3xl border border-blush-100 bg-surface p-8 text-center shadow-sm">
                   <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blush-50 text-discount">
                     <X size={26} />
                   </div>
@@ -1302,7 +1302,7 @@ function Products() {
               )}
 
               {!loading && !error && visibleProducts.length === 0 && (
-                <div className="rounded-3xl border border-line bg-white px-6 py-16 text-center shadow-sm">
+                <div className="rounded-3xl border border-line bg-surface px-6 py-16 text-center shadow-sm">
                   <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-100 text-brand-400">
                     <Search size={30} />
                   </div>
@@ -1337,7 +1337,7 @@ function Products() {
               )}
 
               {!loading && !error && visibleProducts.length > 0 && (
-                <div className="mt-8 flex flex-col items-center justify-between gap-4 rounded-2xl border border-line bg-white px-5 py-4 sm:flex-row">
+                <div className="mt-8 flex flex-col items-center justify-between gap-4 rounded-2xl border border-line bg-surface px-5 py-4 sm:flex-row">
                   <p className="text-sm text-muted">
                     نمایش{" "}
                     <span className="font-black text-ink">

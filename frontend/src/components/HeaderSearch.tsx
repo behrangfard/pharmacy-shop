@@ -290,7 +290,7 @@ function HeaderSearch({
             outline-none transition-all
             placeholder:text-muted-soft
             focus:border-brand-400
-            focus:bg-white
+            focus:bg-surface
             focus:ring-4 focus:ring-brand-500/10
             [&::-webkit-search-cancel-button]:hidden
           "
@@ -320,7 +320,7 @@ function HeaderSearch({
         )}
 
         {open && (
-          <div className="absolute left-0 right-0 top-[calc(100%+10px)] z-[70] overflow-hidden rounded-2xl border border-line bg-white shadow-[0_20px_50px_rgba(40,59,45,0.16)]">
+          <div className="absolute left-0 right-0 top-[calc(100%+10px)] z-[70] overflow-hidden rounded-2xl border border-line bg-surface shadow-[0_20px_50px_rgba(40,59,45,0.16)]">
             <div className="flex items-center justify-between gap-2 border-b border-line bg-cream/60 px-3 py-2 text-[11px] text-muted">
               <span className="inline-flex items-center gap-1.5 font-bold">
                 {showHistory ? (
@@ -348,7 +348,7 @@ function HeaderSearch({
                     clearSearchHistory();
                     setHistory([]);
                   }}
-                  className="rounded-md px-1.5 py-0.5 font-bold text-muted-soft transition hover:bg-white hover:text-discount"
+                  className="rounded-md px-1.5 py-0.5 font-bold text-muted-soft transition hover:bg-surface hover:text-discount"
                 >
                   پاک کردن
                 </button>

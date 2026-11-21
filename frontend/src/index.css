@@ -46,6 +46,9 @@
   /* کرم، سطح و خطوط */
   --color-cream: #faf9f4;
   --color-cream-deep: #f8f7f1;
+  /* سطح کارت/پنل؛ در حالت تاریک به سطح تیره تبدیل می‌شود (dark-mode.css). */
+  --color-surface: #ffffff;
+  --color-surface-soft: #f7f9f6;
   --color-line: #e8eee5;
   --color-line-soft: #e3e9df;
   --color-line-strong: #d7ddd2;

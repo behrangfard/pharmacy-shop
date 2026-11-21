@@ -380,7 +380,7 @@ export default function OrderDetail() {
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
           <div className="space-y-6 lg:col-span-2">
-            <section className="overflow-hidden rounded-2xl border border-line bg-white shadow-sm">
+            <section className="overflow-hidden rounded-2xl border border-line bg-surface shadow-sm">
               <div className="border-b border-line px-5 py-4 sm:px-6">
                 <h2 className="text-lg font-bold text-ink">
                   محصولات سفارش
@@ -499,7 +499,7 @@ export default function OrderDetail() {
               )}
             </section>
 
-            <section className="rounded-2xl border border-line bg-white p-5 shadow-sm sm:p-6">
+            <section className="rounded-2xl border border-line bg-surface p-5 shadow-sm sm:p-6">
               <div className="mb-5 flex items-center gap-3">
                 <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-line">
                   <MapPin size={21} className="text-ink-soft" />
@@ -612,7 +612,7 @@ export default function OrderDetail() {
               )}
             </section>
 
-            <section className="rounded-2xl border border-line bg-white p-5 shadow-sm sm:p-6">
+            <section className="rounded-2xl border border-line bg-surface p-5 shadow-sm sm:p-6">
               <div className="mb-4 flex items-center gap-3">
                 <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-gold-50 text-gold">
                   <RotateCcw size={21} />
@@ -647,7 +647,7 @@ export default function OrderDetail() {
                   </p>
 
                   {order.return_request.admin_note && (
-                    <p className="mt-2 rounded-lg bg-white p-3 text-xs leading-6 text-muted">
+                    <p className="mt-2 rounded-lg bg-surface p-3 text-xs leading-6 text-muted">
                       پاسخ پشتیبانی: {order.return_request.admin_note}
                     </p>
                   )}
@@ -731,7 +731,7 @@ export default function OrderDetail() {
             </section>
           </div>
 
-          <aside className="h-fit rounded-2xl border border-line bg-white p-5 shadow-sm sm:p-6">
+          <aside className="h-fit rounded-2xl border border-line bg-surface p-5 shadow-sm sm:p-6">
             <div className="mb-5 flex items-center gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-line">
                 <Receipt size={21} className="text-ink-soft" />

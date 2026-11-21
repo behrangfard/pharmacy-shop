@@ -23,7 +23,7 @@ function ArticleCard({
   const compact = variant === "compact";
 
   return (
-    <article className="group flex h-full flex-col overflow-hidden rounded-3xl border border-brand-100 bg-white transition-shadow duration-200 hover:shadow-[0_18px_40px_-28px_rgba(47,58,46,0.45)]">
+    <article className="group flex h-full flex-col overflow-hidden rounded-3xl border border-brand-100 bg-surface transition-shadow duration-200 hover:shadow-[0_18px_40px_-28px_rgba(47,58,46,0.45)]">
       <Link
         to={`/articles/${encodeURIComponent(article.slug)}`}
         className="relative block aspect-[16/10] overflow-hidden bg-brand-50"
@@ -44,7 +44,7 @@ function ArticleCard({
         )}
 
         {article.category && (
-          <span className="absolute right-3 top-3 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-bold text-brand-600 shadow-sm backdrop-blur">
+          <span className="absolute right-3 top-3 rounded-full bg-surface/90 px-2.5 py-1 text-[11px] font-bold text-brand-600 shadow-sm backdrop-blur">
             {article.category}
           </span>
         )}

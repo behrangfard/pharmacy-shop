@@ -216,7 +216,7 @@ function QuickViewModal({ product, onClose }: Props) {
 
   return createPortal(
     <div
-      className="quickview-backdrop fixed inset-0 z-[80] flex items-end justify-center bg-ink/50 backdrop-blur-[2px] sm:items-center sm:p-6"
+      className="sf-theme quickview-backdrop fixed inset-0 z-[80] flex items-end justify-center bg-ink/50 backdrop-blur-[2px] sm:items-center sm:p-6"
       onClick={onClose}
       role="presentation"
     >
@@ -226,14 +226,14 @@ function QuickViewModal({ product, onClose }: Props) {
         aria-modal="true"
         aria-labelledby="quickview-title"
         onClick={(event) => event.stopPropagation()}
-        className="quickview-panel relative flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-t-3xl bg-white shadow-[0_24px_70px_rgba(40,59,45,0.28)] sm:max-h-[88vh] sm:rounded-3xl"
+        className="quickview-panel relative flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-t-3xl bg-surface shadow-[0_24px_70px_rgba(40,59,45,0.28)] sm:max-h-[88vh] sm:rounded-3xl"
       >
         <button
           ref={closeRef}
           type="button"
           onClick={onClose}
           aria-label="بستن نمایش سریع"
-          className="absolute left-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-white/95 text-ink-soft shadow-sm ring-1 ring-line transition hover:bg-blush-50 hover:text-discount"
+          className="absolute left-3 top-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-surface/95 text-ink-soft shadow-sm ring-1 ring-line transition hover:bg-blush-50 hover:text-discount"
         >
           <X size={18} />
         </button>
@@ -241,7 +241,7 @@ function QuickViewModal({ product, onClose }: Props) {
         <div className="grid min-h-0 flex-1 overflow-y-auto md:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
           {/* گالری تصویر */}
           <div className="bg-cream-deep p-4 sm:p-6">
-            <div className="relative mx-auto aspect-[4/5] w-full max-w-sm overflow-hidden rounded-2xl bg-white ring-1 ring-line/70">
+            <div className="relative mx-auto aspect-[4/5] w-full max-w-sm overflow-hidden rounded-2xl bg-surface ring-1 ring-line/70">
               {image ? (
                 <img
                   src={image}
@@ -271,7 +271,7 @@ function QuickViewModal({ product, onClose }: Props) {
                     onClick={() => setActiveImage(index)}
                     aria-label={`تصویر ${(index + 1).toLocaleString("fa-IR")}`}
                     aria-current={index === activeImage}
-                    className={`h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-white ring-1 transition ${
+                    className={`h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-surface ring-1 transition ${
                       index === activeImage
                         ? "ring-2 ring-brand-500"
                         : "ring-line hover:ring-brand-300"
@@ -374,7 +374,7 @@ function QuickViewModal({ product, onClose }: Props) {
                         className={`min-w-11 rounded-xl border px-3 py-2 text-xs font-bold transition ${
                           active
                             ? "border-brand-500 bg-brand-50 text-brand-700"
-                            : "border-line bg-white text-ink-soft hover:border-brand-300"
+                            : "border-line bg-surface text-ink-soft hover:border-brand-300"
                         }`}
                       >
                         {variant.name}
@@ -404,7 +404,7 @@ function QuickViewModal({ product, onClose }: Props) {
                   : "ناموجود"}
               </span>
 
-              <div className="flex items-center gap-1 rounded-xl border border-line bg-white p-1">
+              <div className="flex items-center gap-1 rounded-xl border border-line bg-surface p-1">
                 <button
                   type="button"
                   onClick={() =>
@@ -458,7 +458,7 @@ function QuickViewModal({ product, onClose }: Props) {
                 className={`inline-flex items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-bold transition disabled:opacity-60 ${
                   wishlisted
                     ? "border-blush-200 bg-blush-50 text-blush-600"
-                    : "border-line bg-white text-ink-soft hover:border-blush-200 hover:text-blush-500"
+                    : "border-line bg-surface text-ink-soft hover:border-blush-200 hover:text-blush-500"
                 }`}
               >
                 <Heart size={18} fill={wishlisted ? "currentColor" : "none"} />

@@ -36,7 +36,7 @@ const THEME_CLASSES: Record<
   }
 > = {
   light: {
-    panel: "bg-white text-ink",
+    panel: "bg-surface text-ink",
     muted: "text-muted",
     badge: "bg-brand-100 text-brand-700",
     primary: "bg-brand-500 text-white hover:bg-brand-700",
@@ -46,18 +46,18 @@ const THEME_CLASSES: Record<
   dark: {
     panel: "bg-[#16241c] text-white",
     muted: "text-white/70",
-    badge: "bg-white/15 text-white",
-    primary: "bg-white text-ink hover:bg-white/90",
-    secondary: "text-white/80 hover:bg-white/10",
-    coupon: "border-white/30 bg-white/10 text-white",
+    badge: "bg-surface/15 text-white",
+    primary: "bg-surface text-ink hover:bg-surface/90",
+    secondary: "text-white/80 hover:bg-surface/10",
+    coupon: "border-white/30 bg-surface/10 text-white",
   },
   brand: {
     panel: "bg-brand-500 text-white",
     muted: "text-white/75",
-    badge: "bg-white/20 text-white",
-    primary: "bg-white text-brand-700 hover:bg-white/90",
-    secondary: "text-white/85 hover:bg-white/10",
-    coupon: "border-white/40 bg-white/15 text-white",
+    badge: "bg-surface/20 text-white",
+    primary: "bg-surface text-brand-700 hover:bg-surface/90",
+    secondary: "text-white/85 hover:bg-surface/10",
+    coupon: "border-white/40 bg-surface/15 text-white",
   },
 };
 
@@ -279,7 +279,7 @@ function StorefrontPopup() {
 
   const overlay = (
     <div
-      className={`fixed inset-0 z-[95] flex bg-ink/50 backdrop-blur-sm transition-opacity duration-200 ${
+      className={`sf-theme fixed inset-0 z-[95] flex bg-ink/50 backdrop-blur-sm transition-opacity duration-200 ${
         LAYOUT_WRAPPER[popup.layout]
       } ${visible ? "opacity-100" : "opacity-0"}`}
       onClick={() => {
@@ -382,7 +382,7 @@ function StorefrontPopup() {
                 <button
                   type="button"
                   onClick={() => void handleCopy()}
-                  className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-bold transition hover:bg-white/10"
+                  className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[10px] font-bold transition hover:bg-surface/10"
                 >
                   {copied ? <Check size={13} /> : <Copy size={13} />}
                   {copied ? "کپی شد" : "کپی کد"}

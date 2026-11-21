@@ -105,7 +105,7 @@ function Layout({ children }: LayoutProps) {
   }, []);
 
   return (
-    <div className="min-h-screen bg-cream">
+    <div className="sf-theme min-h-screen bg-cream">
       {/*
         نوار اطلاع‌رسانی و هدر داخل یک wrapper چسبان قرار می‌گیرند تا مانند
         همیشه هنگام اسکرول ناپدید نشوند و نوار همیشه بالای هدر بماند.

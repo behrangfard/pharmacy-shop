@@ -127,7 +127,7 @@ function Register() {
     <Layout>
       <main dir="rtl" className="mx-auto max-w-5xl px-4 py-10 sm:px-6 sm:py-14">
         <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
-          <div className="mx-auto w-full max-w-2xl rounded-3xl border border-line bg-white p-6 shadow-sm sm:p-8 lg:max-w-none">
+          <div className="mx-auto w-full max-w-2xl rounded-3xl border border-line bg-surface p-6 shadow-sm sm:p-8 lg:max-w-none">
             <div className="mb-6 flex items-center gap-3 border-b border-line pb-5">
               <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-brand-50 text-brand-600">
                 <User size={24} />
@@ -385,7 +385,7 @@ function Register() {
           <aside className="space-y-4 lg:sticky lg:top-24">
             <StoreChannelsSection />
 
-            <div className="rounded-3xl border border-line bg-white p-5 shadow-sm">
+            <div className="rounded-3xl border border-line bg-surface p-5 shadow-sm">
               <h2 className="text-sm font-black text-ink">
                 چرا حساب بسازم؟
               </h2>

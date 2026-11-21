@@ -71,7 +71,7 @@ function NotFound() {
   return (
     <Layout>
       <div className="mx-auto max-w-4xl px-4 pb-8 pt-8 sm:px-6 sm:pt-12">
-        <section className="rounded-3xl border border-brand-100 bg-white px-5 py-9 text-center shadow-sm sm:px-10 sm:py-12">
+        <section className="rounded-3xl border border-brand-100 bg-surface px-5 py-9 text-center shadow-sm sm:px-10 sm:py-12">
           <span
             className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-50 text-2xl font-black text-brand-600"
             aria-hidden="true"
@@ -106,7 +106,7 @@ function NotFound() {
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="نام محصول را بنویسید..."
                 aria-label="جست‌وجوی محصول"
-                className="w-full rounded-xl border border-line bg-white py-3 pr-9 pl-3 text-sm font-medium text-ink outline-none transition-colors focus:border-brand-400"
+                className="w-full rounded-xl border border-line bg-surface py-3 pr-9 pl-3 text-sm font-medium text-ink outline-none transition-colors focus:border-brand-400"
               />
             </div>
 
@@ -121,7 +121,7 @@ function NotFound() {
           <div className="mt-7 flex flex-wrap items-center justify-center gap-2">
             <Link
               to="/"
-              className="inline-flex items-center gap-2 rounded-xl border border-line bg-white px-4 py-2.5 text-sm font-bold text-ink-soft transition-colors hover:border-brand-250 hover:text-brand-600"
+              className="inline-flex items-center gap-2 rounded-xl border border-line bg-surface px-4 py-2.5 text-sm font-bold text-ink-soft transition-colors hover:border-brand-250 hover:text-brand-600"
             >
               <HomeIcon size={16} aria-hidden="true" />
               صفحهٔ اصلی
@@ -134,7 +134,7 @@ function NotFound() {
                 <Link
                   key={link.to}
                   to={link.to}
-                  className="inline-flex items-center gap-2 rounded-xl border border-line bg-white px-4 py-2.5 text-sm font-bold text-ink-soft transition-colors hover:border-brand-250 hover:text-brand-600"
+                  className="inline-flex items-center gap-2 rounded-xl border border-line bg-surface px-4 py-2.5 text-sm font-bold text-ink-soft transition-colors hover:border-brand-250 hover:text-brand-600"
                 >
                   <Icon size={16} aria-hidden="true" />
                   {link.label}
@@ -146,7 +146,7 @@ function NotFound() {
 
         {/* صفحات ثابت سایت (تماس با ما، قوانین و ...) که مدیر ساخته است. */}
         {sitePages.length > 0 && (
-          <section className="mt-5 rounded-3xl border border-brand-100 bg-white p-5 shadow-sm sm:p-6">
+          <section className="mt-5 rounded-3xl border border-brand-100 bg-surface p-5 shadow-sm sm:p-6">
             <h2 className="flex items-center gap-2 text-sm font-black text-ink">
               <Compass size={16} className="text-brand-600" aria-hidden="true" />
               شاید دنبال این صفحه‌ها بودید

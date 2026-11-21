@@ -127,7 +127,7 @@ export default function ProductSizeGuide({
                           ? "bg-brand-75"
                           : rowIndex % 2 === 1
                             ? "bg-brand-50"
-                            : "bg-white"
+                            : "bg-surface"
                       }
                     >
                       {row.map((cell, cellIndex) => (

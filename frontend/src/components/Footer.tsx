@@ -69,7 +69,7 @@ function TrustBadgeTile({ badge }: { badge: TrustBadge }) {
   );
 
   const tileClassName =
-    "flex w-[88px] flex-col items-center rounded-2xl border border-line bg-white p-2 transition-colors";
+    "flex w-[88px] flex-col items-center rounded-2xl border border-line bg-surface p-2 transition-colors";
 
   if (!badge.link) {
     return (
@@ -440,7 +440,7 @@ function Footer() {
               {headerFooter.footer_about_text}
             </p>
 
-            <div className="mt-5 rounded-2xl border border-line bg-white p-4">
+            <div className="mt-5 rounded-2xl border border-line bg-surface p-4">
               <div className="flex items-center gap-2 text-sm font-bold text-brand-600">
                 <Sparkles size={17} />
                 <span>{headerFooter.footer_highlight_title}</span>
@@ -454,7 +454,7 @@ function Footer() {
 
         {/* Trust badges: اینماد و مجوزهای فروشگاه (سمت چپ پایین صفحه) */}
         {showTrustArea && (
-          <div className="mt-10 flex flex-col gap-5 rounded-3xl border border-line bg-white px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <div className="mt-10 flex flex-col gap-5 rounded-3xl border border-line bg-surface px-4 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-6">
             <div className="sm:max-w-sm">
               <h4 className="flex items-center justify-center gap-2 text-sm font-black text-brand-800 sm:justify-start">
                 <ShieldCheck

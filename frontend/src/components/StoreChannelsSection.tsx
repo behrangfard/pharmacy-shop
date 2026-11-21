@@ -57,10 +57,10 @@ function StoreChannelsSection({ className = "" }: StoreChannelsSectionProps) {
     <section
       dir="rtl"
       aria-labelledby="store-channels-title"
-      className={`overflow-hidden rounded-3xl border border-line bg-white shadow-sm ${className}`}
+      className={`overflow-hidden rounded-3xl border border-line bg-surface shadow-sm ${className}`}
     >
       <header className="flex items-start gap-3 border-b border-line bg-brand-50 px-4 py-4">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-brand-600 shadow-sm">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-surface text-brand-600 shadow-sm">
           <Radio size={20} aria-hidden="true" />
         </span>
 

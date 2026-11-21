@@ -149,7 +149,7 @@ function AccountNameMenu({ name, variant = "page" }: AccountNameMenuProps) {
         <div
           id={menuId}
           role="menu"
-          className={`absolute ${menuAlignClass} top-full z-40 mt-2 w-64 max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-2xl border border-line bg-white text-right shadow-lg`}
+          className={`absolute ${menuAlignClass} top-full z-40 mt-2 w-64 max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-2xl border border-line bg-surface text-right shadow-lg`}
         >
           <Link
             to="/account/orders"

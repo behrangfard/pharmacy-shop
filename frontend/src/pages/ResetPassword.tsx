@@ -87,7 +87,7 @@ function ResetPassword() {
         dir="rtl"
         className="flex min-h-[70vh] items-center justify-center bg-cream p-6"
       >
-        <div className="w-full max-w-md rounded-3xl border border-line bg-white p-8 shadow-sm">
+        <div className="w-full max-w-md rounded-3xl border border-line bg-surface p-8 shadow-sm">
           <div className="mb-8 text-center">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-50 text-brand-600">
               {done ? <CheckCircle2 size={30} /> : <KeyRound size={30} />}

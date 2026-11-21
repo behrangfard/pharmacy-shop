@@ -63,7 +63,7 @@ function Wishlist() {
   return (
     <Layout>
       <main className="min-h-screen bg-cream">
-        <section className="border-b border-line bg-white">
+        <section className="border-b border-line bg-surface">
           <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 sm:py-10">
             <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
               <div>
@@ -112,7 +112,7 @@ function Wishlist() {
                 type="button"
                 onClick={handleRetry}
                 disabled={retrying}
-                className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-blush-200 bg-white px-4 py-2 text-xs font-bold text-blush-600 transition hover:border-blush-400 disabled:cursor-wait disabled:opacity-60"
+                className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-blush-200 bg-surface px-4 py-2 text-xs font-bold text-blush-600 transition hover:border-blush-400 disabled:cursor-wait disabled:opacity-60"
               >
                 {retrying ? (
                   <Loader2 size={14} className="animate-spin" />
@@ -125,7 +125,7 @@ function Wishlist() {
           )}
 
           {loading && entries.length === 0 && (
-            <div className="rounded-3xl border border-line bg-white py-20 text-center shadow-sm">
+            <div className="rounded-3xl border border-line bg-surface py-20 text-center shadow-sm">
               <Loader2
                 size={38}
                 className="mx-auto animate-spin text-brand-550"
@@ -137,7 +137,7 @@ function Wishlist() {
           )}
 
           {!loading && !error && entries.length === 0 && (
-            <div className="rounded-3xl border border-line bg-white px-6 py-16 text-center shadow-sm">
+            <div className="rounded-3xl border border-line bg-surface px-6 py-16 text-center shadow-sm">
               <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-blush-100 text-blush-400">
                 <ShoppingBag size={30} />
               </div>
@@ -173,7 +173,7 @@ function Wishlist() {
                     type="button"
                     onClick={() => handleRemove(entry.product_id)}
                     disabled={removingId === entry.product_id}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-line bg-white px-3 py-2 text-xs font-bold text-muted transition hover:border-blush-200 hover:text-discount disabled:cursor-wait disabled:opacity-60"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-line bg-surface px-3 py-2 text-xs font-bold text-muted transition hover:border-blush-200 hover:text-discount disabled:cursor-wait disabled:opacity-60"
                   >
                     {removingId === entry.product_id ? (
                       <Loader2 size={14} className="animate-spin" />

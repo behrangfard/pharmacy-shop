@@ -134,7 +134,7 @@ function AccountOrders() {
     return (
       <Layout>
         <main className="max-w-4xl mx-auto px-6 py-16">
-          <div className="bg-white rounded-3xl border border-line shadow-sm p-10 text-center">
+          <div className="bg-surface rounded-3xl border border-line shadow-sm p-10 text-center">
             <div className="w-16 h-16 mx-auto rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center">
               <Package size={30} />
             </div>
@@ -207,7 +207,7 @@ function AccountOrders() {
             <button
               type="button"
               onClick={() => setReloadKey((key) => key + 1)}
-              className="mt-4 inline-flex items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-bold text-ink-soft transition hover:bg-cream"
+              className="mt-4 inline-flex items-center gap-2 rounded-xl bg-surface px-5 py-2.5 text-sm font-bold text-ink-soft transition hover:bg-cream"
             >
               <RefreshCw size={16} aria-hidden="true" />
               تلاش دوباره
@@ -216,7 +216,7 @@ function AccountOrders() {
         )}
 
         {!ordersLoading && !ordersError && orders.length === 0 && (
-          <div className="rounded-3xl border border-line bg-white p-10 text-center shadow-sm">
+          <div className="rounded-3xl border border-line bg-surface p-10 text-center shadow-sm">
             <Package
               size={48}
               className="mx-auto text-line-strong"
@@ -306,7 +306,7 @@ function OrderCard({ order, cancelling, onCancel }: OrderCardProps) {
   const canCancel = canCancelCustomerOrder(order);
 
   return (
-    <article className="relative flex flex-col overflow-hidden rounded-2xl border border-line bg-white shadow-sm transition-shadow hover:shadow-md">
+    <article className="relative flex flex-col overflow-hidden rounded-2xl border border-line bg-surface shadow-sm transition-shadow hover:shadow-md">
       <span
         aria-hidden="true"
         className={`absolute inset-y-0 right-0 w-1.5 ${statusStyle.accent}`}

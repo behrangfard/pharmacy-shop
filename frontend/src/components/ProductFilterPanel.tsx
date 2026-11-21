@@ -420,7 +420,7 @@ function ProductFilterPanel({
                   onChange={(event) => setBrandQuery(event.target.value)}
                   placeholder="جستجوی برند..."
                   aria-label="جستجوی برند"
-                  className="h-8 w-full rounded-lg border border-line bg-cream pr-7 pl-2 text-[11px] outline-none transition focus:border-brand-500 focus:bg-white"
+                  className="h-8 w-full rounded-lg border border-line bg-cream pr-7 pl-2 text-[11px] outline-none transition focus:border-brand-500 focus:bg-surface"
                 />
               </div>
             )}
@@ -447,7 +447,7 @@ function ProductFilterPanel({
                           className={`flex h-4 w-4 flex-none items-center justify-center rounded border transition ${
                             checked
                               ? "border-brand-500 bg-brand-500 text-white"
-                              : "border-line-strong bg-white text-transparent"
+                              : "border-line-strong bg-surface text-transparent"
                           }`}
                         >
                           <Check size={11} strokeWidth={3.5} />
@@ -556,7 +556,7 @@ function ProductFilterPanel({
             }}
             placeholder="از"
             aria-label="کمترین قیمت"
-            className="h-9 w-full min-w-0 rounded-lg border border-line bg-cream px-2.5 text-xs outline-none transition focus:border-brand-500 focus:bg-white"
+            className="h-9 w-full min-w-0 rounded-lg border border-line bg-cream px-2.5 text-xs outline-none transition focus:border-brand-500 focus:bg-surface"
           />
 
           <span className="text-[11px] text-line-strong">—</span>
@@ -574,7 +574,7 @@ function ProductFilterPanel({
             }}
             placeholder="تا"
             aria-label="بیشترین قیمت"
-            className="h-9 w-full min-w-0 rounded-lg border border-line bg-cream px-2.5 text-xs outline-none transition focus:border-brand-500 focus:bg-white"
+            className="h-9 w-full min-w-0 rounded-lg border border-line bg-cream px-2.5 text-xs outline-none transition focus:border-brand-500 focus:bg-surface"
           />
 
           <button
@@ -644,7 +644,7 @@ function ProductFilterPanel({
             value={sort}
             onChange={(event) => onSortChange(event.target.value)}
             aria-label="مرتب‌سازی محصولات"
-            className="h-9 w-full appearance-none rounded-lg border border-line bg-white px-2.5 pl-7 text-[12px] font-bold text-ink outline-none transition focus:border-brand-500"
+            className="h-9 w-full appearance-none rounded-lg border border-line bg-surface px-2.5 pl-7 text-[12px] font-bold text-ink outline-none transition focus:border-brand-500"
           >
             {sortOptions.map(([value, label]) => (
               <option key={value} value={value}>

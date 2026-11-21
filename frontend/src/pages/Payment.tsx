@@ -155,7 +155,7 @@ function Payment() {
     return (
       <Layout>
         <main className="max-w-4xl mx-auto px-4 sm:px-6 py-16">
-          <div className="bg-white rounded-3xl border border-line shadow-sm p-10 text-center">
+          <div className="bg-surface rounded-3xl border border-line shadow-sm p-10 text-center">
             <div className="w-14 h-14 mx-auto rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center">
               <Loader2 size={28} className="animate-spin" />
             </div>
@@ -183,7 +183,7 @@ function Payment() {
             بازگشت به حساب کاربری
           </Link>
 
-          <div className="mt-6 bg-white rounded-3xl border border-blush-100 shadow-sm p-8 sm:p-10 text-center">
+          <div className="mt-6 bg-surface rounded-3xl border border-blush-100 shadow-sm p-8 sm:p-10 text-center">
             <div className="w-16 h-16 mx-auto rounded-2xl bg-blush-50 text-discount flex items-center justify-center">
               <AlertCircle size={30} />
             </div>
@@ -245,7 +245,7 @@ function Payment() {
 
         <div className="grid lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 space-y-6">
-            <section className="bg-white rounded-3xl border border-line shadow-sm p-5 sm:p-7">
+            <section className="bg-surface rounded-3xl border border-line shadow-sm p-5 sm:p-7">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5 pb-6 border-b border-line">
                 <div className="flex items-center gap-4">
                   <div className="w-14 h-14 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center">
@@ -312,7 +312,7 @@ function Payment() {
                 </div>
               ) : isCod ? (
                 <div className="mt-7 rounded-2xl bg-gold-50 border border-gold-100 p-6 text-center">
-                  <div className="w-14 h-14 mx-auto rounded-2xl bg-white text-gold flex items-center justify-center">
+                  <div className="w-14 h-14 mx-auto rounded-2xl bg-surface text-gold flex items-center justify-center">
                     <Wallet size={30} />
                   </div>
 
@@ -340,7 +340,7 @@ function Payment() {
                 <div className="mt-7">
                   <div className="rounded-2xl bg-brand-50 border border-brand-100 p-5">
                     <div className="flex items-start gap-4">
-                      <div className="w-11 h-11 rounded-xl bg-white text-brand-600 flex items-center justify-center flex-shrink-0">
+                      <div className="w-11 h-11 rounded-xl bg-surface text-brand-600 flex items-center justify-center flex-shrink-0">
                         <CreditCard size={22} />
                       </div>
 
@@ -391,7 +391,7 @@ function Payment() {
               )}
             </section>
 
-            <section className="bg-white rounded-3xl border border-line shadow-sm p-5 sm:p-7">
+            <section className="bg-surface rounded-3xl border border-line shadow-sm p-5 sm:p-7">
               <div className="flex items-center gap-3 mb-5">
                 <div className="w-11 h-11 rounded-xl bg-cream text-muted flex items-center justify-center">
                   <ShoppingBag size={22} />
@@ -432,7 +432,7 @@ function Payment() {
           </div>
 
           <div>
-            <section className="bg-white rounded-3xl border border-line shadow-sm p-5 sm:p-6 lg:sticky lg:top-6">
+            <section className="bg-surface rounded-3xl border border-line shadow-sm p-5 sm:p-6 lg:sticky lg:top-6">
               <div className="flex items-center gap-3 pb-5 border-b border-line">
                 <div className="w-11 h-11 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center">
                   <CreditCard size={22} />

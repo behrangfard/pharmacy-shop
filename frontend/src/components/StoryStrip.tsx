@@ -70,7 +70,7 @@ function StoryStrip() {
 
   return (
     <section
-      className="border-b border-line bg-white"
+      className="border-b border-line bg-surface"
       aria-label="استوری‌های فروشگاه"
     >
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
@@ -78,7 +78,7 @@ function StoryStrip() {
           <button
             type="button"
             onClick={() => scrollBy(-1)}
-            className={`absolute -right-2 top-8 z-10 hidden h-8 w-8 items-center justify-center rounded-full border border-line bg-white text-brand-600 shadow-md transition hover:border-brand-300 hover:text-brand-700 sm:flex ${
+            className={`absolute -right-2 top-8 z-10 hidden h-8 w-8 items-center justify-center rounded-full border border-line bg-surface text-brand-600 shadow-md transition hover:border-brand-300 hover:text-brand-700 sm:flex ${
               canScrollStart ? "opacity-100" : "pointer-events-none opacity-0"
             }`}
             aria-label="استوری‌های قبلی"
@@ -89,7 +89,7 @@ function StoryStrip() {
           <button
             type="button"
             onClick={() => scrollBy(1)}
-            className={`absolute -left-2 top-8 z-10 hidden h-8 w-8 items-center justify-center rounded-full border border-line bg-white text-brand-600 shadow-md transition hover:border-brand-300 hover:text-brand-700 sm:flex ${
+            className={`absolute -left-2 top-8 z-10 hidden h-8 w-8 items-center justify-center rounded-full border border-line bg-surface text-brand-600 shadow-md transition hover:border-brand-300 hover:text-brand-700 sm:flex ${
               canScrollEnd ? "opacity-100" : "pointer-events-none opacity-0"
             }`}
             aria-label="استوری‌های بعدی"
@@ -121,7 +121,7 @@ function StoryStrip() {
                         : "from-blush-400 via-plum-400 to-brand-500"
                     }`}
                   >
-                    <span className="block rounded-full bg-white p-[2px]">
+                    <span className="block rounded-full bg-surface p-[2px]">
                       {image ? (
                         <img
                           src={image}

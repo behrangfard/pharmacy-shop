@@ -762,7 +762,7 @@ function Checkout() {
             بازگشت به سبد خرید
           </Link>
 
-          <div className="mt-6 rounded-3xl border border-line bg-white p-8 text-center shadow-sm sm:p-12">
+          <div className="mt-6 rounded-3xl border border-line bg-surface p-8 text-center shadow-sm sm:p-12">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-100 text-brand-550">
               <ShoppingBag size={30} />
             </div>
@@ -834,7 +834,7 @@ function Checkout() {
                   <Link
                     to="/login"
                     state={{ from: "/checkout" }}
-                    className="inline-flex items-center justify-center rounded-xl border border-brand-250 bg-white px-5 py-2.5 text-sm font-bold text-brand-700 transition hover:bg-brand-75"
+                    className="inline-flex items-center justify-center rounded-xl border border-brand-250 bg-surface px-5 py-2.5 text-sm font-bold text-brand-700 transition hover:bg-brand-75"
                   >
                     ورود به حساب (اختیاری)
                   </Link>
@@ -860,7 +860,7 @@ function Checkout() {
 
         <form onSubmit={handleSubmit} className="grid gap-6 lg:grid-cols-3">
           <div className="space-y-6 lg:col-span-2">
-            <section className="rounded-3xl border border-line bg-white p-5 shadow-sm sm:p-7">
+            <section className="rounded-3xl border border-line bg-surface p-5 shadow-sm sm:p-7">
               <div className="mb-7 flex items-center gap-3">
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-100 text-brand-550">
                   <MapPin size={24} />
@@ -920,7 +920,7 @@ function Checkout() {
                       onClick={() =>
                         setAddressesReloadKey((current) => current + 1)
                       }
-                      className="shrink-0 rounded-lg bg-white px-3 py-1.5 text-[11px] font-bold text-discount"
+                      className="shrink-0 rounded-lg bg-surface px-3 py-1.5 text-[11px] font-bold text-discount"
                     >
                       تلاش دوباره
                     </button>
@@ -946,7 +946,7 @@ function Checkout() {
                           className={`rounded-2xl border p-4 text-right transition ${
                             isSelected
                               ? "border-brand-500 bg-brand-50 ring-2 ring-brand-100"
-                              : "border-line bg-white hover:border-brand-200"
+                              : "border-line bg-surface hover:border-brand-200"
                           }`}
                         >
                           <div className="flex items-center justify-between gap-2">
@@ -988,7 +988,7 @@ function Checkout() {
                       className={`flex items-center justify-center gap-2 rounded-2xl border border-dashed p-4 text-sm font-bold transition ${
                         selectedAddressId === "new"
                           ? "border-brand-500 bg-brand-50 text-brand-700"
-                          : "border-line bg-white text-muted hover:border-brand-200"
+                          : "border-line bg-surface text-muted hover:border-brand-200"
                       }`}
                     >
                       <Plus size={16} />
@@ -1027,7 +1027,7 @@ function Checkout() {
                       onChange={(event) => setFirstName(event.target.value)}
                       autoComplete="given-name"
                       required
-                      className="w-full rounded-xl border border-line bg-white py-3 pl-4 pr-11 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+                      className="w-full rounded-xl border border-line bg-surface py-3 pl-4 pr-11 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
                     />
                   </div>
                 </div>
@@ -1053,7 +1053,7 @@ function Checkout() {
                       onChange={(event) => setLastName(event.target.value)}
                       autoComplete="family-name"
                       required
-                      className="w-full rounded-xl border border-line bg-white py-3 pl-4 pr-11 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+                      className="w-full rounded-xl border border-line bg-surface py-3 pl-4 pr-11 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
                     />
                   </div>
                 </div>
@@ -1081,7 +1081,7 @@ function Checkout() {
                       required
                       dir="ltr"
                       placeholder="09123456789"
-                      className="w-full rounded-xl border border-line bg-white py-3 pl-4 pr-11 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+                      className="w-full rounded-xl border border-line bg-surface py-3 pl-4 pr-11 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
                     />
                   </div>
                 </div>
@@ -1171,7 +1171,7 @@ function Checkout() {
                       <button
                         type="button"
                         onClick={() => setShowAddressMap((current) => !current)}
-                        className="inline-flex items-center gap-2 rounded-xl border border-line bg-white px-3 py-2 text-xs font-bold text-ink-soft transition hover:border-brand-200 hover:text-brand-700"
+                        className="inline-flex items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2 text-xs font-bold text-ink-soft transition hover:border-brand-200 hover:text-brand-700"
                       >
                         <MapPinned size={15} />
                         {showAddressMap
@@ -1237,7 +1237,7 @@ function Checkout() {
               </div>
             </section>
 
-            <section className="rounded-3xl border border-line bg-white p-5 shadow-sm sm:p-7">
+            <section className="rounded-3xl border border-line bg-surface p-5 shadow-sm sm:p-7">
               <div className="flex items-center gap-3">
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-50 text-stock">
                   <Truck size={24} />
@@ -1302,7 +1302,7 @@ function Checkout() {
               </div>
             </section>
 
-            <section className="rounded-3xl border border-line bg-white p-5 shadow-sm sm:p-7">
+            <section className="rounded-3xl border border-line bg-surface p-5 shadow-sm sm:p-7">
               <div className="flex items-center gap-3">
                 <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-50 text-stock">
                   <Wallet size={24} />
@@ -1351,7 +1351,7 @@ function Checkout() {
                       className={`flex items-start gap-3 rounded-2xl border p-4 transition ${
                         isDisabled
                           ? "cursor-not-allowed border-line bg-cream opacity-60"
-                          : "cursor-pointer bg-white hover:border-brand-300"
+                          : "cursor-pointer bg-surface hover:border-brand-300"
                       } ${
                         isSelected && !isDisabled
                           ? "border-brand-500 bg-brand-50 ring-2 ring-brand-100"
@@ -1431,7 +1431,7 @@ function Checkout() {
           </div>
 
           <div className="space-y-6">
-            <section className="rounded-3xl border border-line bg-white p-5 shadow-sm sm:p-6 lg:sticky lg:top-6">
+            <section className="rounded-3xl border border-line bg-surface p-5 shadow-sm sm:p-6 lg:sticky lg:top-6">
               <div className="flex items-center gap-3 border-b border-line pb-5">
                 <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-100 text-brand-550">
                   <ShoppingBag size={22} />
@@ -1461,7 +1461,7 @@ function Checkout() {
                     onChange={(event) => setCouponInput(event.target.value)}
                     dir="ltr"
                     placeholder="WELCOME10"
-                    className="min-w-0 flex-1 rounded-xl border border-brand-250 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+                    className="min-w-0 flex-1 rounded-xl border border-brand-250 bg-surface px-3 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
                   />
 
                   <button
@@ -1489,7 +1489,7 @@ function Checkout() {
                       <button
                         type="button"
                         onClick={removeCoupon}
-                        className="rounded-lg border border-brand-300 bg-white px-2 py-1 text-[10px] font-bold text-brand-700"
+                        className="rounded-lg border border-brand-300 bg-surface px-2 py-1 text-[10px] font-bold text-brand-700"
                       >
                         حذف
                       </button>

@@ -134,7 +134,7 @@ function Articles() {
         <header className="overflow-hidden rounded-3xl border border-brand-100 bg-gradient-to-l from-brand-75 via-cream to-plum-50 p-6 sm:p-9">
           <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <div className="inline-flex items-center gap-2 rounded-full bg-white px-3.5 py-1.5 text-xs font-bold text-brand-600 shadow-sm">
+              <div className="inline-flex items-center gap-2 rounded-full bg-surface px-3.5 py-1.5 text-xs font-bold text-brand-600 shadow-sm">
                 <Sparkles size={14} aria-hidden="true" />
                 هر روز یک نکتهٔ تازه
               </div>
@@ -149,13 +149,13 @@ function Articles() {
               </p>
             </div>
 
-            <div className="flex h-20 w-20 shrink-0 items-center justify-center self-start rounded-3xl bg-white/80 text-plum-500 shadow-sm sm:self-center">
+            <div className="flex h-20 w-20 shrink-0 items-center justify-center self-start rounded-3xl bg-surface/80 text-plum-500 shadow-sm sm:self-center">
               <BookOpen size={36} aria-hidden="true" />
             </div>
           </div>
         </header>
 
-        <section className="mt-6 rounded-3xl border border-brand-100 bg-white p-4 sm:p-6">
+        <section className="mt-6 rounded-3xl border border-brand-100 bg-surface p-4 sm:p-6">
           <form
             onSubmit={handleSearchSubmit}
             className="flex flex-col gap-3 sm:flex-row sm:items-center"
@@ -173,7 +173,7 @@ function Articles() {
                 onChange={(event) => setSearchInput(event.target.value)}
                 placeholder="جست‌وجو در مقاله‌ها..."
                 aria-label="جست‌وجو در مقاله‌ها"
-                className="h-11 w-full rounded-xl border border-brand-100 bg-brand-50 pr-9 pl-3 text-sm text-ink outline-none transition-colors placeholder:text-muted-soft focus:border-brand-400 focus:bg-white"
+                className="h-11 w-full rounded-xl border border-brand-100 bg-brand-50 pr-9 pl-3 text-sm text-ink outline-none transition-colors placeholder:text-muted-soft focus:border-brand-400 focus:bg-surface"
               />
             </div>
 
@@ -239,7 +239,7 @@ function Articles() {
           )}
 
           {!error && !loading && articles.length === 0 && (
-            <div className="rounded-3xl border border-dashed border-brand-100 bg-white px-6 py-14 text-center">
+            <div className="rounded-3xl border border-dashed border-brand-100 bg-surface px-6 py-14 text-center">
               <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-brand-50 text-brand-400">
                 <BookOpen size={28} aria-hidden="true" />
               </div>
@@ -274,7 +274,7 @@ function Articles() {
               type="button"
               onClick={() => setPage((current) => Math.max(1, current - 1))}
               disabled={meta.current_page <= 1 || loading}
-              className="inline-flex h-10 items-center gap-1 rounded-xl border border-brand-100 bg-white px-4 text-xs font-bold text-ink-soft transition-colors hover:bg-brand-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-10 items-center gap-1 rounded-xl border border-brand-100 bg-surface px-4 text-xs font-bold text-ink-soft transition-colors hover:bg-brand-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <ChevronRight size={16} aria-hidden="true" />
               قبلی
@@ -290,7 +290,7 @@ function Articles() {
                 setPage((current) => Math.min(meta.last_page, current + 1))
               }
               disabled={meta.current_page >= meta.last_page || loading}
-              className="inline-flex h-10 items-center gap-1 rounded-xl border border-brand-100 bg-white px-4 text-xs font-bold text-ink-soft transition-colors hover:bg-brand-50 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex h-10 items-center gap-1 rounded-xl border border-brand-100 bg-surface px-4 text-xs font-bold text-ink-soft transition-colors hover:bg-brand-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
               بعدی
               <ChevronLeft size={16} aria-hidden="true" />

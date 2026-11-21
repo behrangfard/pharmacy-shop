@@ -13,7 +13,42 @@
       html {
         background-color: #faf9f4;
       }
+
+      /* حالت تاریک فروشگاه هم‌رنگ با --color-cream در dark-mode.css. */
+      html[data-mode="dark"] {
+        background-color: #0f1613;
+      }
     </style>
+
+    <!--
+      حالت روشن/تاریک پیش از اولین نقاشی ست می‌شود تا هنگام بارگذاری فایل‌های
+      JS/CSS «فلش سفید» دیده نشود. همان منطق utils/colorMode.ts به‌صورت کوچک:
+      ?mode= ← localStorage ← تنظیم سیستم‌عامل. خطای ذخیره‌سازی نادیده گرفته
+      می‌شود و main.tsx دوباره همان حالت را اعمال/ذخیره می‌کند.
+    -->
+    <script>
+      (function () {
+        try {
+          var query = new URLSearchParams(window.location.search).get("mode");
+          var stored = window.localStorage.getItem(
+            "behrang-shop-color-mode"
+          );
+          var mode = query === "dark" || query === "light" ? query : stored;
+
+          if (mode !== "dark" && mode !== "light") {
+            mode = window.matchMedia("(prefers-color-scheme: dark)").matches
+              ? "dark"
+              : "light";
+          }
+
+          if (mode === "dark") {
+            document.documentElement.setAttribute("data-mode", "dark");
+          }
+        } catch (error) {
+          /* دسترسی به localStorage مسدود است؛ حالت پیش‌فرض روشن می‌ماند. */
+        }
+      })();
+    </script>
 
     <!-- اپلیکیشن وب نصب‌شدنی (PWA): manifest، آیکن‌ها و تنظیمات iOS -->
     <link rel="manifest" href="/manifest.webmanifest" />

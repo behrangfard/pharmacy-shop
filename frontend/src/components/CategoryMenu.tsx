@@ -113,7 +113,7 @@ function CategoryMenu() {
                       className="
                         invisible absolute right-0 top-full z-50
                         min-w-52 translate-y-2 rounded-2xl
-                        border border-line bg-white p-2
+                        border border-line bg-surface p-2
                         opacity-0 shadow-lg
                         transition-all duration-200
                         group-hover:visible group-hover:translate-y-0
@@ -192,7 +192,7 @@ function CategoryMenu() {
             }}
             className="
               inline-flex items-center gap-2 rounded-xl
-              border border-brand-250 bg-white px-3.5 py-2.5
+              border border-brand-250 bg-surface px-3.5 py-2.5
               text-sm font-bold text-ink-soft
               transition-colors hover:bg-brand-100
               focus-visible:outline-none

@@ -396,7 +396,7 @@ function TrackOrder() {
           )}
 
           {registered && savedAccessCode && (
-            <div className="mt-4 rounded-2xl border border-brand-200 bg-white p-4 text-sm leading-7 shadow-sm">
+            <div className="mt-4 rounded-2xl border border-brand-200 bg-surface p-4 text-sm leading-7 shadow-sm">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="flex items-center gap-2 font-black text-ink">
                   <KeyRound size={18} aria-hidden="true" />
@@ -433,7 +433,7 @@ function TrackOrder() {
           )}
 
           {showAccountLadder && (
-            <div className="mt-4 rounded-2xl border border-brand-200 bg-white p-4 text-sm leading-7 shadow-sm">
+            <div className="mt-4 rounded-2xl border border-brand-200 bg-surface p-4 text-sm leading-7 shadow-sm">
               <div className="flex items-start gap-3">
                 <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
                   <UserPlus size={18} aria-hidden="true" />
@@ -477,7 +477,7 @@ function TrackOrder() {
 
           <form
             onSubmit={handleSubmit}
-            className="mt-6 rounded-3xl border border-line bg-white p-5 shadow-sm sm:p-6"
+            className="mt-6 rounded-3xl border border-line bg-surface p-5 shadow-sm sm:p-6"
           >
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
@@ -565,7 +565,7 @@ function TrackOrder() {
           </form>
 
           {isGuest && (
-            <details className="group mt-4 rounded-3xl border border-line bg-white p-5 shadow-sm sm:p-6">
+            <details className="group mt-4 rounded-3xl border border-line bg-surface p-5 shadow-sm sm:p-6">
               <summary className="list-none cursor-pointer text-sm font-bold text-ink-soft [&::-webkit-details-marker]:hidden">
                 دسترسی به سفارش را از دست داده‌اید؟ بازیابی با کد پیگیری
               </summary>
@@ -653,7 +653,7 @@ function TrackOrder() {
 
           {order && (
             <div className="mt-6 space-y-5">
-              <section className="rounded-3xl border border-line bg-white p-5 shadow-sm sm:p-7">
+              <section className="rounded-3xl border border-line bg-surface p-5 shadow-sm sm:p-7">
                 <div className="flex flex-wrap items-start justify-between gap-3 border-b border-line pb-4">
                   <div>
                     <p className="text-xs text-muted-soft">شماره سفارش</p>
@@ -750,7 +750,7 @@ function TrackOrder() {
                             className={`mx-auto flex h-9 w-9 items-center justify-center rounded-full text-xs font-black ${
                               passed
                                 ? "bg-brand-500 text-white"
-                                : "bg-white text-muted"
+                                : "bg-surface text-muted"
                             }`}
                           >
                             {index + 1}
@@ -829,7 +829,7 @@ function TrackOrder() {
                 </p>
               </section>
 
-              <section className="rounded-3xl border border-line bg-white p-5 shadow-sm sm:p-7">
+              <section className="rounded-3xl border border-line bg-surface p-5 shadow-sm sm:p-7">
                 <h2 className="text-lg font-black text-ink">اقلام سفارش</h2>
 
                 <ul className="mt-4 divide-y divide-line">
@@ -912,7 +912,7 @@ function TrackOrder() {
               </section>
 
               {order.shipments.length > 0 && (
-                <section className="rounded-3xl border border-line bg-white p-5 shadow-sm sm:p-7">
+                <section className="rounded-3xl border border-line bg-surface p-5 shadow-sm sm:p-7">
                   <h2 className="text-lg font-black text-ink">مرسوله‌ها</h2>
 
                   {order.shipments.map((shipment) => (

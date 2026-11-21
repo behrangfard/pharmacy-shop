@@ -1097,7 +1097,7 @@ function ProductDetail() {
     return (
       <Layout>
         <div className="max-w-7xl mx-auto px-6 py-20">
-          <div className="bg-white rounded-2xl p-10 text-center">
+          <div className="bg-surface rounded-2xl p-10 text-center">
             <div className="text-xl font-black text-ink">
               {error || "محصول پیدا نشد."}
             </div>
@@ -1176,7 +1176,7 @@ function ProductDetail() {
         */}
         <div
           className="
-            grid grid-cols-1 gap-4 rounded-3xl border border-line bg-white
+            grid grid-cols-1 gap-4 rounded-3xl border border-line bg-surface
             p-4 sm:p-5
             lg:grid-cols-[minmax(0,0.92fr)_minmax(0,1.08fr)] lg:gap-6
           "
@@ -1212,7 +1212,7 @@ function ProductDetail() {
                     type="button"
                     onClick={handlePreviousImage}
                     aria-label="تصویر قبلی"
-                    className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white text-ink-soft shadow-md transition-all duration-200 hover:bg-brand-600 hover:text-white active:scale-90"
+                    className="absolute right-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-surface text-ink-soft shadow-md transition-all duration-200 hover:bg-brand-600 hover:text-white active:scale-90"
                   >
                     <ChevronRight size={19} />
                   </button>
@@ -1221,7 +1221,7 @@ function ProductDetail() {
                     type="button"
                     onClick={handleNextImage}
                     aria-label="تصویر بعدی"
-                    className="absolute left-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-white text-ink-soft shadow-md transition-all duration-200 hover:bg-brand-600 hover:text-white active:scale-90"
+                    className="absolute left-2 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-surface text-ink-soft shadow-md transition-all duration-200 hover:bg-brand-600 hover:text-white active:scale-90"
                   >
                     <ChevronLeft size={19} />
                   </button>
@@ -1255,8 +1255,8 @@ function ProductDetail() {
                     active:scale-90 disabled:cursor-wait disabled:opacity-60
                     ${
                       wishlisted
-                        ? "border-blush-400 bg-white text-blush-600"
-                        : "border-line bg-white/95 text-ink-soft hover:border-brand-300 hover:text-brand-600"
+                        ? "border-blush-400 bg-surface text-blush-600"
+                        : "border-line bg-surface/95 text-ink-soft hover:border-brand-300 hover:text-brand-600"
                     }
                   `}
                 >
@@ -1273,7 +1273,7 @@ function ProductDetail() {
                     onClick={handleCopyProductLink}
                     title={shareCopied ? "لینک کپی شد" : "کپی لینک محصول"}
                     aria-label={shareCopied ? "لینک کپی شد" : "کپی لینک محصول"}
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-line bg-white/95 text-muted shadow-sm backdrop-blur transition-all duration-150 hover:border-brand-300 hover:text-brand-600 active:scale-90"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-line bg-surface/95 text-muted shadow-sm backdrop-blur transition-all duration-150 hover:border-brand-300 hover:text-brand-600 active:scale-90"
                   >
                     {shareCopied ? <Check size={15} /> : <Link2 size={15} />}
                   </button>
@@ -1286,7 +1286,7 @@ function ProductDetail() {
                     rel="noopener noreferrer"
                     title="اشتراک‌گذاری در تلگرام"
                     aria-label="اشتراک‌گذاری در تلگرام"
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-line bg-white/95 text-muted shadow-sm backdrop-blur transition-all duration-150 hover:border-brand-300 hover:text-brand-600 active:scale-90"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-line bg-surface/95 text-muted shadow-sm backdrop-blur transition-all duration-150 hover:border-brand-300 hover:text-brand-600 active:scale-90"
                   >
                     <Send size={15} />
                   </a>
@@ -1299,7 +1299,7 @@ function ProductDetail() {
                     rel="noopener noreferrer"
                     title="اشتراک‌گذاری در واتساپ"
                     aria-label="اشتراک‌گذاری در واتساپ"
-                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-line bg-white/95 text-muted shadow-sm backdrop-blur transition-all duration-150 hover:border-brand-300 hover:text-brand-600 active:scale-90"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-line bg-surface/95 text-muted shadow-sm backdrop-blur transition-all duration-150 hover:border-brand-300 hover:text-brand-600 active:scale-90"
                   >
                     <MessageCircle size={15} />
                   </a>
@@ -1522,7 +1522,7 @@ function ProductDetail() {
                             ${
                               isSelected
                                 ? "border-brand-700 bg-brand-75 text-brand-700 ring-2 ring-brand-700/10"
-                                : "border-line bg-white text-ink-soft hover:border-brand-400"
+                                : "border-line bg-surface text-ink-soft hover:border-brand-400"
                             }
                             ${
                               !isAvailable
@@ -1625,7 +1625,7 @@ function ProductDetail() {
                             ${
                               isSelected
                                 ? "border-brand-700 bg-brand-75 text-brand-700 ring-2 ring-brand-700/10"
-                                : "border-line bg-white text-ink-soft hover:border-brand-400"
+                                : "border-line bg-surface text-ink-soft hover:border-brand-400"
                             }
                           `}
                         >
@@ -1671,7 +1671,7 @@ function ProductDetail() {
                       return (
                         <div
                           key={item.id}
-                          className="rounded-xl border border-line bg-white p-3"
+                          className="rounded-xl border border-line bg-surface p-3"
                         >
                           <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                             <div className="text-xs font-bold text-ink">
@@ -1722,7 +1722,7 @@ function ProductDetail() {
                                       ${
                                         isSelected
                                           ? "border-brand-700 bg-brand-75 text-brand-700"
-                                          : "border-line bg-white text-ink-soft hover:border-brand-400"
+                                          : "border-line bg-surface text-ink-soft hover:border-brand-400"
                                       }
                                     `}
                                   >
@@ -1839,7 +1839,7 @@ function ProductDetail() {
               {/* تعداد و افزودن به سبد در یک ردیف هم‌تراز */}
               {canAddToCart && (
                 <div className="mt-3 flex items-stretch gap-2">
-                  <div className="flex items-stretch overflow-hidden rounded-xl border border-line bg-white">
+                  <div className="flex items-stretch overflow-hidden rounded-xl border border-line bg-surface">
                     <button
                       type="button"
                       onClick={() => setQuantity(Math.max(1, quantity - 1))}
@@ -1947,7 +1947,7 @@ function ProductDetail() {
                       </span>
 
                       {wishlistCount > 0 && (
-                        <span className="rounded-full bg-white/25 px-1.5 py-px text-[10px] font-black leading-4">
+                        <span className="rounded-full bg-surface/25 px-1.5 py-px text-[10px] font-black leading-4">
                           {wishlistCount.toLocaleString("fa-IR")}
                         </span>
                       )}
@@ -1962,7 +1962,7 @@ function ProductDetail() {
                     to="/wishlist"
                     className="
                       group mt-2 flex h-10 w-full items-center justify-center gap-2
-                      rounded-xl border border-line bg-white text-xs font-bold
+                      rounded-xl border border-line bg-surface text-xs font-bold
                       text-ink-soft shadow-sm transition-all duration-200
                       hover:border-blush-200 hover:bg-blush-50 hover:text-blush-600
                       hover:shadow-md active:scale-[0.98]
@@ -2028,7 +2028,7 @@ function ProductDetail() {
 
         {/* Product Description */}
         {product.description && (
-          <div className="mt-4 rounded-3xl border border-line bg-white p-5 sm:p-6">
+          <div className="mt-4 rounded-3xl border border-line bg-surface p-5 sm:p-6">
             <h2 className="mb-4 text-lg font-black text-ink">توضیحات محصول</h2>
 
             <div className="whitespace-pre-line leading-8 text-muted">
@@ -2039,7 +2039,7 @@ function ProductDetail() {
 
         {/* مشخصات محصول؛ همان خلاصهٔ ویژگی‌ها در قالب جدول خوانا */}
         {highlightSpecs.length > 0 && (
-          <div className="mt-4 rounded-3xl border border-line bg-white p-5 sm:p-6">
+          <div className="mt-4 rounded-3xl border border-line bg-surface p-5 sm:p-6">
             <h2 className="mb-3 text-lg font-black text-ink">مشخصات محصول</h2>
 
             <dl className="grid grid-cols-1 gap-x-6 sm:grid-cols-2">
@@ -2062,7 +2062,7 @@ function ProductDetail() {
         {/* Product Reviews */}
         <section
           id="product-reviews"
-          className="mt-8 bg-white rounded-3xl border border-line p-6 sm:p-8"
+          className="mt-8 bg-surface rounded-3xl border border-line p-6 sm:p-8"
         >
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5 border-b border-line pb-6">
             <div>
@@ -2242,7 +2242,7 @@ function ProductDetail() {
                       rounded-xl
                       border
                       border-line
-                      bg-white
+                      bg-surface
                       px-4
                       py-3
                       text-sm
@@ -2315,7 +2315,7 @@ function ProductDetail() {
                       rounded-xl
                       border
                       border-line
-                      bg-white
+                      bg-surface
                       px-4
                       py-3
                       text-sm
@@ -2351,7 +2351,7 @@ function ProductDetail() {
                       rounded-xl
                       border
                       border-line
-                      bg-white
+                      bg-surface
                       px-4
                       py-3
                       text-sm
@@ -2403,7 +2403,7 @@ function ProductDetail() {
 
         {/* محصولات مرتبط؛ ردیف آخر صفحه */}
         {(relatedLoading || relatedProducts.length > 0) && (
-          <section className="mt-4 rounded-3xl border border-line bg-white p-4 sm:p-5">
+          <section className="mt-4 rounded-3xl border border-line bg-surface p-4 sm:p-5">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <Sparkles
@@ -2456,7 +2456,7 @@ function ProductDetail() {
           <RecentlyViewed
             excludeIds={[product.id]}
             limit={6}
-            className="rounded-3xl border border-line bg-white p-4 sm:p-5"
+            className="rounded-3xl border border-line bg-surface p-4 sm:p-5"
           />
         </div>
       </section>

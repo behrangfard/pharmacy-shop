@@ -49,6 +49,8 @@ export const STORAGE_KEYS = {
   adminDashboard: "behrang-shop-admin-dashboard",
   /** تم انتخاب‌شدهٔ فروشگاه برای پیش‌نمایش پالت رنگ (sage/ocean). */
   storefrontTheme: "behrang-shop-storefront-theme",
+  /** حالت روشن/تاریک فروشگاه (light/dark) برای هدر سایت. */
+  storefrontColorMode: "behrang-shop-color-mode",
   /** عبارت‌های جست‌وجوی اخیر کاربر (پیشنهادهای کادر جست‌وجوی هدر). */
   searchHistory: "behrang-shop-search-history",
   /** محصولاتی که کاربر اخیراً دیده است (ریل «بازدیدهای اخیر»). */

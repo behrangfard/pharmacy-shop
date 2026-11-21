@@ -270,7 +270,7 @@ export default function AddressBookSection() {
       .join("، ");
 
   return (
-    <div className="bg-white rounded-3xl border border-line shadow-sm p-5 sm:p-7">
+    <div className="bg-surface rounded-3xl border border-line shadow-sm p-5 sm:p-7">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center">
@@ -356,7 +356,7 @@ export default function AddressBookSection() {
 
                     {address.latitude !== null &&
                       address.longitude !== null && (
-                        <span className="rounded-full bg-white px-2 py-1 text-[11px] font-bold text-stock-700 border border-line">
+                        <span className="rounded-full bg-surface px-2 py-1 text-[11px] font-bold text-stock-700 border border-line">
                           ثبت‌شده روی نقشه
                         </span>
                       )}
@@ -381,7 +381,7 @@ export default function AddressBookSection() {
                     <button
                       type="button"
                       onClick={() => openEditForm(address)}
-                      className="inline-flex items-center gap-1.5 rounded-xl bg-white border border-line px-3 py-2 text-xs font-bold text-ink-soft transition hover:border-brand-200 hover:text-brand-700"
+                      className="inline-flex items-center gap-1.5 rounded-xl bg-surface border border-line px-3 py-2 text-xs font-bold text-ink-soft transition hover:border-brand-200 hover:text-brand-700"
                     >
                       <Pencil size={14} />
                       ویرایش
@@ -392,7 +392,7 @@ export default function AddressBookSection() {
                         type="button"
                         onClick={() => handleMakeDefault(address)}
                         disabled={busyId === address.id}
-                        className="inline-flex items-center gap-1.5 rounded-xl bg-white border border-line px-3 py-2 text-xs font-bold text-ink-soft transition hover:border-brand-200 hover:text-brand-700 disabled:opacity-60"
+                        className="inline-flex items-center gap-1.5 rounded-xl bg-surface border border-line px-3 py-2 text-xs font-bold text-ink-soft transition hover:border-brand-200 hover:text-brand-700 disabled:opacity-60"
                       >
                         {busyId === address.id ? (
                           <Loader2 size={14} className="animate-spin" />
@@ -412,7 +412,7 @@ export default function AddressBookSection() {
                               previewId === address.id ? null : address.id,
                             )
                           }
-                          className="inline-flex items-center gap-1.5 rounded-xl bg-white border border-line px-3 py-2 text-xs font-bold text-ink-soft transition hover:border-brand-200 hover:text-brand-700"
+                          className="inline-flex items-center gap-1.5 rounded-xl bg-surface border border-line px-3 py-2 text-xs font-bold text-ink-soft transition hover:border-brand-200 hover:text-brand-700"
                         >
                           <MapPinned size={14} />
                           {previewId === address.id
@@ -497,7 +497,7 @@ export default function AddressBookSection() {
                 onChange={(event) => updateField("title", event.target.value)}
                 placeholder="خانه، محل کار، ..."
                 maxLength={60}
-                className="w-full rounded-xl border border-line bg-white px-4 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+                className="w-full rounded-xl border border-line bg-surface px-4 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
               />
             </div>
 
@@ -517,7 +517,7 @@ export default function AddressBookSection() {
                   updateField("recipient_name", event.target.value)
                 }
                 placeholder="نام و نام خانوادگی"
-                className="w-full rounded-xl border border-line bg-white px-4 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+                className="w-full rounded-xl border border-line bg-surface px-4 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
               />
             </div>
 
@@ -537,7 +537,7 @@ export default function AddressBookSection() {
                 onChange={(event) => updateField("phone", event.target.value)}
                 placeholder="09121234567"
                 maxLength={15}
-                className="w-full rounded-xl border border-line bg-white px-4 py-2.5 text-sm text-left outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+                className="w-full rounded-xl border border-line bg-surface px-4 py-2.5 text-sm text-left outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
               />
             </div>
 
@@ -555,7 +555,7 @@ export default function AddressBookSection() {
                 value={form.province}
                 onChange={(event) => updateField("province", event.target.value)}
                 placeholder="تهران"
-                className="w-full rounded-xl border border-line bg-white px-4 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+                className="w-full rounded-xl border border-line bg-surface px-4 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
               />
             </div>
 
@@ -573,7 +573,7 @@ export default function AddressBookSection() {
                 value={form.city}
                 onChange={(event) => updateField("city", event.target.value)}
                 placeholder="تهران"
-                className="w-full rounded-xl border border-line bg-white px-4 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+                className="w-full rounded-xl border border-line bg-surface px-4 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
               />
             </div>
 
@@ -595,7 +595,7 @@ export default function AddressBookSection() {
                 }
                 maxLength={10}
                 placeholder="1234567890"
-                className="w-full rounded-xl border border-line bg-white px-4 py-2.5 text-sm text-left outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+                className="w-full rounded-xl border border-line bg-surface px-4 py-2.5 text-sm text-left outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
               />
             </div>
 
@@ -613,7 +613,7 @@ export default function AddressBookSection() {
                 onChange={(event) => updateField("address", event.target.value)}
                 rows={3}
                 placeholder="خیابان، کوچه، پلاک، واحد"
-                className="w-full resize-none rounded-xl border border-line bg-white px-4 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+                className="w-full resize-none rounded-xl border border-line bg-surface px-4 py-2.5 text-sm outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
               />
             </div>
           </div>
@@ -634,7 +634,7 @@ export default function AddressBookSection() {
             <button
               type="button"
               onClick={() => setShowMap((current) => !current)}
-              className="inline-flex items-center gap-2 rounded-xl border border-line bg-white px-3 py-2 text-xs font-bold text-ink-soft transition hover:border-brand-200 hover:text-brand-700"
+              className="inline-flex items-center gap-2 rounded-xl border border-line bg-surface px-3 py-2 text-xs font-bold text-ink-soft transition hover:border-brand-200 hover:text-brand-700"
             >
               <MapPinned size={15} />
               {showMap ? "بستن نقشه" : "انتخاب موقعیت روی نقشه"}
