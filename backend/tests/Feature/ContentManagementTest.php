@@ -156,4 +156,104 @@ class ContentManagementTest extends TestCase
             'is_published' => true,
         ])->assertUnauthorized();
     }
+
+    public function test_new_banner_is_appended_to_the_end_of_its_section(): void
+    {
+        $this->admin();
+
+        Banner::query()->create([
+            'title' => 'اسلاید موجود',
+            'image' => 'banners/existing.jpg',
+            'position' => 'home_hero',
+            'sort_order' => 3,
+        ]);
+
+        // بنر تازه بدون sort_order انتهای همان بخش می‌نشیند، نه ابتدای اسلایدر.
+        $this->postJson('/api/v1/admin/banners', [
+            'image' => 'banners/new.jpg',
+            'position' => 'home_hero',
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.sort_order', 4);
+
+        // شمارش ترتیب برای هر بخش جداست.
+        $this->postJson('/api/v1/admin/banners', [
+            'image' => 'banners/grid.jpg',
+            'position' => 'home_grid',
+        ])
+            ->assertCreated()
+            ->assertJsonPath('data.sort_order', 1);
+    }
+
+    public function test_reorder_keeps_banners_that_were_not_submitted(): void
+    {
+        $this->admin();
+
+        $first = Banner::query()->create([
+            'title' => 'اول',
+            'image' => 'banners/one.jpg',
+            'position' => 'home_hero',
+            'sort_order' => 1,
+        ]);
+
+        $second = Banner::query()->create([
+            'title' => 'دوم',
+            'image' => 'banners/two.jpg',
+            'position' => 'home_hero',
+            'sort_order' => 2,
+        ]);
+
+        $third = Banner::query()->create([
+            'title' => 'سوم',
+            'image' => 'banners/three.jpg',
+            'position' => 'home_hero',
+            'sort_order' => 3,
+        ]);
+
+        // بنر دوم در فهرست ارسالی نیست؛ نباید حذف یا نادیده گرفته شود.
+        $this->putJson('/api/v1/admin/banners/order', [
+            'position' => 'home_hero',
+            'ids' => [$third->id, $first->id],
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $third->id)
+            ->assertJsonPath('data.1.id', $first->id)
+            ->assertJsonPath('data.2.id', $second->id);
+
+        $this->assertSame(1, $third->fresh()->sort_order);
+        $this->assertSame(2, $first->fresh()->sort_order);
+        $this->assertSame(3, $second->fresh()->sort_order);
+    }
+
+    public function test_admin_banner_list_uses_the_same_order_as_storefront(): void
+    {
+        $this->admin();
+
+        $older = Banner::query()->create([
+            'title' => 'قدیمی‌تر',
+            'image' => 'banners/older.jpg',
+            'position' => 'home_hero',
+            'sort_order' => 5,
+            'is_active' => true,
+        ]);
+
+        $newer = Banner::query()->create([
+            'title' => 'جدیدتر',
+            'image' => 'banners/newer.jpg',
+            'position' => 'home_hero',
+            'sort_order' => 5,
+            'is_active' => true,
+        ]);
+
+        // در تساوی sort_order هر دو خروجی شناسهٔ صعودی می‌دهند.
+        $this->getJson('/api/v1/admin/banners')
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $older->id)
+            ->assertJsonPath('data.1.id', $newer->id);
+
+        $this->getJson('/api/v1/banners')
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $older->id)
+            ->assertJsonPath('data.1.id', $newer->id);
+    }
 }

@@ -45,18 +45,32 @@ function resolveTab(value: string | null): ContentTab {
  * همهٔ کارهای محتوایی سایت یک‌جا جمع شده است: بنرهای فروشگاه (که پیش از این
  * صفحهٔ جداگانه داشت)، اسلایدر بالای صفحهٔ اول و صفحات ثابت سایت. تب فعال در
  * آدرس صفحه (?tab=...) نگه داشته می‌شود تا با رفرش یا لینک مستقیم هم بماند.
+ * پارامتر `?edit=<id>` فرم ویرایش همان بنر را در تب بنرها باز می‌کند (از تب
+ * «اسلایدر» یا لینک مستقیم).
  */
 function AdminContent() {
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = resolveTab(searchParams.get("tab"));
+  const editBannerId = Number(searchParams.get("edit")) || null;
 
   const switchTab = useCallback(
-    (tab: ContentTab) => {
-      setSearchParams({ tab }, { replace: true });
+    (tab: ContentTab, options?: { editBannerId?: number }) => {
+      const next: Record<string, string> = { tab };
+
+      if (options?.editBannerId) {
+        next.edit = String(options.editBannerId);
+      }
+
+      setSearchParams(next, { replace: true });
       window.scrollTo({ top: 0, behavior: "smooth" });
     },
     [setSearchParams],
   );
+
+  /** بعد از باز شدن فرم ویرایش، پارامتر `edit` از آدرس پاک می‌شود. */
+  const clearEditRequest = useCallback(() => {
+    setSearchParams({ tab: activeTab }, { replace: true });
+  }, [activeTab, setSearchParams]);
 
   return (
     <div dir="rtl" className="admin-page">
@@ -109,10 +123,20 @@ function AdminContent() {
       </div>
 
       <div role="tabpanel">
-        {activeTab === "banners" && <AdminBanners embedded />}
+        {activeTab === "banners" && (
+          <AdminBanners
+            embedded
+            initialEditId={editBannerId}
+            onEditRequestHandled={clearEditRequest}
+          />
+        )}
 
         {activeTab === "slider" && (
-          <AdminSliderPanel onManageBanners={() => switchTab("banners")} />
+          <AdminSliderPanel
+            onManageBanners={(bannerId) =>
+              switchTab("banners", { editBannerId: bannerId })
+            }
+          />
         )}
 
         {activeTab === "pages" && <AdminPagesPanel />}

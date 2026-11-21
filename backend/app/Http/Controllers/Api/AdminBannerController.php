@@ -28,8 +28,13 @@ class AdminBannerController extends Controller
                 $validated['position'] ?? null,
                 fn ($query, $position) => $query->where('position', $position)
             )
+            /*
+             * ترتیب فهرست پنل دقیقاً مثل فروشگاه است (sort_order سپس id صعودی).
+             * پیش از این پنل در حالت تساوی sort_order شناسهٔ نزولی می‌داد و
+             * ترتیب «ترتیب نمایش» پنل با ترتیب اسلایدهای سایت یکی نبود.
+             */
             ->orderBy('sort_order')
-            ->orderByDesc('id')
+            ->orderBy('id')
             ->get();
 
         return response()->json([
@@ -196,7 +201,21 @@ class AdminBannerController extends Controller
 
     public function store(Request $request): JsonResponse
     {
-        $banner = Banner::create($this->validateBanner($request));
+        $payload = $this->validateBanner($request);
+
+        /*
+         * بنر تازه بدون ترتیب مشخص، انتهای همان بخش می‌نشیند (نه ابتدای
+         * اسلایدر). پیش از این مقدار پیش‌فرض فرم ۰ بود و بنرهای تازه همه با
+         * sort_order صفر در ابتدای فهرست جمع می‌شدند و ترتیب سایت را به هم
+         * می‌ریختند.
+         */
+        if ((int) ($payload['sort_order'] ?? 0) < 1) {
+            $payload['sort_order'] = 1 + (int) Banner::query()
+                ->where('position', $payload['position'])
+                ->max('sort_order');
+        }
+
+        $banner = Banner::create($payload);
 
         $this->forgetStorefrontCache();
 
@@ -268,7 +287,20 @@ class AdminBannerController extends Controller
             ], 422);
         }
 
-        foreach ($ids as $index => $id) {
+        /*
+         * بنرهایی که در فهرست ارسالی نبودند (مثلاً بیش از جایگاه‌های بخش)
+         * حذف نمی‌شوند؛ بعد از بنرهای مرتب‌شده و با ترتیب قبلی خودشان شماره
+         * می‌خورند تا sort_order همهٔ بنرهای بخش یکتا و پیوسته بماند.
+         */
+        $remaining = Banner::query()
+            ->where('position', $validated['position'])
+            ->whereNotIn('id', $ids)
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->pluck('id')
+            ->all();
+
+        foreach (array_merge($ids, $remaining) as $index => $id) {
             Banner::query()
                 ->whereKey($id)
                 ->update(['sort_order' => $index + 1]);
@@ -282,7 +314,7 @@ class AdminBannerController extends Controller
             'data' => Banner::query()
                 ->where('position', $validated['position'])
                 ->orderBy('sort_order')
-                ->orderByDesc('id')
+                ->orderBy('id')
                 ->get(),
         ]);
     }

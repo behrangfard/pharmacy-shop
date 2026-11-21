@@ -36,8 +36,11 @@ interface SliderSlide {
 }
 
 interface AdminSliderPanelProps {
-  /** رفتن به تب «بنرها» برای ساخت یا ویرایش محتوای اسلاید. */
-  onManageBanners: () => void;
+  /**
+   * رفتن به تب «بنرها». با ارسال شناسهٔ اسلاید، فرم ویرایش همان بنر از پیش
+   * باز می‌شود؛ بدون شناسه، فرم افزودن بنر.
+   */
+  onManageBanners: (bannerId?: number) => void;
 }
 
 /**
@@ -275,7 +278,7 @@ function AdminSliderPanel({ onManageBanners }: AdminSliderPanelProps) {
           <button
             type="button"
             className="admin-btn admin-btn-primary"
-            onClick={onManageBanners}
+            onClick={() => onManageBanners()}
           >
             <span className="inline-flex items-center gap-1.5">
               <Plus size={15} aria-hidden="true" />
@@ -329,7 +332,7 @@ function AdminSliderPanel({ onManageBanners }: AdminSliderPanelProps) {
           )
         }
         onSave={() => void saveSection()}
-        onAdd={onManageBanners}
+        onAdd={() => onManageBanners()}
       />
 
       {/* فهرست اسلایدها با ترتیب قابل تغییر */}
@@ -475,7 +478,7 @@ function AdminSliderPanel({ onManageBanners }: AdminSliderPanelProps) {
                           <button
                             type="button"
                             className="admin-btn admin-btn-sm"
-                            onClick={onManageBanners}
+                            onClick={() => onManageBanners(slide.id)}
                           >
                             ویرایش محتوا
                           </button>

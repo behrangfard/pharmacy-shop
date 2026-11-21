@@ -237,13 +237,53 @@ const BANNER_SIZE_HINTS = [
   { label: "موبایل", size: "۷۵۰ × ۱۰۰۰" },
 ] as const;
 
+/** تبی که یک موقعیت بنر در آن نمایش داده می‌شود. */
+function tabForPosition(position: Banner["position"]): BannerTab {
+  if (POSITIONS_BY_TAB.mobile.includes(position)) return "mobile";
+  if (POSITIONS_BY_TAB.other.includes(position)) return "other";
+  return "desktop";
+}
+
+/**
+ * بنر همین حالا در سایت دیده می‌شود؟ (فعال + داخل بازهٔ نمایش)
+ * همان قاعدهٔ `BannerController::index`؛ برای هشدار «بیش از جایگاه‌ها» لازم است.
+ */
+function isBannerVisibleNow(banner: Banner): boolean {
+  if (!banner.is_active) return false;
+
+  const now = Date.now();
+  const startsAt = banner.starts_at ? Date.parse(banner.starts_at) : NaN;
+  const endsAt = banner.ends_at ? Date.parse(banner.ends_at) : NaN;
+
+  if (Number.isFinite(startsAt) && startsAt > now) return false;
+  if (Number.isFinite(endsAt) && endsAt < now) return false;
+
+  return true;
+}
+
 /**
  * بخش مدیریت بنرهای فروشگاه.
  *
  * `embedded` برای زمانی است که این صفحه داخل تب «بنرها» از بخش «مدیریت محتوا»
  * نمایش داده می‌شود؛ در آن حالت سربرگ بزرگ صفحه حذف و فقط نوار دکمه‌ها می‌ماند.
  */
-function AdminBanners({ embedded = false }: { embedded?: boolean }) {
+interface AdminBannersProps {
+  /** نمایش داخل تب «بنرها» از صفحهٔ مدیریت محتوا (بدون سربرگ صفحه). */
+  embedded?: boolean;
+  /**
+   * شناسهٔ بنری که فرم ویرایشش باید باز شود؛ از تب «اسلایدر» یا لینک
+   * `?tab=banners&edit=12` می‌آید.
+   */
+  initialEditId?: number | null;
+  /** بعد از باز شدن فرم درخواست بیرونی، پارامتر آدرس پاک می‌شود. */
+  onEditRequestHandled?: () => void;
+}
+
+function AdminBanners({
+  embedded = false,
+  initialEditId = null,
+  onEditRequestHandled,
+}: AdminBannersProps) {
   const [banners, setBanners] = useState<Banner[]>([]);
   const [form, setForm] = useState<BannerForm>(initialForm);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -275,7 +315,13 @@ function AdminBanners({ embedded = false }: { embedded?: boolean }) {
     Partial<Record<BannerSectionPosition, BannerSection>>
   >({});
   const [sectionLoading, setSectionLoading] = useState(false);
-  const [sectionSaving, setSectionSaving] = useState(false);
+  /**
+   * بخشی که تنظیماتش در حال ذخیره است. هر کارت وضعیت ذخیرهٔ خودش را دارد؛
+   * پیش از این یک flag مشترک بود و ذخیرهٔ هم‌زمان دو کارت، دومی را بی‌صدا
+   * نادیده می‌گرفت.
+   */
+  const [sectionSaving, setSectionSaving] =
+    useState<BannerSectionPosition | null>(null);
 
   // ظاهر پیش‌فرض بنرهای «سایر» (نوار تبلیغاتی و بالای صفحهٔ محصولات)؛ هر بخش
   // صفحهٔ اول گردی گوشهٔ مستقل خودش را دارد.
@@ -420,14 +466,19 @@ function AdminBanners({ embedded = false }: { embedded?: boolean }) {
   /**
    * تغییر تب فعال.
    *
-   * اگر فرم باز باشد و «محل نمایش» انتخاب‌شده در تب جدید نباشد، فرم روی بخش
-   * پیش‌فرض همان تب تنظیم می‌شود؛ بنابراین بنر موبایل در تب دسکتاپ (و برعکس)
-   * ثبت نمی‌شود.
+   * تب فقط فهرست را فیلتر می‌کند. اگر فرم در حالت «افزودن» باز باشد، «محل
+   * نمایش» روی بخش پیش‌فرض تب جدید تنظیم می‌شود تا بنر موبایل در تب دسکتاپ
+   * ثبت نشود. در حالت «ویرایش» موقعیت بنر دست‌نخورده می‌ماند؛ عوض‌کردن تب
+   * نباید بنر موجود را بی‌صدا به بخش دیگری منتقل کند.
    */
   function switchTab(tab: BannerTab) {
     setActiveTab(tab);
 
-    if (formOpen && !POSITIONS_BY_TAB[tab].includes(form.position)) {
+    if (
+      formOpen &&
+      editingId === null &&
+      !POSITIONS_BY_TAB[tab].includes(form.position)
+    ) {
       updateField("position", DEFAULT_POSITION_BY_TAB[tab]);
     }
   }
@@ -483,6 +534,44 @@ function AdminBanners({ embedded = false }: { embedded?: boolean }) {
 
     scrollToForm();
   }
+
+  /** درخواست بیرونی بازکردن فرم ویرایش؛ هر شناسه فقط یک‌بار پردازش می‌شود. */
+  const handledEditRequest = useRef<number | null>(null);
+
+  /*
+   * بازکردن فرم ویرایش از بیرون: تب «اسلایدر» روی هر اسلاید دکمهٔ «ویرایش
+   * محتوا» دارد و آدرس `?tab=banners&edit=12` هم پشتیبانی می‌شود. بعد از باز
+   * شدن فرم، پارامتر آدرس پاک می‌شود تا با بستن فرم دوباره باز نشود.
+   */
+  useEffect(() => {
+    if (initialEditId === null) {
+      // پارامتر آدرس پاک شده است؛ برای درخواست دوبارهٔ همان بنر آماده می‌شویم.
+      handledEditRequest.current = null;
+      return;
+    }
+
+    if (loading || handledEditRequest.current === initialEditId) {
+      return;
+    }
+
+    const target = banners.find((banner) => banner.id === initialEditId);
+
+    if (!target) {
+      // فهرست آمده ولی بنر پیدا نشد (حذف‌شده)؛ درخواست را رها می‌کنیم.
+      if (banners.length > 0) {
+        handledEditRequest.current = initialEditId;
+        onEditRequestHandled?.();
+      }
+
+      return;
+    }
+
+    handledEditRequest.current = initialEditId;
+    // تب همان بنر فعال می‌شود تا گزینه‌های «محل نمایش» با آن هم‌خوان باشد.
+    setActiveTab(tabForPosition(target.position));
+    startEditing(target);
+    onEditRequestHandled?.();
+  }, [banners, initialEditId, loading, onEditRequestHandled]);
 
   /**
    * بارگذاری تصویر بنر. `field` مشخص می‌کند مسیر برگشتی در فیلد تصویر اصلی
@@ -633,9 +722,9 @@ function AdminBanners({ embedded = false }: { embedded?: boolean }) {
   async function saveSection(position: BannerSectionPosition) {
     const section = sections[position];
 
-    if (!section || sectionSaving) return;
+    if (!section || sectionSaving === position) return;
 
-    setSectionSaving(true);
+    setSectionSaving(position);
     setError("");
     setSuccess("");
 
@@ -662,7 +751,7 @@ function AdminBanners({ embedded = false }: { embedded?: boolean }) {
     } catch (err) {
       setError(getAdminErrorMessage(err));
     } finally {
-      setSectionSaving(false);
+      setSectionSaving(null);
     }
   }
 
@@ -756,6 +845,14 @@ function AdminBanners({ embedded = false }: { embedded?: boolean }) {
   const tabBanners = banners.filter((banner) =>
     POSITIONS_BY_TAB[activeTab].includes(banner.position),
   );
+
+  /**
+   * فرم ویرایش بنری باز است که در تب فعال نیست (تب عوض شده یا از تب اسلایدر
+   * آمده‌ایم)؛ موقعیت فعلی به گزینه‌ها اضافه می‌شود تا مقدار select خالی نشود
+   * و ذخیره، محل نمایش بنر را عوض نکند.
+   */
+  const editingPositionOutsideTab =
+    editingId !== null && !POSITIONS_BY_TAB[activeTab].includes(form.position);
 
   const tabSections = BANNER_SECTION_CARDS.filter(
     (card) => card.tab === activeTab,
@@ -1229,12 +1326,26 @@ function AdminBanners({ embedded = false }: { embedded?: boolean }) {
                     )
                   }
                 >
+                  {editingPositionOutsideTab && (
+                    <option value={form.position}>
+                      {positionLabels[form.position]}
+                    </option>
+                  )}
+
                   {positionOptionsForTab(activeTab).map(([value, label]) => (
                     <option key={value} value={value}>
                       {label}
                     </option>
                   ))}
                 </select>
+
+                {editingPositionOutsideTab && (
+                  <p className="rounded-lg border border-[#f0d9a8] bg-[#fff9ec] px-3 py-2 text-[11px] leading-6 text-[#8a5a00]">
+                    این بنر در بخش «{positionLabels[form.position]}» است. تب
+                    فعلی فقط فهرست را فیلتر می‌کند؛ ذخیره، محل نمایش را عوض
+                    نمی‌کند.
+                  </p>
+                )}
 
                 <p className="text-[11px] leading-6 text-[#9aa894]">
                   {activeTab === "desktop"
@@ -1462,24 +1573,42 @@ function AdminBanners({ embedded = false }: { embedded?: boolean }) {
           </div>
         </section>
       ) : (
-        tabSections.map((card) => (
-          <AdminBannerSectionCard
-            key={card.position}
-            kind={card.kind}
-            title={card.title}
-            description={card.description}
-            addLabel={card.addLabel}
-            section={sections[card.position] ?? null}
-            loading={sectionLoading}
-            saving={sectionSaving}
-            onChange={(field, value) =>
-              updateSectionField(card.position, field, value)
-            }
-            onLayout={(layout) => selectSectionLayout(card.position, layout)}
-            onSave={() => void saveSection(card.position)}
-            onAdd={() => openCreateForm(card.position)}
-          />
-        ))
+        tabSections.map((card) => {
+          const section = sections[card.position] ?? null;
+          // سقف نمایش: بخش چندستونه تعداد جایگاه چیدمان، اسلایدر/موبایل «تعداد
+          // تصاویر» (۰ یعنی بدون سقف)؛ بنرهای بیشتر از این در سایت رندر نمی‌شوند.
+          const capacity =
+            section === null
+              ? 0
+              : card.kind === "grid"
+                ? section.slots
+                : section.image_count;
+          const visibleCount = banners.filter(
+            (banner) =>
+              banner.position === card.position && isBannerVisibleNow(banner),
+          ).length;
+
+          return (
+            <AdminBannerSectionCard
+              key={card.position}
+              kind={card.kind}
+              title={card.title}
+              description={card.description}
+              addLabel={card.addLabel}
+              section={section}
+              loading={sectionLoading}
+              saving={sectionSaving === card.position}
+              capacity={capacity}
+              visibleCount={visibleCount}
+              onChange={(field, value) =>
+                updateSectionField(card.position, field, value)
+              }
+              onLayout={(layout) => selectSectionLayout(card.position, layout)}
+              onSave={() => void saveSection(card.position)}
+              onAdd={() => openCreateForm(card.position)}
+            />
+          );
+        })
       )}
 
       <AdminBannerFontsPanel

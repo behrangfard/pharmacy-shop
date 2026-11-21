@@ -74,6 +74,10 @@ interface AdminBannerSectionCardProps {
   saving: boolean;
   /** متن دکمهٔ افزودن بنر (مثلاً «افزودن بنر به اسلایدر»). */
   addLabel: string;
+  /** سقف بنرهای قابل نمایش در سایت (۰ = بدون سقف). */
+  capacity?: number;
+  /** تعداد بنرهای فعال و داخل بازهٔ همین بخش در سایت. */
+  visibleCount?: number;
   onChange: <K extends keyof AdminBannerSection>(
     field: K,
     value: AdminBannerSection[K],
@@ -98,6 +102,8 @@ function AdminBannerSectionCard({
   loading,
   saving,
   addLabel,
+  capacity = 0,
+  visibleCount = 0,
   onChange,
   onLayout,
   onSave,
@@ -116,6 +122,18 @@ function AdminBannerSectionCard({
         <div>
           <h2 className="admin-card-title">{title}</h2>
           <p className="admin-card-desc">{description}</p>
+
+          {capacity > 0 && visibleCount > capacity && (
+            <p
+              role="status"
+              className="mt-2 rounded-xl border border-[#f0d9a8] bg-[#fff9ec] px-3 py-2 text-[11px] leading-6 font-bold text-[#8a5a00]"
+            >
+              ⚠️ {visibleCount.toLocaleString("fa-IR")} بنر فعال دارید ولی این
+              بخش فقط {capacity.toLocaleString("fa-IR")} بنر نمایش می‌دهد؛ بقیه
+              در سایت دیده نمی‌شوند. تعداد را بالا ببرید یا بنرهای اضافه را
+              غیرفعال کنید.
+            </p>
+          )}
         </div>
       </div>
 
