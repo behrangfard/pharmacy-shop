@@ -279,6 +279,19 @@ interface AdminBannersProps {
   onEditRequestHandled?: () => void;
 }
 
+/**
+ * دورریختن تصاویر آپلودشده‌ای که به هیچ بنری وصل نشدند (بستن/انصراف از فرم).
+ * بی‌صدا و بی‌انتظار: اگر درخواست شکست بخورد، کامند `media:prune` بعداً همین
+ * فایل‌های یتیم را جمع می‌کند. سرور هم فقط فایل‌های بدون ارجاع را پاک می‌کند.
+ */
+function discardBannerImages(paths: string[]) {
+  if (paths.length === 0) return;
+
+  void adminApi
+    .post("/admin/banners/images/discard", { paths })
+    .catch(() => undefined);
+}
+
 function AdminBanners({
   embedded = false,
   initialEditId = null,
@@ -449,7 +462,15 @@ function AdminBanners({
     }, 60);
   }
 
+  /** دورریختن آپلودهای ذخیره‌نشدهٔ همین فرم (بی‌صدا؛ خطا مهم نیست). */
+  function discardPendingUploads() {
+    const paths = pendingUploads.current;
+    pendingUploads.current = [];
+    discardBannerImages(paths);
+  }
+
   function resetForm() {
+    discardPendingUploads();
     setForm(initialForm);
     setEditingId(null);
     setFormOpen(false);
@@ -488,6 +509,7 @@ function AdminBanners({
    * موردنظر (مثلاً بخش چندستونهٔ صفحهٔ اول) تنظیم کرد.
    */
   function openCreateForm(position: Banner["position"] = "home_hero") {
+    discardPendingUploads();
     setError("");
     setSuccess("");
     setForm({ ...initialForm, position });
@@ -506,6 +528,7 @@ function AdminBanners({
   }
 
   function startEditing(banner: Banner) {
+    discardPendingUploads();
     setError("");
     setSuccess("");
     setEditingId(banner.id);
@@ -537,6 +560,12 @@ function AdminBanners({
 
   /** درخواست بیرونی بازکردن فرم ویرایش؛ هر شناسه فقط یک‌بار پردازش می‌شود. */
   const handledEditRequest = useRef<number | null>(null);
+
+  /**
+   * تصاویری که در همین فرم آپلود شده‌اند ولی هنوز ذخیره نشده‌اند؛ با بستن،
+   * انصراف یا تعویض تصویر پاک می‌شوند تا فایل یتیم روی دیسک نماند.
+   */
+  const pendingUploads = useRef<string[]>([]);
 
   /*
    * بازکردن فرم ویرایش از بیرون: تب «اسلایدر» روی هر اسلاید دکمهٔ «ویرایش
@@ -601,6 +630,12 @@ function AdminBanners({
 
       if (typeof path !== "string" || path === "") {
         throw new Error("بارگذاری تصویر بنر انجام نشد.");
+      }
+
+      // فایل تازه آپلود شد ولی تا قبل از «ذخیره» به هیچ بنری وصل نیست؛
+      // نگهش می‌داریم تا در صورت انصراف پاک شود.
+      if (!pendingUploads.current.includes(path)) {
+        pendingUploads.current = [...pendingUploads.current, path];
       }
 
       updateField(field, path);
@@ -674,7 +709,23 @@ function AdminBanners({
         setSuccess(response.data?.message ?? "بنر ویرایش شد.");
       }
 
+      /*
+       * فایل‌هایی که در همین فرم آپلود شدند و در payload ذخیره‌شده نیامدند
+       * (مثلاً تصویر دو بار عوض شد) به هیچ بنری وصل نیستند؛ پاک‌شان می‌کنیم.
+       * قبل از resetForm انجام می‌شود تا لیستِ در انتظار خالی شده باشد.
+       */
+      const submitted = new Set(
+        [payload.image, payload.mobile_image].filter(
+          (value): value is string => typeof value === "string" && value !== "",
+        ),
+      );
+      const leftovers = pendingUploads.current.filter(
+        (path) => !submitted.has(path),
+      );
+      pendingUploads.current = [];
+
       resetForm();
+      discardBannerImages(leftovers);
       await refreshAll();
     } catch (err) {
       setError(getAdminErrorMessage(err));

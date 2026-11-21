@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Banner;
 use App\Models\BannerSection;
 use App\Models\StoreSetting;
+use App\Services\Media\MediaCleaner;
 use App\Services\Media\WebpConverter;
 use App\Support\BannerText;
 use App\Support\Media\ImageDimensions;
@@ -228,7 +229,17 @@ class AdminBannerController extends Controller
 
     public function update(Request $request, Banner $banner): JsonResponse
     {
+        // مسیرهای قبلی قبل از به‌روزرسانی خوانده می‌شوند تا اگر تصویر عوض شد،
+        // فایل قدیمی روی دیسک نماند (فقط وقتی بنر دیگری از آن استفاده نکند).
+        $previousPaths = MediaCleaner::bannerPaths($banner);
+
         $banner->update($this->validateBanner($request));
+
+        $currentPaths = MediaCleaner::bannerPaths($banner->fresh());
+
+        foreach (array_diff($previousPaths, $currentPaths) as $path) {
+            MediaCleaner::deleteBannerFile($path);
+        }
 
         $this->forgetStorefrontCache();
 
@@ -321,7 +332,19 @@ class AdminBannerController extends Controller
 
     public function destroy(Banner $banner): JsonResponse
     {
+        /*
+         * فایل‌های تصویر بنر با حذف ردیف پاک می‌شوند، مگر اینکه بنر دیگری (مثلاً
+         * بنر هم‌تصویر یا ستون تصویر موبایل) به همان مسیر ارجاع بدهد؛ بررسی
+         * ارجاع در MediaCleaner انجام می‌شود. مسیرهای فرانت‌اند
+         * (`/images/...`) هم دست‌نخورده می‌مانند.
+         */
+        $paths = MediaCleaner::bannerPaths($banner);
+
         $banner->delete();
+
+        foreach ($paths as $path) {
+            MediaCleaner::deleteBannerFile($path);
+        }
 
         $this->forgetStorefrontCache();
 
@@ -369,6 +392,38 @@ class AdminBannerController extends Controller
                 'height' => $dimensions['height'] ?? null,
             ],
         ], 201);
+    }
+
+    /**
+     * دورریختن تصاویری که آپلود شده‌اند ولی ذخیره نشدند (بستن/انصراف از فرم).
+     *
+     * فقط فایل‌های داخل پوشهٔ `banners` که هیچ بنری به آن‌ها ارجاع ندارد حذف
+     * می‌شوند؛ بنابراین درخواست دستکاری‌شده نمی‌تواند تصویر بنرهای منتشرشده
+     * یا فایل‌های فرانت‌اند را پاک کند. خطای شبکه/فایل هم بی‌اثر است، چون
+     * کامند `media:prune` همین فایل‌های یتیم را بعداً جمع می‌کند.
+     */
+    public function discardImages(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'paths' => ['required', 'array', 'max:10'],
+            'paths.*' => ['string', 'max:2048'],
+        ]);
+
+        $deleted = 0;
+
+        foreach ($validated['paths'] as $path) {
+            if (MediaCleaner::deleteOrphanBannerUpload($path)) {
+                $deleted++;
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => $deleted > 0
+                ? 'تصاویر ذخیره‌نشده پاک شدند.'
+                : 'فایلی برای پاک‌کردن نبود.',
+            'data' => ['deleted' => $deleted],
+        ]);
     }
 
     private function forgetStorefrontCache(): void

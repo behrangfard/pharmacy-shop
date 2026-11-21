@@ -606,6 +606,13 @@ Route::prefix('v1')->group(function () {
                         [AdminBannerController::class, 'uploadImage']
                     );
 
+                    // دورریختن آپلودهای ذخیره‌نشده (بستن/انصراف از فرم بنر).
+                    // فقط فایل‌های بدون ارجاع در پوشهٔ banners پاک می‌شوند.
+                    Route::post(
+                        '/banners/images/discard',
+                        [AdminBannerController::class, 'discardImages']
+                    );
+
                     // بخش‌های بنر (چیدمان بخش چندستونهٔ صفحهٔ اول)
                     Route::get(
                         '/banner-sections',

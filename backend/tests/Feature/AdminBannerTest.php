@@ -218,6 +218,139 @@ class AdminBannerTest extends TestCase
         Storage::disk('public')->assertExists($path);
     }
 
+    public function test_deleting_banner_removes_its_images_from_disk(): void
+    {
+        Storage::fake('public');
+
+        $this->admin();
+
+        Storage::disk('public')->put('banners/desktop.jpg', 'x');
+        Storage::disk('public')->put('banners/mobile.jpg', 'x');
+
+        $banner = Banner::query()->create([
+            'title' => 'بنر حذف‌شدنی',
+            'image' => 'banners/desktop.jpg',
+            'mobile_image' => 'banners/mobile.jpg',
+            'position' => 'home_hero',
+            'is_active' => true,
+        ]);
+
+        $this->deleteJson("/api/v1/admin/banners/{$banner->id}")->assertOk();
+
+        Storage::disk('public')->assertMissing('banners/desktop.jpg');
+        Storage::disk('public')->assertMissing('banners/mobile.jpg');
+    }
+
+    public function test_deleting_banner_keeps_image_used_by_another_banner(): void
+    {
+        Storage::fake('public');
+
+        $this->admin();
+
+        Storage::disk('public')->put('banners/shared.jpg', 'x');
+
+        $first = Banner::query()->create([
+            'title' => 'اول',
+            'image' => 'banners/shared.jpg',
+            'position' => 'home_hero',
+        ]);
+
+        $second = Banner::query()->create([
+            'title' => 'دوم',
+            'image' => 'banners/shared.jpg',
+            'position' => 'home_hero',
+        ]);
+
+        $this->deleteJson("/api/v1/admin/banners/{$first->id}")->assertOk();
+        Storage::disk('public')->assertExists('banners/shared.jpg');
+
+        $this->deleteJson("/api/v1/admin/banners/{$second->id}")->assertOk();
+        Storage::disk('public')->assertMissing('banners/shared.jpg');
+    }
+
+    public function test_updating_banner_image_removes_the_replaced_file(): void
+    {
+        Storage::fake('public');
+
+        $this->admin();
+
+        Storage::disk('public')->put('banners/old.jpg', 'x');
+
+        $banner = Banner::query()->create([
+            'title' => 'قبل',
+            'image' => 'banners/old.jpg',
+            'position' => 'home_hero',
+        ]);
+
+        $this->putJson("/api/v1/admin/banners/{$banner->id}", [
+            'title' => 'بعد',
+            'image' => 'banners/new.jpg',
+            'position' => 'home_hero',
+        ])->assertOk()->assertJsonPath('data.image', 'banners/new.jpg');
+
+        Storage::disk('public')->assertMissing('banners/old.jpg');
+    }
+
+    public function test_frontend_asset_paths_are_never_deleted(): void
+    {
+        Storage::fake('public');
+
+        $this->admin();
+
+        Storage::disk('public')->put('images/hero.png', 'x');
+
+        $banner = Banner::query()->create([
+            'title' => 'تصویر فرانت',
+            // تصاویر آمادهٔ سایت با مسیر نسبی فرانت‌اند ذخیره می‌شوند و مالک
+            // آن‌ها storage بک‌اند نیست.
+            'image' => '/images/hero.png',
+            'position' => 'home_hero',
+        ]);
+
+        $this->deleteJson("/api/v1/admin/banners/{$banner->id}")->assertOk();
+
+        Storage::disk('public')->assertExists('images/hero.png');
+    }
+
+    public function test_discard_endpoint_only_removes_unreferenced_uploads(): void
+    {
+        Storage::fake('public');
+
+        $this->admin();
+
+        Storage::disk('public')->put('banners/temp.jpg', 'x');
+        Storage::disk('public')->put('banners/used.jpg', 'x');
+
+        Banner::query()->create([
+            'title' => 'منتشرشده',
+            'image' => 'banners/used.jpg',
+            'position' => 'home_hero',
+        ]);
+
+        $this->postJson('/api/v1/admin/banners/images/discard', [
+            'paths' => [
+                'banners/temp.jpg',
+                'banners/used.jpg',
+                '/images/hero.png',
+                'banners/../secret.jpg',
+            ],
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.deleted', 1);
+
+        Storage::disk('public')->assertMissing('banners/temp.jpg');
+        Storage::disk('public')->assertExists('banners/used.jpg');
+    }
+
+    public function test_discard_endpoint_rejects_invalid_payload(): void
+    {
+        $this->admin();
+
+        $this->postJson('/api/v1/admin/banners/images/discard', [
+            'paths' => [],
+        ])->assertStatus(422);
+    }
+
     public function test_guest_cannot_manage_banners(): void
     {
         $this->postJson('/api/v1/admin/banners', [
