@@ -73,6 +73,7 @@ function App() {
             fallback={
               <div
                 role="status"
+                data-route-fallback=""
                 style={{
                   minHeight: "50vh",
                   display: "flex",

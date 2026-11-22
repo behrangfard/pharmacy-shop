@@ -224,6 +224,9 @@ function ScrollToTop() {
       }
 
       const settled =
+        // تا وقتی fallback صفحه (Suspense) روی صفحه است، چیدمان «آرام» نیست:
+        // ارتفاع فعلی مال صفحهٔ لودینگ است و اعتماد به آن باعث پرش بعدی می‌شد.
+        !document.querySelector("[data-route-fallback]") &&
         stableFrames >= SETTLE_FRAMES &&
         (Math.abs(readScrollY() - saved) < 2 ||
           // صفحهٔ مقصد کوتاه‌تر از موقعیت قبلی است؛ تا انتهای ممکن می‌رویم.
