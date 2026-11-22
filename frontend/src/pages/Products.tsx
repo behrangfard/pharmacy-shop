@@ -693,6 +693,15 @@ function Products() {
       params.set("sort", sort);
     }
 
+    /*
+     * اگر رشتهٔ کوئری تغییری نکرده باشد، بازنویسی آدرس فقط کلید ورودی تاریخچه را
+     * عوض می‌کند؛ نتیجه‌اش یتیم شدن موقعیت اسکرول ذخیره‌شده (بازگردانی بعد از
+     * Back از بین می‌رفت) و پرش به بالای صفحه است.
+     */
+    if (params.toString() === searchParams.toString()) {
+      return;
+    }
+
     setSearchParams(params, { replace: true });
   }, [
     search,
@@ -706,6 +715,7 @@ function Products() {
     selectedSizes,
     newOnly,
     featuredOnly,
+    searchParams,
     setSearchParams,
   ]);
 

@@ -62,6 +62,12 @@ function ScrollToTop() {
   const restoring = useRef(false);
   /** هر ناوبری تازه، بازگردانی در جریان را باطل می‌کند. */
   const navigationId = useRef(0);
+  /** کلید ورودی قبلی؛ برای انتقال موقعیت وقتی آدرسِ همان صفحه بازنویسی می‌شود. */
+  const previousKey = useRef("");
+  /** مسیر قبلی؛ برای تشخیص «بازنویسی آدرس در همان صفحه» از «رفتن به صفحهٔ تازه». */
+  const previousPathname = useRef("");
+  /** تا این زمان، یک REPLACE در همان مسیر ادامهٔ بازگردانی جاری شمرده می‌شود. */
+  const restoreUntil = useRef(0);
 
   /**
    * بازگردانی خودکار مرورگر خاموش می‌شود تا خودمان موقعیت‌ها را مدیریت کنیم:
@@ -104,7 +110,19 @@ function ScrollToTop() {
 
   useLayoutEffect(() => {
     const id = ++navigationId.current;
+    /*
+     * بعضی صفحه‌ها بعد از mount آدرس را با `replace` بازنویسی می‌کنند (مثلاً
+     * نرمال‌سازی پارامترهای فیلتر در `/products`)؛ این کار کلید ورودی تاریخچه را
+     * عوض می‌کند و موقعیت ذخیره‌شده یتیم می‌ماند. اگر همین حالا بازگردانی در
+     * جریان باشد، این REPLACE «همان صفحه» است و نباید پرش به بالا اجرا شود.
+     */
+    const samePageReplace =
+      navigationType === "REPLACE" && previousPathname.current === pathname;
+    const previousEntryKey = previousKey.current;
     const entryKey = key || pathname;
+
+    previousKey.current = entryKey;
+    previousPathname.current = pathname;
 
     // فریم ذخیرهٔ صفحهٔ قبلی نباید با کلید ورودی تازه ثبت شود.
     if (pendingSave.current) {
@@ -118,6 +136,7 @@ function ScrollToTop() {
 
     if (hashTarget) {
       restoring.current = false;
+      restoreUntil.current = 0;
       hashTarget.scrollIntoView({ block: "start" });
 
       return;
@@ -125,8 +144,28 @@ function ScrollToTop() {
 
     // فقط برگشت/جلوی مرورگر موقعیت قبلی را بازمی‌گرداند؛ رفتن به صفحهٔ تازه
     // همیشه از بالاست.
-    const saved =
+    let saved =
       navigationType === "POP" ? positions.current.get(entryKey) : undefined;
+
+    /*
+     * بازنویسی آدرس در همان صفحه، درست بعد از بازگشت: موقعیت ورودی قبلی به کلید
+     * تازه منتقل می‌شود تا بازگردانی ادامه پیدا کند و ورودی جدید هم موقعیتش را
+     * برای Backهای بعدی داشته باشد.
+     */
+    if (
+      saved === undefined &&
+      samePageReplace &&
+      previousEntryKey &&
+      performance.now() < restoreUntil.current
+    ) {
+      const carried = positions.current.get(previousEntryKey);
+
+      if (carried !== undefined) {
+        saved = carried;
+        positions.current.set(entryKey, carried);
+        positions.current.delete(previousEntryKey);
+      }
+    }
 
     /*
      * گزارش تشخیصی در حالت توسعه: با دیدن این خط در Console مرورگر می‌شود فهمید
@@ -142,17 +181,24 @@ function ScrollToTop() {
       });
     }
 
-    if (!saved) {
+    if (saved === undefined) {
       restoring.current = false;
+      restoreUntil.current = 0;
       jumpTo(0);
 
       return;
     }
 
+    /** از این‌جا به بعد مقدار قطعی است؛ داخل توابع بسته هم عدد می‌ماند. */
+    const restoreTo = saved;
+
     restoring.current = true;
 
     const startedAt = performance.now();
     const deadline = startedAt + RESTORE_WINDOW_MS;
+
+    // تا این زمان، REPLACE در همین مسیر «ادامهٔ بازگردانی» شمرده می‌شود.
+    restoreUntil.current = deadline;
     let frame = 0;
     let stopped = false;
     let lastHeight = -1;
@@ -210,8 +256,8 @@ function ScrollToTop() {
         return;
       }
 
-      if (Math.abs(readScrollY() - saved) >= 2) {
-        jumpTo(saved);
+      if (Math.abs(readScrollY() - restoreTo) >= 2) {
+        jumpTo(restoreTo);
       }
 
       const height = documentHeight();
@@ -228,11 +274,12 @@ function ScrollToTop() {
         // ارتفاع فعلی مال صفحهٔ لودینگ است و اعتماد به آن باعث پرش بعدی می‌شد.
         !document.querySelector("[data-route-fallback]") &&
         stableFrames >= SETTLE_FRAMES &&
-        (Math.abs(readScrollY() - saved) < 2 ||
+        (Math.abs(readScrollY() - restoreTo) < 2 ||
           // صفحهٔ مقصد کوتاه‌تر از موقعیت قبلی است؛ تا انتهای ممکن می‌رویم.
           readScrollY() >= height - window.innerHeight - 2);
 
       if (settled || performance.now() > deadline) {
+        restoreUntil.current = 0;
         stop();
 
         return;
@@ -242,9 +289,18 @@ function ScrollToTop() {
     };
 
     // اگر کاربر خودش شروع به اسکرول کرد، بازگردانی رها شود تا با او کشمکش نکند.
-    window.addEventListener("wheel", stop, { passive: true });
-    window.addEventListener("touchstart", stop, { passive: true });
-    window.addEventListener("keydown", stop);
+    /*
+     * اگر کاربر خودش شروع به اسکرول کرد، بازگردانی رها می‌شود تا با او کشمکش
+     * نکند؛ آخرین موقعیت هم دیگر «ادامهٔ بازگردانی» شمرده نمی‌شود.
+     */
+    const abort = () => {
+      restoreUntil.current = 0;
+      stop();
+    };
+
+    window.addEventListener("wheel", abort, { passive: true });
+    window.addEventListener("touchstart", abort, { passive: true });
+    window.addEventListener("keydown", abort);
 
     frame = requestAnimationFrame(step);
 
