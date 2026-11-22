@@ -14,8 +14,18 @@ import { useLocation, useNavigationType } from "react-router-dom";
  * به بالا اسکرول کند.
  */
 
-/** مهلت تلاش برای بازگردانی؛ صفحه‌هایی که داده‌شان دیر می‌رسد تا این مدت دوباره تلاش می‌شوند. */
-const RESTORE_TIMEOUT_MS = 2000;
+/**
+ * پنجرهٔ بازگردانی: تا این مدت موقعیت هدف پیوسته اعمال می‌شود.
+ *
+ * صفحهٔ مقصد معمولاً اول اسکلتون/محتوای موقت نشان می‌دهد و بعد محتوای واقعی
+ * جایش را می‌گیرد؛ ارتفاع سند در این فاصله عوض می‌شود و مرورگر موقعیت اسکرول
+ * را به انتهای صفحهٔ کوتاه‌تر «قُلِنج» می‌دهد. برای همین بازگردانی یک‌باره
+ * کافی نیست.
+ */
+const RESTORE_WINDOW_MS = 4000;
+
+/** چند فریم بدون تغییر ارتفاع سند = چیدمان آرام شده است (~۳۰۰ms). */
+const SETTLE_FRAMES = 18;
 
 /**
  * اسکرول پرشی به موقعیت مشخص.
@@ -118,6 +128,20 @@ function ScrollToTop() {
     const saved =
       navigationType === "POP" ? positions.current.get(entryKey) : undefined;
 
+    /*
+     * گزارش تشخیصی در حالت توسعه: با دیدن این خط در Console مرورگر می‌شود فهمید
+     * بازگردانی چرا انجام نشده (نوع ناوبری، کلید ورودی، موقعیت ذخیره‌شده).
+     */
+    if (import.meta.env.DEV) {
+      console.debug("[scroll]", {
+        type: navigationType,
+        key: entryKey,
+        saved,
+        y: readScrollY(),
+        height: document.documentElement.scrollHeight,
+      });
+    }
+
     if (!saved) {
       restoring.current = false;
       jumpTo(0);
@@ -127,9 +151,18 @@ function ScrollToTop() {
 
     restoring.current = true;
 
-    const deadline = performance.now() + RESTORE_TIMEOUT_MS;
+    const deadline = performance.now() + RESTORE_WINDOW_MS;
     let frame = 0;
     let stopped = false;
+    let lastHeight = -1;
+    let stableFrames = 0;
+
+    /** ارتفاع سند برای تشخیص «آرام شدن» چیدمان (محتوا که می‌رسد عوض می‌شود). */
+    const documentHeight = () =>
+      Math.max(
+        document.documentElement.scrollHeight,
+        document.body.scrollHeight,
+      );
 
     const stop = () => {
       if (stopped) {
@@ -143,6 +176,8 @@ function ScrollToTop() {
         frame = 0;
       }
 
+      // موقعیت پایانی (هرچه هست) ذخیره شود تا بار بعد دقیق‌تر برگردد.
+      positions.current.set(entryKey, readScrollY());
       restoring.current = false;
       window.removeEventListener("wheel", stop);
       window.removeEventListener("touchstart", stop);
@@ -150,8 +185,9 @@ function ScrollToTop() {
     };
 
     /**
-     * صفحهٔ مقصد ممکن است داده‌اش را دیرتر بیاورد و ارتفاعش هنوز کم باشد؛ پس
-     * تا رسیدن به موقعیت هدف (یا پایان مهلت) روی هر فریم دوباره تلاش می‌شود.
+     * تا آرام شدن چیدمان، موقعیت هدف هر فریم دوباره اعمال می‌شود؛ نه فقط تا
+     * اولین رسیدن. اگر صفحه اول بلند باشد و بعد کوتاه شود، «رسیدن» موقتی است و
+     * مرورگر موقعیت را جابه‌جا می‌کند — همان پرشی که کاربر می‌دید.
      */
     const step = () => {
       frame = 0;
@@ -162,9 +198,26 @@ function ScrollToTop() {
         return;
       }
 
-      jumpTo(saved);
+      if (Math.abs(readScrollY() - saved) >= 2) {
+        jumpTo(saved);
+      }
 
-      if (Math.abs(readScrollY() - saved) < 2 || performance.now() > deadline) {
+      const height = documentHeight();
+
+      if (height === lastHeight) {
+        stableFrames += 1;
+      } else {
+        lastHeight = height;
+        stableFrames = 0;
+      }
+
+      const settled =
+        stableFrames >= SETTLE_FRAMES &&
+        (Math.abs(readScrollY() - saved) < 2 ||
+          // صفحهٔ مقصد کوتاه‌تر از موقعیت قبلی است؛ تا انتهای ممکن می‌رویم.
+          readScrollY() >= height - window.innerHeight - 2);
+
+      if (settled || performance.now() > deadline) {
         stop();
 
         return;
