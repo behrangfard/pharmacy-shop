@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { useLocation, useNavigationType } from "react-router-dom";
 
 /**
@@ -102,7 +102,7 @@ function ScrollToTop() {
     };
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const id = ++navigationId.current;
     const entryKey = key || pathname;
 
@@ -151,7 +151,8 @@ function ScrollToTop() {
 
     restoring.current = true;
 
-    const deadline = performance.now() + RESTORE_WINDOW_MS;
+    const startedAt = performance.now();
+    const deadline = startedAt + RESTORE_WINDOW_MS;
     let frame = 0;
     let stopped = false;
     let lastHeight = -1;
@@ -176,9 +177,20 @@ function ScrollToTop() {
         frame = 0;
       }
 
-      // موقعیت پایانی (هرچه هست) ذخیره شود تا بار بعد دقیق‌تر برگردد.
-      positions.current.set(entryKey, readScrollY());
+      /*
+       * اینجا موقعیت ذخیره نمی‌شود: هنگام پاک شدن این افکت، DOM صفحهٔ بعدی جای
+       * صفحهٔ فعلی نشسته است و خواندن موقعیت، عدد قُلِنج‌شده (اشتباه) می‌دهد.
+       */
       restoring.current = false;
+
+      if (import.meta.env.DEV) {
+        console.debug("[scroll] stop", {
+          key: entryKey,
+          target: saved,
+          y: readScrollY(),
+          ms: Math.round(performance.now() - startedAt),
+        });
+      }
       window.removeEventListener("wheel", stop);
       window.removeEventListener("touchstart", stop);
       window.removeEventListener("keydown", stop);
