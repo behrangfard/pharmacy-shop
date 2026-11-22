@@ -129,9 +129,8 @@ function ArticleDetail() {
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
 
-  useEffect(() => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  }, [slug]);
+  // اسکرول با تغییر مسیر (و بازگردانی موقعیت در برگشت مرورگر) وظیفهٔ
+  // `components/ScrollToTop` است؛ اسکرول دستی اینجا با آن کشمکش می‌کرد.
 
   useEffect(() => {
     if (!slug) {
