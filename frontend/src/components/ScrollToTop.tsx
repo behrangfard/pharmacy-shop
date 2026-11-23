@@ -7,8 +7,9 @@ import { useLocation, useNavigationType } from "react-router-dom";
  * - رفتن به صفحهٔ تازه (کلیک روی لینک/منو): از بالای همان صفحه.
  * - برگشت با دکمهٔ Back (یا رفتن به جلو با Forward): همان جایی که کاربر قبلاً
  *   بود، نه از بالای صفحه.
- * - بازگردانی نرم است: فقط رو به پایین دنبال می‌شود، با آستانهٔ چند پیکسل و با
- *   خاموش‌کردن anchor مرورگر، تا صفحه «بالا-پایین» نپرد.
+ * - بازگردانی یک‌جهته و با آستانهٔ چند پیکسل است تا صفحه «بالا-پایین» نپرد، و
+ *   تا وقتی ارتفاع صفحهٔ مقصد به ارتفاع دفعهٔ قبل نرسیده عجله نمی‌کند (محتوا
+ *   async می‌رسد و ارتفاعِ اولیهٔ صفحه کوتاه است).
  *
  * بدون این کامپوننت مسیریابی سمت کلاینت موقعیت اسکرول صفحهٔ قبلی را نگه
  * می‌دارد؛ اگر صفحهٔ جدید کوتاه‌تر باشد مرورگر آن عدد را تا انتهای صفحه
@@ -26,8 +27,25 @@ import { useLocation, useNavigationType } from "react-router-dom";
  */
 const RESTORE_WINDOW_MS = 4000;
 
-/** چند فریم بدون تغییر ارتفاع سند = چیدمان آرام شده است (~۳۰۰ms). */
-const SETTLE_FRAMES = 18;
+/** چند میلی‌ثانیه بدون تغییر ارتفاع سند = چیدمان آرام شده است. */
+const SETTLE_MS = 300;
+
+/**
+ * مهلت صبر برای رسیدن ارتفاع صفحه به ارتفاع دفعهٔ قبل.
+ *
+ * صفحهٔ مقصد (مثلاً صفحهٔ اصلی فروشگاه) بخش‌هایش را async می‌گیرد؛ تا رسیدن
+ * داده، ارتفاع سند کوتاه است و موقعیت ذخیره‌شده حتی قابل‌دسترس نیست. اگر در
+ * همان حال «تمام‌شده» حساب کنیم، بعد از رسیدن محتوا صفحه نزدیک بالا می‌ماند —
+ * همان برگشتِ ناخواسته به بالای صفحه. پس تا این مدت منتظر می‌مانیم.
+ */
+const CONTENT_WAIT_MS = 3000;
+
+/**
+ * ارتفاع صفحه باید حداقل این نسبت از ارتفاع دفعهٔ قبل باشد تا «محتوا برگشته»
+ * شمرده شود. کمی رواداری، چون ارتفاع بسته به عرض نوار اسکرول/فونت چند پیکسل
+ * تفاوت دارد.
+ */
+const HEIGHT_READY_RATIO = 0.92;
 
 /**
  * آستانهٔ حرکت: اختلاف‌های کمتر از این مقدار نادیده گرفته می‌شوند.
@@ -66,12 +84,38 @@ function readScrollY(): number {
   );
 }
 
+/**
+ * ارتفاع سند؛ با آن تشخیص می‌دهیم محتوای صفحهٔ مقصد برگشته است یا نه.
+ * (محتوا که می‌رسد ارتفاع عوض می‌شود.)
+ */
+function documentHeight(): number {
+  return Math.max(
+    document.documentElement.scrollHeight,
+    document.body.scrollHeight,
+  );
+}
+
+/**
+ * بلندترین موقعیتی که صفحهٔ فعلی اجازه می‌دهد.
+ *
+ * در محیط بدون چیدمان (jsdom در تست) ارتفاع سند صفر است؛ آن‌جا محدودیتی
+ * نمی‌گذاریم تا مقدار هدف مستقیم اعمال شود.
+ */
+function maxScroll(): number {
+  const height = documentHeight();
+
+  return height > 0 ? Math.max(0, height - window.innerHeight) : Infinity;
+}
+
+/** موقعیت اسکرول یک ورودی تاریخچه، همراه ارتفاع سند در همان لحظه. */
+type SavedPosition = { y: number; height: number };
+
 function ScrollToTop() {
   const { pathname, hash, key } = useLocation();
   const navigationType = useNavigationType();
 
   /** آخرین موقعیت اسکرول هر ورودی تاریخچه، با کلید همان ورودی. */
-  const positions = useRef(new Map<string, number>());
+  const positions = useRef(new Map<string, SavedPosition>());
   /** کلید ورودی تاریخچهٔ فعلی؛ موقعیت‌ها با همین کلید ذخیره می‌شوند. */
   const currentKey = useRef<string>("");
   /** فریم در انتظار ذخیره (throttle با requestAnimationFrame). */
@@ -109,7 +153,10 @@ function ScrollToTop() {
         pendingSave.current = 0;
 
         if (!restoring.current) {
-          positions.current.set(currentKey.current, readScrollY());
+          positions.current.set(currentKey.current, {
+            y: readScrollY(),
+            height: documentHeight(),
+          });
         }
       });
     };
@@ -162,7 +209,8 @@ function ScrollToTop() {
 
     // فقط برگشت/جلوی مرورگر موقعیت قبلی را بازمی‌گرداند؛ رفتن به صفحهٔ تازه
     // همیشه از بالاست.
-    let saved =
+    /** موقعیت ذخیره‌شدهٔ همین ورودی (همراه ارتفاع سند در همان لحظه). */
+    let savedEntry =
       navigationType === "POP" ? positions.current.get(entryKey) : undefined;
 
     /*
@@ -171,15 +219,15 @@ function ScrollToTop() {
      * برای Backهای بعدی داشته باشد.
      */
     if (
-      saved === undefined &&
+      savedEntry === undefined &&
       samePageReplace &&
       previousEntryKey &&
       performance.now() < restoreUntil.current
     ) {
       const carried = positions.current.get(previousEntryKey);
 
-      if (carried !== undefined) {
-        saved = carried;
+      if (carried) {
+        savedEntry = carried;
         positions.current.set(entryKey, carried);
         positions.current.delete(previousEntryKey);
       }
@@ -193,13 +241,14 @@ function ScrollToTop() {
       console.debug("[scroll]", {
         type: navigationType,
         key: entryKey,
-        saved,
+        saved: savedEntry?.y,
+        savedHeight: savedEntry?.height,
         y: readScrollY(),
         height: document.documentElement.scrollHeight,
       });
     }
 
-    if (saved === undefined) {
+    if (!savedEntry) {
       restoring.current = false;
       restoreUntil.current = 0;
       jumpTo(0);
@@ -208,7 +257,9 @@ function ScrollToTop() {
     }
 
     /** از این‌جا به بعد مقدار قطعی است؛ داخل توابع بسته هم عدد می‌ماند. */
-    const restoreTo = saved;
+    const restoreTo = savedEntry.y;
+    /** ارتفاعی که صفحهٔ مقصد باید به آن برگردد تا محتوایش کامل باشد. */
+    const restoreHeight = savedEntry.height;
 
     restoring.current = true;
 
@@ -220,29 +271,19 @@ function ScrollToTop() {
     let frame = 0;
     let stopped = false;
     let lastHeight = -1;
-    let stableFrames = 0;
+    /** آخرین بار که ارتفاع سند عوض شد؛ مبنای تشخیص «آرام شدن» چیدمان. */
+    let lastChangedAt = performance.now();
     /** آخرین موقعیتی که خودمان اعمال کردیم؛ تا تغییر معنادار بعدی نوشتنی نداریم. */
     let applied = -1;
 
     /*
-     * در حین بازگردانی، «anchor» خودکار مرورگر خاموش می‌ماند: وقتی محتوای بالای
-     * صفحه می‌رسد (تصویر/فونت)، مرورگر خودش موقعیت را جابه‌جا می‌کرد و ما هر فریم
-     * پسش می‌زدیم — منبع اصلی لرزش صفحه. بعد از پایان، مقدار قبلی برمی‌گردد.
+     * «anchor» خودکار مرورگر روشن می‌ماند: اگر محتوایی بالای ناحیهٔ دید برسد،
+     * مرورگر خودش موقعیت را نگه می‌دارد تا محتوا نپرد. ما هم فقط زمانی
+     * می‌نویسیم که هدفِ قابل‌دسترس بزرگ‌تر شده باشد، پس با هم کشمکش نمی‌کنند.
      */
-    const root = document.documentElement;
-    const previousAnchor = root.style.overflowAnchor;
-
-    root.style.overflowAnchor = "none";
 
     /** برای برداشتن شنونده‌ها؛ بعد از تعریف `stop` مقدار می‌گیرد. */
     let abort: (() => void) | null = null;
-
-    /** ارتفاع سند برای تشخیص «آرام شدن» چیدمان (محتوا که می‌رسد عوض می‌شود). */
-    const documentHeight = () =>
-      Math.max(
-        document.documentElement.scrollHeight,
-        document.body.scrollHeight,
-      );
 
     const stop = () => {
       if (stopped) {
@@ -265,7 +306,8 @@ function ScrollToTop() {
       if (import.meta.env.DEV) {
         console.debug("[scroll] stop", {
           key: entryKey,
-          target: saved,
+          target: restoreTo,
+          height: documentHeight(),
           y: readScrollY(),
           ms: Math.round(performance.now() - startedAt),
         });
@@ -275,15 +317,13 @@ function ScrollToTop() {
         window.removeEventListener("touchstart", abort);
         window.removeEventListener("keydown", abort);
       }
-
-      root.style.overflowAnchor = previousAnchor;
     };
 
-    /** بلندترین موقعیتی که صفحهٔ فعلی اجازه می‌دهد. */
-    const maxScroll = () => Math.max(0, documentHeight() - window.innerHeight);
-
     /**
-     * تا آرام شدن چیدمان، بازگردانی فقط «رو به پایین» است.
+     * بازگردانی تا آماده شدن صفحهٔ مقصد: یک‌جهته، با آستانه، و بدون عجله.
+     *
+     * تا وقتی موقعیت ذخیره‌شده در ارتفاع فعلی سند قابل‌دسترس نیست، نوشتنی
+     * انجام نمی‌شود (محتوا هنوز نرسیده). وقتی رسید، یک‌بار به هدف می‌رویم.
      *
      * وقتی محتوای واقعی می‌رسد ارتفاع سند زیاد می‌شود و هدفِ قابل‌دسترس بزرگ‌تر
      * می‌شود؛ همان را می‌رویم. اصلاح رو به بالا انجام نمی‌شود، چون با جابه‌جایی
@@ -299,31 +339,54 @@ function ScrollToTop() {
         return;
       }
 
+      const now = performance.now();
       const height = documentHeight();
 
-      if (height === lastHeight) {
-        stableFrames += 1;
-      } else {
+      if (height !== lastHeight) {
         lastHeight = height;
-        stableFrames = 0;
+        lastChangedAt = now;
       }
 
-      const target = Math.min(restoreTo, maxScroll());
+      // موقعیت ذخیره‌شده در این ارتفاع قابل‌دسترس است؟
+      const available = maxScroll();
+      const canReach = available >= restoreTo - JUMP_THRESHOLD_PX;
 
-      if (applied < 0 || target - applied >= JUMP_THRESHOLD_PX) {
-        jumpTo(target);
-        applied = target;
+      /*
+       * تا وقتی هدف قابل‌دسترس نیست هیچ نوشتنی نمی‌کنیم: صفحهٔ مقصد هنوز
+       * محتوایش را نگرفته و ارتفاعش کوتاه است (صفحهٔ اصلی فروشگاه بخش‌هایش را
+       * async می‌گیرد). پریدن به انتهای همان صفحهٔ کوتاه و «تمام‌شده» حساب
+       * کردنش، همان دلیلی بود که Back به صفحهٔ اصلی تقریباً از بالا باز می‌شد.
+       */
+      if (canReach) {
+        const target = Math.min(restoreTo, available);
+
+        if (applied < 0 || target - applied >= JUMP_THRESHOLD_PX) {
+          jumpTo(target);
+          applied = target;
+        }
       }
+
+      const quietFor = now - lastChangedAt;
+      /* ارتفاع صفحه به ارتفاع دفعهٔ قبل برگشته است؟ یعنی محتوا کامل شده. */
+      const heightReady =
+        restoreHeight <= 0 || height >= restoreHeight * HEIGHT_READY_RATIO;
+      /* به هدف رسیده‌ایم (یا از آن رد شده‌ایم؛ اصلاح رو به بالا نمی‌کنیم). */
+      const atTarget = readScrollY() >= restoreTo - JUMP_THRESHOLD_PX;
 
       const settled =
         // تا وقتی fallback صفحه (Suspense) روی صفحه است، چیدمان «آرام» نیست:
         // ارتفاع فعلی مال صفحهٔ لودینگ است و اعتماد به آن باعث پرش بعدی می‌شد.
         !document.querySelector("[data-route-fallback]") &&
-        stableFrames >= SETTLE_FRAMES &&
-        // صفحهٔ کوتاه‌تر: `target` خودش همان انتهای ممکن است، پس یکی‌اند.
-        Math.abs(readScrollY() - target) < JUMP_THRESHOLD_PX;
+        quietFor >= SETTLE_MS &&
+        (heightReady
+          ? atTarget ||
+            // اگر anchor مرورگر ما را کمی جابه‌جا کرد، همان درست است؛ نوشتن
+            // دوباره فقط لرزش می‌آورد. پس به‌جای اصرار روی عدد، تمام می‌کنیم.
+            applied >= 0
+          : // ارتفاع برنگشته و مدت‌ها هم ثابت مانده: صفحه واقعاً همین قد است.
+            quietFor >= CONTENT_WAIT_MS);
 
-      if (settled || performance.now() > deadline) {
+      if (settled || now > deadline) {
         restoreUntil.current = 0;
         stop();
 
