@@ -49,6 +49,15 @@ const CONTENT_WAIT_MS = 2000;
 const HEIGHT_READY_RATIO = 0.96;
 
 /**
+ * سقف اصلاح‌های پایانیِ موقعیت.
+ *
+ * بعد از نوشتن، ممکن است چیدمان بالای ناحیهٔ دید عوض شود و anchor مرورگر عدد را
+ * جابه‌جا کند؛ آن‌وقت یک اصلاح آگاهانه لازم است، ولی تعدادش محدود می‌ماند تا
+ * به لرزش تبدیل نشود.
+ */
+const MAX_CORRECTIONS = 3;
+
+/**
  * آستانهٔ حرکت: اختلاف‌های کمتر از این مقدار نادیده گرفته می‌شوند.
  *
  * چیدمان صفحه موقع بازگردانی چند پیکسل جابه‌جا می‌شود (تصویر/فونت/نوار اسکرول)؛
@@ -276,6 +285,10 @@ function ScrollToTop() {
     let lastChangedAt = performance.now();
     /** آخرین موقعیتی که خودمان اعمال کردیم؛ تا تغییر معنادار بعدی نوشتنی نداریم. */
     let applied = -1;
+    /** تعداد اصلاح‌های نهایی؛ سقف دارد تا حلقهٔ «بالا-پایین» نشود. */
+    let corrections = 0;
+    /** فریم اول: اگر صفحه از همان ابتدا کامل است، معطل «آرام شدن» نمی‌مانیم. */
+    let firstFrame = true;
 
     /*
      * «anchor» خودکار مرورگر روشن می‌ماند: اگر محتوایی بالای ناحیهٔ دید برسد،
@@ -310,6 +323,7 @@ function ScrollToTop() {
           target: restoreTo,
           height: documentHeight(),
           y: readScrollY(),
+          corrections,
           ms: Math.round(performance.now() - startedAt),
         });
       }
@@ -342,6 +356,9 @@ function ScrollToTop() {
 
       const now = performance.now();
       const height = documentHeight();
+      const isFirstFrame = firstFrame;
+
+      firstFrame = false;
 
       if (height !== lastHeight) {
         lastHeight = height;
@@ -363,12 +380,14 @@ function ScrollToTop() {
       const contentReady = heightReady || quietFor >= CONTENT_WAIT_MS;
       const available = maxScroll();
 
-      if (contentReady) {
+      if (contentReady && (isFirstFrame || quietFor >= SETTLE_MS)) {
         const target = Math.min(restoreTo, available);
 
         if (applied < 0 || target - applied >= JUMP_THRESHOLD_PX) {
           jumpTo(target);
           applied = target;
+          // بعد از نوشتن باید چیدمان دوباره آرام شود تا بشود drift را سنجید.
+          lastChangedAt = now;
         }
       }
 
@@ -377,14 +396,44 @@ function ScrollToTop() {
         // ارتفاع فعلی مال صفحهٔ لودینگ است و اعتماد به آن باعث پرش بعدی می‌شد.
         !document.querySelector("[data-route-fallback]") &&
         quietFor >= SETTLE_MS &&
-        (heightReady
-          ? applied >= 0 ||
-            // anchor مرورگر خودش ما را جای درست گذاشته است.
-            readScrollY() >= restoreTo - JUMP_THRESHOLD_PX
-          : // ارتفاع برنگشته و مدت‌ها هم ثابت مانده: صفحه واقعاً همین قد است.
-            quietFor >= CONTENT_WAIT_MS);
+        (applied >= 0 ||
+          readScrollY() >= restoreTo - JUMP_THRESHOLD_PX ||
+          // ارتفاع برنگشت و مدت‌ها هم ثابت مانده: صفحه واقعاً همین قد است.
+          quietFor >= CONTENT_WAIT_MS);
 
-      if (settled || now > deadline) {
+      if (settled) {
+        /*
+         * تأیید نهایی: اگر بعد از نوشتن، چیدمان «بالای» ناحیهٔ دید عوض شده باشد
+         * (مثلاً بنر بالای صفحه بعد از اندازه‌گیری ارتفاع واقعی گرفته)، anchor
+         * مرورگر موقعیت را جابه‌جا می‌کند و عدد نهایی از هدف فاصله می‌گیرد
+         * (لاگ واقعی: هدف ۲۱۴۷، پایان ۲۷۹۲). این‌جا یک اصلاح آگاهانه انجام
+         * می‌دهیم تا اختلاف صفر شود؛ تعدادش سقف دارد تا هرگز به «بالا-پایین»
+         * پریدن تبدیل نشود.
+         */
+        const target = Math.min(restoreTo, available);
+
+        if (
+          applied >= 0 &&
+          Math.abs(readScrollY() - target) > JUMP_THRESHOLD_PX &&
+          corrections < MAX_CORRECTIONS &&
+          now + SETTLE_MS < deadline
+        ) {
+          corrections += 1;
+          lastChangedAt = now;
+          applied = target;
+          jumpTo(target);
+          frame = requestAnimationFrame(step);
+
+          return;
+        }
+
+        restoreUntil.current = 0;
+        stop();
+
+        return;
+      }
+
+      if (now > deadline) {
         restoreUntil.current = 0;
         stop();
 
