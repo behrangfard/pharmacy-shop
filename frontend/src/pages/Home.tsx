@@ -788,6 +788,33 @@ function FeaturedProductsRail({
   );
 }
 
+/**
+ * آخرین دادهٔ صفحهٔ اصلی در همین نشست (کش در حافظه).
+ *
+ * برگشت با Back این صفحه را از نو mount می‌کند؛ بدون کش، رندر اول تقریباً خالی
+ * است، ارتفاع سند کوتاه می‌ماند و بازگردانی اسکرول باید منتظر داده بماند — همان
+ * «کسری از ثانیه» که بالای صفحه دیده و بعد پرش می‌شد. با کش، همان محتوای قبلی
+ * فوراً رندر می‌شود، ارتفاع صفحه از رندر اول درست است و `components/ScrollToTop`
+ * پیش از اولین paint موقعیت را می‌نشاند. درخواست‌ها مثل قبل اجرا می‌شوند و اگر
+ * داده تازه باشد، همان لحظه جای کش را می‌گیرند.
+ */
+type HomeSnapshot = {
+  featuredProducts: Product[];
+  newestProducts: Product[];
+  heroBanners: StorefrontBanner[];
+  heroSection: BannerSectionConfig | null;
+  stripBanners: StorefrontBanner[];
+  gridBanners: StorefrontBanner[];
+  gridSection: BannerSectionConfig | null;
+  mobileTopBanners: StorefrontBanner[];
+  mobileTopSection: BannerSectionConfig | null;
+  mobileMiddleBanners: StorefrontBanner[];
+  mobileMiddleSection: BannerSectionConfig | null;
+  bannerRadius: number;
+};
+
+let homeSnapshot: Partial<HomeSnapshot> = {};
+
 function Home() {
   const recentlyViewed = useRecentlyViewed();
 
@@ -798,36 +825,48 @@ function Home() {
    */
   const isDesktop = useMediaQuery(DESKTOP_MEDIA_QUERY, true);
 
-  const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
-  const [newestProducts, setNewestProducts] = useState<Product[]>([]);
+  const [featuredProducts, setFeaturedProducts] = useState<Product[]>(
+    homeSnapshot.featuredProducts ?? [],
+  );
+  const [newestProducts, setNewestProducts] = useState<Product[]>(
+    homeSnapshot.newestProducts ?? [],
+  );
   const [featuredError, setFeaturedError] = useState("");
   const [newestError, setNewestError] = useState("");
-  const [heroBanners, setHeroBanners] = useState<StorefrontBanner[]>([]);
+  const [heroBanners, setHeroBanners] = useState<StorefrontBanner[]>(
+    homeSnapshot.heroBanners ?? [],
+  );
   // تنظیمات بخش هیرو (تعداد اسلایدها، حداکثر ارتفاع هر نما و جاگیری تصویر).
   const [heroSection, setHeroSection] = useState<BannerSectionConfig | null>(
-    null,
+    homeSnapshot.heroSection ?? null,
   );
-  const [stripBanners, setStripBanners] = useState<StorefrontBanner[]>([]);
+  const [stripBanners, setStripBanners] = useState<StorefrontBanner[]>(
+    homeSnapshot.stripBanners ?? [],
+  );
   // بخش چندستونهٔ بنرها: چیدمان و تعداد بنرها از پنل مدیریت می‌آید.
-  const [gridBanners, setGridBanners] = useState<StorefrontBanner[]>([]);
+  const [gridBanners, setGridBanners] = useState<StorefrontBanner[]>(
+    homeSnapshot.gridBanners ?? [],
+  );
   const [gridSection, setGridSection] = useState<BannerSectionConfig | null>(
-    null,
+    homeSnapshot.gridSection ?? null,
   );
   // بنرهای موبایل کاملاً جدا از بنرهای دسکتاپ‌اند: یکی بالای صفحه و یکی وسط
   // صفحه؛ هر کدام تعداد، ارتفاع و گردی گوشهٔ خودش را دارد.
   const [mobileTopBanners, setMobileTopBanners] = useState<StorefrontBanner[]>(
-    [],
+    homeSnapshot.mobileTopBanners ?? [],
   );
   const [mobileTopSection, setMobileTopSection] =
-    useState<BannerSectionConfig | null>(null);
+    useState<BannerSectionConfig | null>(homeSnapshot.mobileTopSection ?? null);
   const [mobileMiddleBanners, setMobileMiddleBanners] = useState<
     StorefrontBanner[]
-  >([]);
+  >(homeSnapshot.mobileMiddleBanners ?? []);
   const [mobileMiddleSection, setMobileMiddleSection] =
-    useState<BannerSectionConfig | null>(null);
+    useState<BannerSectionConfig | null>(
+      homeSnapshot.mobileMiddleSection ?? null,
+    );
   // گردی گوشهٔ پیش‌فرض (برای نوار بنرها و بخش‌هایی که مقدار اختصاصی ندارند).
   const [bannerRadius, setBannerRadius] = useState<number>(
-    DEFAULT_BANNER_RADIUS,
+    homeSnapshot.bannerRadius ?? DEFAULT_BANNER_RADIUS,
   );
 
   // متای صفحهٔ اصلی: عنوان/توضیحات ثابت + معرفی فروشگاه و سایت برای گوگل.
@@ -847,51 +886,59 @@ function Home() {
 
         if (!Array.isArray(result)) return;
 
-        setHeroBanners(
+        const byPosition = (position: string) =>
           result.filter(
-            (banner: StorefrontBanner) => banner.position === "home_hero",
-          ),
-        );
-        setStripBanners(
-          result.filter(
-            (banner: StorefrontBanner) => banner.position === "home_strip",
-          ),
-        );
-        setGridBanners(
-          result.filter(
-            (banner: StorefrontBanner) =>
-              banner.position === HOME_GRID_POSITION,
-          ),
-        );
-        setMobileTopBanners(
-          result.filter(
-            (banner: StorefrontBanner) =>
-              banner.position === HOME_MOBILE_TOP_POSITION,
-          ),
-        );
-        setMobileMiddleBanners(
-          result.filter(
-            (banner: StorefrontBanner) =>
-              banner.position === HOME_MOBILE_MIDDLE_POSITION,
-          ),
-        );
+            (banner: StorefrontBanner) => banner.position === position,
+          );
+
+        const hero = byPosition("home_hero");
+        const strip = byPosition("home_strip");
+        const grid = byPosition(HOME_GRID_POSITION);
+        const mobileTop = byPosition(HOME_MOBILE_TOP_POSITION);
+        const mobileMiddle = byPosition(HOME_MOBILE_MIDDLE_POSITION);
         // چیدمان بخش چندستونه و تنظیمات بخش‌ها (تعداد، ارتفاع، گردی گوشه) از
         // همان پاسخ بنرها می‌آید (response.data.sections). گردی گوشهٔ پیش‌فرض
         // هم در response.data.appearance است.
-        setGridSection(parseBannerSection(response.data?.sections));
-        setHeroSection(
-          parseBannerSection(response.data?.sections, HOME_HERO_POSITION),
+        const gridSectionNext = parseBannerSection(response.data?.sections);
+        const heroSectionNext = parseBannerSection(
+          response.data?.sections,
+          HOME_HERO_POSITION,
         );
-        setMobileTopSection(
-          parseBannerSection(response.data?.sections, HOME_MOBILE_TOP_POSITION),
+        const mobileTopSectionNext = parseBannerSection(
+          response.data?.sections,
+          HOME_MOBILE_TOP_POSITION,
         );
-        setMobileMiddleSection(
-          parseBannerSection(
-            response.data?.sections,
-            HOME_MOBILE_MIDDLE_POSITION,
-          ),
+        const mobileMiddleSectionNext = parseBannerSection(
+          response.data?.sections,
+          HOME_MOBILE_MIDDLE_POSITION,
         );
-        setBannerRadius(parseBannerAppearance(response.data).radius);
+        const radius = parseBannerAppearance(response.data).radius;
+
+        setHeroBanners(hero);
+        setStripBanners(strip);
+        setGridBanners(grid);
+        setMobileTopBanners(mobileTop);
+        setMobileMiddleBanners(mobileMiddle);
+        setGridSection(gridSectionNext);
+        setHeroSection(heroSectionNext);
+        setMobileTopSection(mobileTopSectionNext);
+        setMobileMiddleSection(mobileMiddleSectionNext);
+        setBannerRadius(radius);
+
+        // کش برای رندر فوری هنگام برگشت با Back (بخش «homeSnapshot»).
+        homeSnapshot = {
+          ...homeSnapshot,
+          heroBanners: hero,
+          stripBanners: strip,
+          gridBanners: grid,
+          mobileTopBanners: mobileTop,
+          mobileMiddleBanners: mobileMiddle,
+          gridSection: gridSectionNext,
+          heroSection: heroSectionNext,
+          mobileTopSection: mobileTopSectionNext,
+          mobileMiddleSection: mobileMiddleSectionNext,
+          bannerRadius: radius,
+        };
       })
       .catch((error) => {
         // بنرها اختیاری هستند؛ خطای دریافت آن‌ها نباید صفحه را خراب کند.
@@ -909,6 +956,9 @@ function Home() {
 
         if (Array.isArray(result)) {
           setFeaturedProducts(result);
+
+          // کش برای رندر فوری هنگام برگشت با Back (بخش «homeSnapshot»).
+          homeSnapshot = { ...homeSnapshot, featuredProducts: result };
         } else {
           setFeaturedProducts([]);
           setFeaturedError("پاسخ محصولات ویژه آرایه نیست.");
@@ -938,6 +988,9 @@ function Home() {
 
         if (Array.isArray(result)) {
           setNewestProducts(result);
+
+          // کش برای رندر فوری هنگام برگشت با Back (بخش «homeSnapshot»).
+          homeSnapshot = { ...homeSnapshot, newestProducts: result };
         } else {
           setNewestProducts([]);
           setNewestError("پاسخ جدیدترین محصولات آرایه نیست.");
