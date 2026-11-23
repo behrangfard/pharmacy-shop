@@ -38,14 +38,15 @@ const SETTLE_MS = 300;
  * همان حال «تمام‌شده» حساب کنیم، بعد از رسیدن محتوا صفحه نزدیک بالا می‌ماند —
  * همان برگشتِ ناخواسته به بالای صفحه. پس تا این مدت منتظر می‌مانیم.
  */
-const CONTENT_WAIT_MS = 3000;
+const CONTENT_WAIT_MS = 2000;
 
 /**
  * ارتفاع صفحه باید حداقل این نسبت از ارتفاع دفعهٔ قبل باشد تا «محتوا برگشته»
- * شمرده شود. کمی رواداری، چون ارتفاع بسته به عرض نوار اسکرول/فونت چند پیکسل
- * تفاوت دارد.
+ * شمرده شود. رواداری کم است چون ارتفاع سند مستقل از ارتفاع ویوپورت است و هر
+ * تفاوت محسوس یعنی بخشی از محتوا (مثلاً بنرهای بالای صفحهٔ اصلی) هنوز نرسیده
+ * است؛ نوشتنِ زودهنگام در آن حالت موقعیت را جلو می‌اندازد.
  */
-const HEIGHT_READY_RATIO = 0.92;
+const HEIGHT_READY_RATIO = 0.96;
 
 /**
  * آستانهٔ حرکت: اختلاف‌های کمتر از این مقدار نادیده گرفته می‌شوند.
@@ -347,17 +348,22 @@ function ScrollToTop() {
         lastChangedAt = now;
       }
 
-      // موقعیت ذخیره‌شده در این ارتفاع قابل‌دسترس است؟
-      const available = maxScroll();
-      const canReach = available >= restoreTo - JUMP_THRESHOLD_PX;
+      const quietFor = now - lastChangedAt;
+      /* ارتفاع صفحه به ارتفاع دفعهٔ قبل برگشته است؟ یعنی محتوا کامل شده. */
+      const heightReady =
+        restoreHeight <= 0 || height >= restoreHeight * HEIGHT_READY_RATIO;
 
       /*
-       * تا وقتی هدف قابل‌دسترس نیست هیچ نوشتنی نمی‌کنیم: صفحهٔ مقصد هنوز
-       * محتوایش را نگرفته و ارتفاعش کوتاه است (صفحهٔ اصلی فروشگاه بخش‌هایش را
-       * async می‌گیرد). پریدن به انتهای همان صفحهٔ کوتاه و «تمام‌شده» حساب
-       * کردنش، همان دلیلی بود که Back به صفحهٔ اصلی تقریباً از بالا باز می‌شد.
+       * نوشتن مستقیم روی `restoreTo` فقط وقتی مجاز است که محتوای صفحه برگشته
+       * باشد. اگر زودتر بنویسیم، بخش‌هایی که هنوز نیامده‌اند بعداً «بالای» ناحیهٔ
+       * دید جا می‌گیرند و anchor مرورگر برای ثابت نگه‌داشتن محتوا اسکرول را به
+       * اندازهٔ همان بخش‌ها جابه‌جا می‌کند؛ نتیجه: موقعیت نهایی از موقعیت واقعی
+       * کاربر جلو می‌زند (لاگ: هدف ۲۴۴۲، پایان ۴۰۷۵).
        */
-      if (canReach) {
+      const contentReady = heightReady || quietFor >= CONTENT_WAIT_MS;
+      const available = maxScroll();
+
+      if (contentReady) {
         const target = Math.min(restoreTo, available);
 
         if (applied < 0 || target - applied >= JUMP_THRESHOLD_PX) {
@@ -366,23 +372,15 @@ function ScrollToTop() {
         }
       }
 
-      const quietFor = now - lastChangedAt;
-      /* ارتفاع صفحه به ارتفاع دفعهٔ قبل برگشته است؟ یعنی محتوا کامل شده. */
-      const heightReady =
-        restoreHeight <= 0 || height >= restoreHeight * HEIGHT_READY_RATIO;
-      /* به هدف رسیده‌ایم (یا از آن رد شده‌ایم؛ اصلاح رو به بالا نمی‌کنیم). */
-      const atTarget = readScrollY() >= restoreTo - JUMP_THRESHOLD_PX;
-
       const settled =
         // تا وقتی fallback صفحه (Suspense) روی صفحه است، چیدمان «آرام» نیست:
         // ارتفاع فعلی مال صفحهٔ لودینگ است و اعتماد به آن باعث پرش بعدی می‌شد.
         !document.querySelector("[data-route-fallback]") &&
         quietFor >= SETTLE_MS &&
         (heightReady
-          ? atTarget ||
-            // اگر anchor مرورگر ما را کمی جابه‌جا کرد، همان درست است؛ نوشتن
-            // دوباره فقط لرزش می‌آورد. پس به‌جای اصرار روی عدد، تمام می‌کنیم.
-            applied >= 0
+          ? applied >= 0 ||
+            // anchor مرورگر خودش ما را جای درست گذاشته است.
+            readScrollY() >= restoreTo - JUMP_THRESHOLD_PX
           : // ارتفاع برنگشته و مدت‌ها هم ثابت مانده: صفحه واقعاً همین قد است.
             quietFor >= CONTENT_WAIT_MS);
 
