@@ -6,6 +6,7 @@ import AdminLayout from "./components/AdminLayout";
 import AdminPermissionGuard from "./components/AdminPermissionGuard";
 import { RouteErrorBoundary } from "./components/ErrorBoundary";
 import ScrollToTop from "./components/ScrollToTop";
+import AnalyticsTracker from "./components/AnalyticsTracker";
 import { AdminAuthProvider } from "./context/AdminAuthContext";
 import { ADMIN_PERMISSIONS } from "./utils/adminPermissions";
 
@@ -66,6 +67,9 @@ function App() {
     <BrowserRouter>
       {/* هر صفحهٔ جدید از بالای خودش باز می‌شود، نه از موقعیت اسکرول صفحهٔ قبلی */}
       <ScrollToTop />
+
+      {/* ثبت بازدید هر مسیر در GA4/GTM؛ بدون شناسه در .env هیچ کاری نمی‌کند */}
+      <AnalyticsTracker />
 
       <AdminAuthProvider>
         <RouteErrorBoundary>
