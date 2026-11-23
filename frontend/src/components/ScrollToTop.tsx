@@ -7,6 +7,8 @@ import { useLocation, useNavigationType } from "react-router-dom";
  * - رفتن به صفحهٔ تازه (کلیک روی لینک/منو): از بالای همان صفحه.
  * - برگشت با دکمهٔ Back (یا رفتن به جلو با Forward): همان جایی که کاربر قبلاً
  *   بود، نه از بالای صفحه.
+ * - بازگردانی نرم است: فقط رو به پایین دنبال می‌شود، با آستانهٔ چند پیکسل و با
+ *   خاموش‌کردن anchor مرورگر، تا صفحه «بالا-پایین» نپرد.
  *
  * بدون این کامپوننت مسیریابی سمت کلاینت موقعیت اسکرول صفحهٔ قبلی را نگه
  * می‌دارد؛ اگر صفحهٔ جدید کوتاه‌تر باشد مرورگر آن عدد را تا انتهای صفحه
@@ -15,12 +17,12 @@ import { useLocation, useNavigationType } from "react-router-dom";
  */
 
 /**
- * پنجرهٔ بازگردانی: تا این مدت موقعیت هدف پیوسته اعمال می‌شود.
+ * پنجرهٔ بازگردانی: تا این مدت، هدفِ «قابل‌دسترس» دنبال می‌شود.
  *
  * صفحهٔ مقصد معمولاً اول اسکلتون/محتوای موقت نشان می‌دهد و بعد محتوای واقعی
- * جایش را می‌گیرد؛ ارتفاع سند در این فاصله عوض می‌شود و مرورگر موقعیت اسکرول
- * را به انتهای صفحهٔ کوتاه‌تر «قُلِنج» می‌دهد. برای همین بازگردانی یک‌باره
- * کافی نیست.
+ * جایش را می‌گیرد؛ ارتفاع سند در این فاصله عوض می‌شود. برای همین بازگردانی
+ * یک‌باره کافی نیست — ولی دنبال‌کردن هم باید یک‌جهته (رو به پایین) و با
+ * آستانه باشد تا صفحه نلرزد.
  */
 const RESTORE_WINDOW_MS = 4000;
 
@@ -28,21 +30,37 @@ const RESTORE_WINDOW_MS = 4000;
 const SETTLE_FRAMES = 18;
 
 /**
+ * آستانهٔ حرکت: اختلاف‌های کمتر از این مقدار نادیده گرفته می‌شوند.
+ *
+ * چیدمان صفحه موقع بازگردانی چند پیکسل جابه‌جا می‌شود (تصویر/فونت/نوار اسکرول)؛
+ * اصلاح همین چند پیکسل، همان لرزش «بالا-پایین» است که کاربر می‌دید.
+ */
+const JUMP_THRESHOLD_PX = 4;
+
+/**
  * اسکرول پرشی به موقعیت مشخص.
  *
- * `behavior: "auto"` برای اسکرول پرشی است؛ اگر استایل صفحه `scroll-behavior`
- * نرم داشته باشد اسکرول نرم کاربر را گیج می‌کند.
+ * `behavior: "instant"` است نه `"auto"`: مقدار `"auto"` از `scroll-behavior` CSS
+ * صفحه تبعیت می‌کند و اگر جایی نرم تعریف شده باشد، هر اصلاح به یک انیمیشن تبدیل
+ * می‌شود؛ نتیجه‌اش لرزش است. فقط وقتی مقدار مستقیم جا نیفتاد، `scrollTop` را
+ * دستی می‌گذاریم.
  */
 function jumpTo(top: number) {
-  window.scrollTo({ top, left: 0, behavior: "auto" });
-  document.documentElement.scrollTop = top;
-  document.body.scrollTop = top;
+  window.scrollTo({ top, left: 0, behavior: "instant" });
+
+  if (Math.abs(readScrollY() - top) >= 1) {
+    document.documentElement.scrollTop = top;
+    document.body.scrollTop = top;
+  }
 }
 
-/** موقعیت فعلی اسکرول سند (در بعضی مرورگرها فقط یکی از این سه مقدار به‌روز است). */
+/** موقعیت فعلی اسکرول سند؛ `scrollY` مرجع اصلی است و بقیه فقط fallback‌اند. */
 function readScrollY(): number {
+  if (typeof window.scrollY === "number") {
+    return window.scrollY;
+  }
+
   return Math.max(
-    window.scrollY || 0,
     document.documentElement.scrollTop || 0,
     document.body.scrollTop || 0,
   );
@@ -203,6 +221,21 @@ function ScrollToTop() {
     let stopped = false;
     let lastHeight = -1;
     let stableFrames = 0;
+    /** آخرین موقعیتی که خودمان اعمال کردیم؛ تا تغییر معنادار بعدی نوشتنی نداریم. */
+    let applied = -1;
+
+    /*
+     * در حین بازگردانی، «anchor» خودکار مرورگر خاموش می‌ماند: وقتی محتوای بالای
+     * صفحه می‌رسد (تصویر/فونت)، مرورگر خودش موقعیت را جابه‌جا می‌کرد و ما هر فریم
+     * پسش می‌زدیم — منبع اصلی لرزش صفحه. بعد از پایان، مقدار قبلی برمی‌گردد.
+     */
+    const root = document.documentElement;
+    const previousAnchor = root.style.overflowAnchor;
+
+    root.style.overflowAnchor = "none";
+
+    /** برای برداشتن شنونده‌ها؛ بعد از تعریف `stop` مقدار می‌گیرد. */
+    let abort: (() => void) | null = null;
 
     /** ارتفاع سند برای تشخیص «آرام شدن» چیدمان (محتوا که می‌رسد عوض می‌شود). */
     const documentHeight = () =>
@@ -237,15 +270,25 @@ function ScrollToTop() {
           ms: Math.round(performance.now() - startedAt),
         });
       }
-      window.removeEventListener("wheel", stop);
-      window.removeEventListener("touchstart", stop);
-      window.removeEventListener("keydown", stop);
+      if (abort) {
+        window.removeEventListener("wheel", abort);
+        window.removeEventListener("touchstart", abort);
+        window.removeEventListener("keydown", abort);
+      }
+
+      root.style.overflowAnchor = previousAnchor;
     };
 
+    /** بلندترین موقعیتی که صفحهٔ فعلی اجازه می‌دهد. */
+    const maxScroll = () => Math.max(0, documentHeight() - window.innerHeight);
+
     /**
-     * تا آرام شدن چیدمان، موقعیت هدف هر فریم دوباره اعمال می‌شود؛ نه فقط تا
-     * اولین رسیدن. اگر صفحه اول بلند باشد و بعد کوتاه شود، «رسیدن» موقتی است و
-     * مرورگر موقعیت را جابه‌جا می‌کند — همان پرشی که کاربر می‌دید.
+     * تا آرام شدن چیدمان، بازگردانی فقط «رو به پایین» است.
+     *
+     * وقتی محتوای واقعی می‌رسد ارتفاع سند زیاد می‌شود و هدفِ قابل‌دسترس بزرگ‌تر
+     * می‌شود؛ همان را می‌رویم. اصلاح رو به بالا انجام نمی‌شود، چون با جابه‌جایی
+     * طبیعی چیدمان کشمکش می‌کرد و صفحه را «بالا-پایین» می‌پراند؛ اختلاف‌های زیر
+     * `JUMP_THRESHOLD_PX` هم نادیده می‌مانند تا هیچ نوشتنی انجام نشود.
      */
     const step = () => {
       frame = 0;
@@ -254,10 +297,6 @@ function ScrollToTop() {
         stop();
 
         return;
-      }
-
-      if (Math.abs(readScrollY() - restoreTo) >= 2) {
-        jumpTo(restoreTo);
       }
 
       const height = documentHeight();
@@ -269,14 +308,20 @@ function ScrollToTop() {
         stableFrames = 0;
       }
 
+      const target = Math.min(restoreTo, maxScroll());
+
+      if (applied < 0 || target - applied >= JUMP_THRESHOLD_PX) {
+        jumpTo(target);
+        applied = target;
+      }
+
       const settled =
         // تا وقتی fallback صفحه (Suspense) روی صفحه است، چیدمان «آرام» نیست:
         // ارتفاع فعلی مال صفحهٔ لودینگ است و اعتماد به آن باعث پرش بعدی می‌شد.
         !document.querySelector("[data-route-fallback]") &&
         stableFrames >= SETTLE_FRAMES &&
-        (Math.abs(readScrollY() - restoreTo) < 2 ||
-          // صفحهٔ مقصد کوتاه‌تر از موقعیت قبلی است؛ تا انتهای ممکن می‌رویم.
-          readScrollY() >= height - window.innerHeight - 2);
+        // صفحهٔ کوتاه‌تر: `target` خودش همان انتهای ممکن است، پس یکی‌اند.
+        Math.abs(readScrollY() - target) < JUMP_THRESHOLD_PX;
 
       if (settled || performance.now() > deadline) {
         restoreUntil.current = 0;
@@ -288,12 +333,11 @@ function ScrollToTop() {
       frame = requestAnimationFrame(step);
     };
 
-    // اگر کاربر خودش شروع به اسکرول کرد، بازگردانی رها شود تا با او کشمکش نکند.
     /*
      * اگر کاربر خودش شروع به اسکرول کرد، بازگردانی رها می‌شود تا با او کشمکش
      * نکند؛ آخرین موقعیت هم دیگر «ادامهٔ بازگردانی» شمرده نمی‌شود.
      */
-    const abort = () => {
+    abort = () => {
       restoreUntil.current = 0;
       stop();
     };
