@@ -3586,3 +3586,33 @@ drag & drop، گارد ذخیره‌نشده، `ConfirmDialog`)، بستهٔ ۴ 
 untracked است و تصمیم حذف/استفاده‌اش با مالک است؛ (۴) تسک‌های ۴/۵/۶ نقشهٔ راه
 (فید Merchant، داشبورد کمپین، پیش‌بینی موجودی).
 
+---
+
+## هندآف ۱.۵۰ — فید Google Merchant + راهنمای UTM کمپین (تسک ۴)
+
+- **هدف:** فید محصول برای Google Merchant/Shopping (Free listings) + قرارداد
+  UTM کمپین.
+- **انجام‌شده (بک‌اند):** `GET /feed/google-merchant.xml` در `routes/web.php`
+  (بیرون از `/api/v1`) با `App\Http\Controllers\Api\MerchantFeedController`؛
+  RSS 2.0 با `xmlns:g` و `Content-Type: application/xml` از محصولات فعال:
+  `g:id`, `g:title`، `g:description` (متن ساده/سقف ۵۰۰۰)، `g:link` =
+  `${FRONTEND_URL}/product/{slug}`، `g:image_link` + تا ۱۰
+  `g:additional_image_link` (آدرس مطلق؛ `storage` برای دیسک public، دامنهٔ SPA
+  برای مسیرهای `/...`)، `g:price`/`g:sale_price` به ریال (تومان×۱۰ مثل GA4)،
+  `g:availability`, `g:brand` (بی‌برند = نام فروشگاه)، `g:mpn` = SKU +
+  `g:identifier_exists=no`, `g:condition=new`, `g:product_type` = نام دسته و
+  `g:shipping` (IR؛ همان قاعدهٔ `OrderController@resolveShippingCost`).
+- **کش:** `storefront:feed:google-merchant` (TTL ۳۰ دقیقه)؛ `flushCatalog()` و
+  `flushSettings()` در `StorefrontCache` آن را پاک می‌کنند، پس
+  `StorefrontCacheObserver` تغییر محصول/دسته/برند/تنظیمات را فوری منتقل می‌کند.
+- **تست:** ۴ تست `MerchantFeedTest` (فیلدها + ریال + sale_price، حذف غیرفعال +
+  صفر موجود + نبود عنصر خالی، ارسال رایگان/هزینه‌دار، کش و پاک‌سازی).
+- **باقی‌مانده:** ثبت آدرس فید در Merchant Center/Search Console با تصمیم مالک
+  حساب؛ تسک‌های ۳ (sitemap سروری/canonical)، ۵ (داشبورد کمپین)، ۶ (پیش‌بینی
+  اتمام موجودی) و ۷ (پیش‌رندر).
+- **تأیید:** `cd backend; php artisan test --filter=MerchantFeedTest` و
+  `php artisan route:list | Select-String 'google-merchant'`.
+- **انتشار:** بدون مایگریشن/متغیر env جدید؛ `FRONTEND_URL` و `APP_URL` باید
+  آدرس واقعی سایت باشند تا `g:link` و آدرس تصاویر درست دربیاید. فید را می‌توان
+  دستی هم بررسی کرد: `https://api.<domain>/feed/google-merchant.xml`.
+

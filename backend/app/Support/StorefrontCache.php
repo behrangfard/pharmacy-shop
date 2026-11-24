@@ -35,6 +35,9 @@ class StorefrontCache
      */
     public const PRODUCT_FILTERS_VERSION_KEY = 'storefront:products:filters-version';
 
+    /** کش سند فید Google Merchant (`/feed/google-merchant.xml`). */
+    public const MERCHANT_FEED_CACHE_KEY = 'storefront:feed:google-merchant';
+
     public static function productsVersion(): string
     {
         return (string) Cache::get(self::PRODUCT_FILTERS_VERSION_KEY, 'v1');
@@ -68,6 +71,7 @@ class StorefrontCache
         self::bumpProductsVersion();
         Cache::forget(CategoryController::STOREFRONT_CACHE_KEY);
         Cache::forget(BrandController::STOREFRONT_CACHE_KEY);
+        Cache::forget(self::MERCHANT_FEED_CACHE_KEY);
     }
 
     public static function flushBanners(): void
@@ -113,5 +117,7 @@ class StorefrontCache
     {
         StoreSetting::forgetCache();
         self::flushBanners();
+        // هزینهٔ ارسال/نام فروشگاه در فید Merchant هم می‌آید.
+        Cache::forget(self::MERCHANT_FEED_CACHE_KEY);
     }
 }

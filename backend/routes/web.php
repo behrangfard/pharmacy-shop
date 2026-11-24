@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\MerchantFeedController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 
@@ -34,3 +35,16 @@ Route::get('/storage/{path}', function (string $path) {
 
     return response()->file($disk->path($path));
 })->where('path', '.*')->name('storage.file');
+
+/*
+|--------------------------------------------------------------------------
+| فید محصولات برای Google Merchant Center / Shopping
+|--------------------------------------------------------------------------
+|
+| این مسیر عمداً بیرون از پیشوند `/api/v1` است: گوگل آدرس فید را همان‌طور
+| که هست ثبت می‌کند و سند خروجی RSS 2.0 (نه JSON API) است. محتوا در
+| `MerchantFeedController` ساخته و کش می‌شود.
+|
+*/
+Route::get('/feed/google-merchant.xml', [MerchantFeedController::class, 'index'])
+    ->name('feed.google-merchant');
