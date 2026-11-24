@@ -68,6 +68,10 @@ TypeScript نسخهٔ ۷ (نیتیو) API کامپایلر جاوااسکریپ�
    سقف مبلغ COD از `config('payment.cod_max_total')`/`COD_MAX_TOTAL` می‌آید
    (۰ = بدون سقف) و بررسی آن داخل تراکنش ثبت سفارش است؛ هر لغو/بازپرداخت هم
    سهمیهٔ کوپن را فقط از `App\Services\Orders\OrderCouponService` آزاد می‌کند.
+   فعال‌بودن پرداخت آنلاین از `payment_online_enabled` در `GET /store-settings`
+   می‌آید (معادل `config('payment.mode') !== 'disabled'`)؛ در production بدون
+   درگاه واقعی `false` است و چک‌اوت باید گزینهٔ آنلاین را غیرفعال و COD را
+   پیش‌فرض کند.
 10. صفحات رسمی/اعتماد (`about/contact/terms/privacy/returns`) با
     `php artisan pages:legal` نصب می‌شوند، متنشان در `App\Support\LegalPages`
     است و متغیرهای `{{store_*}}` هنگام نمایش در `PageController` پر می‌شوند.

@@ -38,6 +38,26 @@ class AdminStoreSettingTest extends TestCase
             ->assertJsonPath('data.shipping_cost', 0);
     }
 
+    /**
+     * چک‌اوت باید بداند پرداخت آنلاین در این نصب فعال است یا نه؛ در production
+     * بدون درگاه واقعی، `payment.mode` برابر `disabled` است و فلگ باید false
+     * برگردد تا گزینهٔ آنلاین غیرفعال و «پرداخت در محل» پیش‌فرض شود.
+     */
+    public function test_public_store_settings_report_online_payment_availability(): void
+    {
+        config(['payment.mode' => 'disabled']);
+
+        $this->getJson('/api/v1/store-settings')
+            ->assertOk()
+            ->assertJsonPath('data.payment_online_enabled', false);
+
+        config(['payment.mode' => 'demo']);
+
+        $this->getJson('/api/v1/store-settings')
+            ->assertOk()
+            ->assertJsonPath('data.payment_online_enabled', true);
+    }
+
     public function test_admin_can_update_settings_and_public_endpoint_refreshes(): void
     {
         $this->admin();

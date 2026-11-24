@@ -52,6 +52,15 @@ class StoreSettingController extends Controller
                  * همیشه سمت سرور انجام می‌شود.
                  */
                 'cod_fee' => max(0, (int) config('payment.cod_fee', 0)),
+
+                /*
+                 * آیا پرداخت آنلاین در این نصب فعال است؟ (`PAYMENT_MODE` در
+                 * محیط production به‌صورت سخت‌گیرانه `disabled` می‌شود.) چک‌اوت
+                 * با این فلگ گزینهٔ «پرداخت آنلاین» را غیرفعال و «پرداخت در
+                 * محل» را پیش‌فرض می‌کند تا مشتری به خطای 403 در صفحهٔ پرداخت
+                 * نخورد. اعتبارسنجی نهایی همیشه سمت سرور است.
+                 */
+                'payment_online_enabled' => config('payment.mode') !== 'disabled',
             ],
         ]);
     }

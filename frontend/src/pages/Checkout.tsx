@@ -407,15 +407,41 @@ function Checkout() {
   const codMaxTotal = Math.max(0, Number(storeSettings.cod_max_total) || 0);
   const codLimitExceeded = codMaxTotal > 0 && codPayableTotal > codMaxTotal;
 
+  /*
+   * آیا پرداخت آنلاین در این نصب فعال است؟ سرور این فلگ را از
+   * `config('payment.mode')` می‌سازد و در production (بدون درگاه واقعی)
+   * `false` است. آن‌گاه گزینهٔ آنلاین غیرفعال می‌شود تا مشتری پس از ثبت
+   * سفارش به خطای 403 در صفحهٔ پرداخت نخورد و موجودی‌اش قفل نشود.
+   */
+  const onlinePaymentEnabled = storeSettings.payment_online_enabled;
+
+  /*
+   * هر دو روش بسته: سبد از سقف پرداخت در محل گذشته و درگاه آنلاین هم فعال
+   * نیست. در این حالت ثبت سفارش ممکن نیست و دکمه غیرفعال می‌شود.
+   */
+  const paymentBlocked = codLimitExceeded && !onlinePaymentEnabled;
+
   /** مبلغی که در خلاصهٔ سفارش به‌عنوان مبلغ نهایی نشان داده می‌شود. */
   const payableTotal =
     paymentMethod === "cod" ? codPayableTotal : finalTotal;
 
   useEffect(() => {
-    if (codLimitExceeded && user && paymentMethod === "cod") {
+    if (
+      codLimitExceeded &&
+      user &&
+      onlinePaymentEnabled &&
+      paymentMethod === "cod"
+    ) {
       setPaymentMethod("online");
     }
-  }, [codLimitExceeded, paymentMethod, user]);
+  }, [codLimitExceeded, paymentMethod, user, onlinePaymentEnabled]);
+
+  // اگر پرداخت آنلاین خاموش شد و روش انتخاب‌شده آنلاین بود، به COD برگرد.
+  useEffect(() => {
+    if (!onlinePaymentEnabled && paymentMethod === "online") {
+      setPaymentMethod("cod");
+    }
+  }, [onlinePaymentEnabled, paymentMethod]);
 
   // مرتب‌سازی قطعی اقلام برای اینکه ترتیب سبد خرید
   // باعث تولید کلید Idempotency متفاوت نشود.
@@ -507,6 +533,14 @@ function Checkout() {
       setError(
         "وضعیت سفارش قبلی هنوز مشخص نیست. صفحه را تازه‌سازی کنید " +
           "و پیش از ارسال مجدد، سفارش‌های خود را بررسی کنید.",
+      );
+      return;
+    }
+
+    if (paymentBlocked) {
+      setError(
+        "مبلغ سبد از سقف پرداخت در محل بیشتر است و پرداخت آنلاین فعال نیست؛ " +
+          "برای هماهنگی با پشتیبانی تماس بگیرید.",
       );
       return;
     }
@@ -1398,11 +1432,20 @@ function Checkout() {
                   // پرداخت آنلاین فقط برای کاربر واردشده فعال است.
                   const disabledOnline = !user && option.value === "online";
 
+                  /*
+                   * در نصب‌هایی که درگاه آنلاین فعال نیست (production فعلی)،
+                   * گزینهٔ آنلاین کاملاً غیرفعال می‌شود تا مشتری به صفحهٔ پرداخت
+                   * نرسد.
+                   */
+                  const disabledByGateway =
+                    option.value === "online" && !onlinePaymentEnabled;
+
                   // COD برای مبالغ بالاتر از سقف تنظیم‌شده پذیرفته نمی‌شود.
                   const disabledByCodCap =
                     option.value === "cod" && codLimitExceeded;
 
-                  const isDisabled = disabledOnline || disabledByCodCap;
+                  const isDisabled =
+                    disabledOnline || disabledByGateway || disabledByCodCap;
 
                   return (
                     <label
@@ -1450,14 +1493,23 @@ function Checkout() {
                           </span>
                         )}
 
+                        {disabledByGateway && (
+                          <span className="mt-1 block text-[11px] font-bold leading-5 text-gold">
+                            پرداخت آنلاین در حال حاضر فعال نیست؛ سفارش را با
+                            «پرداخت در محل» ثبت کنید.
+                          </span>
+                        )}
+
                         {disabledByCodCap && (
                           <span className="mt-1 block text-[11px] font-bold leading-5 text-discount">
                             سقف سفارش پرداخت در محل{" "}
                             {formatPrice(codMaxTotal)} تومان است و مبلغ این سبد
                             بیشتر است.{" "}
-                            {user
-                              ? "پرداخت آنلاین را انتخاب کنید."
-                              : "برای ثبت سفارش وارد حساب کاربری شوید."}
+                            {!onlinePaymentEnabled
+                              ? "برای هماهنگی با پشتیبانی تماس بگیرید."
+                              : user
+                                ? "پرداخت آنلاین را انتخاب کنید."
+                                : "برای ثبت سفارش وارد حساب کاربری شوید."}
                           </span>
                         )}
                       </span>
@@ -1484,6 +1536,13 @@ function Checkout() {
                 <p className="mt-4 rounded-xl border border-gold-100 bg-gold-50 p-4 text-xs leading-6 text-gold">
                   سفارش مهمان بدون نیاز به ثبت‌نام و فقط با «پرداخت در محل»
                   ثبت می‌شود. برای پرداخت آنلاین، وارد حساب کاربری شوید.
+                </p>
+              )}
+
+              {!onlinePaymentEnabled && (
+                <p className="mt-4 rounded-xl border border-gold-100 bg-gold-50 p-4 text-xs leading-6 text-gold">
+                  پرداخت آنلاین در این فروشگاه فعال نیست؛ سفارش شما با «پرداخت
+                  در محل» ثبت می‌شود.
                 </p>
               )}
             </section>
@@ -1644,6 +1703,13 @@ function Checkout() {
                 </p>
               )}
 
+              {paymentBlocked && (
+                <p className="mt-4 rounded-xl border border-line bg-cream px-3 py-2 text-center text-xs font-bold leading-6 text-discount">
+                  مبلغ سبد از سقف پرداخت در محل بیشتر است و پرداخت آنلاین فعال
+                  نیست؛ برای هماهنگی با پشتیبانی تماس بگیرید.
+                </p>
+              )}
+
               {authLoading ? (
                 <button
                   type="button"
@@ -1656,7 +1722,7 @@ function Checkout() {
               ) : (
                 <button
                   type="submit"
-                  disabled={loading || submissionUncertain}
+                  disabled={loading || submissionUncertain || paymentBlocked}
                   className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand-500 py-3.5 font-black text-white transition-colors hover:bg-brand-700 disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {loading ? (

@@ -30,6 +30,12 @@ export interface StorefrontSettings {
   cod_max_total: number;
   /** کارمزد «پرداخت در محل» به تومان (۰ = بدون کارمزد). */
   cod_fee: number;
+  /**
+   * آیا پرداخت آنلاین در این نصب فعال است؟ در production بدون درگاه واقعی
+   * سرور `false` می‌فرستد؛ چک‌اوت آن‌گاه گزینهٔ آنلاین را غیرفعال و
+   * «پرداخت در محل» را پیش‌فرض می‌کند.
+   */
+  payment_online_enabled: boolean;
 }
 
 export const DEFAULT_STOREFRONT_SETTINGS: StorefrontSettings = {
@@ -53,6 +59,8 @@ export const DEFAULT_STOREFRONT_SETTINGS: StorefrontSettings = {
   free_shipping_threshold: 0,
   cod_max_total: 0,
   cod_fee: 0,
+  // تا پیش از رسیدن پاسخ سرور، رفتار قبلی (فعال بودن آنلاین) حفظ می‌شود.
+  payment_online_enabled: true,
 };
 
 interface SettingsCache {
@@ -106,6 +114,8 @@ function normalize(raw: unknown): StorefrontSettings {
     free_shipping_threshold: number(source.free_shipping_threshold),
     cod_max_total: number(source.cod_max_total),
     cod_fee: number(source.cod_fee),
+    // فقط `false` صریح یعنی خاموش؛ کش قدیمی بدون این کلید رفتار قبلی را دارد.
+    payment_online_enabled: source.payment_online_enabled !== false,
   };
 }
 

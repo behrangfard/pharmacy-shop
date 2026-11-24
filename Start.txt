@@ -3550,3 +3550,39 @@ drag & drop، گارد ذخیره‌نشده، `ConfirmDialog`)، بستهٔ ۴ 
 
 
 
+
+## هندآف ۱.۴۹ — اعلام فعال‌بودن پرداخت آنلاین به چک‌اوت (پیش‌نیاز لانچ)
+
+**هدف:** در production `payment.mode` سخت‌گیرانه `disabled` است، ولی چک‌اوت
+پیش‌فرض «پرداخت آنلاین» را انتخاب می‌کرد؛ مشتری لاگین‌کرده سفارش
+`pending/unpaid` ثبت می‌کرد و در `/payment/...` خطای ۴۰۳ می‌گرفت (و ۶۰ دقیقه
+بعد `orders:release-abandoned` سفارش را لغو و موجودی را آزاد می‌کرد).
+
+**انجام‌شده:** `GET /store-settings` فیلد `payment_online_enabled` را از
+`config('payment.mode') !== 'disabled'` برمی‌گرداند؛ `services/storeSettings.ts`
+(تایپ + پیش‌فرض `true` + نرمال‌سازی «فقط `false` صریح = خاموش») و
+`pages/Checkout.tsx`: غیرفعال‌شدن گزینهٔ آنلاین با علت، پیش‌فرض‌شدن COD،
+برگشت خودکار روش انتخاب‌شده به COD، و قفل‌شدن ثبت سفارش وقتی هم سقف
+`COD_MAX_TOTAL` رد شود و هم آنلاین بسته باشد (گارد در `handleSubmit` + پیام
+«تماس با پشتیبانی»).
+
+**فایل‌ها:** `backend/app/Http/Controllers/Api/StoreSettingController.php`،
+`backend/tests/Feature/AdminStoreSettingTest.php` (تست جدید ۲ assertion)،
+`frontend/src/services/storeSettings.ts`، `frontend/src/pages/Checkout.tsx`،
+`AGENTS.md` (قاعدهٔ ۹)، `TECHNICAL_GUIDE.md` (بخش‌های ۵، ۸، ۹ + ردیف ۱.۴۹).
+
+**تأیید:** `AdminStoreSettingTest` ۵ تست/۲۸ assertion؛ کل بک‌اند **۵۵۵ passed /
+۲۷۵۶ assertions**؛ `npx tsc --noEmit` سبز؛ `npm run lint` **۰ خطا / ۰ هشدار
+(۲۱۳ فایل)**؛ `npm run build` سبز.
+
+**دیپلوی:** بدون مایگریشن و بدون env جدید؛ فرانت و بک‌اند باید با هم منتشر
+شوند (تا وقتی سرور فیلد را نفرستد، فرانت رفتار قبلی را دارد).
+
+**باقی‌مانده (تصمیم مالک):** (۱) اتصال درگاه واقعی پرداخت (۲–۳ تسک) — تا آن روز
+فروشگاه فقط COD است؛ (۲) `AccountOrders` هنوز برای سفارش‌های آنلاین
+`pending/unpaid` دکمهٔ «ادامهٔ پرداخت» را نشان می‌دهد که با آنلاین خاموش به
+۴۰۳ می‌رسد (فقط دادهٔ قبل از لانچ مهم است)؛ (۳) کامیت ۱.۴۶+۱.۴۷ (`f8b70f99c`)
+و ۱.۴۸ (`c3cd9f40a`) زده شد؛ `frontend/public/images/Untitled-1.jpg` همچنان
+untracked است و تصمیم حذف/استفاده‌اش با مالک است؛ (۴) تسک‌های ۴/۵/۶ نقشهٔ راه
+(فید Merchant، داشبورد کمپین، پیش‌بینی موجودی).
+
