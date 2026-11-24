@@ -61,9 +61,14 @@ describe("adminSearchIndex", () => {
   });
 
   it("جست‌وجو با حروف عربی و نیم‌فاصله هم نتیجه می‌دهد", () => {
-    expect(searchAdminEntries(entries, "موجودي")[0]?.path).toBe(
-      "/admin/products",
+    const results = searchAdminEntries(entries, "موجودي").map(
+      (entry) => entry.path,
     );
+
+    /* «موجودی و انبار» عنوان دقیق‌تری دارد و اول می‌آید، ولی بخش محصولات هم
+       با کلیدواژهٔ موجودی باید پیدا شود. */
+    expect(results).toContain("/admin/inventory");
+    expect(results).toContain("/admin/products");
 
     expect(
       searchAdminEntries(entries, "پيام رساني").map((entry) => entry.path),

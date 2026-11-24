@@ -57,6 +57,7 @@ class AdminPermissionTest extends TestCase
             '/api/v1/admin/messaging/settings',
             '/api/v1/admin/settings',
             '/api/v1/admin/reports/sales',
+            '/api/v1/admin/analytics/traffic',
             '/api/v1/admin/admins',
         ];
     }
@@ -107,6 +108,7 @@ class AdminPermissionTest extends TestCase
             '/api/v1/admin/admins',
             '/api/v1/admin/messaging',
             '/api/v1/admin/reports/sales',
+            '/api/v1/admin/analytics/traffic',
         ] as $uri) {
             $this->json('GET', $uri)
                 ->assertForbidden()
@@ -124,6 +126,7 @@ class AdminPermissionTest extends TestCase
         $this->json('GET', '/api/v1/admin/coupons')->assertOk();
         $this->json('GET', '/api/v1/admin/returns')->assertOk();
         $this->json('GET', '/api/v1/admin/reports/sales')->assertOk();
+        $this->json('GET', '/api/v1/admin/analytics/traffic')->assertOk();
 
         $this->json('GET', '/api/v1/admin/products')->assertForbidden();
         $this->json('GET', '/api/v1/admin/banners')->assertForbidden();
@@ -174,6 +177,7 @@ class AdminPermissionTest extends TestCase
 
         $this->assertContains(AdminRole::ORDERS_MANAGE, $permissions);
         $this->assertContains(AdminRole::REPORTS_VIEW, $permissions);
+        $this->assertContains(AdminRole::ANALYTICS_VIEW, $permissions);
         $this->assertNotContains(AdminRole::SETTINGS_MANAGE, $permissions);
         $this->assertNotContains(AdminRole::ADMINS_MANAGE, $permissions);
 

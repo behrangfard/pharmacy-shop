@@ -62,6 +62,7 @@ const AdminPopups = lazy(() => import("./pages/AdminPopups"));
 const AdminHeaderFooter = lazy(() => import("./pages/AdminHeaderFooter"));
 const AdminArticles = lazy(() => import("./pages/AdminArticles"));
 const AdminReports = lazy(() => import("./pages/AdminReports"));
+const AdminAnalytics = lazy(() => import("./pages/AdminAnalytics"));
 const AdminAccounting = lazy(() => import("./pages/AdminAccounting"));
 const AdminWishlist = lazy(() => import("./pages/AdminWishlist"));
 
@@ -377,6 +378,17 @@ function App() {
                         section="گزارش فروش"
                       >
                         <AdminReports />
+                      </AdminPermissionGuard>
+                    }
+                  />
+                  <Route
+                    path="analytics"
+                    element={
+                      <AdminPermissionGuard
+                        permission={ADMIN_PERMISSIONS.analytics}
+                        section="تحلیل کمپین‌ها"
+                      >
+                        <AdminAnalytics />
                       </AdminPermissionGuard>
                     }
                   />

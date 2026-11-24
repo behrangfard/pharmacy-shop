@@ -1,5 +1,6 @@
 import {
   BadgeCheck,
+  BarChart3,
   Boxes,
   Calculator,
   CirclePlay,
@@ -239,6 +240,14 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
     label: "گزارش فروش",
     icon: TrendingUp,
     keywords: "گزارش فروش درآمد آمار پرفروش موجودی کم تحلیل",
+  },
+  {
+    to: "/admin/analytics",
+    permission: ADMIN_PERMISSIONS.analytics,
+    label: "تحلیل کمپین‌ها",
+    icon: BarChart3,
+    keywords:
+      "تحلیل کمپین ترافیک منبع utm اینستاگرام گوگل تلگرام ارجاع دهنده بازاریابی roas بازده تبلیغات",
   },
   {
     to: "/admin/accounting",

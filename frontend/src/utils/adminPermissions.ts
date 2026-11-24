@@ -25,6 +25,7 @@ export const ADMIN_PERMISSIONS = {
   channels: "channels.manage",
   accounting: "accounting.manage",
   reports: "reports.view",
+  analytics: "analytics.view",
   settings: "settings.manage",
   admins: "admins.manage",
 } as const;

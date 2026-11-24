@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AdminAccountingController;
+use App\Http\Controllers\Api\AdminAnalyticsController;
 use App\Http\Controllers\Api\AdminAnnouncementBarController;
 use App\Http\Controllers\Api\AdminArticleController;
 use App\Http\Controllers\Api\AdminBannerController;
@@ -1105,6 +1106,15 @@ Route::prefix('v1')->group(function () {
                     Route::get(
                         '/reports/stock-movements',
                         [AdminReportController::class, 'stockMovements']
+                    );
+                });
+
+            // Analytics (فروش به تفکیک منبع/کمپین از روی سفارش‌ها)
+            Route::middleware('admin.permission:'.AdminRole::ANALYTICS_VIEW)
+                ->group(function () {
+                    Route::get(
+                        '/analytics/traffic',
+                        [AdminAnalyticsController::class, 'traffic']
                     );
                 });
 

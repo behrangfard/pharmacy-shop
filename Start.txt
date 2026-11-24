@@ -3586,33 +3586,52 @@ drag & drop، گارد ذخیره‌نشده، `ConfirmDialog`)، بستهٔ ۴ 
 untracked است و تصمیم حذف/استفاده‌اش با مالک است؛ (۴) تسک‌های ۴/۵/۶ نقشهٔ راه
 (فید Merchant، داشبورد کمپین، پیش‌بینی موجودی).
 
----
+## هندآف ۱.۵۱ — داشبورد «تحلیل کمپین‌ها» (تسک ۵ نقشهٔ راه، فاز اول)
 
-## هندآف ۱.۵۰ — فید Google Merchant + راهنمای UTM کمپین (تسک ۴)
+**هدف:** پاسخ به «کدام منبع/کمپین فروش می‌آورد؟» بدون وابستگی به GA4 — فقط از
+روی ستون‌های انتساب خود سفارش (`utm_*` و `referrer`) که در ۱.۴۸ اضافه شدند.
 
-- **هدف:** فید محصول برای Google Merchant/Shopping (Free listings) + قرارداد
-  UTM کمپین.
-- **انجام‌شده (بک‌اند):** `GET /feed/google-merchant.xml` در `routes/web.php`
-  (بیرون از `/api/v1`) با `App\Http\Controllers\Api\MerchantFeedController`؛
-  RSS 2.0 با `xmlns:g` و `Content-Type: application/xml` از محصولات فعال:
-  `g:id`, `g:title`، `g:description` (متن ساده/سقف ۵۰۰۰)، `g:link` =
-  `${FRONTEND_URL}/product/{slug}`، `g:image_link` + تا ۱۰
-  `g:additional_image_link` (آدرس مطلق؛ `storage` برای دیسک public، دامنهٔ SPA
-  برای مسیرهای `/...`)، `g:price`/`g:sale_price` به ریال (تومان×۱۰ مثل GA4)،
-  `g:availability`, `g:brand` (بی‌برند = نام فروشگاه)، `g:mpn` = SKU +
-  `g:identifier_exists=no`, `g:condition=new`, `g:product_type` = نام دسته و
-  `g:shipping` (IR؛ همان قاعدهٔ `OrderController@resolveShippingCost`).
-- **کش:** `storefront:feed:google-merchant` (TTL ۳۰ دقیقه)؛ `flushCatalog()` و
-  `flushSettings()` در `StorefrontCache` آن را پاک می‌کنند، پس
-  `StorefrontCacheObserver` تغییر محصول/دسته/برند/تنظیمات را فوری منتقل می‌کند.
-- **تست:** ۴ تست `MerchantFeedTest` (فیلدها + ریال + sale_price، حذف غیرفعال +
-  صفر موجود + نبود عنصر خالی، ارسال رایگان/هزینه‌دار، کش و پاک‌سازی).
-- **باقی‌مانده:** ثبت آدرس فید در Merchant Center/Search Console با تصمیم مالک
-  حساب؛ تسک‌های ۳ (sitemap سروری/canonical)، ۵ (داشبورد کمپین)، ۶ (پیش‌بینی
-  اتمام موجودی) و ۷ (پیش‌رندر).
-- **تأیید:** `cd backend; php artisan test --filter=MerchantFeedTest` و
-  `php artisan route:list | Select-String 'google-merchant'`.
-- **انتشار:** بدون مایگریشن/متغیر env جدید؛ `FRONTEND_URL` و `APP_URL` باید
-  آدرس واقعی سایت باشند تا `g:link` و آدرس تصاویر درست دربیاید. فید را می‌توان
-  دستی هم بررسی کرد: `https://api.<domain>/feed/google-merchant.xml`.
+**انجام‌شده (بک‌اند):** مجوز جدید `analytics.view` در `Support/AdminRole.php`
+(مدیر ارشد + مدیر سفارش‌ها) و `GET /admin/analytics/traffic?days=` (۷ تا ۳۶۵،
+پیش‌فرض ۳۰) در گروه ادمین با `admin.permission:analytics.view`.
+`AdminAnalyticsController@traffic` پنج گروه‌بندی می‌دهد: `sources` (utm_source)،
+`mediums` (utm_medium)، `campaigns` (source+medium+campaign)، `contents`
+(utm_content) و `referrers` (دامنهٔ referrer، بدون `www`)؛ هر ردیف
+`orders_count`/`revenue`/`average_order_total`/`revenue_share` دارد و خلاصه شامل
+درآمد، تعداد سفارش، میانگین، شمار/سهم سفارش‌های UTM، ترافیک شناسایی‌شده و
+مستقیم است. سفارش لغوشده (`cancelled`/`canceled`) و خارج از بازه حذف می‌شوند
+(همان تعریف گزارش فروش)؛ مقادیر NULL/خالی در ردیف `(direct)` ادغام می‌شوند تا
+جمع ردیف‌ها با کل یکی بماند؛ سقف ۲۰ ردیف به‌ترتیب درآمد.
+
+**انجام‌شده (فرانت):** `services/analytics.ts` (تایپ‌ها + `fetchTrafficAnalytics`
++ `attributionLabel`)، صفحهٔ `pages/AdminAnalytics.tsx` (کارت‌های خلاصه، پنج
+جدول با نوار سهم، انتخاب ۷/۳۰/۹۰ روز، حالت خطا/خالی)، مسیر `/admin/analytics`
+با `AdminPermissionGuard`، آیتم منو «تحلیل کمپین‌ها» (آیکن `BarChart3`) در گروه
+«گزارشات» (`adminNavItems.ts` + `adminSidebarLayout.ts`) و کلید
+`ADMIN_PERMISSIONS.analytics`.
+
+**فایل‌ها:** `backend/app/Support/AdminRole.php`،
+`backend/app/Http/Controllers/Api/AdminAnalyticsController.php`،
+`backend/routes/api.php`، `backend/tests/Feature/AdminAnalyticsTest.php`،
+`backend/tests/Feature/AdminPermissionTest.php`،
+`frontend/src/services/analytics.ts`، `frontend/src/pages/AdminAnalytics.tsx`,
+`frontend/src/App.tsx`، `frontend/src/utils/{adminPermissions,adminNavItems,adminSidebarLayout}.ts`،
+`TECHNICAL_GUIDE.md` (بخش‌های ۲، ۶، ۸ + ردیف ۱.۵۱)، `SEO_ANALYTICS_PLAN.md`.
+
+**تأیید:** `php artisan test --filter=AdminAnalyticsTest` ۹/۹ (۵۱ assertion)؛
+`AdminPermissionTest` سبز؛ کل بک‌اند **۵۶۸ passed**؛ `npx tsc --noEmit` سبز؛
+`npm run lint` ۰ خطا؛ `npm run test` و `npm run build` سبز.
+یک تست قدیمی هم اصلاح شد: `adminSearchIndex.test.ts` برای جست‌وجوی «موجودي»
+انتظار `/admin/products` داشت، ولی بعد از افزودن منوی «موجودی و انبار» در ۱.۴۷
+عنوان دقیق‌تر آن اول می‌آید؛ assertion به «هر دو مسیر در نتیجه باشند» تغییر کرد
+(هدف تست نرمال‌سازی حروف است، نه ترتیب نتایج).
+
+**دیپلوی:** بدون مایگریشن و بدون env جدید؛ فقط بک‌اند+فرانت با هم منتشر شوند.
+مجوز جدید خودکار به مدیر ارشد می‌رسد؛ برای مدیران با نقش `order_manager` هم
+فعال است (managerهای قدیمی بدون نقش = مدیر ارشد).
+
+**باقی‌مانده:** (۱) قیف رویدادمحور (بازدید→سبد→خرید) و ROAS نیازمند جدول
+`analytics_events` و ثبت هزینهٔ تبلیغات است؛ (۲) تسک ۳ (sitemap سروری/canonical)
+و تسک ۶ (پیش‌بینی اتمام موجودی) و تسک ۷ (پیش‌رندر) طبق نقشهٔ راه.
+
 

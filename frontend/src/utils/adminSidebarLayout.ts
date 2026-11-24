@@ -102,6 +102,7 @@ export const ADMIN_SIDEBAR_DEFAULT_GROUPS: Record<
   ],
   reports: [
     "/admin/reports",
+    "/admin/analytics",
     "/admin/admins",
     "/admin/settings",
     "/admin/trust-badges",

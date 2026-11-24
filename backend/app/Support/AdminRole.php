@@ -56,6 +56,8 @@ class AdminRole
 
     public const REPORTS_VIEW = 'reports.view';
 
+    public const ANALYTICS_VIEW = 'analytics.view';
+
     public const SETTINGS_MANAGE = 'settings.manage';
 
     public const ADMINS_MANAGE = 'admins.manage';
@@ -85,7 +87,7 @@ class AdminRole
         return [
             self::SUPER_ADMIN => 'دسترسی کامل به همه بخش‌های پنل، از جمله مدیران و تنظیمات',
             self::PRODUCT_MANAGER => 'محصولات، دسته‌بندی‌ها، برندها، بنرها، مقالات، صفحات سایت و نظرات',
-            self::ORDER_MANAGER => 'سفارش‌ها، مرجوعی‌ها، کدهای تخفیف، مشتریان، حسابداری و گزارش فروش',
+            self::ORDER_MANAGER => 'سفارش‌ها، مرجوعی‌ها، کدهای تخفیف، مشتریان، حسابداری، گزارش فروش و تحلیل کمپین‌ها',
             self::SUPPORT => 'سفارش‌ها، مرجوعی‌ها، مشتریان، پیام‌رسانی و کانال‌های ارتباطی',
         ];
     }
@@ -115,6 +117,7 @@ class AdminRole
             self::CHANNELS_MANAGE,
             self::ACCOUNTING_MANAGE,
             self::REPORTS_VIEW,
+            self::ANALYTICS_VIEW,
             self::SETTINGS_MANAGE,
             self::ADMINS_MANAGE,
         ];
@@ -160,6 +163,7 @@ class AdminRole
                 self::CUSTOMERS_MANAGE,
                 self::ACCOUNTING_MANAGE,
                 self::REPORTS_VIEW,
+                self::ANALYTICS_VIEW,
             ],
 
             self::SUPPORT => [
