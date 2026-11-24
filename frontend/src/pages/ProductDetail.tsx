@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { getStorageUrl } from "../utils/images";
+import { trackViewItem } from "../utils/analytics";
 import {
   ArrowRight,
   ShoppingCart,
@@ -205,6 +206,9 @@ function ProductDetail() {
   const [searchParams] = useSearchParams();
   const { addToCart } = useCart();
 
+  /** آخرین محصولی که `view_item` برایش فرستاده شده (جلوگیری از تکرار). */
+  const viewedGaProductId = useRef<string | null>(null);
+
   /*
    * درصد ارزش افزوده از تنظیمات فروشگاه می‌آید (همان منبع کارت محصول و
    * چک‌اوت)؛ اگر مالیات خاموش باشد یا درصد صفر، خط ارزش افزوده نمایش داده
@@ -361,6 +365,20 @@ function ProductDetail() {
         setSelectedImageIndex(0);
         setQuantity(1);
         setAddedToCart(false);
+
+        /*
+         * GA4 `view_item`: یک بار برای هر محصول؛ در حالت dev که افکت دو بار
+         * اجرا می‌شود، رویداد تکراری فرستاده نمی‌شود.
+         */
+        if (viewedGaProductId.current !== String(productData.id)) {
+          viewedGaProductId.current = String(productData.id);
+
+          trackViewItem({
+            id: productData.id,
+            name: productData.name,
+            price: Number(productData.price ?? 0),
+          });
+        }
 
         // ثبت بازدید برای ریل «بازدیدهای اخیر»؛ خطا هرگز صفحه را نمی‌شکند.
         try {

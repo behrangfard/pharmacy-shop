@@ -17,6 +17,7 @@ import Layout from "../components/Layout";
 import { usePrivatePageMeta } from "../hooks/usePageMeta";
 import { useAuth } from "../context/AuthContext";
 import api from "../services/api";
+import { trackRefund } from "../utils/analytics";
 import {
   canCancelCustomerOrder,
   canContinuePayment,
@@ -108,6 +109,9 @@ function AccountOrders() {
 
     try {
       await api.post(`/orders/${orderNumber}/cancel`);
+
+      // GA4: لغو سفارش مشتری به‌عنوان «بازپرداخت» ثبت می‌شود (بدون مبلغ).
+      trackRefund({ orderNumber });
 
       setOrders((currentOrders) =>
         currentOrders.map((order) =>

@@ -3466,5 +3466,87 @@ drag & drop، گارد ذخیره‌نشده، `ConfirmDialog`)، بستهٔ ۴ 
 **باقی‌مانده:** تأیید رفتاری در مرورگر واقعی (به‌خصوص فهرست محصولات با
 اسکلتون) و بعد از هم‌ترازسازی Vitest یک‌بار `npm run test` واقعی.
 
+---
+
+## هندآف — صفحهٔ «سلامت سئو» + مدیر ریدایرکت ۳۰۱ (۱.۴۶)
+
+**هدف:** بستن شکاف «تغییر اسلاگ = ترافیک سوخته» (قاعدهٔ پروژه ریدایرکت ۳۰۱
+می‌خواست ولی جدولی نداشت) + یک دید کلی از متای ضعیف، بدون فرم تکراری.
+
+**انجام‌شده:** جدول/مدل `redirects` (مایگریشن `2026_12_03` اجرا شد، batch 44)،
+`AdminSeoController` (ممیزی محصول/دسته/برند/صفحه + CRUD ریدایرکت) زیر مجوز
+`seo.manage`، `SeoController` عمومی (`GET /seo/redirects` با کش ۱۰ دقیقه و
+`POST /seo/redirects/hit`)، صفحهٔ `AdminSeo.tsx`، `RedirectGate` داخل SPA و
+نوشتن `_redirects`/`redirects.conf` در اسکریپت build. کش ریدایرکت‌ها در هر
+تغییر پاک می‌شود؛ مسیرها با `Redirect::normalizePath` یکدست می‌شوند.
+
+**تأیید:** `AdminSeoTest` (۱۰ تست) سبز؛ `tsc` و `oxlint` صفر خطا. تست فرانت
+جدید (`utils/seoIssues.test.ts`) به همان بلاکر Vitest/Vite (بند ۱۷) خورد.
+
+**باقی‌مانده (به ترتیب):** (۱) موجودی: `low_stock_threshold` + اعلان؛
+(۲) رویدادهای GA4 فروش + UTM سفارش؛ (۳) بعد از تصمیم هاست، ۴۰۴ واقعی و
+پیش‌رندر (تسک ۷ `SEO_ANALYTICS_PLAN.md`).
+
+
+## هندآف — هشدار موجودی کم + شمارش انبار (۱.۴۷)
+
+**هدف:** دیده‌شدن کالاهای زیر آستانه، تعیین آستانهٔ هر کالا/تنوع، اصلاح موجودی
+با شمارش واقعی و ساخت اعلان — بدون تغییر در مسیرهای سفارش (قاعدهٔ ۵).
+
+**انجام‌شده:** مایگریشن `2026_12_04_000000_add_low_stock_threshold_to_products_and_variants`
+(ستون NULL-پذیر)، `config/inventory.php`، `Services/Inventory/LowStockService`
+(شمارش فعال‌ها با COALESCE آستانه + اعلان با بازهٔ خنک‌شدن)،
+`AdminInventoryController` (فهرست low/all، آستانه، stocktake، notify) زیر
+`products.manage`، `StockMovement::TYPE_STOCKTAKE`، `AdminNotification::TYPE_LOW_STOCK`،
+کامند `inventory:notify-low-stock` (روزانه ۰۸:۳۰)، `low_stock` در `/admin/dashboard`،
+صفحهٔ `/admin/inventory` + `services/inventory.ts` + آیتم سایدبار/میان‌بر.
+
+**تأیید:** `AdminInventoryTest` ۱۱ تست سبز؛ کل بک‌اند ۵۵۰ تست/۲۷۳۰ assertion؛
+`tsc` و `oxlint` صفر خطا؛ `build` سبز (chunk `AdminInventory` ≈ ۱۴٫۵ kB).
+
+**باقی‌مانده:** (۱) رویدادهای GA4 فروش + UTM سفارش؛ (۲) پیش‌بینی «چند روز تا
+اتمام» و خروجی اکسل گردش موجودی؛ (۳) ۴۰۴ واقعی/پیش‌رندر بعد از تصمیم هاست.
+
+---
+
+## هندآف ۱.۴۸ — رویدادهای فروش GA4 + انتساب سفارش (UTM)
+
+**هدف:** تسک ۲ نقشهٔ راه آنالیتیکس (`SEO_ANALYTICS_PLAN.md` فازهای ۱.۲ + ۱.۳):
+رویدادهای GA4 قیف خرید و ذخیرهٔ UTM/referrer هر سفارش سمت سرور.
+
+**انجام‌شده:**
+- بک‌اند: مایگریشن `2026_12_05` (۶ ستون اختیاری روی `orders`)، `$fillable` مدل
+  `Order`، اعتبارسنجی `utm.*` در `OrderController@store` + `sanitizeAttribution`
+  (حذف تگ/کنترل‌کاراکتر، برش ۱۸۰/۵۰۰، خالی→NULL). مسیر جدیدی اضافه نشد.
+- فرانت: `utils/analytics.ts` رویدادهای فروش (`view_item`, `view_item_list`,
+  `add_to_cart`, `remove_from_cart`, `begin_checkout`, `add_shipping_info`,
+  `add_payment_info`, `purchase`, `refund`) با تبدیل تومان→ریال و
+  `currency: "IRR"` و `transaction_id` = شمارهٔ سفارش؛ `utils/attribution.ts`
+  (انتساب اول-تماس در sessionStorage، کلید جدید `behrang-shop-attribution`)؛
+  اتصال: `CartContext`، `Products`، `ProductDetail`، `Checkout`
+  (+ `utm` در payload)، `Payment` (purchase پس از پرداخت آنلاین)،
+  `AccountOrders` و `TrackOrder` (refund در لغو).
+- تست: ۴ تست جدید `OrderAttributionTest` (ذخیره، پاک‌سازی، بدون UTM، نوع نامعتبر).
+- سند: بخش ۷ و ۸ و جدول نسخه‌های `TECHNICAL_GUIDE.md` + وضعیت فازهای
+  ۱.۲/۱.۳ در `SEO_ANALYTICS_PLAN.md` به‌روز شد.
+
+**فایل‌های مهم:** `backend/database/migrations/2026_12_05_*`,
+`backend/app/Http/Controllers/Api/OrderController.php`, `backend/app/Models/Order.php`,
+`backend/tests/Feature/OrderAttributionTest.php`, `frontend/src/utils/analytics.ts`,
+`frontend/src/utils/attribution.ts`, `frontend/src/utils/storageKeys.ts`,
+`frontend/src/components/AnalyticsTracker.tsx`, `frontend/src/context/CartContext.tsx`,
+`frontend/src/pages/{Products,ProductDetail,Checkout,Payment,AccountOrders,TrackOrder}.tsx`
+
+**دستورهای تأیید (همین تسک):** `php artisan test --filter=OrderAttributionTest`
+(۴/۴، ۲۲ assertion)؛ کل بک‌اند **۵۵۴ passed / ۲۷۵۲ assertions**؛ `tsc` سبز،
+`npm run lint` **۰ warning / ۰ error**، `npm run build` سبز؛ مایگریشن
+`2026_12_05` روی دیتابیس محلی اعمال شد.
+**دیپلوی:** `php artisan migrate --force` + (اختیاری) هیچ env جدیدی لازم نیست.
+
+**باقی‌مانده:** (۱) داشبورد «فروش هر کمپین» در پنل (فاز ۱.۴/تسک ۵، بعد از
+تصمیم جدول `analytics_events`)؛ (۲) پیش‌بینی «چند روز تا اتمام» و خروجی اکسل
+گردش موجودی؛ (۳) ۴۰۴ واقعی/پیش‌رندر بعد از تصمیم هاست (تسک ۷).
+
+
 
 

@@ -272,6 +272,7 @@ npm run dev                   # http://localhost:5173
 | عمر توکن API | `SANCTUM_EXPIRATION` (دقیقه؛ پیش‌فرض `43200` = ۳۰ روز؛ `0` = بدون انقضا) |
 | CORS | `CORS_ALLOWED_ORIGINS` (پیش‌فرض: `http://localhost:5173,http://localhost:4173`) |
 | پرداخت | `PAYMENT_MODE` (`demo`/`disabled`), `PAYMENT_DEMO_ENABLED`, `COD_MAX_TOTAL` (سقف مبلغ سفارش پرداخت در محل به تومان؛ ۰ = بدون سقف), `COD_FEE` (کارمزد ثابت سفارش پرداخت در محل به تومان؛ ۰ = بدون کارمزد) |
+| انبار | `INVENTORY_LOW_STOCK_THRESHOLD` (آستانهٔ پیش‌فرض هشدار موجودی کم؛ پیش‌فرض ۵؛ ۰ = فقط موجودی صفر), `INVENTORY_LOW_STOCK_NOTIFY_COOLDOWN_HOURS` (فاصلهٔ حداقلی اعلان‌های موجودی کم؛ پیش‌فرض ۲۴) |
 | مدیر اولیه | `ADMIN_NAME`, `ADMIN_EMAIL`, `ADMIN_PASSWORD` |
 | پیام‌رسانی | `MESSAGING_TIMEOUT`, `MESSAGING_AUDIENCE_LIMIT` |
 | پیامک | `SMS_ENABLED`, `SMS_DRIVER` (`kavenegar`/`smsir`/`custom`), `SMS_API_KEY`, `SMS_SENDER`, `SMS_BASE_URL`, `SMS_DEFAULT_RECIPIENT` |
@@ -420,6 +421,7 @@ php artisan view:cache
 | `banners.manage` | ✅ | ✅ | — | — |
 | `articles.manage` | ✅ | ✅ | — | — |
 | `pages.manage` | ✅ | ✅ | — | — |
+| `seo.manage` | ✅ | ✅ | — | — |
 | `reviews.manage` | ✅ | ✅ | — | — |
 | `orders.manage` | ✅ | — | ✅ | ✅ |
 | `returns.manage` | ✅ | — | ✅ | ✅ |
@@ -460,7 +462,7 @@ php artisan view:cache
 
 ## ۷) مدل داده
 
-۷۲ مایگریشن و ۴۳ مدل. جدول‌ها را می‌توان به شش حوزه تقسیم کرد.
+۷۳ مایگریشن و ۴۴ مدل. جدول‌ها را می‌توان به شش حوزه تقسیم کرد.
 
 ### ۷.۱ کاتالوگ و محصول
 
@@ -554,6 +556,7 @@ php artisan view:cache
 | `personal_access_tokens` | توکن‌های Sanctum |
 | `password_reset_tokens` | توکن‌های هش‌شدهٔ بازیابی رمز عبور (یک‌بارمصرف، انقضای ۶۰ دقیقه) |
 | `admin_notifications` | اعلان‌های درون‌پنل (سفارش جدید، …) |
+| `redirects` | ریدایرکت ۳۰۱ بخش «سلامت سئو»: `from_path` (یکتا، نرمال‌شده)، `to_path` (داخلی یا نشانی کامل)، `is_active`، `hits` (شمارندهٔ استفاده) |
 | `cache`, `jobs`, `sessions` | زیرساخت Laravel (کش دیتابیسی، صف، نشست) |
 
 ---
@@ -590,7 +593,7 @@ php artisan view:cache
 |---|---|
 | `POST /auth/register`, `POST /auth/login` | ثبت‌نام / ورود (خروجی: user + token) |
 | `POST /auth/forgot-password`, `POST /auth/reset-password` | بازیابی رمز عبور با توکن ایمیل (پاسخ forgot همیشه عمومی است) |
-| `POST /orders` | ثبت سفارش کاربر یا مهمان — مهمان باید `X-Guest-Token` بفرستد و فقط `cod` مجاز است |
+| `POST /orders` | ثبت سفارش کاربر یا مهمان — مهمان باید `X-Guest-Token` بفرستد و فقط `cod` مجاز است؛ بدنه می‌تواند `utm: {source, medium, campaign, content, term, referrer}` اختیاری داشته باشد (انتساب کمپین؛ سرور پاک‌سازی می‌کند) |
 | `POST /orders/track` | رهگیری عمومی سفارش با «شماره سفارش + شماره تماس» |
 | `POST /orders/recover` | بازیابی دسترسی مهمان در مرورگر جدید با «شماره سفارش + کد پیگیری»؛ شناسهٔ مرورگر قبلی برمی‌گردد |
 | `GET /orders/{orderNumber}`, `POST /orders/{orderNumber}/cancel` | جزئیات/فاکتور و لغو سفارش برای صاحب سفارش: کاربر (Bearer) یا مهمان (`X-Guest-Token`)؛ بدون هویت `401` |
@@ -611,6 +614,7 @@ php artisan view:cache
 | `GET /articles`, `GET /articles/{slug}` | مقالات منتشرشده |
 | `GET /pages`, `GET /pages/{slug}` | صفحات ثابت |
 | `GET /trust-badges` | نشان‌های اعتماد |
+| `GET /seo/redirects`, `POST /seo/redirects/hit` | نقشهٔ ریدایرکت‌های فعال ۳۰۱ (برای build و `RedirectGate`) و شمارش استفاده |
 | `GET /contact-channels` | کانال‌های ارتباطی فعال (لینک عضویت/پیام؛ ۱۰ دقیقه کش) |
 | `GET /header-footer` | متن/لینک‌های هدر و فوتر |
 | `GET /store-settings`, `GET /store-settings/tax` | تنظیمات عمومی و مالیات (شامل `cod_max_total` و `cod_fee`) |
@@ -663,6 +667,7 @@ php artisan view:cache
 | `products` | ۱۴ | `AdminProductController`, `AdminProductImageController`, `AdminProductImportController` | CRUD، تصاویر/ترتیب/اصلی، تغییر وضعیت، ایمپورت گروهی و دانلود قالب، انتقال گروهی به دسته‌بندی (`POST /admin/products/assign-category`) |
 | `categories` | ۶ | `AdminCategoryController` | CRUD + وضعیت |
 | `brands` | ۶ | `AdminBrandController` | CRUD + وضعیت |
+| `seo` / `redirects` | ۵ | `AdminSeoController` | ممیزی متای محصول/دسته/برند/صفحه + CRUD ریدایرکت ۳۰۱ با شمارندهٔ استفاده (نیازمند `seo.manage`) |
 | `orders` | ۵ | `AdminOrderController` | فهرست/جزئیات، تغییر وضعیت، اطلاعات ارسال، ثبت دریافت وجه COD |
 | `returns` | ۲ | `AdminReturnRequestController` | فهرست + تغییر وضعیت |
 | `coupons` | ۵ | `AdminCouponController` | CRUD + وضعیت |
@@ -688,6 +693,7 @@ php artisan view:cache
 | `notifications` | ۳ | `AdminNotificationController` | فهرست، خواندن یکی/همه |
 | `admins` | ۴ | `AdminUserController` | مدیریت مدیران و نقش‌ها (نیازمند `admins.manage`) |
 | `reports` | ۲ | `AdminReportController` | گزارش فروش + گردش موجودی (`GET /admin/reports/stock-movements` با فیلتر نوع/محصول/تنوع و صفحه‌بندی) |
+| `inventory` | ۵ | `AdminInventoryController` | موجودی و انبار (`products.manage`): `GET /admin/inventory` (mode=low/all)، `GET /admin/inventory/summary`، `PATCH /admin/inventory/{kind}/{id}/threshold`، `POST /admin/inventory/stocktake`، `POST /admin/inventory/notify` |
 
 > فهرست دقیق و کامل مسیرها با `php artisan route:list` یا فایل
 > `routes/api.php` قابل مشاهده است. در این سند فقط گروه‌بندی و مسئولیت‌ها آمده
@@ -802,6 +808,19 @@ php artisan view:cache
   موجودی رسمی سفارش همچنان `products.stock`/`product_variants.stock` است و
   هیچ‌کدام از مسیرهای سفارش/لغو/`orders:release-abandoned` به این جدول دست
   نمی‌زند.
+- **آستانهٔ هشدار موجودی (`low_stock_threshold`):** ستون nullable روی
+  `products` و `product_variants` (مایگریشن `2026_12_04_000000`)؛ `NULL` یعنی
+  پیش‌فرض `config('inventory.low_stock_threshold')`. تنوع اول آستانهٔ خودش، بعد
+  آستانهٔ محصول و در آخر پیش‌فرض را به ارث می‌برد (`effectiveLowStockThreshold`).
+  این ستون فقط برای هشدار/گزارش است و در محاسبهٔ سفارش اثری ندارد.
+- **انتساب سفارش (UTM + referrer):** شش ستون اختیاری `utm_source`،
+  `utm_medium`، `utm_campaign`، `utm_content`، `utm_term` (۱۸۰ کاراکتر) و
+  `referrer` (۵۰۰ کاراکتر) روی `orders` (مایگریشن `2026_12_05`). بدنهٔ
+  `POST /orders` می‌تواند شیء `utm` بفرستد؛ `OrderController::sanitizeAttribution`
+  تگ/کنترل‌کاراکتر را حذف، فاصله‌ها را یکسان و طول را برش می‌دهد و رشتهٔ خالی را
+  `NULL` می‌کند تا در گزارش «فروش هر کمپین» قابل اتکا باشد. فرانت انتساب
+  اول-تماس نشست را در `sessionStorage` (`behrang-shop-attribution`) نگه
+  می‌دارد (`utils/attribution.ts`) و فقط هنگام تسویه می‌فرستد.
 - **همگام‌سازی پالت رنگ در پنل (`AdminProductController::syncColors`):** رنگ‌های
   ارسال‌شده به‌روزرسانی/ایجاد و رنگ‌های حذف‌شده پاک می‌شوند. تطبیق نام‌ها با
   `colorNameKey` (ی/ي، ک/ك، نیم‌فاصله، کشیده و اعراب یکی می‌شوند) انجام می‌شود؛
@@ -857,6 +876,17 @@ php artisan view:cache
   می‌شوند و مقدار صفر ثبت نمی‌شود. گزارش پنل:
   `GET /admin/reports/stock-movements?days=30&type=&product_id=&variant_id=&page=`
   با خلاصهٔ افزایش/کاهش و صفحه‌بندی (تست: `StockMovementTest`).
+- **هشدار موجودی کم و شمارش انبار:** هر محصول/تنوع ستون اختیاری
+  `low_stock_threshold` دارد؛ NULL یعنی پیش‌فرض `config('inventory.low_stock_threshold')`
+  (env: `INVENTORY_LOW_STOCK_THRESHOLD`، پیش‌فرض ۵) و تنوع اول آستانهٔ خودش، بعد
+  آستانهٔ محصول و در آخر پیش‌فرض را به ارث می‌برد. `LowStockService::summary()`
+  فقط کالاهای فعال را می‌شمارد و `notify()` تا وقتی اعلان خوانده‌نشدهٔ
+  `AdminNotification::TYPE_LOW_STOCK` در بازهٔ
+  `inventory.low_stock_notify_cooldown_hours` وجود دارد اعلان تازه نمی‌سازد
+  (کامند روزانهٔ `inventory:notify-low-stock` و دکمهٔ پنل، با `--force` برای
+  ارسال دستی). شمارش انبار از `POST /admin/inventory/stocktake` موجودی شمارش‌شده
+  را جای موجودی فعلی می‌گذارد و اختلاف را با `StockLedger` و نوع `stocktake`
+  ثبت می‌کند؛ مسیرهای سفارش/لغو دست‌نخورده‌اند (تست: `AdminInventoryTest`).
 - **کش ویترین:** پاک‌سازی فقط با کنترلرهای پنل انجام نمی‌شود؛
   `App\Observers\StorefrontCacheObserver` روی محصول/تنوع، دسته، برند، بنر و
   بخش بنر، فونت بنر، نوار اطلاع‌رسانی، پاپ‌آپ، استوری، نشان اعتماد، کانال
@@ -1057,6 +1087,24 @@ php artisan view:cache
   `/admin/products/new?category_id=...` باز می‌کند و `AdminProductForm` فقط اگر
   آن شناسه در فهرست دسته‌ها باشد، همان را از ابتدا انتخاب می‌کند.
 
+### ۹.۱۰ سئو، متا و ریدایرکت ۳۰۱
+
+- **ممیزی متا:** `GET /admin/seo/audit` محصولات/دسته‌ها/برندها/صفحه‌های فعال را
+  می‌گردد و عنوان/توضیح خالی، بلندتر از ۶۰/۱۶۰ کاراکتر و عنوان تکراری را
+  برمی‌گرداند (`rows` + `summary` + شمارش آدرس‌های `sitemap`). خودِ متا فقط در
+  فرم‌های موجود ویرایش می‌شود؛ این صفحه فرم تکراری ندارد.
+- **تغییر اسلاگ ⇒ ریدایرکت:** هر تغییر اسلاگ باید یک ردیف در `redirects` بگیرد
+  (`POST /admin/redirects`). مسیرها با `Redirect::normalizePath` یکدست می‌شوند
+  (بدون کوئری، با «/» شروع، بدون «/» پایانی)، مبدأ «/» و مقصدِ برابر با مبدأ
+  رد می‌شود و `from_path` یکتاست.
+- **تحویل ۳۰۱:** سایت SPA است؛ `GET /seo/redirects` نقشهٔ فعال را می‌دهد و
+  `scripts/generate-sitemap.mjs` در هر build فایل‌های `dist/_redirects`
+  (Netlify/Cloudflare) و `dist/redirects.conf` (nginx) را می‌سازد. `RedirectGate`
+  هم همان نقشه را در مرورگر می‌گیرد تا کاربر داخل SPA به ۴۰۴ نخورد؛ برای اینکه
+  گوگل ۳۰۱ واقعی ببیند، بعد از تغییر ریدایرکت‌ها یک build/دیپلوی لازم است.
+- **شمارشندهٔ استفاده:** `POST /seo/redirects/hit` با هر بار باز شدن مسیر قدیمی
+  `hits` را زیاد می‌کند (throttle دارد) تا معلوم شود کدام ریدایرکت هنوز لازم است.
+
 ---
 
 ## ۱۰) فرانت‌اند
@@ -1086,7 +1134,7 @@ php artisan view:cache
 **پنل مدیریت:** `/admin/login` عمومی؛ بقیه زیر `/admin` با `AdminLayout`:
 
 `/admin` (نمای کلی)، `products`, `products/create`, `products/:id/edit`,
-`categories`, `brands`, `orders`, `returns`, `coupons`, `customers`,
+`categories`, `brands`, `seo`, `orders`, `returns`, `coupons`, `customers`,
 `customers/:customerId`, `wishlist`, `admins`, `messaging`, `support`,
 `accounting`, `shipping`, `content`, `banners`, `announcement-bar`,
 `trust-badges`, `channels`, `stories`, `popups`, `header-footer`, `articles`,
@@ -1191,6 +1239,13 @@ php artisan view:cache
 - سئو: `usePageMeta` (عنوان/توضیح/canonical)، `utils/seo.ts`،
   `utils/structuredData.ts` (JSON-LD محصول/مقاله) و تولید sitemap در
   `npm run build`.
+- **ریدایرکت ۳۰۱ و فایل‌های هاست:** `components/RedirectGate.tsx` (داخل
+  `BrowserRouter`، مسیرهای `/admin` مستثنا) نقشهٔ `services/redirects.ts` را با
+  کش ۵ دقیقه‌ای می‌گیرد و مسیر قدیمی را با `Navigate replace` (یا
+  `location.replace` برای مقصد بیرونی) به مقصد می‌فرستد و هر بار
+  `POST /seo/redirects/hit` می‌زند. اسکریپت build علاوه بر sitemap،
+  `dist/_redirects` و `dist/redirects.conf` را از `GET /seo/redirects` می‌نویسد.
+  صفحهٔ پنل: `pages/AdminSeo.tsx` (تب «ممیزی متا» + تب «ریدایرکت ۳۰۱»).
 - **تصاویر (سئو و Core Web Vitals):** متن جایگزین بنرها از فیلد `image_alt` پنل
   و در نبود آن از عنوان بنر می‌آید (`bannerImageAlt`)؛ کارت محصول اولویت را به
   `alt` تصویر اصلی ثبت‌شده در پنل می‌دهد و در نبود آن نام محصول را می‌گذارد
@@ -1263,6 +1318,7 @@ php artisan view:cache
 | کلیدهای localStorage | `frontend/src/utils/storageKeys.ts` |
 | PWA (manifest/sw/آفلاین) | `frontend/public/manifest.webmanifest`, `sw.js`, `offline.html` + `vite.config.ts` |
 | سئو و JSON-LD | `frontend/src/utils/seo.ts`, `structuredData.ts`, `hooks/usePageMeta.ts` |
+| سلامت سئو و ریدایرکت ۳۰۱ | `AdminSeoController` + `SeoController` + `Models/Redirect` + `components/RedirectGate.tsx`, `services/redirects.ts`, `pages/AdminSeo.tsx` + فایل‌های build در `scripts/generate-sitemap.mjs` |
 | تصاویر: تبدیل WebP، ابعاد ذاتی و یکپارچه‌سازی مسیرها | `backend/app/Services/Media/WebpConverter.php`, `backend/app/Support/Media/ImageDimensions.php`, `backend/config/media.php` + کامندهای `images:webp` و `images:migrate-legacy` |
 | تست‌های بک‌اند | `backend/tests/Feature/` (الگو: `RefreshDatabase` + `Sanctum::actingAs`) |
 
@@ -1468,6 +1524,9 @@ node -p "require('./package.json').dependencies.react"
 | 1.43 | 2026-11-23 | **تأیید نهایی موقعیت بعد از نوشتن:** لاگ دوم (`saved: 2147`, `savedHeight: 5686`, پایان `y: 2792`) نشان داد نوشتن دیگر زودهنگام نیست، ولی **بعد از** نوشتن چیدمان بالای ناحیهٔ دید عوض شده (بنر بالا بعد از اندازه‌گیری ارتفاع واقعی گرفته) و anchor مرورگر موقعیت را ۶۴۵px جلو برده است. حالا: (۱) نوشتن فقط وقتی انجام می‌شود که چیدمان ۳۰۰ms آرام مانده باشد (در فریم اول اگر صفحه از قبل کامل است، بی‌درنگ)، و بعد از هر نوشتن «آرام‌شدن» از نو شمرده می‌شود؛ (۲) در لحظهٔ پایان، اگر `y` از `min(saved, maxScroll)` بیش از ۴px فاصله داشته باشد یک **اصلاح آگاهانه** انجام می‌شود و حداکثر ۳ بار تکرار می‌شود (`MAX_CORRECTIONS`) تا به پرش بالا-پایین تبدیل نشود؛ لاگ `[scroll] stop` هم تعداد اصلاح‌ها را نشان می‌دهد |
 | 1.44 | 2026-11-23 | **حذف فلشِ «هدر» در برگشت با Back:** بعد از اصلاح ۱.۴۳ موقعیت درست بود ولی کاربر «کسری از ثانیه» بالای صفحه را می‌دید، چون `Home` همهٔ داده را در `useEffect` می‌گرفت و رندر اول تقریباً خالی بود (ارتفاع ۴۰۵۳ در برابر ۵۶۸۶). حالا آخرین دادهٔ صفحهٔ اصلی در `homeSnapshot` (سطح ماژول، فقط حافظهٔ همین نشست) کش می‌شود و `useState`ها از آن مقدار اولیه می‌گیرند؛ برگشت با Back همان محتوا را فوراً رندر می‌کند، ارتفاع از رندر اول درست است و بازگردانیِ `ScrollToTop` پیش از اولین paint انجام می‌شود (بدون فلش و بدون نیاز به اصلاح). درخواست‌ها مثل قبل اجرا و کش را تازه می‌کنند |
 | 1.45 | 2026-11-23 | **پایهٔ آنالیتیکس (GA4/GTM):** `utils/analytics.ts` تنها درگاه رویداد شد (`initAnalytics`, `trackEvent`, `trackPageView`) و `components/AnalyticsTracker.tsx` داخل `BrowserRouter` با هر تغییر مسیر `page_view` می‌فرستد؛ در `initAnalytics` مقدار `send_page_view:false` است تا بازدید اولیه دوبار شمرده نشود و مسیرهای `/admin` ثبت نمی‌شوند. شناسه‌ها از `VITE_GA4_ID`/`VITE_GTM_ID` می‌آیند: بدون شناسه هیچ اسکریپتی دانلود و هیچ درخواستی ارسال نمی‌شود؛ اگر GTM تنظیم شده باشد GA4 مستقیم بارگذاری نمی‌شود (رویدادها به `dataLayer`) تا شمارش دوباره رخ ندهد. نقشهٔ راه سئو/آنالیتیکس/ادز/انبار در `SEO_ANALYTICS_PLAN.md` ثبت شد |
+| 1.48 | 2026-11-23 | **رویدادهای فروش GA4 + انتساب سفارش (UTM):** شش ستون اختیاری `utm_source/utm_medium/utm_campaign/utm_content/utm_term/referrer` روی `orders` (مایگریشن `2026_12_05`)؛ `OrderController@store` payload اختیاری `utm` را اعتبارسنجی و با `sanitizeAttribution` پاک‌سازی می‌کند (حذف تگ/کنترل‌کاراکتر، برش ۱۸۰/۵۰۰، خالی→NULL) — `purchase` با `transaction_id` = شمارهٔ سفارش و `currency` = `IRR` (تبدیل تومان→ریال فقط در `utils/analytics.ts`) می‌دهد: `view_item`+`view_item_list` (فهرست محصولات)، `add_to_cart`/`remove_from_cart` (سبد)، `begin_checkout`/`add_shipping_info`/`add_payment_info` (تسویه)، `purchase` (COD در لحظهٔ ثبت، آنلاین پس از پرداخت) و `refund` (لغو مشتری/مهمان)؛ `utils/attribution.ts` انتساب اول-تماس نشست را در `sessionStorage` (کلید `behrang-shop-attribution`) نگه می‌دارد و `AnalyticsTracker` با هر تغییر مسیر آن را تازه می‌کند؛ ۴ تست `OrderAttributionTest` (۵۵۴ تست بک‌اند، ۲۷۵۲ assertion) |
+| 1.47 | 2026-11-23 | **هشدار موجودی کم + شمارش انبار:** ستون `low_stock_threshold` روی `products`/`product_variants` (NULL = پیش‌فرض) با مایگریشن `2026_12_04`، `config/inventory.php` (`INVENTORY_LOW_STOCK_THRESHOLD` پیش‌فرض ۵، `INVENTORY_LOW_STOCK_NOTIFY_COOLDOWN_HOURS` پیش‌فرض ۲۴) و `App\Services\Inventory\LowStockService` (شمارش فعال‌ها، اعلان با بازهٔ خنک‌شدن)؛ مسیرهای `GET /admin/inventory`، `GET /admin/inventory/summary`، `PATCH /admin/inventory/{kind}/{id}/threshold`، `POST /admin/inventory/stocktake` و `POST /admin/inventory/notify` زیر مجوز `products.manage`؛ نوع `stocktake` در `StockMovement` (اصلاح موجودی با شمارش، بدون دست‌زدن به `OrderStockService`)، نوع `low_stock` در `AdminNotification`، کامند `inventory:notify-low-stock` (روزانه ۰۸:۳۰) و کارت/میان‌بر «موجودی و انبار» در داشبورد؛ صفحهٔ `pages/AdminInventory.tsx` + `services/inventory.ts` با دو حالت «رو به اتمام/همهٔ کالاها»، ویرایش آستانه، فرم شمارش و دکمهٔ اعلان؛ ۱۱ تست `AdminInventoryTest` (۵۵۰ تست بک‌اند، ۲۷۳۰ assertion) و `tsc`/`oxlint`/`build` سبز |
+| 1.46 | 2026-11-23 | **صفحهٔ «سلامت سئو» + مدیر ریدایرکت ۳۰۱:** مایگریشن/مدل `redirects` (`from_path` یکتا، `to_path`، `is_active`، `hits`) با نرمال‌سازی مسیر (`Redirect::normalizePath`)، `AdminSeoController` (ممیزی متای محصول/دسته/برند/صفحه برای خالی، بلندتر از ۶۰/۱۶۰ و تکراری + CRUD ریدایرکت + شمارش آدرس‌های sitemap) زیر مجوز جدید `seo.manage` (مدیر ارشد و مدیر محصولات)؛ `SeoController` عمومی `GET /seo/redirects` (کش ۱۰ دقیقه، پاک‌سازی در هر تغییر) و `POST /seo/redirects/hit`؛ فرانت `pages/AdminSeo.tsx` (کارت‌های خلاصه، فیلتر نوع، پیش‌نمایش نتیجهٔ گوگل، جدول صفحه‌بندی‌شده؛ تب ریدایرکت با فرم/جست‌وجو/فعال‌سازی/حذف و `ConfirmDialog`)، `components/RedirectGate.tsx` + `services/redirects.ts` برای ۳۰۱ داخل SPA، و `scripts/generate-sitemap.mjs` حالا `dist/_redirects` و `dist/redirects.conf` را از همان API می‌نویسد؛ ۱۰ تست `AdminSeoTest` (ممیزی، اعتبارسنجی، کش، hit، مجوزها) — `tsc` و `oxlint` (۰ خطا) سبز، تست فرانت به بلاکر Vitest (بند ۱۷ `Start.txt`) خورد |
 | 1.41 | 2026-11-23 | **Back به صفحهٔ اصلی (و هر صفحهٔ داده‌محور) از بالا باز می‌شد:** صفحهٔ `/` همهٔ محتوایش را در `useState` نگه می‌دارد و با افکت‌های async پر می‌کند؛ پس در اولین رندر بعد از Back ارتفاع سند کوتاه است و موقعیت ذخیره‌شده **قابل‌دسترس نیست**. حلقهٔ بازگردانی همان عدد قلنج‌شده (نزدیک صفر) را اعمال می‌کرد و چون چیدمان چند فریم ثابت می‌ماند، «آرام‌شده» حساب می‌شد و متوقف می‌شد؛ بعد محتوا می‌رسید و صفحه تا نزدیک بالا می‌ماند. اکنون `positions` عدد نیست، `{ y, height }` است: ارتفاع سند در لحظهٔ ذخیره هم نگه داشته می‌شود و بازگردانی تا وقتی هدف در ارتفاع فعلی **قابل‌دسترس** نشده هیچ نوشتنی نمی‌کند (سبک `deny`)، فقط صبر می‌کند؛ «آرام شدن» هم فریم‌شمار نیست، زمان‌محور است (`SETTLE_MS = 300`، و برای صفحه‌ای که ارتفاعش تا `CONTENT_WAIT_MS = 2000` برنگشت، پایان با مهلت) و `HEIGHT_READY_RATIO = 0.96` برای تشخیص برگشتن محتوا. هم‌چنین `overflow-anchor` دیگر خاموش نمی‌شود: با نوشتنِ یک‌باره، anchor مرورگر کمک می‌کند محتوا هنگام رسیدن بخش‌های بالایی نپرد (خاموش‌کردنش در نسخهٔ ۱.۴۰ باعث می‌شد بخش دیرهنگامِ بالای صفحه، هدف را جابه‌جا کند)؛ `maxScroll`/`documentHeight` به سطح ماژول رفتند و `maxScroll` در محیط بدون چیدمان (jsdom) بی‌نهایت است تا تست معنا داشته باشد — `tsc`/`oxlint` (۰ خطا) و `build` سبز |
 | 1.21 | 2026-11-19 | **شکستن فایل‌های بزرگ (بدهی ۱ — مرحلهٔ دوم):** `pages/AdminDashboard.tsx` (۲٬۵۸۵ خط) به پوستهٔ ۱٬۱۲۷ خطی (دریافت داده، آمار، `renderBlock`) + `components/admin/dashboard/` شکسته شد: `dashboardShared.ts` (۲۲۰: انواع `DashboardData`/`SalesTrend*`/`SalesChannelItem`، قالب‌بندهای فارسی عدد/قیمت/تاریخ، `quickLinks`، `channelPresentation`)، `dashboardStyles.ts` (۳۱۷: استایل تزریقی)، `SalesTrendChart.tsx` (۵۰۸: نمودار SVG تعاملی + `buildSmoothPath`)، `SalesChannelsChart.tsx` (۲۳۰: دونات/فهرست کانال‌ها)، `useDashboardLayout.ts` (۳۰۳: چیدمان شخصی هر مدیر، پنهان/ترتیب/کشیدن، میان‌برهای منو)؛ بدون تغییر رفتار (tsc/lint با ۰ خطا، ۶۴ تست، build سبز) |
 | 1.22 | 2026-11-19 | **موجودی هر رنگ + ارزش افزودهٔ کارت محصول:** ستون nullable `product_colors.stock` (مایگریشن `2026_11_19_120000`) با فیلد «موجودی این رنگ» در فرم محصول پنل (`colors.*.stock`، `NULL` = ثبت نشده) — فقط اطلاعاتی و بدون دخالت در موجودی سفارش؛ `utils/price.ts::calculateVatAmount` + نمایش «ارزش افزوده (٪): مبلغ» زیر قیمت `ProductCard` (grid/home) بر اساس `vat_enabled`/`vat_percent` فروشگاه و `is_taxable` کالا؛ ۲ تست بک‌اند (`ProductColorTest`) و ۴ تست فرانت (`price.test.ts`) — ۴۹۷ تست بک‌اند و ۶۸ تست فرانت سبز |

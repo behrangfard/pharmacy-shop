@@ -42,7 +42,7 @@ Google Merchant/Shopping وجود ندارد.
   `BrowserRouter`: `page_view` با هر تغییر مسیر (SPA)، با `send_page_view:false`
   در config تا بازدید اولیه دوبار ثبت نشود؛ مسیرهای `/admin` ثبت نمی‌شوند.
 
-### فاز ۱.۲ — رویدادهای فروش (تسک بعدی)
+### فاز ۱.۲ — رویدادهای فروش (انجام شد در ۱.۴۸)
 مکان‌های دقیق: `ProductCard`/`ProductDetail` (`view_item`، `view_item_list`)،
 `context/CartContext` (`add_to_cart`، `remove_from_cart`)، `Checkout`
 (`begin_checkout`، `add_shipping_info`، `add_payment_info`)، صفحهٔ موفقیت سفارش
@@ -53,7 +53,12 @@ Google Merchant/Shopping وجود ندارد.
 `currency`: قیمت‌ها به تومان ذخیره می‌شوند؛ برای GA4 مقدار ریالی با
 `currency: "IRR"` فرستاده می‌شود (تبدیل یک‌جا در همان فایل analytics).
 
-### فاز ۱.۳ — UTM و انتساب سفارش (همراه فاز ۱.۲)
+**پیاده‌سازی ۱.۴۸:** `view_item_list` از صفحهٔ `/products` (هر لود/صفحه‌بندی) و
+`view_item` از `/product/:slug` فرستاده می‌شود؛ `purchase` برای COD در `Checkout`
+و برای پرداخت آنلاین در `Payment.tsx` پس از موفقیت پرداخت؛ `refund` در لغو
+سفارش `AccountOrders`/`TrackOrder` (بدون مبلغ).
+
+### فاز ۱.۳ — UTM و انتساب سفارش (انجام شد در ۱.۴۸، همراه فاز ۱.۲)
 - ستون‌های `orders.utm_source/utm_medium/utm_campaign/utm_content/utm_term` +
   `orders.referrer` (مایگریشن + پر کردن در `OrderController@store`؛ اعتبارسنجی
   سمت سرور و حذف پارامترهای خطرناک).
@@ -119,11 +124,14 @@ Clarity برای heatmap (رایگان) فقط اگر با حریم خصوصی �
 
 ## ۶) مسیر انبار (با آنچه داریم)
 
-1. **هشدار موجودی کم:** ستون `low_stock_threshold` روی محصول/تنوع + اعلان در
-   `AdminNotification` و ویجت داشبورد («۳ قلم رو به اتمام»).
-2. **شمارش انبار (stocktake):** سند شمارش + اختلاف + ثبت اصلاحی در
-   `stock_movements` با نوع جدید (`stocktake`) و مجوز `inventory.manage`؛
-   بدون دست‌زدن به `OrderStockService` (قاعدهٔ ۵).
+1. **هشدار موجودی کم:** **انجام شد (۱.۴۷):** ستون `low_stock_threshold` روی
+   محصول/تنوع، `LowStockService`، اعلان `AdminNotification::TYPE_LOW_STOCK`،
+   کامند روزانهٔ `inventory:notify-low-stock` و کارت «کالاهای رو به اتمام» و
+   میان‌بر «موجودی و انبار» در داشبورد.
+2. **شمارش انبار (stocktake):** **انجام شد (۱.۴۷):** `POST /admin/inventory/stocktake`
+   + نوع `stocktake` در `stock_movements` + فرم ردیفی در `/admin/inventory`؛
+   بدون دست‌زدن به `OrderStockService` (قاعدهٔ ۵). به‌جای مجوز جدای
+   `inventory.manage` از `products.manage` استفاده شد تا فهرست مجوزها کوتاه بماند.
 3. **پیش‌بینی اتمام:** میانگین فروش ۳۰/۹۰ روز از `order_items` ÷ موجودی =
    «چند روز دیگر تمام می‌شود»؛ ستون جدید در فهرست محصولات پنل.
 4. **گزارش گردش موجودی:** فیلتر بازه/نوع/محصول + خروجی اکسل با `XlsxWriter`
@@ -138,11 +146,12 @@ Clarity برای heatmap (رایگان) فقط اگر با حریم خصوصی �
 | تسک | محتوا | وضعیت |
 |---|---|---|
 | ۱ | پوستهٔ آنالیتیکس + `page_view` + مستندسازی متغیرها | **انجام شد** |
-| ۲ | رویدادهای فروش GA4 + ستون‌های UTM سفارش (بک‌اند + فرانت + تست) | بعدی |
+| ۱.۵ | صفحهٔ «سلامت سئو» + مدیر ریدایرکت ۳۰۱ (ممیزی متا، `redirects`، `_redirects`/`redirects.conf` در build) | **انجام شد** (۱.۴۶) |
+| ۲ | رویدادهای فروش GA4 + ستون‌های UTM سفارش (بک‌اند + فرانت + تست) | **انجام شد** (۱.۴۸) |
 | ۳ | سئو: canonical پارامترها + sitemap سروری + `shippingDetails` | |
 | ۴ | فید Merchant (`/feed/google-merchant.xml`) + راهنمای UTM کمپین | |
 | ۵ | داشبورد آنالیتیکس داخلی پنل (بعد از تصمیم دربارهٔ فاز ۱.۴) | |
-| ۶ | انبار: هشدار موجودی + پیش‌بینی اتمام | |
+| ۶ | انبار: هشدار موجودی + پیش‌بینی اتمام | هشدار موجودی **انجام شد** (۱.۴۷)؛ پیش‌بینی اتمام باقی |
 | ۷ | پیش‌رندر مسیرهای عمومی (نیازمند تصمیم معماری/هاست) | |
 
 ## ۸) چه چیزی از شما لازم است

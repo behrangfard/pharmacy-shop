@@ -27,6 +27,7 @@ import {
 } from "../utils/guestAccessCode";
 
 import { STORAGE_KEYS } from "../utils/storageKeys";
+import { trackRefund } from "../utils/analytics";
 
 type TrackingEvent = {
   status: string;
@@ -243,6 +244,9 @@ function TrackOrder() {
       await api.post(
         `/orders/${encodeURIComponent(order.order_number)}/cancel`,
       );
+
+      // GA4: لغو سفارش مهمان هم «بازپرداخت» است (بدون مبلغ).
+      trackRefund({ orderNumber: order.order_number });
 
       setOrder((previous) =>
         previous

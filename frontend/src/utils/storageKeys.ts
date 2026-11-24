@@ -57,6 +57,8 @@ export const STORAGE_KEYS = {
   recentlyViewed: "behrang-shop-recently-viewed",
   /** شناسهٔ پایدار مرورگر مهمان برای ثبت سفارش بدون حساب (Idempotency). */
   guestToken: "behrang-shop-guest-token",
+  /** UTM/ارجاع اولین لینک ورودی نشست برای انتساب سفارش به کمپین. */
+  attribution: "behrang-shop-attribution",
   /** زمان بستن پیشنهاد نصب اپلیکیشن (PWA) تا دوباره مزاحم نشود. */
   pwaInstallDismissed: "behrang-shop-pwa-install-dismissed",
 } as const;

@@ -37,6 +37,51 @@ class OrderController extends Controller
     ) {
     }
 
+    /**
+     * پاک‌سازی پارامترهای انتساب سفارش.
+     *
+     * این مقدارها از آدرس صفحهٔ مشتری می‌آیند و آزادند؛ برای اینکه در گزارش‌ها،
+     * CSV و پنل امن بمانند فقط متن ساده و محدود نگه می‌داریم: تگ و کنترل‌کاراکتر
+     * حذف، فاصله‌ها یکسان و طول برش داده می‌شود. مقدار خالی به NULL تبدیل
+     * می‌شود تا «ثبت نشده» از «رشتهٔ خالی» قابل تفکیک باشد.
+     *
+     * @param  array<string, mixed>  $raw
+     * @return array{source: string|null, medium: string|null, campaign: string|null, content: string|null, term: string|null, referrer: string|null}
+     */
+    private function sanitizeAttribution(array $raw): array
+    {
+        $limits = [
+            'source' => 180,
+            'medium' => 180,
+            'campaign' => 180,
+            'content' => 180,
+            'term' => 180,
+            'referrer' => 500,
+        ];
+
+        $clean = [];
+
+        foreach ($limits as $key => $limit) {
+            $value = $raw[$key] ?? null;
+
+            if (! is_string($value)) {
+                $clean[$key] = null;
+
+                continue;
+            }
+
+            $value = strip_tags($value);
+            $value = preg_replace('/[\x00-\x1F\x7F]+/u', ' ', $value) ?? '';
+            $value = trim(preg_replace('/\s+/u', ' ', $value) ?? '');
+
+            $clean[$key] = $value === ''
+                ? null
+                : mb_substr($value, 0, $limit);
+        }
+
+        return $clean;
+    }
+
     public function store(Request $request)
     {
         $validated = $request->validate([
@@ -67,9 +112,25 @@ class OrderController extends Controller
                 'string',
                 Rule::in(PaymentMethod::ALL),
             ],
+
+            /*
+             * انتساب سفارش (UTM + referrer): اختیاری است و از آدرس صفحهٔ
+             * مشتری می‌آید. سقفِ بزرگ‌تر از حد نهایی (۱۸۰/۵۰۰) فقط گارد
+             * درخواست‌های عظیم است؛ برش نهایی و پاک‌سازی در
+             * sanitizeAttribution انجام می‌شود.
+             */
+            'utm' => ['nullable', 'array'],
+            'utm.source' => ['nullable', 'string', 'max:500'],
+            'utm.medium' => ['nullable', 'string', 'max:500'],
+            'utm.campaign' => ['nullable', 'string', 'max:500'],
+            'utm.content' => ['nullable', 'string', 'max:500'],
+            'utm.term' => ['nullable', 'string', 'max:500'],
+            'utm.referrer' => ['nullable', 'string', 'max:1000'],
         ]);
 
         $paymentMethod = $validated['payment_method'] ?? PaymentMethod::ONLINE;
+
+        $attribution = $this->sanitizeAttribution($validated['utm'] ?? []);
 
         // جلوگیری از تکرار یک تنوع/رنگ در چند ردیف سفارش
         $uniqueItems = [];
@@ -151,7 +212,8 @@ class OrderController extends Controller
                 $guestToken,
                 $guestAccessCode,
                 $idempotencyKey,
-                $paymentMethod
+                $paymentMethod,
+                $attribution
             ) {
                 $subtotal = 0;
                 $discount = 0;
@@ -572,6 +634,12 @@ class OrderController extends Controller
                     'postal_code' => $validated['postal_code'] ?? null,
                     'notes' => $validated['notes'] ?? null,
                     'sales_channel' => 'website',
+                    'utm_source' => $attribution['source'],
+                    'utm_medium' => $attribution['medium'],
+                    'utm_campaign' => $attribution['campaign'],
+                    'utm_content' => $attribution['content'],
+                    'utm_term' => $attribution['term'],
+                    'referrer' => $attribution['referrer'],
                 ]);
 
                 foreach ($orderItems as $orderItem) {

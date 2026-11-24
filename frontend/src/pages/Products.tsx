@@ -33,6 +33,7 @@ import {
   type StorefrontBanner,
 } from "../utils/banners";
 import { usePageMeta } from "../hooks/usePageMeta";
+import { trackViewItemList } from "../utils/analytics";
 import {
   DEFAULT_BANNER_RADIUS,
   bannerRadiusStyle,
@@ -582,6 +583,19 @@ function Products() {
 
         if (!cancelled) {
           setProducts(result);
+
+          // رویداد GA4: هر بار لود/صفحه‌بندی فهرست، یک «نمایش فهرست».
+          trackViewItemList(
+            result
+              .map((item) => ({
+                id: Number(item?.id ?? 0),
+                name: String(item?.name ?? ""),
+                price: Number(item?.price ?? 0),
+              }))
+              .filter((item) => item.id > 0 && item.name !== ""),
+            "فهرست محصولات",
+          );
+
           setTotalProducts(
             Number(payload?.total ?? result.length) || result.length,
           );

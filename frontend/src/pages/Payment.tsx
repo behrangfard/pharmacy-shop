@@ -17,6 +17,7 @@ import {
 import Layout from "../components/Layout";
 import { usePrivatePageMeta } from "../hooks/usePageMeta";
 import api from "../services/api";
+import { trackPurchase } from "../utils/analytics";
 
 type OrderData = {
   id?: number;
@@ -34,6 +35,14 @@ type OrderData = {
   payment_status: string;
   payment_method?: string | null;
   status: string;
+
+  /** اقلام سفارش؛ برای آیتم‌های رویداد `purchase` در GA4. */
+  items?: Array<{
+    product_id?: number | string;
+    product_name?: string;
+    quantity?: number | string;
+    unit_price?: number | string;
+  }>;
 };
 
 function Payment() {
@@ -132,6 +141,22 @@ function Payment() {
 
     try {
       await api.post(`/orders/${orderNumber}/pay`);
+
+      /*
+       * GA4: سفارش آنلاین فقط پس از موفقیت پرداخت «خرید» است؛ شمارهٔ سفارش
+       * به‌عنوان `transaction_id` جلوی شمارش دوباره را می‌گیرد.
+       */
+      trackPurchase({
+        orderNumber,
+        totalToman: Number(order.total ?? 0),
+        shippingToman: Number(order.shipping_cost ?? 0),
+        items: (order.items ?? []).map((item) => ({
+          id: item.product_id ?? orderNumber,
+          name: item.product_name ?? "محصول",
+          price: Number(item.unit_price ?? 0),
+          quantity: Number(item.quantity ?? 1),
+        })),
+      });
 
       /*
        * سبد خرید فقط در مرحلهٔ ثبت سفارش (Checkout) خالی می‌شود. اگر کاربر

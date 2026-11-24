@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 
+import { captureAttribution } from "../utils/attribution";
 import { initAnalytics, trackPageView } from "../utils/analytics";
 
 /**
@@ -23,6 +24,9 @@ function AnalyticsTracker() {
 
   useEffect(() => {
     if (pathname.startsWith("/admin")) return;
+
+    // UTM/ارجاع لینک ورودی همین نشست برای انتساب سفارش ذخیره می‌شود.
+    captureAttribution();
 
     trackPageView(`${pathname}${search}`);
   }, [pathname, search]);

@@ -4,11 +4,13 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
 
 import api from "../services/api";
+import { trackCartChange } from "../utils/analytics";
 import { calculateProductPrice } from "../utils/price";
 import { STORAGE_KEYS } from "../utils/storageKeys";
 
@@ -140,6 +142,17 @@ function readStoredCart(): CartItem[] {
 function CartProvider({ children }: CartProviderProps) {
   const [items, setItems] = useState<CartItem[]>(readStoredCart);
 
+  /*
+   * مرجع تازهٔ سبد برای رویدادهای آنالیتیکس: `addToCart`/`removeFromCart`
+   * callbackهای پایداری هستند (deps خالی) و بدون این مرجع، مقدار حذف‌شده
+   * برای `remove_from_cart` در دسترس نیست.
+   */
+  const itemsRef = useRef<CartItem[]>(items);
+
+  useEffect(() => {
+    itemsRef.current = items;
+  }, [items]);
+
   // ذخیره خودکار سبد خرید
   useEffect(() => {
     try {
@@ -155,6 +168,20 @@ function CartProvider({ children }: CartProviderProps) {
     const colorName = (product.color_name ?? "").trim() || null;
     const packColors = product.pack_colors ?? null;
     const cartKey = getCartKey(product.id, variantId, colorName, packColors);
+
+    /*
+     * `add_to_cart` فقط وقتی موجودی دارد معنا پیدا می‌کند؛ ردیفی که به سقف
+     * موجودی رسیده باشد در سبد بدون تغییر می‌ماند (شمارش اضافه خودداری).
+     */
+    if (product.stock > 0) {
+      trackCartChange("add_to_cart", {
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        quantity: 1,
+        variant: product.variant_name ?? null,
+      });
+    }
 
     setItems((currentItems) => {
       const existingItem = currentItems.find(
@@ -199,6 +226,22 @@ function CartProvider({ children }: CartProviderProps) {
 
   // حذف ردیف بر اساس cartKey؛ عدد برای سازگاری با کدهای قبلی است.
   const removeFromCart = useCallback((identity: CartIdentity) => {
+    const removedItem = itemsRef.current.find((item) =>
+      typeof identity === "string"
+        ? item.cartKey === identity
+        : item.id === identity,
+    );
+
+    if (removedItem) {
+      trackCartChange("remove_from_cart", {
+        id: removedItem.id,
+        name: removedItem.name,
+        price: removedItem.price,
+        quantity: removedItem.quantity,
+        variant: removedItem.variant_name ?? null,
+      });
+    }
+
     setItems((currentItems) =>
       currentItems.filter((item) => {
         if (typeof identity === "string") {

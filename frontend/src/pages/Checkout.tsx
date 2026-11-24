@@ -32,6 +32,13 @@ import {
 import { useStoreSettings } from "../hooks/useStoreSettings";
 import { toEnglishDigits } from "../utils/jalali";
 import { STORAGE_KEYS } from "../utils/storageKeys";
+import {
+  cartAnalyticsItems,
+  trackBeginCheckout,
+  trackCheckoutOption,
+  trackPurchase,
+} from "../utils/analytics";
+import { readAttribution, type OrderAttribution } from "../utils/attribution";
 
 const CHECKOUT_KEY_STORAGE = "checkout_idempotency_key";
 const CHECKOUT_FINGERPRINT_STORAGE = "checkout_fingerprint";
@@ -57,6 +64,8 @@ type CheckoutPayload = {
   payment_method: PaymentMethodValue;
   coupon_code?: string | null;
   items: CheckoutItem[];
+  /** انتساب کمپین (UTM/referrer)؛ فقط وقتی نشست انتسابی ثبت کرده باشد. */
+  utm?: OrderAttribution;
 };
 
 /**
@@ -99,6 +108,8 @@ function Checkout() {
   const submitLock = useRef(false);
   const idempotencyKeyRef = useRef<string | null>(null);
   const nameInitialized = useRef(false);
+  /** هر ورود به تسویه فقط یک `begin_checkout` می‌فرستد. */
+  const beginCheckoutTracked = useRef(false);
 
   const [vatEnabled, setVatEnabled] = useState(false);
   const [vatPercent, setVatPercent] = useState(0);
@@ -113,6 +124,17 @@ function Checkout() {
   } | null>(null);
   const [couponLoading, setCouponLoading] = useState(false);
   const [couponError, setCouponError] = useState("");
+
+  /*
+   * GA4: با رسیدن سبد، «شروع تسویه» یک بار ثبت می‌شود؛ تغییر کوپن یا
+   * بازخوانی آدرس‌ها رویداد را تکرار نمی‌کند.
+   */
+  useEffect(() => {
+    if (beginCheckoutTracked.current || items.length === 0) return;
+
+    beginCheckoutTracked.current = true;
+    trackBeginCheckout(cartAnalyticsItems(items), coupon?.code ?? null);
+  }, [items, coupon?.code]);
 
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
   const [addressesLoading, setAddressesLoading] = useState(false);
@@ -591,6 +613,8 @@ function Checkout() {
         .filter(Boolean)
         .join("، ");
 
+      const attribution = readAttribution();
+
       const payload: CheckoutPayload = {
         recipient_name: `${firstName.trim()} ${lastName.trim()}`,
         phone: phone.trim(),
@@ -601,6 +625,7 @@ function Checkout() {
         // سفارش مهمان فقط «پرداخت در محل» است (سرور هم همین را می‌پذیرد).
         payment_method: user ? paymentMethod : "cod",
         items: orderItems,
+        ...(attribution ? { utm: attribution } : {}),
       };
 
       const fingerprint = getCheckoutFingerprint(payload);
@@ -614,6 +639,25 @@ function Checkout() {
       if (!user) {
         requestHeaders["X-Guest-Token"] = getOrCreateGuestToken();
       }
+
+      /*
+       * رویدادهای GA4 قیف خرید: اطلاعات ارسال و روش پرداخت پیش از ثبت
+       * سفارش فرستاده می‌شوند (مستقل از موفقیت ثبت، نیت خرید را نشان می‌دهند).
+       */
+      const gaItems = cartAnalyticsItems(items);
+
+      trackCheckoutOption(
+        "add_shipping_info",
+        gaItems,
+        "ارسال فروشگاه",
+        coupon?.code ?? null,
+      );
+      trackCheckoutOption(
+        "add_payment_info",
+        gaItems,
+        user ? paymentMethod : "cod",
+        coupon?.code ?? null,
+      );
 
       const response = await api.post("/orders", payload, {
         headers: requestHeaders,
@@ -664,6 +708,21 @@ function Checkout() {
       sessionStorage.removeItem(CHECKOUT_FINGERPRINT_STORAGE);
 
       idempotencyKeyRef.current = null;
+
+      /*
+       * `purchase`: سفارش «پرداخت در محل» همان لحظهٔ ثبت خرید قطعی است؛ برای
+       * سفارش آنلاین رویداد در صفحهٔ پرداخت و بعد از موفقیت پرداخت فرستاده
+       * می‌شود تا با وضعیت واقعی سفارش هم‌راستا باشد.
+       */
+      if (!user || paymentMethod === "cod") {
+        trackPurchase({
+          orderNumber,
+          totalToman: Number(order?.total ?? cartTotal),
+          items: gaItems,
+          shippingToman: Number(order?.shipping_cost ?? 0),
+          couponCode: coupon?.code ?? null,
+        });
+      }
 
       /*
        * سفارش پرداخت در محل مرحلهٔ درگاه ندارد و مستقیم به جزئیات سفارش
