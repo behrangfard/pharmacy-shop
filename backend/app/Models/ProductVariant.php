@@ -22,6 +22,7 @@ class ProductVariant extends Model
         'price',
         'compare_price',
         'stock',
+        'low_stock_threshold',
         'image',
         'is_active',
     ];
@@ -30,6 +31,7 @@ class ProductVariant extends Model
         'price' => 'decimal:2',
         'compare_price' => 'decimal:2',
         'stock' => 'integer',
+        'low_stock_threshold' => 'integer',
         'is_active' => 'boolean',
     ];
 
@@ -58,6 +60,20 @@ class ProductVariant extends Model
     public function variantColors(): HasMany
     {
         return $this->hasMany(ProductVariantColor::class, 'variant_id');
+    }
+
+    /**
+     * آستانهٔ هشدار این تنوع: آستانهٔ خودش، بعد آستانهٔ محصول، بعد پیش‌فرض.
+     */
+    public function effectiveLowStockThreshold(): int
+    {
+        $own = $this->low_stock_threshold;
+
+        if ($own === null || $own === '') {
+            $own = $this->product?->low_stock_threshold;
+        }
+
+        return Product::thresholdValue($own);
     }
 
     /**

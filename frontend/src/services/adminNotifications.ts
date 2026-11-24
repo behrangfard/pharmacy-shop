@@ -6,6 +6,7 @@ export type AdminNotificationType =
   | "order_status"
   | "support"
   | "return"
+  | "low_stock"
   | (string & {});
 
 export interface AdminNotification {

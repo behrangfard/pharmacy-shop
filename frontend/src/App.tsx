@@ -6,6 +6,7 @@ import AdminLayout from "./components/AdminLayout";
 import AdminPermissionGuard from "./components/AdminPermissionGuard";
 import { RouteErrorBoundary } from "./components/ErrorBoundary";
 import ScrollToTop from "./components/ScrollToTop";
+import RedirectGate from "./components/RedirectGate";
 import AnalyticsTracker from "./components/AnalyticsTracker";
 import { AdminAuthProvider } from "./context/AdminAuthContext";
 import { ADMIN_PERMISSIONS } from "./utils/adminPermissions";
@@ -40,12 +41,14 @@ const AdminCustomerDetail = lazy(() => import("./pages/AdminCustomerDetail"));
 const AdminOrders = lazy(() => import("./pages/AdminOrders"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 const AdminProducts = lazy(() => import("./pages/AdminProducts"));
+const AdminInventory = lazy(() => import("./pages/AdminInventory"));
 const AdminProductForm = lazy(() => import("./pages/AdminProductForm"));
 const AdminProductReviews = lazy(() => import("./pages/AdminProductReviews"));
 const AdminAdmins = lazy(() => import("./pages/AdminAdmins"));
 const AdminMessaging = lazy(() => import("./pages/AdminMessaging"));
 const AdminSettings = lazy(() => import("./pages/AdminSettings"));
 const AdminBrands = lazy(() => import("./pages/AdminBrands"));
+const AdminSeo = lazy(() => import("./pages/AdminSeo"));
 const AdminCoupons = lazy(() => import("./pages/AdminCoupons"));
 const AdminReturns = lazy(() => import("./pages/AdminReturns"));
 const AdminShipping = lazy(() => import("./pages/AdminShipping"));
@@ -67,6 +70,8 @@ function App() {
     <BrowserRouter>
       {/* هر صفحهٔ جدید از بالای خودش باز می‌شود، نه از موقعیت اسکرول صفحهٔ قبلی */}
       <ScrollToTop />
+      {/* مسیرهای قدیمی (ریدایرکت ۳۰۱ بخش سلامت سئو) در SPA هم به مقصد می‌روند */}
+      <RedirectGate />
 
       {/* ثبت بازدید هر مسیر در GA4/GTM؛ بدون شناسه در .env هیچ کاری نمی‌کند */}
       <AnalyticsTracker />
@@ -178,6 +183,18 @@ function App() {
                   />
 
                   <Route
+                    path="inventory"
+                    element={
+                      <AdminPermissionGuard
+                        permission={ADMIN_PERMISSIONS.inventory}
+                        section="موجودی و انبار"
+                      >
+                        <AdminInventory />
+                      </AdminPermissionGuard>
+                    }
+                  />
+
+                  <Route
                     path="categories"
                     element={
                       <AdminPermissionGuard
@@ -196,6 +213,17 @@ function App() {
                         section="برندها"
                       >
                         <AdminBrands />
+                      </AdminPermissionGuard>
+                    }
+                  />
+                  <Route
+                    path="seo"
+                    element={
+                      <AdminPermissionGuard
+                        permission={ADMIN_PERMISSIONS.seo}
+                        section="سلامت سئو"
+                      >
+                        <AdminSeo />
                       </AdminPermissionGuard>
                     }
                   />

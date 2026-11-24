@@ -36,6 +36,8 @@ class AdminRole
 
     public const PAGES_MANAGE = 'pages.manage';
 
+    public const SEO_MANAGE = 'seo.manage';
+
     public const REVIEWS_MANAGE = 'reviews.manage';
 
     public const ORDERS_MANAGE = 'orders.manage';
@@ -103,6 +105,7 @@ class AdminRole
             self::BANNERS_MANAGE,
             self::ARTICLES_MANAGE,
             self::PAGES_MANAGE,
+            self::SEO_MANAGE,
             self::REVIEWS_MANAGE,
             self::ORDERS_MANAGE,
             self::RETURNS_MANAGE,
@@ -145,6 +148,7 @@ class AdminRole
                 self::BANNERS_MANAGE,
                 self::ARTICLES_MANAGE,
                 self::PAGES_MANAGE,
+                self::SEO_MANAGE,
                 self::REVIEWS_MANAGE,
             ],
 

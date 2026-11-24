@@ -1,5 +1,6 @@
 import type { CSSProperties } from "react";
 import {
+  Boxes,
   CircleHelp,
   Globe,
   Package,
@@ -63,6 +64,14 @@ export interface DashboardData {
     cancelled: number;
   };
   payments: { paid: number; unpaid: number };
+  low_stock?: {
+    products: number;
+    variants: number;
+    out_of_stock: number;
+    low_stock: number;
+    total: number;
+    threshold: number;
+  };
   sales: {
     total: number | string;
     current_week: number | string;
@@ -162,6 +171,15 @@ export const quickLinks: QuickLinkItem[] = [
     color: "#c96548",
     background: "#fff0eb",
     action: "مشاهده محصولات",
+  },
+  {
+    to: "/admin/inventory",
+    title: "موجودی و انبار",
+    description: "کالاهای رو به اتمام، آستانهٔ هشدار و شمارش انبار را مدیریت کن.",
+    icon: Boxes,
+    color: "#b47b3c",
+    background: "#fbf2e5",
+    action: "بررسی موجودی",
   },
   {
     to: "/admin/categories",

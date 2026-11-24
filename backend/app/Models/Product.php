@@ -24,6 +24,7 @@ class Product extends Model
         'compare_price',
         'discount_percent',
         'stock',
+        'low_stock_threshold',
         'weight',
         'thumbnail',
         'is_active',
@@ -48,6 +49,7 @@ class Product extends Model
         'is_new' => 'boolean',
         'is_taxable' => 'boolean',
         'is_returnable' => 'boolean',
+        'low_stock_threshold' => 'integer',
     ];
 
     public function category()
@@ -118,6 +120,26 @@ class Product extends Model
     public function wishlistItems(): HasMany
     {
         return $this->hasMany(WishlistItem::class);
+    }
+
+    /**
+     * آستانهٔ هشدار موجودی این محصول؛ نبود مقدار یعنی پیش‌فرض فروشگاه.
+     */
+    public function effectiveLowStockThreshold(): int
+    {
+        return self::thresholdValue($this->low_stock_threshold);
+    }
+
+    /**
+     * تبدیل مقدار خام آستانه به عدد معتبر (NULL = پیش‌فرض `config/inventory`).
+     */
+    public static function thresholdValue(mixed $value): int
+    {
+        if ($value === null || $value === '') {
+            return max(0, (int) config('inventory.low_stock_threshold', 5));
+        }
+
+        return max(0, (int) $value);
     }
 
     public function getDiscountAmountAttribute()

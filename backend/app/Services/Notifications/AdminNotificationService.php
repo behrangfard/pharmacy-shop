@@ -131,6 +131,44 @@ class AdminNotificationService
     }
 
     /**
+     * اعلان «موجودی کم» با خلاصهٔ تعداد کالاهای زیر آستانه.
+     *
+     * @param  array<string, int>  $summary
+     */
+    public function lowStock(array $summary): AdminNotification
+    {
+        $products = (int) ($summary['products'] ?? 0);
+        $variants = (int) ($summary['variants'] ?? 0);
+        $outOfStock = (int) ($summary['out_of_stock'] ?? 0);
+        $total = (int) ($summary['total'] ?? 0);
+
+        $parts = [];
+
+        if ($products > 0) {
+            $parts[] = number_format($products) . ' محصول';
+        }
+
+        if ($variants > 0) {
+            $parts[] = number_format($variants) . ' تنوع';
+        }
+
+        $parts[] = number_format($outOfStock) . ' قلم ناموجود';
+
+        return $this->push(
+            AdminNotification::TYPE_LOW_STOCK,
+            "موجودی {$total} قلم کالا رو به اتمام است",
+            'کالاهای زیر آستانه: ' . implode(' • ', $parts),
+            '/admin/inventory',
+            [
+                'products' => $products,
+                'variants' => $variants,
+                'out_of_stock' => $outOfStock,
+                'threshold' => (int) ($summary['threshold'] ?? 0),
+            ],
+        );
+    }
+
+    /**
      * آخرین اعلان‌ها برای نمایش در کشوی زنگوله.
      *
      * @return Collection<int, AdminNotification>

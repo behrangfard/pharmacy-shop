@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\User;
+use App\Services\Inventory\LowStockService;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -16,7 +17,7 @@ class AdminController extends Controller
     /**
      * Admin dashboard summary.
      */
-    public function dashboard(Request $request): JsonResponse
+    public function dashboard(Request $request, LowStockService $lowStock): JsonResponse
     {
         $totalProducts = Product::count();
         $activeProducts = Product::where('is_active', true)->count();
@@ -175,6 +176,7 @@ class AdminController extends Controller
                     'paid' => $paidOrders,
                     'unpaid' => $unpaidOrders,
                 ],
+                'low_stock' => $lowStock->summary(),
                 'sales' => [
                     'total' => (float) $totalSales,
                     'current_week' => (float) $currentWeekSales,

@@ -78,8 +78,10 @@ export const ADMIN_SIDEBAR_DEFAULT_GROUPS: Record<
   general: ["/admin"],
   store: [
     "/admin/products",
+    "/admin/inventory",
     "/admin/categories",
     "/admin/brands",
+    "/admin/seo",
     "/admin/content",
     "/admin/announcement-bar",
     "/admin/stories",

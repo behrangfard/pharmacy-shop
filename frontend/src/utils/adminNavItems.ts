@@ -1,5 +1,6 @@
 import {
   BadgeCheck,
+  Boxes,
   Calculator,
   CirclePlay,
   Heart,
@@ -14,6 +15,7 @@ import {
   Package,
   PanelTop,
   RotateCcw,
+  Search,
   Settings,
   ShieldCheck,
   ShoppingCart,
@@ -66,6 +68,14 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
     keywords: "کالا موجودی قیمت افزودن محصول",
   },
   {
+    to: "/admin/inventory",
+    permission: ADMIN_PERMISSIONS.inventory,
+    label: "موجودی و انبار",
+    icon: Boxes,
+    keywords:
+      "موجودی انبار کمبود آستانه هشدار شمارش انبار stocktake کالای رو به اتمام ناموجود",
+  },
+  {
     to: "/admin/categories",
     permission: ADMIN_PERMISSIONS.categories,
     label: "دسته‌بندی‌ها",
@@ -78,6 +88,14 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
     label: "برندها",
     icon: Tags,
     keywords: "برند سازنده لوگو تولیدکننده",
+  },
+  {
+    to: "/admin/seo",
+    permission: ADMIN_PERMISSIONS.seo,
+    label: "سلامت سئو",
+    icon: Search,
+    keywords:
+      "سئو متا عنوان توضیح ریدایرکت ۳۰۱ تغییر آدرس قدیمی sitemap robots گوگل ایندکس",
   },
   {
     to: "/admin/orders",

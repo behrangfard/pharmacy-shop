@@ -9,10 +9,12 @@ import type { AuthUser } from "../context/AuthContext";
 export const ADMIN_PERMISSIONS = {
   dashboard: "dashboard.view",
   products: "products.manage",
+  inventory: "products.manage",
   categories: "categories.manage",
   brands: "brands.manage",
   banners: "banners.manage",
   pages: "pages.manage",
+  seo: "seo.manage",
   articles: "articles.manage",
   reviews: "reviews.manage",
   orders: "orders.manage",

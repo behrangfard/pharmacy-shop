@@ -35,6 +35,9 @@ class StockMovement extends Model
     /** تغییر موجودی با ایمپورت فایل محصولات. */
     public const TYPE_IMPORT = 'import';
 
+    /** اصلاح موجودی با شمارش انبار (stocktake). */
+    public const TYPE_STOCKTAKE = 'stocktake';
+
     protected $fillable = [
         'product_id',
         'variant_id',
@@ -66,6 +69,7 @@ class StockMovement extends Model
             self::TYPE_PURCHASE_REVERSED => 'برگشت فاکتور خرید',
             self::TYPE_MANUAL => 'ویرایش دستی',
             self::TYPE_IMPORT => 'ایمپورت محصولات',
+            self::TYPE_STOCKTAKE => 'شمارش انبار',
         ];
     }
 

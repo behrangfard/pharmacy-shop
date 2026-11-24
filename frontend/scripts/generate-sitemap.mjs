@@ -243,6 +243,51 @@ function buildRobots() {
   ].join("\n");
 }
 
+/**
+ * ریدایرکت‌های ۳۰۱ که مدیر در پنل «سلامت سئو» ثبت کرده است.
+ *
+ * همان فهرستی که RedirectGate در مرورگر می‌خواند، اینجا به فایل ریدایرکت
+ * هاست تبدیل می‌شود تا گوگل هم ۳۰۱ واقعی ببیند (نه ۴۰۴ صفحهٔ SPA).
+ */
+async function fetchRedirectRules() {
+  const payload = await fetchJson("/seo/redirects");
+  const data = payload?.data;
+
+  if (!Array.isArray(data)) return [];
+
+  return data.filter(
+    (rule) =>
+      typeof rule?.from === "string" &&
+      rule.from !== "" &&
+      typeof rule?.to === "string" &&
+      rule.to !== "",
+  );
+}
+
+/** قالب Netlify / Cloudflare Pages: `from  to  301` */
+function buildHostRedirects(rules) {
+  return [
+    "# ریدایرکت‌های ۳۰۱ — ساخته‌شده با npm run build (بخش «سلامت سئو» پنل)",
+    ...rules.map((rule) => `${rule.from}  ${rule.to}  301`),
+    "",
+  ].join("\n");
+}
+
+/** قالب nginx: `rewrite ^/old$ /new permanent;` */
+function buildNginxRedirects(rules) {
+  const escapeRegex = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+  return [
+    "# ریدایرکت‌های ۳۰۱ — ساخته‌شده با npm run build (بخش «سلامت سئو» پنل)",
+    "# این فایل را در server { } کانفیگ nginx بعد از location / قرار دهید.",
+    ...rules.map(
+      (rule) => `rewrite ^${escapeRegex(rule.from)}$ ${rule.to} permanent;`,
+    ),
+    "",
+  ].join("\n");
+}
+
+
 async function main() {
   if (!SITE_URL) {
     console.warn(
@@ -253,14 +298,29 @@ async function main() {
 
   await mkdir(OUT_DIR, { recursive: true });
 
-  const sitemap = await buildSitemap();
+  const [sitemap, redirectRules] = await Promise.all([
+    buildSitemap(),
+    fetchRedirectRules(),
+  ]);
 
   await writeFile(path.join(OUT_DIR, "sitemap.xml"), sitemap, "utf8");
   await writeFile(path.join(OUT_DIR, "robots.txt"), buildRobots(), "utf8");
+  await writeFile(
+    path.join(OUT_DIR, "_redirects"),
+    buildHostRedirects(redirectRules),
+    "utf8",
+  );
+  await writeFile(
+    path.join(OUT_DIR, "redirects.conf"),
+    buildNginxRedirects(redirectRules),
+    "utf8",
+  );
 
   const count = (sitemap.match(/<url>/g) || []).length;
 
-  console.log(`[sitemap] ${count} آدرس در ${OUT_DIR} نوشته شد.`);
+  console.log(
+    `[sitemap] ${count} آدرس و ${redirectRules.length} ریدایرکت در ${OUT_DIR} نوشته شد.`,
+  );
 }
 
 main().catch((error) => {

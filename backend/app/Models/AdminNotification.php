@@ -21,11 +21,15 @@ class AdminNotification extends Model
 
     public const TYPE_RETURN = 'return';
 
+    /** هشدار موجودی کم (محصول/تنوع زیر آستانه). */
+    public const TYPE_LOW_STOCK = 'low_stock';
+
     public const TYPES = [
         self::TYPE_ORDER,
         self::TYPE_ORDER_STATUS,
         self::TYPE_SUPPORT,
         self::TYPE_RETURN,
+        self::TYPE_LOW_STOCK,
     ];
 
     protected $fillable = [

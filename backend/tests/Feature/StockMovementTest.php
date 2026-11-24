@@ -162,7 +162,7 @@ class StockMovementTest extends TestCase
             ->assertJsonPath('data.movements.1.type', StockMovement::TYPE_ORDER)
             ->assertJsonPath('data.movements.1.quantity', -1);
 
-        $this->assertCount(6, $response->json('data.types'));
+        $this->assertCount(7, $response->json('data.types'));
     }
 
     public function test_stock_movements_report_can_filter_by_type(): void

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Bell,
+  Boxes,
   CheckCheck,
   MessageSquare,
   RefreshCw,
@@ -54,6 +55,7 @@ function NotificationIcon({ type }: { type: string }) {
   if (type === "order_status") return <Truck size={15} />;
   if (type === "support") return <MessageSquare size={15} />;
   if (type === "return") return <RotateCcw size={15} />;
+  if (type === "low_stock") return <Boxes size={15} />;
 
   return <Bell size={15} />;
 }

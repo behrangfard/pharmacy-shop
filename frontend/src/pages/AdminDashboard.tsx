@@ -173,6 +173,16 @@ function AdminDashboard() {
           color: "#b47b3c",
           background: "#fbf2e5",
         },
+        {
+          title: "کالاهای رو به اتمام",
+          value: formatNumber(data.low_stock?.total ?? 0),
+          description: `${formatNumber(
+            data.low_stock?.out_of_stock ?? 0,
+          )} قلم ناموجود — «موجودی و انبار»`,
+          icon: TrendingDown,
+          color: "#c66d59",
+          background: "#f9eeeb",
+        },
       ]
     : [];
 

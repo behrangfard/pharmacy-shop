@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\AdminController;
 use App\Http\Controllers\Api\AdminMessagingContactController;
 use App\Http\Controllers\Api\AdminMessagingController;
 use App\Http\Controllers\Api\AdminNotificationController;
+use App\Http\Controllers\Api\AdminInventoryController;
 use App\Http\Controllers\Api\AdminOrderController;
 use App\Http\Controllers\Api\AdminPageController;
 use App\Http\Controllers\Api\AdminProductController;
@@ -26,6 +27,7 @@ use App\Http\Controllers\Api\AdminProductReviewController;
 use App\Http\Controllers\Api\AdminPopupController;
 use App\Http\Controllers\Api\AdminReportController;
 use App\Http\Controllers\Api\AdminReturnRequestController;
+use App\Http\Controllers\Api\AdminSeoController;
 use App\Http\Controllers\Api\AdminShippingController;
 use App\Http\Controllers\Api\AdminStoreSettingController;
 use App\Http\Controllers\Api\AdminStoryController;
@@ -53,6 +55,7 @@ use App\Http\Controllers\Api\PopupController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\ProductReviewController;
 use App\Http\Controllers\Api\ReturnRequestController;
+use App\Http\Controllers\Api\SeoController;
 use App\Http\Controllers\Api\ShippingInfoController;
 use App\Http\Controllers\Api\StoreSettingController;
 use App\Http\Controllers\Api\StoryController;
@@ -114,6 +117,19 @@ Route::prefix('v1')->group(function () {
         '/orders/{orderNumber}/cancel',
         [OrderController::class, 'cancel']
     )->middleware('throttle:orders');
+
+    /*
+     * ریدایرکت‌های ۳۰۱ (بخش «سلامت سئو» در پنل).
+     *
+     * SPA روی هاست استاتیک منتشر می‌شود؛ این دو مسیر عمومی، نقشهٔ ریدایرکت‌ها
+     * را در اختیار اسکریپت build (نوشتن فایل ریدایرکت هاست) و RedirectGate
+     * سمت مرورگر می‌گذارند و شمارندهٔ استفاده را نگه می‌دارند.
+     */
+    Route::get('/seo/redirects', [SeoController::class, 'redirects'])
+        ->middleware('throttle:120,1');
+
+    Route::post('/seo/redirects/hit', [SeoController::class, 'hit'])
+        ->middleware('throttle:60,1');
 
     // Authenticated Routes
     Route::middleware('auth:sanctum')->group(function () {
@@ -786,6 +802,26 @@ Route::prefix('v1')->group(function () {
                     );
                 });
 
+            // SEO Health (سلامت سئو: ممیزی متا + ریدایرکت ۳۰۱)
+            Route::middleware('admin.permission:'.AdminRole::SEO_MANAGE)
+                ->group(function () {
+                    Route::get('/seo/audit', [AdminSeoController::class, 'audit']);
+
+                    Route::get('/redirects', [AdminSeoController::class, 'index']);
+
+                    Route::post('/redirects', [AdminSeoController::class, 'store']);
+
+                    Route::put(
+                        '/redirects/{redirect}',
+                        [AdminSeoController::class, 'update']
+                    );
+
+                    Route::delete(
+                        '/redirects/{redirect}',
+                        [AdminSeoController::class, 'destroy']
+                    );
+                });
+
             // Messaging Panel (SMS / Telegram / WhatsApp / Bale)
             Route::middleware('admin.permission:'.AdminRole::MESSAGING_MANAGE)
                 ->group(function () {
@@ -1046,6 +1082,20 @@ Route::prefix('v1')->group(function () {
                         '/channels/{contactChannel}/status',
                         [AdminContactChannelController::class, 'updateStatus']
                     );
+                });
+
+            // Inventory (موجودی و انبار: آستانهٔ کمبود، شمارش انبار، اعلان)
+            Route::middleware('admin.permission:'.AdminRole::PRODUCTS_MANAGE)
+                ->prefix('inventory')
+                ->group(function () {
+                    Route::get('/', [AdminInventoryController::class, 'items']);
+                    Route::get('/summary', [AdminInventoryController::class, 'summary']);
+                    Route::post('/notify', [AdminInventoryController::class, 'notify']);
+                    Route::post('/stocktake', [AdminInventoryController::class, 'stocktake']);
+                    Route::patch(
+                        '/{kind}/{id}/threshold',
+                        [AdminInventoryController::class, 'updateThreshold']
+                    )->whereIn('kind', ['product', 'variant']);
                 });
 
             // Reports (گزارش فروش)
