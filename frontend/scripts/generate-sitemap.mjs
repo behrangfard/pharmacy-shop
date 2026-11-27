@@ -237,6 +237,8 @@ function buildRobots() {
     "Disallow: /login",
     "Disallow: /register",
     "Disallow: /order/",
+    // بخش ویژهٔ بزرگسالان نباید در نتایج موتورهای جست‌وجو بیاید.
+    "Disallow: /adult",
     "",
     `Sitemap: ${SITE_URL}/sitemap.xml`,
     "",

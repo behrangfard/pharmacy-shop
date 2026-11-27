@@ -409,7 +409,11 @@ class AdminSeoController extends Controller
      */
     private function sitemapStatus(): array
     {
-        $products = Product::query()->where('is_active', true)->count();
+        // کالاهای ویژهٔ ۱۸+ در sitemap نمی‌آیند؛ پس در این شمارش هم نیستند.
+        $products = Product::query()
+            ->where('is_active', true)
+            ->where('is_adult', false)
+            ->count();
         $categories = Category::query()->where('is_active', true)->count();
         $articles = Article::query()->published()->count();
         $pages = Page::query()->published()->count();

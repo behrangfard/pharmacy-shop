@@ -7,7 +7,9 @@ use App\Models\Category;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -201,4 +203,78 @@ public function test_admin_cannot_delete_category_with_children(): void
         $this->assertNull(Cache::get(CategoryController::STOREFRONT_CACHE_KEY));
     }
 
+    public function test_admin_can_upload_category_image(): void
+    {
+        $this->admin();
+
+        Storage::fake('public');
+
+        // GD روی این محیط نصب نیست؛ از یک PNG واقعی کوچک استفاده می‌شود
+        // (قاعدهٔ `image` همچنان هدر فایل را بررسی می‌کند).
+        $png = base64_decode(
+            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+            true
+        );
+
+        $response = $this->post(
+            '/api/v1/admin/categories/image',
+            ['image' => UploadedFile::fake()->createWithContent('category.png', $png)],
+            ['Accept' => 'application/json']
+        )->assertCreated()
+            ->assertJsonPath('success', true);
+
+        $path = $response->json('data.path');
+
+        $this->assertIsString($path);
+        $this->assertStringStartsWith('categories/', $path);
+        Storage::disk('public')->assertExists($path);
+        $this->assertNotEmpty($response->json('data.url'));
+    }
+
+    public function test_category_image_upload_rejects_non_image_files(): void
+    {
+        $this->admin();
+
+        Storage::fake('public');
+
+        $this->postJson('/api/v1/admin/categories/image', [
+            'image' => UploadedFile::fake()->create(
+                'catalog.pdf',
+                40,
+                'application/pdf'
+            ),
+        ])->assertStatus(422);
+    }
+
+    public function test_category_image_upload_requires_permission(): void
+    {
+        Sanctum::actingAs(User::factory()->create(['role' => 'user']));
+
+        $this->postJson('/api/v1/admin/categories/image', [])
+            ->assertForbidden();
+    }
+
+    public function test_storefront_category_index_exposes_image(): void
+    {
+        Cache::forget(CategoryController::STOREFRONT_CACHE_KEY);
+
+        $parent = $this->createCategory([
+            'name' => 'Parent With Image',
+            'slug' => 'parent-with-image',
+            'image' => 'categories/parent.webp',
+        ]);
+
+        $this->createCategory([
+            'name' => 'Child With Image',
+            'slug' => 'child-with-image',
+            'parent_id' => $parent->id,
+            'image' => 'categories/child.webp',
+        ]);
+
+        $this->getJson('/api/v1/categories')
+            ->assertOk()
+            ->assertJsonPath('data.0.slug', 'parent-with-image')
+            ->assertJsonPath('data.0.image', 'categories/parent.webp')
+            ->assertJsonPath('data.0.children.0.image', 'categories/child.webp');
+    }
 }

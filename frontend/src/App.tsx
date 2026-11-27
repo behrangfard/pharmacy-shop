@@ -33,6 +33,7 @@ const Articles = lazy(() => import("./pages/Articles"));
 const ArticleDetail = lazy(() => import("./pages/ArticleDetail"));
 const PageView = lazy(() => import("./pages/PageView"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const AdultProducts = lazy(() => import("./pages/AdultProducts"));
 
 const AdminLogin = lazy(() => import("./pages/AdminLogin"));
 const AdminCategories = lazy(() => import("./pages/AdminCategories"));
@@ -104,6 +105,8 @@ function App() {
               <Route path="/product/:slug" element={<ProductDetail />} />
               <Route path="/size-guide" element={<SizeGuide />} />
               <Route path="/shipping-info" element={<ShippingInfo />} />
+              {/* بخش ویژهٔ بزرگسالان (۱۸+): دروازهٔ سنی داخل خود صفحه است */}
+              <Route path="/adult" element={<AdultProducts />} />
               <Route path="/articles" element={<Articles />} />
               <Route path="/articles/:slug" element={<ArticleDetail />} />
               <Route path="/pages/:slug" element={<PageView />} />

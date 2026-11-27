@@ -32,6 +32,14 @@ const SUGGESTION_LIMIT = 6;
 /** کمتر از این تعداد نویسه، جست‌وجو ارسال نمی‌شود. */
 const MIN_QUERY_LENGTH = 2;
 
+/**
+ * شناسهٔ کادر جست‌وجوی هدر.
+ *
+ * دکمهٔ «جست‌وجو» در ناوبری پایین موبایل (`MobileBottomNav`) با همین شناسه
+ * کادر را پیدا و روی آن فوکوس می‌کند؛ پس این رشته فقط یک‌جا تعریف می‌شود.
+ */
+export const HEADER_SEARCH_INPUT_ID = "header-search-input";
+
 /** زمان توقف تایپ پیش از ارسال درخواست. */
 const DEBOUNCE_MS = 250;
 
@@ -264,6 +272,7 @@ function HeaderSearch({
       <div className="relative" ref={wrapperRef}>
         <input
           ref={inputRef}
+          id={HEADER_SEARCH_INPUT_ID}
           type="search"
           value={query}
           onChange={(event) => {

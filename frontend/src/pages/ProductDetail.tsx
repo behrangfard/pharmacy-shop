@@ -40,6 +40,7 @@ import {
   findSizeGuideRow,
   normalizeProductSizeGuide,
 } from "../utils/productSizeGuide";
+import AdultGate from "../components/AdultGate";
 import api from "../services/api";
 import { useCart } from "../context/CartContext";
 import { useWishlist } from "../context/WishlistContext";
@@ -49,6 +50,7 @@ import { calculateProductPrice, calculateVatAmount } from "../utils/price";
 import { formatJalaliDateTime } from "../utils/jalali";
 import { useStoreSettings } from "../hooks/useStoreSettings";
 import { usePageMeta } from "../hooks/usePageMeta";
+import { useAdultConsent } from "../hooks/useAdultConsent";
 import { SITE_NAME, plainText, type PageMeta } from "../utils/seo";
 import {
   breadcrumbJsonLd,
@@ -111,6 +113,8 @@ interface Product {
    * قابلیت را ندارند و پنل مدیریت این گزینه را برایشان خاموش می‌کند.
    */
   is_returnable?: boolean | number;
+  /** کالای ویژهٔ بزرگسالان (۱۸+)؛ نمایش فقط پس از تأیید سن. */
+  is_adult?: boolean | number;
   average_rating?: number | string | null;
   reviews_count?: number;
   category?: {
@@ -335,6 +339,10 @@ function ProductDetail() {
 
   usePageMeta(pageMeta);
 
+  /* کالای ویژهٔ ۱۸+ تا تأیید سن نمایش داده نمی‌شود (دروازهٔ سنی). */
+  const { confirmed: adultConfirmed, confirm: confirmAdult } =
+    useAdultConsent();
+  const adultBlocked = product?.is_adult === true && !adultConfirmed;
 
   // Load product
   useEffect(() => {
@@ -380,11 +388,17 @@ function ProductDetail() {
           });
         }
 
-        // ثبت بازدید برای ریل «بازدیدهای اخیر»؛ خطا هرگز صفحه را نمی‌شکند.
-        try {
-          recordProductView(productData);
-        } catch (viewError) {
-          console.error("Recently viewed error:", viewError);
+        /*
+         * ثبت بازدید برای ریل «بازدیدهای اخیر»؛ کالای ۱۸+ ثبت نمی‌شود تا در
+         * صفحهٔ اصلی و صفحه‌های عادی فروشگاه دیده نشود. خطا هرگز صفحه را
+         * نمی‌شکند.
+         */
+        if (!productData.is_adult) {
+          try {
+            recordProductView(productData);
+          } catch (viewError) {
+            console.error("Recently viewed error:", viewError);
+          }
         }
 
         // Select the first available active variant.
@@ -549,6 +563,11 @@ function ProductDetail() {
           per_page: 12,
           sort: "latest",
         };
+
+        // کالای ۱۸+ فقط کالاهای همان بخش را پیشنهاد می‌دهد.
+        if (product.is_adult) {
+          params.adult = 1;
+        }
 
         if (categorySlug) {
           params.category = categorySlug;
@@ -1142,6 +1161,23 @@ function ProductDetail() {
             </Link>
           </div>
         </div>
+      </Layout>
+    );
+  }
+
+  /*
+   * کالای ویژهٔ ۱۸+: تا وقتی کاربر در این مرورگر تأیید سن را نداده هیچ
+   * محتوایی از محصول (تصویر، قیمت، توضیحات) رندر نمی‌شود.
+   */
+  if (adultBlocked) {
+    return (
+      <Layout>
+        <AdultGate
+          title={`این کالا در بخش ویژهٔ بزرگسالان (۱۸+) است: ${product.name}`}
+          backTo="/adult"
+          backLabel="بازگشت به بخش ویژه"
+          onConfirm={confirmAdult}
+        />
       </Layout>
     );
   }

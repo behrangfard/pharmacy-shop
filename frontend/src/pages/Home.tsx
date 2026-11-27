@@ -1227,12 +1227,29 @@ function Home() {
               to="/products"
               variant="ghost"
               size="sm"
-              className="shrink-0 text-brand-500 transition hover:text-brand-700 active:scale-95"
+              className="hidden shrink-0 text-brand-500 transition hover:text-brand-700 active:scale-95 sm:inline-flex"
             >
               همه محصولات
               <ArrowLeft size={18} />
             </ButtonLink>
           </div>
+
+          {/* در موبایل این لینک از سرصفحه بیرون می‌آید و به شکل یک ردیف
+              تمام‌عرض، هم‌تراز کارت‌های دسته‌بندی چیده می‌شود. */}
+          <Link
+            to="/products"
+            className="
+              mb-4 flex w-full items-center justify-between gap-3
+              rounded-2xl border border-line bg-surface px-4 py-3
+              text-sm font-black text-brand-600 transition
+              hover:border-brand-300 hover:bg-brand-50
+              focus-visible:outline-none focus-visible:ring-2
+              focus-visible:ring-brand-400 sm:hidden
+            "
+          >
+            همه محصولات
+            <ArrowLeft size={18} aria-hidden="true" />
+          </Link>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             <CategoryCard

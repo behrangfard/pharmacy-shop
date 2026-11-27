@@ -17,6 +17,7 @@ interface Product {
   is_active: boolean;
   is_featured: boolean;
   is_new: boolean;
+  is_adult: boolean;
   thumbnail: string | null;
   images?: Array<{
     id: number;
@@ -136,6 +137,8 @@ function AdminProducts() {
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
+  /** فیلتر کالاهای ویژهٔ ۱۸+؛ مقدار «all» یعنی بدون فیلتر. */
+  const [adult, setAdult] = useState("all");
   const [page, setPage] = useState(1);
 
   const [loading, setLoading] = useState(true);
@@ -178,6 +181,7 @@ function AdminProducts() {
 
     if (search) params.search = search;
     if (status !== "all") params.status = status;
+    if (adult !== "all") params.adult = adult;
 
     const requestKey = JSON.stringify(params);
     let request = inFlightRequestRef.current;
@@ -238,7 +242,7 @@ function AdminProducts() {
     } finally {
       if (requestId === requestIdRef.current) setLoading(false);
     }
-  }, [page, search, status]);
+  }, [page, search, status, adult]);
 
   useEffect(() => {
     void loadProducts();
@@ -336,6 +340,7 @@ function AdminProducts() {
     setSearchInput("");
     setSearch("");
     setStatus("all");
+    setAdult("all");
     setPage(1);
   }
 
@@ -727,6 +732,21 @@ function AdminProducts() {
             <option value="inactive">فقط غیرفعال</option>
           </select>
 
+          {/* فیلتر کالاهای ویژهٔ بزرگسالان (۱۸+) */}
+          <select
+            value={adult}
+            onChange={(event) => {
+              setAdult(event.target.value);
+              setPage(1);
+            }}
+            aria-label="فیلتر کالاهای ویژهٔ ۱۸+"
+            style={inputStyle}
+          >
+            <option value="all">همهٔ کالاها</option>
+            <option value="yes">فقط ویژهٔ ۱۸+</option>
+            <option value="no">بدون کالای ۱۸+</option>
+          </select>
+
           <button
             type="button"
             className="products-button"
@@ -858,6 +878,7 @@ function AdminProducts() {
                               شناسه: {formatNumber(product.id)}
                               {product.is_featured ? " · ویژه" : ""}
                               {product.is_new ? " · جدید" : ""}
+                              {product.is_adult ? " · ۱۸+" : ""}
                             </div>
                           </div>
                         </div>
@@ -1159,7 +1180,9 @@ function AdminProducts() {
                         شناسه: {formatNumber(product.id)}
                       </div>
 
-                      {(product.is_featured || product.is_new) && (
+                      {(product.is_featured ||
+                        product.is_new ||
+                        product.is_adult) && (
                         <div
                           style={{
                             display: "flex",
@@ -1191,6 +1214,18 @@ function AdminProducts() {
                               }}
                             >
                               جدید
+                            </span>
+                          )}
+                          {product.is_adult && (
+                            <span
+                              style={{
+                                padding: "3px 6px",
+                                borderRadius: 6,
+                                background: colors.red,
+                                color: colors.redText,
+                              }}
+                            >
+                              ۱۸+
                             </span>
                           )}
                         </div>

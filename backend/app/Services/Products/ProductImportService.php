@@ -55,6 +55,7 @@ class ProductImportService
         'is_active' => ['فعال', 'وضعیت', 'is active', 'active'],
         'is_featured' => ['ویژه', 'محصول ویژه', 'is featured', 'featured'],
         'is_new' => ['جدید', 'محصول جدید', 'is new', 'new'],
+        'is_adult' => ['۱۸+', '18+', 'محتوای بزرگسالان', 'adult', 'is adult'],
         'is_taxable' => ['مشمول مالیات', 'مالیات', 'is taxable'],
         'is_returnable' => ['قابل مرجوع', 'قابل برگشت', 'ضمانت بازگشت', 'is returnable'],
         'meta_title' => ['عنوان سئو', 'meta title'],
@@ -97,6 +98,7 @@ class ProductImportService
         'is_active',
         'is_featured',
         'is_new',
+        'is_adult',
         'is_taxable',
         'is_returnable',
     ];
@@ -668,6 +670,7 @@ class ProductImportService
                 $data['is_active'] = $data['is_active'] ?? true;
                 $data['is_featured'] = $data['is_featured'] ?? false;
                 $data['is_new'] = $data['is_new'] ?? false;
+                $data['is_adult'] = $data['is_adult'] ?? false;
                 $data['is_taxable'] = $data['is_taxable'] ?? false;
                 $data['is_returnable'] = $data['is_returnable'] ?? true;
 

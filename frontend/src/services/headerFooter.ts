@@ -60,6 +60,80 @@ export interface FooterServiceItem {
 /** بیشینهٔ تعداد ردیف‌های «خدمات مشتریان» (هماهنگ با بک‌اند). */
 export const FOOTER_SERVICES_MAX = 8;
 
+/**
+ * آیکن‌های مجاز نوار پایین موبایل و ردیف‌های «دسترسی سریع».
+ * هماهنگ با `NAV_ICONS` در `backend/app/Http/Controllers/Api/
+ * HeaderFooterController.php` و نقشهٔ آیکن‌ها در
+ * `frontend/src/components/MobileBottomNav.tsx`؛ آیکن تازه باید در هر سه جا
+ * اضافه شود.
+ */
+export const MOBILE_NAV_ICONS = [
+  { value: "home", label: "خانه" },
+  { value: "store", label: "فروشگاه" },
+  { value: "shopping-cart", label: "سبد خرید" },
+  { value: "shopping-bag", label: "کیف خرید" },
+  { value: "heart", label: "علاقه‌مندی" },
+  { value: "user-round", label: "حساب کاربری" },
+  { value: "search", label: "جست‌وجو" },
+  { value: "sparkles", label: "ویژه" },
+  { value: "truck", label: "ارسال" },
+  { value: "tag", label: "برچسب و دسته" },
+  { value: "ruler", label: "راهنمای سایز" },
+  { value: "file-text", label: "مقاله و راهنما" },
+  { value: "lock", label: "قفل و بخش ویژه" },
+  { value: "headset", label: "پشتیبانی" },
+  { value: "phone", label: "تلفن" },
+  { value: "package-check", label: "سفارش‌ها" },
+  { value: "ticket-percent", label: "کد تخفیف" },
+  { value: "gift", label: "هدیه" },
+  { value: "monitor-smartphone", label: "اپلیکیشن" },
+  { value: "shield-check", label: "اعتماد و مجوز" },
+] as const;
+
+/** نام آیکن مجاز نوار پایین و ردیف‌های «دسترسی سریع». */
+export type MobileNavIcon = (typeof MOBILE_NAV_ICONS)[number]["value"];
+
+/**
+ * نشان عددی هر میان‌بر: بدون نشان، تعداد سبد خرید یا تعداد علاقه‌مندی.
+ * عدد از همان Context هدر می‌آید تا با بالای صفحه ناهم‌خوان نشود.
+ */
+export type MobileNavBadge = "none" | "cart" | "wishlist";
+
+/** برچسب فارسی گزینه‌های «نشان» در پنل مدیریت. */
+export const MOBILE_NAV_BADGES: { value: MobileNavBadge; label: string }[] = [
+  { value: "none", label: "بدون نشان" },
+  { value: "cart", label: "تعداد سبد خرید" },
+  { value: "wishlist", label: "تعداد علاقه‌مندی" },
+];
+
+/** یک میان‌بر نوار پایین موبایل (قابل ویرایش از پنل). */
+export interface MobileNavItem {
+  label: string;
+  url: string;
+  icon: MobileNavIcon;
+  badge: MobileNavBadge;
+}
+
+/** یک ردیف «دسترسی سریع» پنل دکمهٔ شناور (قابل ویرایش از پنل). */
+export interface MobileNavQuickLink {
+  label: string;
+  hint: string;
+  url: string;
+  icon: MobileNavIcon;
+}
+
+/** رفتار دکمهٔ شناور وسط نوار: بازکردن پنل یا رفتن به یک نشانی. */
+export type MobileNavFabMode = "panel" | "link";
+
+/** کمینهٔ تعداد میان‌برهای نوار پایین (هماهنگ با بک‌اند). */
+export const MOBILE_NAV_ITEMS_MIN = 2;
+
+/** بیشینهٔ تعداد میان‌برهای نوار پایین (هماهنگ با بک‌اند). */
+export const MOBILE_NAV_ITEMS_MAX = 4;
+
+/** بیشینهٔ تعداد ردیف‌های «دسترسی سریع» (هماهنگ با بک‌اند). */
+export const MOBILE_NAV_QUICK_LINKS_MAX = 6;
+
 
 export interface HeaderFooterSettings {
   store_name: string;
@@ -82,6 +156,18 @@ export interface HeaderFooterSettings {
   footer_services: FooterServiceItem[];
   /** نمایش ردیف‌های خودکار تلفن، ایمیل و نشانی زیر ردیف‌های بالا. */
   footer_show_contact: boolean;
+  /** نمایش نوار ناوبری پایین در موبایل. */
+  mobile_nav_enabled: boolean;
+  /** میان‌برهای نوار پایین (۲ تا ۴ ردیف؛ ترتیب ردیف‌ها = ترتیب نوار). */
+  mobile_nav_items: MobileNavItem[];
+  /** ردیف‌های «دسترسی سریع» پنل دکمهٔ شناور (حداکثر ۶ ردیف). */
+  mobile_nav_quick_links: MobileNavQuickLink[];
+  /** رفتار دکمهٔ شناور وسط نوار. */
+  mobile_nav_fab_mode: MobileNavFabMode;
+  /** نشانی دکمهٔ شناور در حالت `link`. */
+  mobile_nav_fab_url: string;
+  /** لوگوی دکمهٔ شناور (مسیر آپلودی یا مسیر فرانت)؛ خالی یعنی آیکن پیش‌فرض. */
+  mobile_nav_fab_logo: string;
 }
 
 export const DEFAULT_HEADER_FOOTER: HeaderFooterSettings = {
@@ -140,6 +226,47 @@ export const DEFAULT_HEADER_FOOTER: HeaderFooterSettings = {
     },
   ],
   footer_show_contact: true,
+  mobile_nav_enabled: true,
+  mobile_nav_items: [
+    { label: "خانه", url: "/", icon: "home", badge: "none" },
+    { label: "فروشگاه", url: "/products", icon: "store", badge: "none" },
+    {
+      label: "علاقه‌مندی",
+      url: "/wishlist",
+      icon: "heart",
+      badge: "wishlist",
+    },
+    { label: "سبد خرید", url: "/cart", icon: "shopping-cart", badge: "cart" },
+  ],
+  mobile_nav_quick_links: [
+    {
+      label: "حساب کاربری و سفارش‌ها",
+      hint: "ورود، سفارش‌ها و اطلاعات حساب",
+      url: "/account",
+      icon: "user-round",
+    },
+    {
+      label: "پیگیری سفارش",
+      hint: "با شمارهٔ سفارش و تلفن",
+      url: "/track-order",
+      icon: "truck",
+    },
+    {
+      label: "راهنمای انتخاب سایز",
+      hint: "اندازهٔ درست را پیدا کن",
+      url: "/size-guide",
+      icon: "ruler",
+    },
+    {
+      label: "مقالات و راهنما",
+      hint: "نکته‌ها و آموزش‌ها",
+      url: "/articles",
+      icon: "file-text",
+    },
+  ],
+  mobile_nav_fab_mode: "panel",
+  mobile_nav_fab_url: "",
+  mobile_nav_fab_logo: "",
 };
 
 /** بیشینهٔ تعداد لینک سریع فوتر (هماهنگ با بک‌اند). */
@@ -232,6 +359,72 @@ function normalizeServices(raw: unknown): FooterServiceItem[] {
   return items;
 }
 
+const NAV_ICON_VALUES = MOBILE_NAV_ICONS.map((icon) => icon.value);
+
+/** آیکن ناشناخته به آیکن پیش‌فرض برمی‌گردد تا مقدار خراب روی سایت رندر نشود. */
+function normalizeNavIcon(value: unknown): MobileNavIcon {
+  return NAV_ICON_VALUES.includes(value as MobileNavIcon)
+    ? (value as MobileNavIcon)
+    : "sparkles";
+}
+
+/** میان‌برهای نوار پایین موبایل را از پاسخ API پاک‌سازی می‌کند. */
+function normalizeNavItems(raw: unknown): MobileNavItem[] {
+  if (!Array.isArray(raw)) return [];
+
+  const items: MobileNavItem[] = [];
+
+  for (const entry of raw) {
+    if (!isRecord(entry)) continue;
+
+    const label = typeof entry.label === "string" ? entry.label.trim() : "";
+    const url = typeof entry.url === "string" ? entry.url.trim() : "";
+
+    if (!label || !url) continue;
+
+    items.push({
+      label,
+      url,
+      icon: normalizeNavIcon(entry.icon),
+      badge:
+        entry.badge === "cart" || entry.badge === "wishlist"
+          ? entry.badge
+          : "none",
+    });
+
+    if (items.length >= MOBILE_NAV_ITEMS_MAX) break;
+  }
+
+  return items;
+}
+
+/** ردیف‌های «دسترسی سریع» پنل دکمهٔ شناور را از پاسخ API پاک‌سازی می‌کند. */
+function normalizeNavQuickLinks(raw: unknown): MobileNavQuickLink[] {
+  if (!Array.isArray(raw)) return [];
+
+  const links: MobileNavQuickLink[] = [];
+
+  for (const entry of raw) {
+    if (!isRecord(entry)) continue;
+
+    const label = typeof entry.label === "string" ? entry.label.trim() : "";
+    const url = typeof entry.url === "string" ? entry.url.trim() : "";
+
+    if (!label || !url) continue;
+
+    links.push({
+      label,
+      hint: typeof entry.hint === "string" ? entry.hint.trim() : "",
+      url,
+      icon: normalizeNavIcon(entry.icon),
+    });
+
+    if (links.length >= MOBILE_NAV_QUICK_LINKS_MAX) break;
+  }
+
+  return links;
+}
+
 function normalize(raw: unknown): HeaderFooterSettings {
   const source = isRecord(raw) ? raw : {};
 
@@ -277,6 +470,20 @@ function normalize(raw: unknown): HeaderFooterSettings {
       source.footer_show_contact === undefined
         ? DEFAULT_HEADER_FOOTER.footer_show_contact
         : bool(source.footer_show_contact),
+    mobile_nav_enabled:
+      source.mobile_nav_enabled === undefined
+        ? DEFAULT_HEADER_FOOTER.mobile_nav_enabled
+        : bool(source.mobile_nav_enabled),
+    mobile_nav_items: normalizeNavItems(
+      source.mobile_nav_items ?? DEFAULT_HEADER_FOOTER.mobile_nav_items,
+    ),
+    mobile_nav_quick_links: normalizeNavQuickLinks(
+      source.mobile_nav_quick_links ??
+        DEFAULT_HEADER_FOOTER.mobile_nav_quick_links,
+    ),
+    mobile_nav_fab_mode: source.mobile_nav_fab_mode === "link" ? "link" : "panel",
+    mobile_nav_fab_url: text(source.mobile_nav_fab_url, ""),
+    mobile_nav_fab_logo: text(source.mobile_nav_fab_logo, ""),
   };
 }
 

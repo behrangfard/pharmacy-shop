@@ -279,6 +279,12 @@ Route::prefix('v1')->group(function () {
             Route::middleware('admin.permission:'.AdminRole::CATEGORIES_MANAGE)
                 ->group(function () {
                     Route::get('/categories', [AdminCategoryController::class, 'index']);
+
+                    Route::post(
+                        '/categories/image',
+                        [AdminCategoryController::class, 'uploadImage']
+                    );
+
                     Route::post('/categories', [AdminCategoryController::class, 'store']);
 
                     Route::get(
@@ -1032,6 +1038,13 @@ Route::prefix('v1')->group(function () {
                     Route::put(
                         '/header-footer',
                         [HeaderFooterController::class, 'update']
+                    );
+
+                    // لوگوی دکمهٔ شناور نوار پایین موبایل (فایل جداگانه،
+                    // چون مسیرش در فرم «هدر و فوتر» ذخیره می‌شود)
+                    Route::post(
+                        '/header-footer/mobile-logo',
+                        [HeaderFooterController::class, 'uploadMobileLogo']
                     );
 
                     // Trust Badges (اینماد و مجوزهای فوتر)

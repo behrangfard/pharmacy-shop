@@ -221,6 +221,8 @@ class ProductController extends Controller
     {
         $products = Product::query()
             ->where('is_active', true)
+            // کالای ۱۸+ در ویترین صفحهٔ اصلی نمایش داده نمی‌شود.
+            ->where('is_adult', false)
             ->where('is_featured', true)
             ->with([
                 'brand',
@@ -258,6 +260,8 @@ class ProductController extends Controller
     {
         $products = Product::query()
             ->where('is_active', true)
+            // کالای ۱۸+ در ردیف «تازه‌ترین محصولات» صفحهٔ اصلی نمی‌آید.
+            ->where('is_adult', false)
             ->where('is_new', true)
             ->with([
                 'brand',
@@ -300,6 +304,13 @@ class ProductController extends Controller
         bool $withSort = true
     ): Builder {
         $query = Product::query()->where('products.is_active', true);
+
+        /*
+         * کالاهای ۱۸+ از کاتالوگ عمومی بیرون‌اند: فقط وقتی برمی‌گردند که
+         * درخواست با پرچم `adult=1` بیاید (صفحهٔ ویژهٔ بزرگسالان). بدون این
+         * پرچم، هم فهرست و هم جست‌وجو فقط کالاهای عادی فروشگاه را می‌بینند.
+         */
+        $query->where('products.is_adult', $request->boolean('adult'));
 
         $this->applySearch($query, $request, $exclude);
         $this->applyCategory($query, $request, $exclude);

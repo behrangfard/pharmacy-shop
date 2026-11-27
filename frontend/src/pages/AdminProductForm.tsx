@@ -164,6 +164,9 @@ interface Product {
 
   is_new: boolean;
 
+  /** کالای ویژهٔ بزرگسالان (۱۸+)؛ فقط در صفحهٔ /adult نمایش داده می‌شود. */
+  is_adult?: boolean;
+
   is_taxable: boolean;
 
   /** آیا این کالا ضمانت بازگشت دارد؟ (کالاهای بهداشتی: خیر) */
@@ -228,6 +231,9 @@ interface ProductFormData {
 
   is_new: boolean;
 
+  /** کالای ویژهٔ بزرگسالان (۱۸+)؛ نمایش فقط در بخش ویژهٔ فروشگاه. */
+  is_adult: boolean;
+
   is_taxable: boolean;
 
   /** آیا این کالا ضمانت بازگشت (مرجوعی) دارد؟ */
@@ -278,6 +284,8 @@ const emptyForm: ProductFormData = {
   is_featured: false,
 
   is_new: false,
+
+  is_adult: false,
 
   is_taxable: false,
 
@@ -425,6 +433,8 @@ function readProduct(product: Product): ProductFormData {
     is_featured: Boolean(product.is_featured),
 
     is_new: Boolean(product.is_new),
+
+    is_adult: Boolean(product.is_adult),
 
     is_taxable: Boolean(product.is_taxable),
 
@@ -1687,6 +1697,8 @@ function AdminProductForm() {
 
       is_new: form.is_new,
 
+      is_adult: form.is_adult,
+
       is_taxable: form.is_taxable,
 
       is_returnable: form.is_returnable,
@@ -2016,6 +2028,7 @@ function AdminProductForm() {
       | "is_active"
       | "is_featured"
       | "is_new"
+      | "is_adult"
       | "is_taxable"
       | "is_returnable",
 
@@ -3679,6 +3692,11 @@ function AdminProductForm() {
             {checkboxField("is_featured", "محصول ویژه باشد")}
 
             {checkboxField("is_new", "محصول جدید باشد")}
+
+            {checkboxField(
+              "is_adult",
+              "کالای ویژهٔ بزرگسالان (۱۸+) — فقط در صفحهٔ «بخش ویژه ۱۸+» نمایش داده شود",
+            )}
 
             {checkboxField("is_taxable", "مشمول ارزش افزوده")}
 

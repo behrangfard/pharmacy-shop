@@ -27,12 +27,14 @@ return [
             'products',
             'banners',
             'brands',
+            'categories',
             'popups',
             'stories',
             'article-covers',
             'trust-badges',
             'product-size-guides',
             'announcement-bar',
+            'mobile-nav',
         ],
     ],
 
@@ -48,6 +50,10 @@ return [
      * `product-images`، چون مسیر تصویر راهنمای سایز داخل ستون JSON ذخیره
      * می‌شود و با تطابق سادهٔ مسیر قابل سنجش نیست؛ برای این پوشه‌ها از
      * `images:migrate-legacy` و بازبینی دستی استفاده شود.
+     *
+     * پوشهٔ `mobile-nav` (لوگوی دکمهٔ شناور نوار پایین) هم این‌جا نیست، چون
+     * مسیرش داخل مقدارِ جدول `store_settings` ذخیره می‌شود نه ستون یک جدول؛
+     * هنگام تغییر لوگو خودِ `HeaderFooterController` فایل قبلی را پاک می‌کند.
      */
     'prune' => [
         'directories' => [
@@ -56,6 +62,9 @@ return [
             ],
             'brands' => [
                 ['table' => 'brands', 'columns' => ['logo']],
+            ],
+            'categories' => [
+                ['table' => 'categories', 'columns' => ['image']],
             ],
             'article-covers' => [
                 ['table' => 'articles', 'columns' => ['cover_image']],

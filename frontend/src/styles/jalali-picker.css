@@ -301,7 +301,7 @@
   justify-content: center;
   width: 100%;
   height: 100%;
-  animation: announcement-bar-fade-in 0.45s ease;
+  animation: announcement-bar-fade-in 1s ease;
 }
 
 .announcement-bar-slide[data-animation="slide"] {
@@ -402,4 +402,3 @@
     animation: none;
   }
 }
-

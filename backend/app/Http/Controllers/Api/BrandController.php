@@ -46,6 +46,8 @@ class BrandController extends Controller
                 'products' => function ($query) {
                     $query
                         ->where('is_active', true)
+                        // کالاهای ۱۸+ در صفحهٔ برند عمومی دیده نمی‌شوند.
+                        ->where('is_adult', false)
                         ->with(['category', 'images'])
                         ->orderByDesc('is_featured')
                         ->orderByDesc('id');

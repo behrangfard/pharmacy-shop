@@ -4,10 +4,13 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Category;
+use App\Services\Media\WebpConverter;
+use App\Support\Media\ImageDimensions;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -145,6 +148,52 @@ class AdminCategoryController extends Controller
             'success' => true,
             'message' => 'دسته‌بندی حذف شد.',
         ]);
+    }
+
+    /**
+     * بارگذاری تصویر دسته‌بندی (بدون نیاز به شناسهٔ دسته، تا هنگام ایجاد هم شود).
+     *
+     * مسیر ذخیره‌شده در فیلد `image` فرم می‌نشیند و در منوی موبایل فروشگاه به
+     * عنوان تصویر کوچک کنار نام دسته نمایش داده می‌شود.
+     */
+    public function uploadImage(Request $request): JsonResponse
+    {
+        $request->validate([
+            'image' => [
+                'required',
+                'image',
+                'mimes:jpg,jpeg,png,webp',
+                'max:2048',
+            ],
+        ]);
+
+        $path = $request->file('image')->store('categories', 'public');
+
+        if (! $path) {
+            return response()->json([
+                'success' => false,
+                'message' => 'بارگذاری تصویر دسته‌بندی انجام نشد.',
+            ], 500);
+        }
+
+        // تبدیل به WebP (اگر افزونهٔ تصویر روی سرور فعال باشد؛ وگرنه بی‌اثر).
+        $path = WebpConverter::convert($path);
+
+        $dimensions = ImageDimensions::forPath($path);
+
+        // تصویر در پاسخ کش‌شدهٔ دسته‌های فروشگاه می‌آید؛ کش باید تازه شود.
+        $this->forgetStorefrontCache();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'تصویر دسته‌بندی بارگذاری شد.',
+            'data' => [
+                'path' => $path,
+                'url' => Storage::disk('public')->url($path),
+                'width' => $dimensions['width'] ?? null,
+                'height' => $dimensions['height'] ?? null,
+            ],
+        ], 201);
     }
 
     /**

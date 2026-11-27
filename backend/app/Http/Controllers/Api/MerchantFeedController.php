@@ -89,6 +89,8 @@ class MerchantFeedController extends Controller
 
         $products = Product::query()
             ->where('is_active', true)
+            // کالای ویژهٔ بزرگسالان (۱۸+) به Google Merchant فرستاده نمی‌شود.
+            ->where('is_adult', false)
             ->with([
                 'category',
                 'brand',

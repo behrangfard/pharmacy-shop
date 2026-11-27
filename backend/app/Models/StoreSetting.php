@@ -120,6 +120,25 @@ class StoreSetting extends Model
         'announcement_bar_font_size' => '13',
         'announcement_bar_interval' => '6',
         'announcement_bar_animation' => 'fade',
+
+        /*
+         * نوار ناوبری پایین موبایل + دکمهٔ شناور (FAB) وسط نوار.
+         *
+         * «میان‌برها» فهرست JSON آرایه‌ای از label/url/icon/badge است (۲ تا ۴
+         * ردیف؛ دو ردیف اول پیش از قوس و بقیه پس از آن می‌آیند) و badge یکی از
+         * none | cart | wishlist است تا نشان تعداد از همان Context هدر بیاید.
+         * «ردیف‌های دسترسی سریع» هم JSON آرایه‌ای از label/hint/url/icon است
+         * (حداکثر ۶ ردیف، بعد از ردیف‌های ثابت جست‌وجو و حساب کاربری).
+         * لوگوی دکمهٔ شناور مسیر فایل آپلودی (پوشهٔ mobile-nav) یا مسیر فرانت
+         * (`/images/...`) است؛ خالی یعنی آیکن پیش‌فرض. حالت دکمه یکی از
+         * panel (بازکردن پنل دسترسی سریع) یا link (رفتن به ...fab_url) است.
+         */
+        'mobile_nav_enabled' => '1',
+        'mobile_nav_items' => '[{"label":"خانه","url":"/","icon":"home","badge":"none"},{"label":"فروشگاه","url":"/products","icon":"store","badge":"none"},{"label":"علاقه‌مندی","url":"/wishlist","icon":"heart","badge":"wishlist"},{"label":"سبد خرید","url":"/cart","icon":"shopping-cart","badge":"cart"}]',
+        'mobile_nav_quick_links' => '[{"label":"حساب کاربری و سفارش‌ها","hint":"ورود، سفارش‌ها و اطلاعات حساب","url":"/account","icon":"user-round"},{"label":"پیگیری سفارش","hint":"با شمارهٔ سفارش و تلفن","url":"/track-order","icon":"truck"},{"label":"راهنمای انتخاب سایز","hint":"اندازهٔ درست را پیدا کن","url":"/size-guide","icon":"ruler"},{"label":"مقالات و راهنما","hint":"نکته‌ها و آموزش‌ها","url":"/articles","icon":"file-text"}]',
+        'mobile_nav_fab_mode' => 'panel',
+        'mobile_nav_fab_url' => '',
+        'mobile_nav_fab_logo' => '',
     ];
 
     protected $fillable = [

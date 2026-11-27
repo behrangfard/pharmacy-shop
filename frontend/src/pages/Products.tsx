@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
   ChevronDown,
@@ -212,7 +212,19 @@ function toggleValue(list: string[], value: string): string[] {
 
 
 function Products() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+
+  /*
+   * کالاهای ویژهٔ ۱۸+ فقط در بخش ویژه (`/adult`) نمایش داده می‌شوند؛ اگر
+   * کسی آدرس فهرست عمومی را با پرچم adult باز کند به همان صفحه هدایت می‌شود
+   * تا دروازهٔ سنی دور زده نشود.
+   */
+  useEffect(() => {
+    if (searchParams.get("adult") === "1") {
+      navigate("/adult", { replace: true });
+    }
+  }, [navigate, searchParams]);
 
   const [products, setProducts] = useState<Product[]>([]);
   // دسته‌بندی‌ها از کش مشترک (همان کش منوی سایت) خوانده می‌شوند تا در

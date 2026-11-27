@@ -18,6 +18,8 @@ export interface StorefrontCategory {
   name: string;
   slug: string;
   parent_id?: number | null;
+  /** مسیر تصویر دسته (اختیاری)؛ در منوی موبایل کنار نام دسته دیده می‌شود. */
+  image?: string | null;
   is_active?: boolean;
   sort_order?: number;
   products_count?: number;

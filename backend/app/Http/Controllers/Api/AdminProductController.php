@@ -78,6 +78,12 @@ class AdminProductController extends Controller
                 'string',
                 Rule::in(['active', 'inactive']),
             ],
+            // فیلتر «کالاهای ویژهٔ ۱۸+» در فهرست پنل محصولات.
+            'adult' => [
+                'nullable',
+                'string',
+                Rule::in(['yes', 'no']),
+            ],
             'per_page' => [
                 'sometimes',
                 'required',
@@ -93,6 +99,12 @@ class AdminProductController extends Controller
             $query->where('is_active', true);
         } elseif ($status === 'inactive') {
             $query->where('is_active', false);
+        }
+
+        if (($validated['adult'] ?? null) === 'yes') {
+            $query->where('is_adult', true);
+        } elseif (($validated['adult'] ?? null) === 'no') {
+            $query->where('is_adult', false);
         }
 
         /*
@@ -600,6 +612,13 @@ class AdminProductController extends Controller
             ],
 
             'is_new' => [
+                'sometimes',
+                'boolean',
+            ],
+
+            // کالای ویژهٔ بزرگسالان (۱۸+)؛ در فروشگاه فقط در صفحهٔ /adult
+            // نمایش داده می‌شود.
+            'is_adult' => [
                 'sometimes',
                 'boolean',
             ],

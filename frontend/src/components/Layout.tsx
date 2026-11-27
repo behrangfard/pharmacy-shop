@@ -5,10 +5,12 @@ import AnnouncementBar from "./AnnouncementBar";
 import Header from "./Header";
 import Footer from "./Footer";
 import CategoryMenu from "./CategoryMenu";
+import MobileBottomNav from "./MobileBottomNav";
 import InstallPwaPrompt from "./InstallPwaPrompt";
 import StorefrontPopup from "./StorefrontPopup";
 import SupportWidget from "./SupportWidget";
 import ThemeSwitcher from "./ThemeSwitcher";
+import { useHeaderFooter } from "../hooks/useHeaderFooter";
 
 interface LayoutProps {
   children: ReactNode;
@@ -17,6 +19,9 @@ interface LayoutProps {
 function Layout({ children }: LayoutProps) {
   // پشتهٔ چسبان (نوار اطلاع‌رسانی + هدر) برای محاسبهٔ آفست اسکرول/فوکوس
   const stickyRef = useRef<HTMLDivElement>(null);
+  // نوار پایین موبایل می‌تواند از پنل مدیریت خاموش شود؛ در آن حالت جای خالی
+  // انتهای محتوا هم نباید رندر شود (کش مشترک است، درخواست تازه‌ای نمی‌زند).
+  const { mobile_nav_enabled: mobileNavEnabled } = useHeaderFooter();
 
   useEffect(() => {
     const stickyElement = stickyRef.current;
@@ -122,6 +127,11 @@ function Layout({ children }: LayoutProps) {
 
       <Footer />
 
+      {/* جای خالی زیر محتوا تا نوار ناوبری پایین موبایل روی فوتر/دکمه‌ها نیفتد. */}
+      {mobileNavEnabled && (
+        <div className="mobile-nav-spacer" aria-hidden="true" />
+      )}
+
       <SupportWidget />
 
       {/* پاپ‌آپ تبلیغاتی؛ انتخاب پاپ‌آپ و زمان نمایش را خودش مدیریت می‌کند */}
@@ -132,6 +142,9 @@ function Layout({ children }: LayoutProps) {
 
       {/* ابزار مقایسهٔ تم (پیش‌فرض/اقیانوس)؛ در نسخهٔ تولید فقط با تم غیرپیش‌فرض */}
       <ThemeSwitcher />
+
+      {/* ناوبری پایین + دکمهٔ شناور دسترسی سریع؛ فقط در نمای موبایل دیده می‌شود */}
+      <MobileBottomNav />
     </div>
   );
 }

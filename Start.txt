@@ -3634,4 +3634,326 @@ untracked است و تصمیم حذف/استفاده‌اش با مالک است
 `analytics_events` و ثبت هزینهٔ تبلیغات است؛ (۲) تسک ۳ (sitemap سروری/canonical)
 و تسک ۶ (پیش‌بینی اتمام موجودی) و تسک ۷ (پیش‌رندر) طبق نقشهٔ راه.
 
+========================================================================
+تسک ۱.۵۲ — بخش ویژهٔ بزرگسالان (۱۸+) — انجام شد
+========================================================================
+
+**هدف:** صفحه‌ای جدا برای محصولات جنسی و پوشاک کاستوم/سکسی با یک مرحلهٔ تأیید سن؛
+این کالاها فقط در همان صفحه دیده شوند و آیتم منو ظاهر و جایگاه متفاوت داشته باشد.
+
+**انجام‌شده (بک‌اند):** ستون `products.is_adult` (مایگریشن `2026_12_06`، پیش‌فرض
+false) + cast/fillable در `Product`؛ `ProductController@listingQuery` کوئری را به
+`$request->boolean('adult')` مقید می‌کند (پیش‌فرض: فقط کالاهای عادی) و
+`featured`/`newest` هم `is_adult = false` گرفتند؛ خروج کالای ۱۸+ از صفحهٔ دسته
+(`CategoryController@show`)، صفحهٔ برند (`BrandController@show`)، شمارش sitemap
+(`AdminSeoController`) و فید Google Merchant؛ پنل: اعتبارسنجی `is_adult` + فیلتر
+`adult=yes|no` در `GET /admin/products` (`AdminProductController`) و ستون «۱۸+» در
+`ProductImportService`.
+
+**انجام‌شده (فرانت):** `utils/adultGate.ts` + `hooks/useAdultConsent.ts` (تأیید سن با
+کلید `behrang-shop-adult-consent`، فقط در مرورگر، بدون درخواست به سرور)،
+`components/AdultGate.tsx` (هشدار ۱۸+)، `pages/AdultProducts.tsx` روی مسیر `/adult`
+(جست‌وجو/مرتب‌سازی/چیپ دسته/صفحه‌بندی با تم تیره-رز، noindex، دکمهٔ «خروج از بخش
+ویژه»)، دروازهٔ سنی روی صفحهٔ محصول ۱۸+ (`adultBlocked` در `ProductDetail`)، حذف
+کالای ۱۸+ از «بازدیدهای اخیر» و گرفتن «محصولات مرتبط» با `adult=1`، آیتم متمایز
+«بخش ویژه ۱۸+» در `CategoryMenu` (دسکتاپ: انتهای نوار با گرادیان رز + آیکن قفل؛
+موبایل: ردیف مستقل با نشان ۱۸+)، ریدایرکت `/products?adult=1` → `/adult`،
+`Disallow: /adult` در robots، و در پنل: فیلتر «فقط ویژهٔ ۱۸+» + برچسب «۱۸+» در
+`AdminProducts` و تیک «کالای ویژهٔ بزرگسالان (۱۸+)» در `AdminProductForm`.
+
+**تأیید:** `php artisan test --filter=AdultProductsTest` ۹/۹ (۳۳ assertion)؛ کل
+بک‌اند **۵۷۷ passed** (۲۹۱۸ assertion)؛ `npm run test` ۹۳ pass (شامل ۶ تست
+`adultGate`)؛ `npx tsc --noEmit` سبز؛ `npm run lint` ۰ خطا؛ `php artisan migrate`
+اجرا شد.
+
+**فایل‌ها:** مایگریشن `2026_12_06_000000_add_is_adult_to_products_table.php`،
+`app/Models/Product.php`، `app/Http/Controllers/Api/{Product,Category,Brand,MerchantFeed,AdminSeo,AdminProduct}Controller.php`،
+`app/Services/Products/ProductImportService.php`، `tests/Feature/AdultProductsTest.php`؛
+فرانت: `utils/adultGate.ts` + `adultGate.test.ts`، `hooks/useAdultConsent.ts`،
+`components/AdultGate.tsx`، `components/CategoryMenu.tsx`، `pages/AdultProducts.tsx`،
+`pages/ProductDetail.tsx`، `pages/Products.tsx`، `pages/AdminProducts.tsx`،
+`pages/AdminProductForm.tsx`، `App.tsx`، `utils/storageKeys.ts`،
+`scripts/generate-sitemap.mjs`؛ `TECHNICAL_GUIDE.md` (۴، ۷، ۸، ۹.۱۱، ۱۰.۱، ۱۲ +
+ردیف ۱.۵۲) و `SITE_GUIDE.md`.
+
+**باقی‌مانده (اختیاری):** علامت‌گذاری گروهی (bulk) کالاهای ۱۸+، سقف اعتبار برای
+تأیید سن (مثلاً ۳۰ روز)، لینک «بخش ویژه» در فوتر/پاپ‌آپ (تصمیم فروشگاه) و سیاست
+خارج‌کردن کالاهای ۱۸+ از سبد در صورت تغییر مقررات.
+
+**دیپلوی:** `php artisan migrate --force` (یک ستون جدید روی `products`) و انتشار
+هم‌زمان فرانت؛ بدون env جدید. یک `npm run build` بعد از deploy لازم است تا
+`Disallow: /adult` در robots.txt و sitemap تازه ساخته شوند.
+
+**بازبینی ظاهری (همان تسک):** نوار دسته‌بندی دسکتاپ به‌هم می‌ریخت (کلاس
+`flex-wrap` داشت و با پر شدن خط، گروه «راهنما + بخش ویژه» به خط دوم و گوشهٔ
+چپ می‌پرید). اصلاح شد: حذف `flex-wrap` و تک‌ردیفه‌کردن نوار
+(`hidden w-full min-w-0 items-center gap-1.5 lg:flex xl:gap-2`)، فشرده‌کردن
+تب‌ها (`px-2.5 py-2 text-[13px]` و `xl:px-3`)، کوتاه‌شدن نام دستهٔ بلند با
+`truncate` (`min-w-0` روی ردیف و لینک، آیکن `ChevronDown` با `shrink-0`) و
+دو لینک راهنما در عرض ۱۰۲۴–۱۲۷۹ فقط آیکن‌اند (برچسب با `hidden xl:inline` و
+`sr-only xl:hidden` برای اسکرین‌ریدر + `title`). دکمهٔ «بخش ویژه ۱۸+» هم
+دایره‌ای شد و کلاس `adult-nav-button` گرفت: گرادیان رز متحرک
+(`adult-nav-flow`) + درخشش کشویی (`adult-nav-sweep`) در
+`frontend/src/styles/storefront-extras.css`، با `prefers-reduced-motion`
+خاموش. همین کلاس به ردیف مستقل موبایل هم داده شد. تأیید: `npx tsc --noEmit`
+سبز، `npm run lint` ۰ خطا، `npm run test` ۹۳ پاس، `npm run build` سبز و کلاس
+`adult-nav-button` در CSS خروجی موجود است.
+
+
+
+========================================================================
+تسک ۱.۵۳ — ناوبری پایین موبایل (Bottom Navigation + FAB) — انجام شد
+========================================================================
+
+**هدف:** در نمای موبایل فروشگاه یک نوار ناوبری پایین ثابت + دکمهٔ شناور (FAB)
+اضافه شود تا دسترسی به خانه/فروشگاه/علاقه‌مندی/سبد خرید و یک «دسترسی سریع»
+(جست‌وجو، حساب کاربری، پیگیری سفارش، راهنمای سایز، مقالات، بخش ویژهٔ ۱۸+)
+همیشه در دسترس باشد.
+
+**انجام‌شده:**
+- کامپوننت جدید `frontend/src/components/MobileBottomNav.tsx` (۳۰۹ خط) —
+  `md:hidden`، ثابت در پایین صفحه (`z-index: 70`) و با احترام به
+  `env(safe-area-inset-bottom)`؛ چهار میان‌بر با `aria-current="page"` و نشان
+  تعداد سبد/علاقه‌مندی از همان Context هدر؛ دکمهٔ شناور وسط (هاب سفید +
+  گرادیان متحرک برند→آلو→صورتی) که پنل «دسترسی سریع» را باز می‌کند؛ بستن پنل
+  با دکمه، `Esc`، کلیک روی پس‌زمینهٔ تار و هر تغییر مسیر.
+- `frontend/src/components/Layout.tsx` — import + رندر کامپوننت و افزودن
+  `.mobile-nav-spacer` (جبران ارتفاع نوار در انتهای محتوا).
+- `frontend/src/components/HeaderSearch.tsx` — اکسپورت
+  `HEADER_SEARCH_INPUT_ID` + `id` روی کادر جست‌وجو؛ ردیف «جست‌وجو» پنل روی
+  همین کادر فوکوس می‌کند (بدون ساختن کادر جست‌وجوی دوم).
+- `frontend/src/styles/storefront-extras.css` — بخش جدید «ناوبری پایین موبایل
+  + FAB» (فایل ۶۳۷ خط شد): متغیر `--mobile-nav-height`، نوار/آیتم/نشان/هاب/
+  دکمهٔ شناور، کیفریم‌های `mobile-fab-flow`/`mobile-fab-sweep`/
+  `mobile-quick-panel-in`/`mobile-quick-backdrop-in`، پنل دسترسی سریع (ردیف رز
+  برای ۱۸+)، بالا بردن `.pwa-install`/`.theme-switcher`/`.support-widget` در
+  موبایل و `prefers-reduced-motion`. همهٔ رنگ‌ها از توکن‌های `--color-*` است،
+  پس دارک‌مود و تم اقیانوس هم درست می‌مانند.
+- `frontend/src/components/MobileBottomNav.test.tsx` (۲۰۶ خط) — ۷ تست:
+  میان‌برها و آیتم فعال (سبد خرید و صفحهٔ محصول)، نشان تعداد با اعداد فارسی،
+  باز/بستن پنل با دکمهٔ شناور، بستن با `Esc` و پس‌زمینه، مقصد ردیف حساب کاربری
+  برای مهمان و کاربر واردشده، و فوکوس کادر جست‌وجو.
+
+**تأیید شده:** `npx tsc --noEmit` سبز؛ `npx oxlint` روی هر چهار فایل دست‌خورده
+۰ خطا؛ `npm run build` سبز (۲۲۱۴ ماژول — chunk `Layout` شامل نوار جدید).
+
+**تأیید نشده:** اجرای تست فرانت. محیط فعلی (Vitest 5.1.0 + Vite 8.3.0) حتی
+`src/utils/price.test.ts` دست‌نخورده را با
+`Vitest failed to find the current suite` سقوط می‌دهد؛ با `--pool=threads`،
+`--no-isolate` و یک کانفیگ پروب بدون `setupFiles` هم تکرار شد (پروب بعد از
+آزمایش پاک شد). این بلاکر قبلاً بند ۱۷ همین فایل بوده و اکنون در
+`TECHNICAL_GUIDE.md` بند ۱۶ §۱۴ هم ثبت شد. **۷ تست جدید باید بعد از رفع بلاکر
+اجرا شود.**
+
+**دستورهای تأیید:** `cd frontend; npx tsc --noEmit` · `npm run lint` ·
+`npm run test` (پس از رفع بلاکر) · `npm run build`. بازبینی چشمی در عرض‌های
+۳۲۰/۳۷۵/۴۱۴px: نوار روی فوتر نیفتد، نیمهٔ بالای دکمهٔ شناور آزاد دیده شود،
+پنل روی نوار باز شود و کارت نصب PWA/ابزار تم/ویجت پشتیبانی بالای نوار بمانند؛
+دارک‌مود و `prefers-reduced-motion` هم بررسی شود.
+
+**باقی‌مانده (دو خواستهٔ کاربر در همان پیام که به تسک بعد موکول شد):**
+۱) «منو اصلی هم‌عرض صفحه» در موبایل — پنل بازشوی `CategoryMenu` لبه‌به‌لبه و
+دکمهٔ «دسته‌بندی محصولات» تمام‌عرض؛ ۲) «عکس کنار هر محصول» — جای دقیقش با
+کاربر روشن نشد (کارت دسته‌بندی صفحهٔ اصلی بدون عکس، ردیف‌های منوی موبایل، یا
+اقلام سفارش) و منتظر مشخص‌کردن آن هستیم.
+
+==============================================================================
+تسک ۱.۵۴ — منوی دسته‌بندی موبایل (تمام‌عرض + تصویر دسته) + آپلود تصویر دسته
+تاریخ: 2026-11-26
+==============================================================================
+
+خواستهٔ کاربر در یک پیام (سه بند):
+۱) منوی «دسته‌بندی محصولات» در موبایل تمام عرض صفحه را بگیرد؛
+۲) در ردیف‌های منو، هر کدام کنار متن در سمت راست یک تصویر کوچک داشته باشد که
+   از پنل مدیریت اضافه شود؛
+۳) در «قسمت دسته‌بندی محصولات» در موبایل، «همه محصولات» هم‌راستای دسته‌ها شود.
+
+پیش‌فرض‌هایی که برای ابهام‌ها گرفته شد (اگر منظور دیگری بود، برعکس‌کردنش کم‌هزینه
+است): «منوها» هم ردیف دسته و هم زیردستهٔ پنل موبایل + زیردسته‌های دراپ‌داون
+دسکتاپ در نظر گرفته شد؛ «همه محصولات» هم به پنل منوی موبایل اضافه شد و هم در
+صفحهٔ اصلی (بخش «دسته‌بندی محصولات») در موبایل هم‌تراز کارت‌ها شد.
+
+انجام‌شده:
+- `frontend/src/components/CategoryMenu.tsx`:
+  • پنل موبایل لب‌به‌لب: `-mx-4 border-t border-brand-100 px-4 pb-3 pt-2
+    sm:-mx-6 sm:px-6 lg:hidden` — پس‌زمینهٔ پنل تا لبهٔ صفحه می‌رود ولی متن‌ها
+    با پدینگ برمی‌گردند و هم‌تراز بقیهٔ صفحه می‌مانند.
+  • دکمهٔ «دسته‌بندی محصولات» تمام‌عرض شد (`flex w-full ... justify-between`؛
+    برچسب+آیکن راست، فلش چپ).
+  • کامپوننت محلی `CategoryThumb` با سه اندازهٔ md (۴۰px)/sm (۳۶px)/xs (۳۲px):
+    اگر تصویر دسته باشد `<img>` با `getStorageUrl` + `loading="lazy"` و اگر
+    نباشد جعبهٔ جانشین با حرف اول نام (دراپ‌داون دسکتاپ با
+    `fallback={false}` فقط تصویر واقعی). تصویر سمت **راست** نام است، چون در
+    RTL اولین فرزند flex همان‌جاست.
+  • ردیف‌های پنل موبایل (دسته + زیردسته) و زیردسته‌های دراپ‌داون دسکتاپ تصویر
+    گرفتند؛ نام‌ها در موبایل `truncate` شدند تا ردیف‌ها یک‌خطی بمانند.
+  • ردیف «همه محصولات» (`/products`) بالای پنل موبایل با همان قالب ردیف‌های
+    دسته (آیکن `LayoutGrid` در همان جعبهٔ ۴۰px + `border-b`) هم‌تراز شد.
+- `frontend/src/pages/Home.tsx` (بخش «دسته‌بندی محصولات»): دکمهٔ سرصفحه با
+  `hidden sm:inline-flex` در موبایل پنهان شد و به‌جایش یک `Link` تمام‌عرض
+  (`sm:hidden`، همان حاشیه/گردی کارت‌ها، متن راست + فلش چپ) بالای گرید آمد.
+- `frontend/src/services/categories.ts`: فیلد `image?: string | null` به
+  `StorefrontCategory` اضافه شد (پاسخ عمومی `/categories` از قبل همهٔ ستون‌ها
+  را برمی‌گرداند؛ کلید کش دست‌نخورده ماند).
+- بکاند:
+  • `AdminCategoryController@uploadImage` + مسیر
+    `POST /api/v1/admin/categories/image` (گروه `categories.manage`، پیش از
+    `POST /categories` ثبت شد): اعتبارسنجی `image|mimes:jpg,jpeg,png,webp|max:2048`،
+    ذخیره در پوشهٔ `categories/` دیسک public، تبدیل اختیاری WebP
+    (`WebpConverter::convert`) و پاسخ `path`/`url`/`width`/`height`؛ کش فروشگاه
+    (`CategoryController::STOREFRONT_CACHE_KEY`) همان لحظه پاک می‌شود.
+  • `config/media.php`: پوشهٔ `categories` به `webp.directories` و به نقشهٔ
+    `prune.directories` (جدول `categories`، ستون `image`) اضافه شد تا فایل‌های
+    یتیم با `media:prune` شناسایی شوند.
+  • ستون `categories.image` از قبل در مایگریشن `2026_09_14_064021` و در
+    `$fillable`/اعتبارسنجی بود؛ پس مایگریشن جدید لازم نشد.
+- پنل مدیریت `frontend/src/pages/AdminCategories.tsx`: کنار فیلد مسیر (که دستی
+  هم می‌ماند) دکمهٔ «بارگذاری تصویر» (multipart به `/admin/categories/image`)،
+  «حذف تصویر» و پیش‌نمایش (`getStorageUrl`) اضافه شد؛ مسیر برگشتی در همان فیلد
+  می‌نشیند و با «ذخیره» به دسته وصل می‌شود.
+
+تأیید شده:
+- بکاند: `php artisan test --filter=AdminCategoryTest` → ۱۲ پاس/۳۵ assertion
+  (۴ تست جدید: آپلود موفق با آغاز مسیر `categories/` و وجود فایل روی دیسک fake،
+  رد فایل غیرتصویری با ۴۲۲، ۴۰۳ برای کاربر عادی، و آمدن `image` در پاسخ عمومی
+  دسته‌ها برای والد و زیردسته). `php artisan test --filter=MediaPruneTest` →
+  ۶ پاس (افزودن پوشهٔ تازه چیزی را نشکست).
+- فرانت: `npx tsc --noEmit` سبز، `npm run lint` (oxlint) ۰ خطا روی ۲۲۲ فایل،
+  `npm run build` سبز (۲۲۱۴ ماژول).
+- تست فرانت همچنان اجرا نمی‌شود (بلاکر Vitest 5.1.0 + Vite 8.3.0 — بند ۱۶ §۱۴
+  سند فنی و بند بلاکر در همین فایل). برای این تسک تست فرانت جدیدی نوشته نشد.
+
+باقی‌مانده / بازبینی چشمی: عرض‌های ۳۲۰/۳۷۵/۴۱۴px (پنل لب‌به‌لب بدون اسکرول
+افقی، تصویرها هم‌اندازه و هم‌تراز، ردیف «همه محصولات» بالای دسته‌ها)، دارک‌مود،
+و بررسی این‌که ترازِ «همه محصولات» در صفحهٔ اصلی همان جایی است که مدیر می‌خواست.
+
+دستورهای تأیید: `cd backend; php artisan test --filter=AdminCategoryTest` ·
+`cd frontend; npx tsc --noEmit` · `npm run lint` · `npm run build`.
+
+فایل‌های دست‌خورده: `backend/app/Http/Controllers/Api/AdminCategoryController.php` ·
+`backend/routes/api.php` · `backend/config/media.php` ·
+`backend/tests/Feature/AdminCategoryTest.php` ·
+`frontend/src/components/CategoryMenu.tsx` · `frontend/src/pages/AdminCategories.tsx` ·
+`frontend/src/pages/Home.tsx` · `frontend/src/services/categories.ts`.
+
+
+---
+
+## تسک ۱.۵۵ — پس‌زمینهٔ بنرها در حالت تاریک (2026-11-27)
+
+**گزارش مدیر:** در دارک‌مود پشت بخش‌های بنر صفحهٔ اصلی تیره نمی‌شد و وقتی بنر
+کوچک‌تری گذاشته می‌شد، پس‌زمینهٔ روشن پشت و اطراف بنر دیده می‌شد.
+
+- **ریشه:** `BANNER_SECTION_SURFACE_CLASS` در `frontend/src/utils/bannerGrid.ts`
+  مقدار `bg-white` داشت. سفید Tailwind از توکن‌های `@theme` نمی‌آید و در
+  `styles/dark-mode.css` عمداً دست‌نخورده است (بند ۱۰ همان فایل: تا `text-white`
+  روی دکمه‌های توپُر روشن بماند)؛ پس این سطح در حالت تاریک روشن می‌مانْد.
+  در تسک ۱.۳۳ هر ۲۳۳ مورد `bg-white` فروشگاه به `bg-surface` تبدیل شده بود،
+  ولی این ثابت بعدتر در تسک بخش‌های بنر اضافه شده بود و جا مانده بود.
+- **اصلاح (یک مقدار):** `bg-surface` — در حالت روشن دقیقاً همان سفید قبلی
+  (`--color-surface: #ffffff`) است، پس ظاهر روشن بدون تغییر می‌ماند؛ در حالت
+  تاریک به `#151d19` می‌رود که همان سطح هدر/فوتر است و بالای صفحه یکدست
+  می‌شود (نوار روشن پشت بنر کوچک حذف شد). پنج بخش از همین یک ثابت استفاده
+  می‌کنند: هیرو دسکتاپ، بنر بالای موبایل، نوار بنرهای کوتاه، بخش چندستونه و
+  بنر وسط موبایل.
+- **نکته برای آینده:** اگر مدیر خواست بنرها روی خودِ پس‌زمینهٔ صفحه بنشینند
+  (بدون هیچ نوار متمایز)، فقط همین مقدار را به `bg-transparent` یا `bg-cream`
+  تغییر دهید؛ هیچ کلاس رنگ دیگری در بخش‌های بنر نیست. همین نکته در کامنت خودِ
+  ثابت `BANNER_SECTION_SURFACE_CLASS` هم ثبت شد.
+- **تأیید:** `npx tsc --noEmit` سبز · `npm run lint` (oxlint) ۰ خطا · `npm run
+  build` سبز. تست فرانت همچنان به بلاکر Vitest/Vite خورده است (بند ۱۷ همین
+  فایل) و برای این تسک تست جدیدی نوشته نشد؛ تست بک‌اند لازم نبود چون هیچ فایل
+  بک‌اندی تغییر نکرد.
+- **فایل‌های دست‌خورده:** `frontend/src/utils/bannerGrid.ts` ·
+  `TECHNICAL_GUIDE.md` (ردیف ۱.۵۵ + همین توضیح).
+
+---
+
+## تسک ۱.۵۶ — ویرایش نوار پایین موبایل از پنل + لوگو در دکمهٔ شناور + قوس وسط نوار (2026-11-27)
+
+**گزارش مدیر:** وسط نوار ناوبری پایین موبایل باید لوگوی فروشگاه بنشیند؛ کل آن
+منو از پنل مدیریت قابل ویرایش باشد و دایرهٔ وسط با یک منحنی از مستطیل نوار جدا
+شود تا شیک‌تر شود.
+
+- **بک‌اند (بدون مایگریشن):** هفت کلید تازه در `StoreSetting::DEFAULTS` —
+  `mobile_nav_enabled`، `mobile_nav_items` (JSON آرایه‌ای ۲–۴ ردیف با
+  label/url/icon/badge)، `mobile_nav_quick_links` (JSON آرایه‌ای تا ۶ ردیف با
+  label/hint/url/icon)، `mobile_nav_fab_mode` (`panel`/`link`)،
+  `mobile_nav_fab_url` و `mobile_nav_fab_logo`. `HeaderFooterController` این
+  کلیدها را با همان الگوی بخش‌های قبلی (اعتبارسنجی + encode/decode JSON)
+  مدیریت می‌کند: میان‌بر `min:2`/`max:4`، «دسترسی سریع» `max:6`، آیکن فقط از
+  فهرست `NAV_ICONS` (۲۰ آیکن)، `badge` یکی از none|cart|wishlist، حالت `link`
+  بدون نشانی ۴۲۲ و مقدار خراب هنگام خواندن پاک‌سازی می‌شود.
+- **آپلود لوگو:** `POST /api/v1/admin/header-footer/mobile-logo` (مجوز
+  `settings.manage`) — پوشهٔ `mobile-nav` دیسک public، سقف ۲MB، WebP اختیاری و
+  برگشت `path`/`url`/ابعاد. مسیر فقط با «ذخیره»ی فرم به تنظیمات وصل می‌شود و
+  هنگام تعویض لوگو فایل قبلی پاک می‌شود (`deleteReplacedNavLogo`).
+- **فایل‌های مدیا:** پوشهٔ `mobile-nav` به `webp.directories` اضافه شد؛ در
+  توضیح نقشهٔ `prune` ثبت شد که مسیر لوگو در مقدار `store_settings` است و آن
+  کامند پوششش نمی‌دهد (بدهی ۱۷ در §۱۴ سند).
+- **فرانت:** `services/headerFooter.ts` ثابت‌ها/انواع/پیش‌فرض/نرمال‌سازی
+  ردیف‌ها را گرفت؛ `MobileBottomNav` دیگر دادهٔ ثابت ندارد و همه را از
+  `useHeaderFooter()` می‌خواند (نقشهٔ آیکن `NAV_ICON_COMPONENTS`، هایلایت با
+  `isNavItemActive` که `/products` را روی `/product/:slug` هم فعال می‌کند، نشان
+  عددی از همان Context هدر، ردیف‌های ثابت جست‌وجو و ۱۸+، `/account` برای مهمان
+  → `/login`، و خاموش‌شدن کامل با `mobile_nav_enabled` همراه `.mobile-nav-spacer`
+  در `Layout`)؛ دکمهٔ شناور لوگوی آپلودی را نشان می‌دهد و در حالت link خودش لینک
+  می‌شود.
+- **طراحی (درخواست «جدا کردن دایره»):** سطح نوار به لایهٔ `.mobile-nav-surface`
+  منتقل شد و با `mask-image: radial-gradient(circle 44px at 50% 0 …)` یک قوس
+  نیم‌دایره در وسط نوار بریده می‌شود؛ سایه و خط بالای نوار روی
+  `.mobile-nav-shell` با `filter: drop-shadow` است تا شکل قوس را دنبال کند. هاب
+  دکمه شفاف شد تا داخل قوس محتوای صفحه دیده شود، `--mobile-nav-notch: 44px`
+  اضافه و جای خالی وسط نوار ۷۶px شد تا دکمهٔ ۵۶px داخل قوس بنشیند.
+- **پنل:** صفحهٔ «هدر و فوتر» بخش «منوی پایین موبایل» گرفت: چک‌باکس نمایش نوار،
+  انتخاب رفتار دکمه (پنل/لینک)، آپلود + حذف + پیش‌نمایش لوگو و دو ویرایشگر ردیفی
+  (میان‌برها با آیکن/نشان و «دسترسی سریع» با آیکن/توضیح). اعتبارسنجی فرم همان
+  قواعد سرور را دارد (ردیف نیمه‌کاره و کمتر از دو میان‌بر رد می‌شود).
+- **تأیید:** `php artisan test --filter=HeaderFooterTest` → **۱۵ پاس (۱۰۷
+  assertion)** با ۶ تست جدید (پیش‌فرض‌های عمومی، ویرایش و تازه‌شدن کش، رد آیکن
+  ناشناخته و کمینهٔ ردیف، حالت link بدون نشانی، آپلود و پاک‌شدن فایل قبلی، رد
+  فایل غیرتصویری و ۴۰۱ مهمان)؛ `npx tsc --noEmit` سبز · `npm run lint` ۰ خطا
+  (۲۲۲ فایل). **تست فرانت اجرا نشد** (بلاکر Vitest/Vite، بند ۱۷) اما ۴ تست جدید
+  در `MobileBottomNav.test.tsx` نوشته شد (تنظیمات پنل، لوگو، حالت لینک، خاموشی).
+- **فایل‌های دست‌خورده:** `backend/app/Models/StoreSetting.php` ·
+  `backend/app/Http/Controllers/Api/HeaderFooterController.php` ·
+  `backend/routes/api.php` · `backend/config/media.php` ·
+  `backend/tests/Feature/HeaderFooterTest.php` ·
+  `frontend/src/services/headerFooter.ts` ·
+  `frontend/src/components/MobileBottomNav.tsx` ·
+  `frontend/src/components/MobileBottomNav.test.tsx` ·
+  `frontend/src/components/Layout.tsx` · `frontend/src/pages/AdminHeaderFooter.tsx` ·
+  `frontend/src/styles/storefront-extras.css` · `TECHNICAL_GUIDE.md` (ردیف ۱.۵۶،
+  §۷، §۸، §۹.۱۲، §۱۰، §۱۲، §۱۴) · `SITE_GUIDE.md` §۴.
+
+## تسک ۱.۵۷ — بازبینی ظاهری قوس + شیشه‌ای‌کردن منوی پایین موبایل (2026-11-27)
+
+- **سه ایراد گزارش‌شده:** (۱) با فعال‌شدن تب‌های کنار قوس، گوشهٔ مستطیل تب فعال
+  داخل بریدگی می‌رفت؛ (۲) گردی دکمه و گردی بریدگی متناسب نبود و فاصله زیاد بود؛
+  (۳) درخواست شیشه‌ای‌شدن کل نوار.
+- **هندسهٔ تازه:** شعاع قوس حالا از خود دکمه ساخته می‌شود —
+  `--mobile-nav-fab: 56px` + `--mobile-nav-fab-ring: 6px` →
+  `--mobile-nav-notch: 34px` (قبلاً ۴۴px). هاب دکمه جابه‌جا شد تا مرکزش روی خط
+  بالای نوار بنشیند، پس حلقهٔ ۶px دور دکمه یکنواخت است (قبلاً بالا/پایین دکمه
+  فاصلهٔ نامساوی داشت). جای خالی وسط با `--mobile-nav-slot: 72px` و
+  `flex: 0 0 auto` ثابت شد (قبلاً `flex: 1 1 0; min-width: 76px` و نیم‌عرض ۳۸px
+  < شعاع ۴۴px بود؛ همین باعث ورود گوشهٔ تب به بریدگی می‌شد). تب‌ها هم
+  `margin: 4px 2px` و `border-radius: 16px` گرفتند تا پس‌زمینهٔ تب فعال به لبهٔ
+  نوار نچسبد.
+- **رفع جابه‌جایی دکمه با تعداد فرد میان‌بر:** نوار به دو `mobile-nav-group`
+  هم‌عرض (پیش و پس جای خالی) تقسیم شد و `Math.floor` جای `Math.ceil` آمد؛ قبلاً
+  با ۳ میان‌بر جای خالی نیم‌آیتم از مرکز می‌افتاد و دکمه روی تب سوم می‌نشست.
+- **شیشه‌ای:** `background: color-mix(in srgb, var(--color-surface) 82%,
+  transparent)` + `backdrop-filter: blur(16px) saturate(150%)` روی
+  `.mobile-nav-surface`. `filter: drop-shadow` از `.mobile-nav-shell` برداشته شد،
+  چون هر `filter`/`mask` روی والد یک «backdrop root» می‌سازد و `backdrop-filter`
+  را بی‌اثر می‌کند؛ سایهٔ نرم حالا با گرادیان خطی + هالهٔ دایره‌ای روی
+  `.mobile-nav-shell::before` است.
+- **فایل‌ها:** `frontend/src/components/MobileBottomNav.tsx` ·
+  `frontend/src/styles/storefront-extras.css` · `TECHNICAL_GUIDE.md` (ردیف ۱.۵۷،
+  §۹.۱۲، §۱۰) · `SITE_GUIDE.md` §۴ · `NEXT_CHAT.md`.
+- **تأیید:** `.\node_modules\.bin\tsc.cmd --noEmit` سبز (خروجی خالی، exit 0) ·
+  `npm run lint` ۰ خطا/۲۲۲ فایل · `npm run build` سبز (۲۲۱۴ ماژول، 2.18s).
+  تست فرانت هنوز با بلاکر Vitest/Vite اجرا نمی‌شود؛ بازبینی چشمی در ۳۲۰/۳۷۵/۴۱۴px
+  و دارک‌مود باقی است (این تغییر تست جدیدی لازم نداشت چون منطق داده عوض نشد).
 

@@ -1,6 +1,15 @@
-import { FormEvent, Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import {
+  ChangeEvent,
+  FormEvent,
+  Fragment,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { adminApi } from "../services/api";
 import CategoryProductsPanel from "../components/admin/categories/CategoryProductsPanel";
+import { getStorageUrl } from "../utils/images";
 
 interface Category {
   id: number;
@@ -116,6 +125,10 @@ export default function AdminCategories() {
   const [expandedCategoryId, setExpandedCategoryId] = useState<number | null>(
     null,
   );
+  const [uploading, setUploading] = useState(false);
+
+  /** پیش‌نمایش تصویر دسته؛ آدرس نسبی/مطلق از همان ابزار مشترک تصاویر می‌آید. */
+  const imagePreview = getStorageUrl(form.image);
 
   const loadCategories = useCallback(async (silent = false) => {
     if (!silent) {
@@ -194,6 +207,45 @@ export default function AdminCategories() {
     value: CategoryForm[K],
   ) {
     setForm((current) => ({ ...current, [field]: value }));
+  }
+
+  /**
+   * بارگذاری تصویر دسته در پوشهٔ `categories/` سرور؛ مسیر برگشتی در فیلد فرم
+   * می‌نشیند و با «ذخیره» به دسته‌بندی وصل می‌شود.
+   */
+  async function handleImageUpload(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+
+    // ورودی پاک می‌شود تا انتخاب دوبارهٔ همان فایل هم رویداد بدهد.
+    event.target.value = "";
+
+    if (!file || uploading) return;
+
+    setUploading(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+
+      const response = await adminApi.post("/admin/categories/image", formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      const path = response.data?.data?.path;
+
+      if (typeof path !== "string" || path === "") {
+        throw new Error("مسیر تصویر بارگذاری‌شده برنگشت.");
+      }
+
+      updateField("image", path);
+      setSuccess("تصویر بارگذاری شد؛ با ذخیرهٔ دسته‌بندی نهایی می‌شود.");
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      setUploading(false);
+    }
   }
 
   function resetForm() {
@@ -514,7 +566,7 @@ export default function AdminCategories() {
             </div>
 
             <div className="admin-category-field">
-              <label htmlFor="category-image">آدرس تصویر (اختیاری)</label>
+              <label htmlFor="category-image">تصویر دسته‌بندی (اختیاری)</label>
               <input
                 id="category-image"
                 className="admin-category-input"
@@ -523,6 +575,59 @@ export default function AdminCategories() {
                 placeholder="/storage/categories/example.jpg"
                 dir="ltr"
               />
+
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  marginTop: 8,
+                  flexWrap: "wrap",
+                }}
+              >
+                <label
+                  className="admin-category-button admin-category-button-edit"
+                  style={{ cursor: "pointer" }}
+                >
+                  {uploading ? "در حال بارگذاری..." : "بارگذاری تصویر"}
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    onChange={(event) => void handleImageUpload(event)}
+                    style={{ display: "none" }}
+                    disabled={uploading}
+                  />
+                </label>
+
+                {form.image && (
+                  <button
+                    type="button"
+                    className="admin-category-button admin-category-button-delete"
+                    onClick={() => updateField("image", "")}
+                    disabled={uploading}
+                  >
+                    حذف تصویر
+                  </button>
+                )}
+
+                <span style={{ fontSize: 12, color: "var(--color-muted)" }}>
+                  PNG/JPG/WebP تا ۲ مگابایت — تصویر کوچک کنار نام دسته در منوی
+                  موبایل فروشگاه دیده می‌شود.
+                </span>
+              </div>
+
+              {imagePreview && (
+                <img
+                  src={imagePreview}
+                  alt="پیش‌نمایش تصویر دسته‌بندی"
+                  style={{
+                    marginTop: 8,
+                    height: 64,
+                    width: "auto",
+                    objectFit: "contain",
+                  }}
+                />
+              )}
             </div>
 
             <div className="admin-category-field">

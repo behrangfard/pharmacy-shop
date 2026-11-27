@@ -1,7 +1,7 @@
 ﻿# راهنمای فنی جامع پروژه «بهرنگ شاپ»
 
-> **نسخهٔ سند:** 1.29
-> **تاریخ:** ۱ آذر ۱۴۰۵ / 2026-11-21
+> **نسخهٔ سند:** 1.52
+> **تاریخ:** ۵ آذر ۱۴۰۵ / 2026-11-25
 > **مخاطب:** توسعه‌دهندهٔ جدید، بازبین خارجی، دستیار هوش مصنوعی
 > **دامنه:** کل مونوریپو (`backend/` + `frontend/`)
 
@@ -199,16 +199,16 @@
 | مسیر | محتوا |
 |---|---|
 | `src/App.tsx` | تعریف همهٔ مسیرها؛ همهٔ صفحه‌ها با `lazy()` و `Suspense` |
-| `src/pages/` | ۵۱ صفحه: ۲۲ صفحهٔ فروشگاه (از جمله `ForgotPassword`, `ResetPassword`, `TrackOrder`, `AccountOrders`) + ۲۹ صفحهٔ ادمین (از جمله `AdminDashboard`, `AdminProductForm`, `AdminShipping`, `AdminChannels`, `InvoiceView`) |
-| `src/components/` | ۷۳ فایل: کامپوننت‌های عمومی + پوشهٔ `accounting/` (۷ فایل) + پوشهٔ `admin/shipping/` (۱۱ فایل: `shippingShared` + ۱۰ تب/فرم صفحهٔ ارسال) + پوشهٔ `admin/dashboard/` (۵ فایل: `dashboardShared`، `dashboardStyles`، `SalesTrendChart`، `SalesChannelsChart`، `useDashboardLayout`) + پوشهٔ `admin/categories/` (۱ فایل: `CategoryProductsPanel` — محصولات هر دسته با افزودن/انتقال/حذف) |
+| `src/pages/` | ۵۲ صفحه: ۲۳ صفحهٔ فروشگاه (از جمله `ForgotPassword`, `ResetPassword`, `TrackOrder`, `AccountOrders`, `AdultProducts`) + ۲۹ صفحهٔ ادمین (از جمله `AdminDashboard`, `AdminProductForm`, `AdminShipping`, `AdminChannels`, `InvoiceView`) |
+| `src/components/` | ۸۲ فایل (۷۷ بدون تست): کامپوننت‌های عمومی (از جمله `AdultGate` برای دروازهٔ سنی ۱۸+، `MobileBottomNav` برای ناوبری پایین موبایل + دکمهٔ شناور «دسترسی سریع» (میان‌برها، ردیف‌های «دسترسی سریع» و لوگوی دکمه از پنل «هدر و فوتر» ویرایش می‌شوند)) + پوشهٔ `accounting/` (۷ فایل) + پوشهٔ `admin/shipping/` (۱۱ فایل: `shippingShared` + ۱۰ تب/فرم صفحهٔ ارسال) + پوشهٔ `admin/dashboard/` (۵ فایل: `dashboardShared`، `dashboardStyles`، `SalesTrendChart`، `SalesChannelsChart`، `useDashboardLayout`) + پوشهٔ `admin/categories/` (۱ فایل: `CategoryProductsPanel` — محصولات هر دسته با افزودن/انتقال/حذف) |
 | `src/context/` | `AuthContext`, `AdminAuthContext`, `CartContext`, `WishlistContext` |
-| `src/hooks/` | `useStoreSettings`, `useHeaderFooter`, `useSitePages`, `useBannerFonts`, `useStories`, `useTrustBadges`, `useContactChannels`, `usePageMeta`, `useRecentlyViewed`, `useMediaQuery` (پاسخ زندهٔ `matchMedia` برای رندر تک‌نسخه‌ای دسکتاپ/موبایل) |
+| `src/hooks/` | `useStoreSettings`, `useHeaderFooter`, `useSitePages`, `useBannerFonts`, `useStories`, `useTrustBadges`, `useContactChannels`, `usePageMeta`, `useRecentlyViewed`, `useAdultConsent` (وضعیت تأیید سن ۱۸+ با همگام‌سازی زنده), `useMediaQuery` (پاسخ زندهٔ `matchMedia` برای رندر تک‌نسخه‌ای دسکتاپ/موبایل) |
 | `src/services/` | لایهٔ تماس با API (axios) — `api.ts`، `productFilters.ts`، `popups.ts`، `support.ts`، `contactChannels.ts`، `wishlist.ts`، … |
-| `src/utils/` | `storageKeys.ts` (کلیدهای localStorage + مهاجرت از کلیدهای قدیمی)، `guestAccessCode.ts` (نرمال/قالب کد پیگیری مهمان)، `theme.ts`، `seo.ts`، `structuredData.ts`، `price.ts`، `jalali.ts`، `adminPermissions.ts`، `adminNavItems.ts`، `adminSidebarLayout.ts` (چیدمان سایدبار + `ADMIN_SIDEBAR_GROUP_LABELS`)، `adminSearchIndex.ts` (فهرست/جست‌وجوی زیرمنوهای پنل)، `images.ts`، `banner*.ts`، `supportChat.ts`، `analytics.ts` (تنها درگاه رویداد GA4/GTM: `initAnalytics`/`trackEvent`/`trackPageView`؛ بدون `VITE_GA4_ID`/`VITE_GTM_ID` هیچ اسکریپتی بارگذاری نمی‌شود) |
+| `src/utils/` | `storageKeys.ts` (کلیدهای localStorage + مهاجرت از کلیدهای قدیمی)، `guestAccessCode.ts` (نرمال/قالب کد پیگیری مهمان)، `theme.ts`، `seo.ts`، `structuredData.ts`، `price.ts`، `jalali.ts`، `adminPermissions.ts`، `adminNavItems.ts`، `adminSidebarLayout.ts` (چیدمان سایدبار + `ADMIN_SIDEBAR_GROUP_LABELS`)، `adminSearchIndex.ts` (فهرست/جست‌وجوی زیرمنوهای پنل)، `adultGate.ts` (تأیید سن ۱۸+ در localStorage)، `images.ts`، `banner*.ts`، `supportChat.ts`، `analytics.ts` (تنها درگاه رویداد GA4/GTM: `initAnalytics`/`trackEvent`/`trackPageView`؛ بدون `VITE_GA4_ID`/`VITE_GTM_ID` هیچ اسکریپتی بارگذاری نمی‌شود) |
 | `src/test/` | `setup.ts` مشترک تست‌ها (jest-dom + پاک‌سازی DOM و localStorage بعد از هر تست) |
-| `src/**/*.test.ts(x)` | تست‌های Vitest کنار همان ماژول: `utils/guestAccessCode`، `utils/storageKeys`، `utils/jalali`، `utils/orderDisplay`، `utils/bannerText`، `utils/adminSearchIndex`، `utils/price`، `components/Button`، `components/AccountNameMenu`، `services/contactChannels`، `components/StoreChannelsSection`، `pages/AccountOrders`، `services/api` |
+| `src/**/*.test.ts(x)` | تست‌های Vitest کنار همان ماژول: `utils/guestAccessCode`، `utils/storageKeys`، `utils/jalali`، `utils/orderDisplay`، `utils/bannerText`، `utils/adminSearchIndex`، `utils/price`، `utils/adultGate`، `components/Button`، `components/AccountNameMenu`، `services/contactChannels`، `components/StoreChannelsSection`، `pages/AccountOrders`، `services/api`، `components/MobileBottomNav` |
 | `src/index.css` | هستهٔ استایل (۱۰۵ خط): `@import "tailwindcss"`، فونت وزیرمتن و بلوک `@theme` با توکن‌های رنگ/شعاع |
-| `src/styles/` | ۱۵ فایل CSS به ترتیب سند: `base`، `admin-screens`، `admin-responsive`، `admin-page-widths`، `admin-sidebar-icons`، `admin-responsive-wide`، `storefront`، `admin-components`، `admin-sidebar`، `support-widget`، `support-inbox`، `admin-sidebar-custom`، `jalali-picker`، `theme-preview`، `storefront-extras` (بزرگ‌ترین ۸۱۹ خط) |
+| `src/styles/` | ۱۵ فایل CSS به ترتیب سند: `base`، `admin-screens`، `admin-responsive`، `admin-page-widths`، `admin-sidebar-icons`، `admin-responsive-wide`، `storefront`، `admin-components`، `admin-sidebar`، `support-widget`، `support-inbox`، `admin-sidebar-custom`، `jalali-picker`، `theme-preview`، `storefront-extras` (بزرگ‌ترین ۶۹۰ خط؛ نوار پایین موبایل با `--mobile-nav-height` و `--mobile-nav-notch` این‌جاست) |
 | `public/` | `manifest.webmanifest`، `sw.js`، `offline.html`، `icons/`، `images/` |
 | `scripts/` | `generate-sitemap.mjs` (در `npm run build`) و `generate-pwa-icons.mjs` |
 | `vite.config.ts` | پلاگین Tailwind، پلاگین نسخه‌دهی خودکار `sw.js`، پورت ۵۱۷۳/۴۱۷۳ و `host: true` برای تست روی موبایل |
@@ -475,7 +475,7 @@ php artisan view:cache
 |---|---|
 | `categories` | درختی (`parent_id`)، `slug`، `is_active`، `sort_order` |
 | `brands` | `slug`، `is_active`، `sort_order` |
-| `products` | `category_id` (الزامی، `restrictOnDelete`)، `brand_id` (nullable)، `name`، `slug`، `sku`، `price`، `compare_price`، `discount_percent`، `stock`، `weight`، `thumbnail`، `is_active/is_featured/is_new`، `views_count`، `sales_count`، `is_taxable`، `cost_price`، `is_returnable`، `meta_title/meta_description` |
+| `products` | `category_id` (الزامی، `restrictOnDelete`)، `brand_id` (nullable)، `name`، `slug`، `sku`، `price`، `compare_price`، `discount_percent`، `stock`، `weight`، `thumbnail`، `is_active/is_featured/is_new`، `is_adult` (ویژهٔ بزرگسالان ۱۸+؛ فقط در `/adult` دیده می‌شود)، `views_count`، `sales_count`، `is_taxable`، `cost_price`، `is_returnable`، `meta_title/meta_description` |
 | `product_images` | چند تصویر برای هر محصول + تصویر اصلی (`alt` قابل ویرایش از پنل) + `width`/`height` ذاتی که هنگام ذخیره از فایل پر می‌شود (رزرو فضا و کاهش CLS) |
 | `product_variants` | تنوع‌ها؛ فیلد `size` برای فیلتر سایز و `is_active` |
 | `product_colors` | پالت رنگ محصول، `is_active`، `sort_order`، `stock` (موجودی اعلامی هر رنگ؛ `NULL` = ثبت نشده و فقط اطلاعاتی است — موجودی رسمی روی محصول/تنوع است) |
@@ -527,7 +527,7 @@ php artisan view:cache
 | `popups` | کمپین پاپ‌آپ: محتوا (عنوان/توضیح/تصویر/CTA/کد تخفیف)، ظاهر (`theme`, `layout`, `image_position`)، هدف‌گیری (`display_pages`, `devices`)، زمان‌بندی (`starts_at`, `ends_at`, `countdown_to`)، قواعد نمایش (`delay_seconds`, `auto_close_seconds`, `frequency`, `close_on_backdrop`, `show_close`)، `is_active`, `sort_order` |
 | `trust_badges` | نمادها و مجوزها (اینماد، ساماندهی، …) برای فوتر |
 | `contact_channels` | کانال‌های ارتباطی فروشگاه: `key` یکتای `telegram`/`whatsapp`/`bale`/`eitaa`/`instagram`، `title`، `description`، `join_url`/`join_label` (عضویت در کانال)، `chat_url`/`chat_label` (ارسال پیام)، `sort_order`، `is_active` |
-| `store_settings` | تنظیمات کلید/مقدار فروشگاه (تماس، مالیات، ارسال، هدر/فوتر، صفحهٔ ارسال، …) — `StoreSetting::DEFAULTS` منبع پیش‌فرض‌هاست |
+| `store_settings` | تنظیمات کلید/مقدار فروشگاه (تماس، مالیات، ارسال، هدر/فوتر، نوار پایین موبایل، صفحهٔ ارسال، …) — `StoreSetting::DEFAULTS` منبع پیش‌فرض‌هاست |
 
 **مقادیر مجاز پاپ‌آپ** (`App\Models\Popup`):
 صفحه‌ها `home|products|product|cart|checkout`؛ تم `light|dark|brand`؛
@@ -606,6 +606,7 @@ php artisan view:cache
 | `GET /products/featured` | محصولات ویژه |
 | `GET /products/newest` | جدیدترین محصولات |
 | `GET /products/filters` | گزینه‌ها و شمار هر فست (دسته/برند/سایز/بازهٔ قیمت) |
+| `GET /products?adult=1`, `GET /products/filters?adult=1` | فقط کالاهای ویژهٔ ۱۸+ (صفحهٔ `/adult` پس از تأیید سن)؛ رفتار پیش‌فرض همهٔ مسیرهای عمومی این است که کالاهای `is_adult` را برنمی‌گردانند |
 | `GET /products/{slug}` | جزئیات محصول + افزایش `views_count` |
 | `GET /products/{slug}/reviews` | نظرات تأییدشده |
 | `POST /products/{slug}/reviews` | ثبت نظر (نیازمند ورود) |
@@ -622,7 +623,7 @@ php artisan view:cache
 | `GET /seo/redirects`, `POST /seo/redirects/hit` | نقشهٔ ریدایرکت‌های فعال ۳۰۱ (برای build و `RedirectGate`) و شمارش استفاده |
 | `GET /feed/google-merchant.xml` (بدون پیشوند `/api/v1`، در `routes/web.php`) | فید RSS 2.0 محصولات فعال برای Google Merchant/Shopping؛ کش ۳۰ دقیقه‌ای `storefront:feed:google-merchant` که `StorefrontCache::flushCatalog/flushSettings` پاک می‌کند |
 | `GET /contact-channels` | کانال‌های ارتباطی فعال (لینک عضویت/پیام؛ ۱۰ دقیقه کش) |
-| `GET /header-footer` | متن/لینک‌های هدر و فوتر |
+| `GET /header-footer` | متن/لینک‌های هدر و فوتر + تنظیمات نوار پایین موبایل (`mobile_nav_enabled`/`mobile_nav_items`/`mobile_nav_quick_links`/`mobile_nav_fab_*`) |
 | `GET /store-settings`, `GET /store-settings/tax` | تنظیمات عمومی و مالیات (شامل `cod_max_total`، `cod_fee` و `payment_online_enabled`) |
 | `GET /shipping-info` | محتوای صفحهٔ روش‌های ارسال |
 | `POST /coupons/check` | اعتبارسنجی کد تخفیف (برای مهمان، فیلد اختیاری `phone` مبنای سقف شخصی است) |
@@ -671,7 +672,7 @@ php artisan view:cache
 |---|:--:|---|---|
 | `dashboard` | ۲ | `AdminController` | آمار کلی + روند فروش |
 | `products` | ۱۴ | `AdminProductController`, `AdminProductImageController`, `AdminProductImportController` | CRUD، تصاویر/ترتیب/اصلی، تغییر وضعیت، ایمپورت گروهی و دانلود قالب، انتقال گروهی به دسته‌بندی (`POST /admin/products/assign-category`) |
-| `categories` | ۶ | `AdminCategoryController` | CRUD + وضعیت |
+| `categories` | ۷ | `AdminCategoryController` | CRUD + وضعیت + آپلود تصویر دسته (`POST /admin/categories/image`) |
 | `brands` | ۶ | `AdminBrandController` | CRUD + وضعیت |
 | `seo` / `redirects` | ۵ | `AdminSeoController` | ممیزی متای محصول/دسته/برند/صفحه + CRUD ریدایرکت ۳۰۱ با شمارندهٔ استفاده (نیازمند `seo.manage`) |
 | `orders` | ۵ | `AdminOrderController` | فهرست/جزئیات، تغییر وضعیت، اطلاعات ارسال، ثبت دریافت وجه COD |
@@ -690,7 +691,7 @@ php artisan view:cache
 | `articles` | ۷ | `AdminArticleController` | CRUD + کاور + وضعیت |
 | `trust-badges` | ۶ | `AdminTrustBadgeController` | CRUD + تصویر + وضعیت |
 | `channels` | ۳ | `AdminContactChannelController` | فهرست پنج کانال ثابت، ذخیره و تغییر وضعیت (نیازمند `channels.manage`) |
-| `header-footer` | ۲ | `HeaderFooterController` | خواندن/ذخیرهٔ تنظیمات |
+| `header-footer` | ۳ | `HeaderFooterController` | خواندن/ذخیرهٔ تنظیمات + بارگذاری لوگوی دکمهٔ شناور نوار پایین (`POST /header-footer/mobile-logo`) |
 | `settings` | ۲ | `AdminStoreSettingController` | خواندن/ذخیرهٔ `store_settings` |
 | `shipping` | ۲۷ | `AdminShippingController` | روش‌ها، مناطق، قوانین، مرسوله‌ها، استعلام هزینه، صفحهٔ ارسال، تاریخچه |
 | `accounting` | ۲۲ | `AdminAccountingController`, `AdminSupplierController`, `AdminPurchaseInvoiceController`, `AdminExpenseController`, `AdminChequeController` | نمای کلی، گزارش، تأمین‌کننده، فاکتور خرید، هزینه، چک |
@@ -1120,6 +1121,73 @@ php artisan view:cache
 - **شمارشندهٔ استفاده:** `POST /seo/redirects/hit` با هر بار باز شدن مسیر قدیمی
   `hits` را زیاد می‌کند (throttle دارد) تا معلوم شود کدام ریدایرکت هنوز لازم است.
 
+### ۹.۱۱ بخش ویژهٔ بزرگسالان (۱۸+)
+
+- **پرچم محصول:** `products.is_adult` (پیش‌فرض `false`، مایگریشن `2026_12_06`).
+  در پنل، فرم محصول تیک «کالای ویژهٔ بزرگسالان (۱۸+)» دارد و فهرست محصولات
+  فیلتر «فقط ویژهٔ ۱۸+ / بدون کالای ۱۸+» (`GET /admin/products?adult=yes|no`)
+  و برچسب قهوه‌ای‌رنگ «۱۸+» روی کارت‌ها.
+- **ایزولاسیون:** `ProductController@listingQuery` همیشه بر اساس پرچم `adult`
+  درخواست فیلتر می‌کند؛ بدون آن فقط `is_adult = false` برمی‌گردد. `featured`،
+  `newest`، صفحهٔ دسته (`CategoryController@show`)، صفحهٔ برند
+  (`BrandController@show`)، شمارش `sitemap` در «سلامت سئو» و فید Google Merchant
+  هم کالاهای ۱۸+ را حذف می‌کنند؛ `Catalog` (فست‌ها) از همان کوئری استفاده می‌کند.
+- **دروازهٔ سنی (فرانت):** `utils/adultGate.ts` + `hooks/useAdultConsent.ts`
+  تأیید را با کلید `behrang-shop-adult-consent` (زمان ISO) فقط در مرورگر کاربر
+  نگه می‌دارند (بدون درخواست به سرور). `components/AdultGate.tsx` هشدار ۱۸+،
+  دکمهٔ «بله، ۱۸ سال یا بیشتر» و بازگشت به فروشگاه را نشان می‌دهد و در
+  `pages/AdultProducts.tsx` (مسیر `/adult`) پیش از هر رندر و پیش از هر درخواست
+  محصولات اجرا می‌شود؛ دکمهٔ «خروج از بخش ویژه» تأیید را پاک می‌کند.
+- **صفحهٔ محصول:** کالای ۱۸+ در همان `/product/{slug}` باز است ولی تا تأیید سن
+  محتوایش رندر نمی‌شود (`adultBlocked` در `ProductDetail`)، در «بازدیدهای اخیر»
+  ذخیره نمی‌شود و «محصولات مرتبط» آن با همان پرچم `adult=1` گرفته می‌شود.
+- **منو و سئو:** `CategoryMenu` آیتم «بخش ویژه ۱۸+» را جدا از دسته‌ها و با ظاهر
+  تیره/رز (آیکن قفل) در انتهای نوار دسکتاپ و یک ردیف مستقل در موبایل نشان
+  می‌دهد. صفحهٔ `/adult` با `NO_INDEX_ROBOTS` منتشر می‌شود، `scripts/generate-sitemap.mjs`
+  برای آن `Disallow: /adult` می‌نویسد و آدرس `/products?adult=1` در فرانت به
+  `/adult` ریدایرکت می‌شود تا دروازهٔ سنی دور زده نشود.
+- **تست:** `AdultProductsTest` (۹ تست: ایزولاسیون فهرست/جست‌وجو/ویترین/دسته/فست
+  و فید، پرچم‌گذاری و فیلتر پنل) و `frontend/src/utils/adultGate.test.ts`.
+
+### ۹.۱۲ نوار پایین موبایل و دکمهٔ شناور
+
+- **دامنه:** فقط نمای موبایل (کمتر از ۷۶۸px) و فقط صفحه‌های فروشگاه (در
+  `Layout`، نه پنل مدیریت). ارتفاع نوار `--mobile-nav-height` و شعاع قوس وسط
+  نوار `--mobile-nav-notch` در `styles/storefront-extras.css` است.
+- **مدیریت از پنل:** میان‌برها (۲ تا ۴ ردیف: عنوان/نشانی/آیکن/نشان)، ردیف‌های
+  «دسترسی سریع» (تا ۶ ردیف: عنوان/توضیح/نشانی/آیکن)، لوگوی دکمهٔ شناور و
+  رفتار آن از پنل **هدر و فوتر → «منوی پایین موبایل»** ویرایش می‌شوند (مجوز
+  `settings.manage`)؛ کلیدها در `store_settings` با پیشوند `mobile_nav_` و در
+  پاسخ عمومی `GET /header-footer` برمی‌گردند. فهرست آیکن‌های مجاز سه‌جا همگام
+  است: `NAV_ICONS` (کنترلر)، `MOBILE_NAV_ICONS` (سرویس فرانت) و
+  `NAV_ICON_COMPONENTS` (کامپوننت).
+- **اعتبارسنجی سرور:** میان‌برها `min:2`/`max:4`، «دسترسی سریع» `max:6`،
+  `icon` فقط از فهرست مجاز و `badge` یکی از `none|cart|wishlist`؛ نشانی هر ردیف
+  اجباری است و حالت `link` بدون نشانی دکمه `422` می‌دهد. مقدار خرابِ دیتابیس
+  هنگام خواندن پاک‌سازی می‌شود (`safeNavIcon`/`safeNavBadge`).
+- **نشان و فعال‌بودن:** نشان سبد/علاقه‌مندی از همان Context هدر می‌آید (بدون
+  درخواست تازه) و هایلایت از مقایسهٔ مسیر؛ `/products` روی `/product/:slug` هم
+  فعال می‌ماند (`isNavItemActive`).
+- **ردیف‌های ثابت:** «جست‌وجو در فروشگاه» (فوکوس کادر جست‌وجوی هدر با
+  `HEADER_SEARCH_INPUT_ID`) و «بخش ویژهٔ ۱۸+» از پنل ویرایش نمی‌شوند؛ در
+  ردیف‌های «دسترسی سریع»، نشانی `/account` برای مهمان خودکار به `/login` می‌رود.
+- **دکمهٔ شناور و قوس:** میان دایرهٔ دکمه و مستطیل نوار یک قوس نیم‌دایره بریده
+  شده (`mask-image` روی `.mobile-nav-surface`). هندسه از خود دکمه ساخته
+  می‌شود: `--mobile-nav-fab` (قطر) + `--mobile-nav-fab-ring` (حلقهٔ فاصله) →
+  `--mobile-nav-notch` = نیمهٔ دکمه + حلقه، و مرکز دکمه دقیقاً روی خط بالای نوار
+  است؛ پس حلقهٔ ۶پیکسلی دور دکمه یکنواخت می‌ماند. عرض جای خالی وسط
+  (`--mobile-nav-slot` = قطر قوس + ۴px) با `flex: 0 0 auto` ثابت است و
+  میان‌برها در دو گروه `mobile-nav-group` هم‌عرض پیش/پس آن می‌نشینند تا تب‌های
+  کنار قوس و گوشهٔ تب فعال هرگز داخل بریدگی نیایند و دکمه با تعداد فرد میان‌بر
+  هم وسط بماند.
+- **ظاهر شیشه‌ای:** `.mobile-nav-surface` با
+  `color-mix(... 82% , transparent)` + `backdrop-filter: blur(16px)` شیشه است.
+  نکته: هیچ والد این لایه نباید `filter`/`mask` بگیرد (backdrop root) وگرنه
+  شیشه بی‌اثر می‌شود؛ سایهٔ نرم بالای نوار با گرادیان روی
+  `.mobile-nav-shell::before` است. لوگوی آپلودی در پوشهٔ `mobile-nav` دیسک
+  public ذخیره و هنگام تعویض فایل قبلی پاک می‌شود؛ خاموش‌کردن نوار از پنل هم
+  نوار و هم `.mobile-nav-spacer` را حذف می‌کند.
+
 ---
 
 ## ۱۰) فرانت‌اند
@@ -1133,6 +1201,7 @@ php artisan view:cache
 | `/` | خانه (بنر، دسته‌ها، استوری، محصولات ویژه/جدید، مقالات) |
 | `/products` | فهرست محصولات + فیلتر آکاردئونی + مرتب‌سازی + صفحه‌بندی |
 | `/product/:slug` | جزئیات محصول (گالری، رنگ، سایز، پک، نظرات، راهنمای سایز) |
+| `/adult` | بخش ویژهٔ بزرگسالان (۱۸+): دروازهٔ تأیید سن + فهرست/فیلتر کالاهای `is_adult` (noindex و بیرون از sitemap) |
 | `/size-guide`, `/shipping-info` | راهنمای سایز و روش‌های ارسال |
 | `/articles`, `/articles/:slug` | مقالات |
 | `/pages/:slug` | صفحات ثابت |
@@ -1238,6 +1307,18 @@ php artisan view:cache
   عدد نهایی را ببیند؛ در فرم محصول پنل (`pages/AdminProductForm.tsx` →
   «رنگ‌های محصول») هم برای هر رنگ یک فیلد «موجودی این رنگ» وجود دارد که با
   `colors.*.stock` ذخیره می‌شود.
+- **ناوبری پایین موبایل (`MobileBottomNav`):** در نمای موبایل یک نوار ثابت پایین صفحه
+  با چهار میان‌بر (خانه، فروشگاه، علاقه‌مندی و سبد خرید با نشان تعداد از همان
+  Context هدر) و یک دکمهٔ شناور (FAB) در وسط دیده می‌شود که پنل «دسترسی سریع» را
+  باز می‌کند: فوکوس کادر جست‌وجوی هدر (شناسهٔ مشترک `HEADER_SEARCH_INPUT_ID` که از
+  `HeaderSearch` اکسپورت می‌شود)، حساب کاربری/ورود، پیگیری سفارش، راهنمای سایز،
+  مقالات و بخش ویژهٔ ۱۸+. ارتفاع نوار در متغیر `--mobile-nav-height` است و
+  سطحش شیشهٔ نیمه‌شفاف با `backdrop-filter` و قوس وسطِ ماسک‌دار است (هندسه از
+  `--mobile-nav-fab`/`--mobile-nav-fab-ring` ساخته می‌شود)،
+  `.mobile-nav-spacer` در `Layout` فضای انتهای محتوا را جبران می‌کند و ویجت‌های
+  شناور (نصب PWA، ابزار تم، پشتیبانی) در موبایل همان‌قدر بالا می‌روند؛ پنل با
+  دکمه، `Esc`، پس‌زمینهٔ تار و هر تغییر مسیر بسته می‌شود و انیمیشن‌ها
+  `prefers-reduced-motion` و دارک‌مود را رعایت می‌کنند.
 - **بارگذاری:** صفحه‌های اصلی skeleton دارند (مقالات، جزئیات مقاله، دسته‌ها،
   جست‌وجوی هدر، گالری محصول، اطلاعات ارسال) و شبکهٔ محصولات `/products` هم
   با ۱۲ کارت اسکلتی (`animate-pulse`) و `aria-busy` نمایش داده می‌شود؛
@@ -1309,6 +1390,7 @@ php artisan view:cache
 |---|---|
 | ظاهر کلی، رنگ‌ها، فاصله‌ها، تم | `frontend/src/index.css` + `frontend/src/utils/theme.ts` |
 | فیلتر صفحهٔ محصولات | `frontend/src/components/ProductFilterPanel.tsx` + `frontend/src/pages/Products.tsx` + `backend/app/Http/Controllers/Api/ProductController.php` |
+| بخش ویژهٔ بزرگسالان (۱۸+) | `backend/app/Http/Controllers/Api/ProductController.php` (`adult`) + `frontend/src/pages/AdultProducts.tsx`, `components/AdultGate.tsx`, `utils/adultGate.ts`, `hooks/useAdultConsent.ts` + `components/CategoryMenu.tsx` + `tests/Feature/AdultProductsTest.php` |
 | منطق ثبت سفارش/موجودی/کد تخفیف | `backend/app/Http/Controllers/Api/OrderController.php` + `Services/Orders/OrderStockService.php`, `OrderCouponService.php`, `OrderSalesService.php` |
 | فید Google Merchant | `MerchantFeedController` + `routes/web.php` + `StorefrontCache::MERCHANT_FEED_CACHE_KEY` + `tests/Feature/MerchantFeedTest.php` |
 | بازیابی رمز عبور | `PasswordResetController` + `App\Notifications\ResetPasswordNotification` + `pages/ForgotPassword.tsx`, `ResetPassword.tsx` + `config('app.frontend_url')` |
@@ -1326,6 +1408,7 @@ php artisan view:cache
 | استوری‌ها | `StoryController` + `components/StoryStrip.tsx`, `StoryViewer.tsx` |
 | مقالات و صفحات | `ArticleController`, `PageController` + `pages/Articles.tsx`, `ArticleDetail.tsx`, `PageView.tsx` |
 | تنظیمات فروشگاه (تماس/مالیات/ارسال) | `backend/app/Models/StoreSetting.php` + `AdminStoreSettingController` |
+| نوار پایین موبایل (میان‌برها، «دسترسی سریع»، لوگوی دکمهٔ شناور) | `StoreSetting` (`mobile_nav_*`) + `HeaderFooterController` + `frontend/src/components/MobileBottomNav.tsx`, `pages/AdminHeaderFooter.tsx`, `services/headerFooter.ts`, `styles/storefront-extras.css` + `tests/Feature/HeaderFooterTest.php` |
 | روش‌ها/مناطق/قوانین ارسال | `AdminShippingController` + `app/Services/Shipping/` + `pages/AdminShipping.tsx` |
 | حسابداری، فاکتور خرید، هزینه، چک | `app/Services/Accounting/` + `Admin*Controller` + `pages/AdminAccounting.tsx` |
 | پیام‌رسانی و قالب‌ها | `app/Services/Messaging/` + `AdminMessagingController` + `pages/AdminMessaging.tsx` |
@@ -1409,6 +1492,8 @@ php artisan view:cache
 | ۱۳ | بدون CAPTCHA در احراز هویت | rate limit (۱۵/دقیقه per IP) و قفل حساب (۵ تلاش ناموفق/۱۵ دقیقه) اضافه شده؛ هنوز CAPTCHA یا محافظت لایهٔ CDN نیست | افزودن CAPTCHA فقط در صورت مشاهدهٔ حملهٔ واقعی |
 | ۱۴ | محدودیت‌های سفارش مهمان | مهمان با شناسهٔ مرورگر سفارش خودش را می‌بیند، فاکتور می‌گیرد و سفارش پرداخت‌نشده را لغو می‌کند؛ مرجوعی و پرداخت آنلاین همچنان فقط برای حساب کاربر است. بازیابی دسترسی با پاک‌شدن `localStorage` حل شد (**۱.۱۱**): `POST /orders/recover` با «شماره سفارش + کد پیگیری» شناسهٔ مرورگر قبلی را برمی‌گرداند. **نردبان ساخت حساب (۱.۱۹):** بعد از ثبت سفارش و در `/track-order` کارت «با همین شماره حساب بسازید» نمایش داده می‌شود و `/register?phone=...` فرم را پیش‌پر می‌کند؛ اتصال خودکار سفارش‌های قبلی به حساب جدید عمداً انجام نمی‌شود چون تأیید مالکیت شماره (OTP) وجود ندارد | افزودن تأیید شماره با OTP تا بتوان سفارش‌های مهمان همان شماره را پس از ثبت‌نام به حساب وصل کرد |
 | ۱۵ | هگز دستی در بقیهٔ صفحات پنل | **بخشی انجام شد (۱.۳۲):** `AdminBanners`، `AdminStories`، `AdminPopups`، `AdminContent` و `AdminPermissionGuard` کاملاً توکنی شدند. باقی‌مانده (تعداد خطوط دارای هگز): `AdminProductForm` ۱۳۲، `dashboardStyles` ۱۲۰، `AdminCustomers` ۱۱۲، `AdminMessaging` ۹۹، `AdminAdmins` ۸۲، `AdminLayout` ۷۲، `accountingUi` ۵۵، `AdminProductImportDialog` ۵۵، `AdminOrders` ۵۳، `AdminCustomerDetail` ۴۰، `AdminProductReviews` ۳۶، `AdminMessagingContactsCard` ۳۵، `AdminWishlist` ۳۳، `AdminProducts` ۳۰، `AdminDashboard` ۲۸ | همان الگوی ۱.۳۲: کلاس‌های `brand-*/cream/line/ink/muted/gold/stock/discount` و `var(--color-*)`؛ رنگ‌های انتخاب کاربر (پالت متن بنر و ادیتور) عمداً هگز می‌مانند |
+| ۱۶ | بلاکر اجرای تست فرانت | **باز (۱.۵۳):** با جفت نسخهٔ فعلی (Vitest **5.1.0** + Vite **8.3.0**) هر فایل تست — حتی `src/utils/price.test.ts` دست‌نخورده — با خطای `Vitest failed to find the current suite` در `src/test/setup.ts` سقوط می‌کند و هیچ تستی اجرا نمی‌شود؛ با `--pool=threads`، `--no-isolate` و یک کانفیگ پروب بدون `setupFiles` هم تکرار شد (دومی خطای `Cannot read properties of undefined (reading 'config')` داد، یعنی ماژول `vitest` در فایل تست به runner وصل نمی‌شود) | هم‌ترازکردن نسخه‌ها: بازگشت `vite` به نسخهٔ سازگار با `vitest@5.1` (یا ارتقای vitest) و تأیید با `npm run test`؛ تا آن زمان هر تغییر فرانت با `npx tsc --noEmit` + `npm run lint` + `npm run build` و بازبینی چشمی تأیید می‌شود (بند ۱۷ `Start.txt`) |
+| ۱۷ | پاک‌سازی لوگوی نوار پایین (۱.۵۶) | پوشهٔ `mobile-nav` در نقشهٔ `prune.directories` نیست، چون مسیر فایل در *مقدار* جدول `store_settings` ذخیره می‌شود و `media:prune` فقط ستون‌های جدول‌ها را تطبیق می‌دهد؛ هنگام تعویض یا حذف لوگو خودِ `HeaderFooterController` فایل قبلی را پاک می‌کند، ولی فایلی که مدیر بارگذاری کند و فرم را ذخیره نکند یتیم می‌ماند | اگر پوشه مهم شد، به `PruneMedia` حالت «کلیدهای `store_settings`» اضافه شود؛ یا آپلود لوگو هم مثل بنرها با «حذف آپلود یتیم» همراه شود |
 
 
 موارد بالا «باگ» نیستند؛ نقطه‌های تصمیم برای ادامهٔ کار هستند. اگر بازبین
@@ -1540,6 +1625,12 @@ node -p "require('./package.json').dependencies.react"
 | 1.43 | 2026-11-23 | **تأیید نهایی موقعیت بعد از نوشتن:** لاگ دوم (`saved: 2147`, `savedHeight: 5686`, پایان `y: 2792`) نشان داد نوشتن دیگر زودهنگام نیست، ولی **بعد از** نوشتن چیدمان بالای ناحیهٔ دید عوض شده (بنر بالا بعد از اندازه‌گیری ارتفاع واقعی گرفته) و anchor مرورگر موقعیت را ۶۴۵px جلو برده است. حالا: (۱) نوشتن فقط وقتی انجام می‌شود که چیدمان ۳۰۰ms آرام مانده باشد (در فریم اول اگر صفحه از قبل کامل است، بی‌درنگ)، و بعد از هر نوشتن «آرام‌شدن» از نو شمرده می‌شود؛ (۲) در لحظهٔ پایان، اگر `y` از `min(saved, maxScroll)` بیش از ۴px فاصله داشته باشد یک **اصلاح آگاهانه** انجام می‌شود و حداکثر ۳ بار تکرار می‌شود (`MAX_CORRECTIONS`) تا به پرش بالا-پایین تبدیل نشود؛ لاگ `[scroll] stop` هم تعداد اصلاح‌ها را نشان می‌دهد |
 | 1.44 | 2026-11-23 | **حذف فلشِ «هدر» در برگشت با Back:** بعد از اصلاح ۱.۴۳ موقعیت درست بود ولی کاربر «کسری از ثانیه» بالای صفحه را می‌دید، چون `Home` همهٔ داده را در `useEffect` می‌گرفت و رندر اول تقریباً خالی بود (ارتفاع ۴۰۵۳ در برابر ۵۶۸۶). حالا آخرین دادهٔ صفحهٔ اصلی در `homeSnapshot` (سطح ماژول، فقط حافظهٔ همین نشست) کش می‌شود و `useState`ها از آن مقدار اولیه می‌گیرند؛ برگشت با Back همان محتوا را فوراً رندر می‌کند، ارتفاع از رندر اول درست است و بازگردانیِ `ScrollToTop` پیش از اولین paint انجام می‌شود (بدون فلش و بدون نیاز به اصلاح). درخواست‌ها مثل قبل اجرا و کش را تازه می‌کنند |
 | 1.45 | 2026-11-23 | **پایهٔ آنالیتیکس (GA4/GTM):** `utils/analytics.ts` تنها درگاه رویداد شد (`initAnalytics`, `trackEvent`, `trackPageView`) و `components/AnalyticsTracker.tsx` داخل `BrowserRouter` با هر تغییر مسیر `page_view` می‌فرستد؛ در `initAnalytics` مقدار `send_page_view:false` است تا بازدید اولیه دوبار شمرده نشود و مسیرهای `/admin` ثبت نمی‌شوند. شناسه‌ها از `VITE_GA4_ID`/`VITE_GTM_ID` می‌آیند: بدون شناسه هیچ اسکریپتی دانلود و هیچ درخواستی ارسال نمی‌شود؛ اگر GTM تنظیم شده باشد GA4 مستقیم بارگذاری نمی‌شود (رویدادها به `dataLayer`) تا شمارش دوباره رخ ندهد. نقشهٔ راه سئو/آنالیتیکس/ادز/انبار در `SEO_ANALYTICS_PLAN.md` ثبت شد |
+| 1.57 | 2026-11-27 | **بازبینی ظاهری قوس + شیشه‌ای‌شدن منوی پایین موبایل:** (۱) با فعال‌شدن تب کنار قوس، گوشهٔ مستطیل تب داخل بریدگی می‌رفت چون شعاع قوس (۴۴px) از نیم‌عرض جای خالی (۳۸px) بزرگ‌تر بود: حالا شعاع از خود دکمه ساخته می‌شود (`--mobile-nav-fab: 56px` + `--mobile-nav-fab-ring: 6px` → `--mobile-nav-notch: 34px`)، هاب دکمه طوری جابه‌جا شد که مرکزش روی خط بالای نوار بنشیند (حلقهٔ ۶px یکنواخت دور دکمه) و جای خالی با `--mobile-nav-slot: 72px` و `flex: 0 0 auto` از تب‌ها جدا شد؛ تب‌ها هم `margin: 4px 2px` + `border-radius: 16px` گرفتند تا پس‌زمینهٔ تب فعال به لبهٔ نوار نچسبد؛ (۲) نوار به دو `mobile-nav-group` هم‌عرض تقسیم شد و `Math.floor` جای `Math.ceil` آمد تا با ۳ میان‌بر هم دکمه دقیقاً وسط بماند (قبلاً نیم‌آیتم جابه‌جا می‌شد و روی تب کنارش می‌افتاد)؛ (۳) شیشه‌ای: `background: color-mix(in srgb, var(--color-surface) 82%, transparent)` + `backdrop-filter: blur(16px) saturate(150%)` روی `.mobile-nav-surface`؛ `filter: drop-shadow` از `.mobile-nav-shell` برداشته شد چون هر `filter`/`mask` روی والد یک «backdrop root» می‌سازد و شیشه را بی‌اثر می‌کند — سایهٔ نرم حالا با گرادیان خطی + هالهٔ دایره‌ای روی `.mobile-nav-shell::before` است — `tsc` سبز، `oxlint` ۰ خطا/۲۲۲ فایل و `build` سبز (۲۲۱۴ ماژول)؛ بازبینی چشمی ۳۲۰/۳۷۵/۴۱۴px و دارک‌مود باقی است |
+| 1.56 | 2026-11-27 | **نوار پایین موبایل قابل ویرایش از پنل + دکمهٔ شناور با لوگو و قوس وسط:** هفت کلید تازه در `StoreSetting::DEFAULTS` — `mobile_nav_enabled`، `mobile_nav_items` (JSON آرایه‌ای ۲–۴ ردیف با `label`/`url`/`icon`/`badge`)، `mobile_nav_quick_links` (JSON آرایه‌ای تا ۶ ردیف با `label`/`hint`/`url`/`icon`)، `mobile_nav_fab_mode` (`panel`/`link`)، `mobile_nav_fab_url`، `mobile_nav_fab_logo`؛ `HeaderFooterController` اعتبارسنجی/رمزگذاری JSON، فهرست آیکن مجاز (`NAV_ICONS`، ۲۰ آیکن)، رد حالت `link` بدون نشانی با `422`، پاک‌سازی مقدار خراب، متد آپلود `POST /admin/header-footer/mobile-logo` (پوشهٔ `mobile-nav` دیسک public، WebP اختیاری، مجوز `settings.manage`) و حذف فایل لوگوی قبلی هنگام تعویض (`deleteReplacedNavLogo`) گرفت؛ `config/media.php` پوشهٔ `mobile-nav` را به `webp.directories` اضافه کرد و ثبت شد که نقشهٔ `media:prune` مقادیر `store_settings` را پوشش نمی‌دهد (بدهی ۱۷ در §۱۴)؛ فرانت: `services/headerFooter.ts` (`MOBILE_NAV_ICONS`، `MOBILE_NAV_ITEMS_MIN/MAX`، `MOBILE_NAV_QUICK_LINKS_MAX`، `MOBILE_NAV_BADGES`، نرمال‌سازی ردیف‌ها)، `MobileBottomNav` از `useHeaderFooter` می‌خواند (نقشهٔ آیکن `NAV_ICON_COMPONENTS`، هایلایت با `isNavItemActive`، نشان cart/wishlist از همان Context، ردیف‌های ثابت جست‌وجو و ۱۸+، نشانی `/account` برای مهمان → `/login`، خاموش‌شدن کامل با `mobile_nav_enabled`)، دکمهٔ شناور لوگوی آپلودی را نشان می‌دهد و در حالت `link` خودش لینک می‌شود، `Layout` جای خالی انتهای محتوا را با همان تنظیم هم‌گام کرد؛ طراحی: قوس نیم‌دایره‌ای وسط نوار با `mask-image` روی `.mobile-nav-surface` و سایهٔ `filter: drop-shadow` روی `.mobile-nav-shell` (`--mobile-nav-notch: 44px`)، هاب دکمهٔ شناور شفاف شد و دکمه داخل قوس از مستطیل جدا دیده می‌شود؛ پنل «هدر و فوتر» بخش «منوی پایین موبایل» گرفت (چک‌باکس نمایش، حالت دکمه، آپلود/حذف/پیش‌نمایش لوگو و دو ویرایشگر ردیفی با آیکن و نشان) — ۶ تست جدید `HeaderFooterTest` (۱۵ پاس/۱۰۷ assertion) و ۴ تست جدید `MobileBottomNav.test.tsx`؛ کل تست‌های بک‌اند ۵۸۸ پاس (۲۹۸۶ assertion)؛ `tsc` سبز، `oxlint` ۰ خطا/۲۲۲ فایل و `npm run build` سبز (۲۲۱۴ ماژول) |
+| 1.55 | 2026-11-27 | **رفع پس‌زمینهٔ روشن پشت بنرها در حالت تاریک:** `BANNER_SECTION_SURFACE_CLASS` در `frontend/src/utils/bannerGrid.ts` از `bg-white` به `bg-surface` تغییر کرد. سفید Tailwind از توکن‌های `@theme` نمی‌آید و در `styles/dark-mode.css` عمداً دست‌نخورده مانده (تا `text-white` روی دکمه‌های توپُر روشن بماند)؛ بنابراین سطح پشت هر پنج بخش بنر صفحهٔ اول (هیرو دسکتاپ، بنر بالای موبایل، نوار بنرهای کوتاه، بخش چندستونه و بنر وسط موبایل) در حالت تاریک روشن می‌مانْد و با بنر کوچک‌تر (`fit=contain` و کادر `w-fit`) به‌صورت نوار روشن پشت و اطراف بنر دیده می‌شد. با `--color-surface` رنگ در حالت روشن همان سفید قبلی (بدون تغییر ظاهری) و در تاریک سطح تیرهٔ سایت (`#151d19`، هم‌رنگ هدر/فوتر) است؛ `tsc`/`oxlint` و `build` سبز |
+| 1.54 | 2026-11-26 | **منوی دسته‌بندی موبایل لب‌به‌لب + تصویر دسته از پنل:** پنل `CategoryMenu` در موبایل با `-mx-4 px-4 sm:-mx-6 sm:px-6` از کانتینر بیرون می‌زند (پس‌زمینه تا لبهٔ صفحه، متن‌ها هم‌تراز صفحه) و دکمهٔ «دسته‌بندی محصولات» تمام‌عرض شد؛ در هر ردیف (دسته و زیردستهٔ پنل موبایل و زیردستهٔ دراپ‌داون دسکتاپ) تصویر کوچک سمت راست نام نشان داده می‌شود با کامپوننت محلی `CategoryThumb` (اندازه‌های md/sm/xs، جانشین حرف اول برای دستهٔ بدون تصویر، `getStorageUrl`، `loading="lazy"`) و ردیف «همه محصولات» بالای پنل موبایل با همان قالب ردیف‌های دسته هم‌تراز شد؛ در صفحهٔ اصلی («دسته‌بندی محصولات») دکمهٔ سرصفحه در موبایل با `hidden sm:inline-flex` پنهان و یک ردیف تمام‌عرض هم‌تراز کارت‌ها (`sm:hidden`) جای آن آمد؛ بکاند: مسیر `POST /admin/categories/image` (`AdminCategoryController@uploadImage` با `admin.permission:categories.manage`) — پوشهٔ `categories/` دیسک public، تبدیل اختیاری WebP و برگشت `path`/`url`/ابعاد + پاک‌کردن کش فروشگاه؛ `config/media.php` پوشهٔ `categories` را به تبدیل WebP و نقشهٔ `media:prune` (جدول `categories` ستون `image`) اضافه کرد؛ پنل: دکمهٔ «بارگذاری تصویر» + «حذف تصویر» + پیش‌نمایش در فرم دسته (فیلد مسیر دستی هم ماند) و `image` در `StorefrontCategory`؛ ستون `categories.image` از قبل بود (مایگریشن ۲۰۲۶_۰۹_۱۴) و در پاسخ عمومی `/categories` می‌آید — ۴ تست جدید `AdminCategoryTest` (۱۲ پاس) + `MediaPruneTest` ۶ پاس؛ `tsc`/`oxlint` (۰ خطا/۲۲۲ فایل) و `build` سبز (۲۲۱۴ ماژول) |
+| 1.53 | 2026-11-26 | **ناوبری پایین موبایل + دکمهٔ شناور (FAB):** کامپوننت جدید `components/MobileBottomNav.tsx` (فقط `md:hidden`) در `Layout` بعد از فوتر و ابزار تم رندر می‌شود: چهار میان‌بر «خانه» `/`، «فروشگاه» `/products` (روی `/product/:slug` هم فعال)، «علاقه‌مندی» `/wishlist` و «سبد خرید» `/cart` با نشان تعداد از همان Context هدر (`useCart`/`useWishlist`) و آیتم فعال با `useLocation` + `aria-current="page"`؛ دکمهٔ شناور وسط (هاب سفید + گرادیان متحرک برند→آلو→صورتی با `@keyframes mobile-fab-flow`/`mobile-fab-sweep` در `styles/storefront-extras.css`) پنل «دسترسی سریع» را باز می‌کند: فوکوس کادر جست‌وجوی هدر (شناسهٔ مشترک `HEADER_SEARCH_INPUT_ID` که از `HeaderSearch` اکسپورت شد)، حساب کاربری (`/account` برای کاربر واردشده و `/login` برای مهمان)، پیگیری سفارش `/track-order`، راهنمای سایز `/size-guide`، مقالات `/articles` و بخش ویژهٔ ۱۸+ `/adult` (گرادیان رز)؛ بستن پنل با دکمه، `Esc`، کلیک روی پس‌زمینهٔ تار و هر تغییر مسیر. ارتفاع نوار در متغیر `--mobile-nav-height` نگه داشته می‌شود و `.mobile-nav-spacer` در `Layout` فضای انتهای محتوا را جبران می‌کند؛ کارت نصب PWA، ابزار تم و ویجت پشتیبانی در موبایل بالای نوار منتقل شدند (همه رنگ‌ها از توکن‌های `--color-*` و `env(safe-area-inset-bottom)` رعایت شده). تأیید: `npx tsc --noEmit` سبز، `oxlint` روی چهار فایل دست‌خورده ۰ خطا، `npm run build` سبز (۲۲۱۴ ماژول) — **تست فرانت اجرا نشد:** محیط فعلی با بلاکر نسخهٔ Vitest/Vite (بند ۱۶ §۱۴ و بند ۱۷ `Start.txt`) حتی فایل‌های دست‌نخورده را هم سقوط می‌دهد؛ ۷ تست جدید در `components/MobileBottomNav.test.tsx` نوشته شد و پس از رفع بلاکر باید اجرا شود |
+| 1.52 | 2026-11-25 | **بخش ویژهٔ بزرگسالان (۱۸+):** ستون `products.is_adult` (مایگریشن `2026_12_06`، پیش‌فرض false) + فیلد در `Product`؛ `ProductController@listingQuery` همیشه کوئری را به پرچم `adult` درخواست مقید می‌کند (بدون آن فقط کالاهای عادی) و `featured`/`newest` همچنین؛ صفحهٔ دسته (`CategoryController@show`)، صفحهٔ برند (`BrandController@show`)، شمارش sitemap (`AdminSeoController`) و فید Google Merchant کالاهای ۱۸+ را حذف می‌کنند؛ پنل: تیک «کالای ویژهٔ بزرگسالان» در فرم محصول (`AdminProductController` + `pages/AdminProductForm.tsx`)، فیلتر `adult=yes|no` در `GET /admin/products` و برچسب «۱۸+» در فهرست/کارت‌ها؛ فرانت: صفحهٔ `/adult` (`pages/AdultProducts.tsx`) با جست‌وجو/مرتب‌سازی/چیپ دسته/صفحه‌بندی و تم تیره-رز، دروازهٔ سنی `components/AdultGate.tsx` + `utils/adultGate.ts` + `hooks/useAdultConsent.ts` (کلید `behrang-shop-adult-consent`، فقط مرورگر، بدون سرور) که محصول ۱۸+ در `ProductDetail` هم تا تأیید رندر نمی‌شود؛ `CategoryMenu` آیتم «بخش ویژه ۱۸+» را جدا و متمایز نشان می‌دهد، `robots.txt` (`Disallow: /adult`) و `noindex` صفحه اضافه شد و `/products?adult=1` به `/adult` ریدایرکت می‌شود؛ `ProductImportService` ستون «۱۸+» را هم می‌خواند؛ ۹ تست `AdultProductsTest` (۵۷۷ تست بک‌اند، ۲۹۱۸ assertion) + ۶ تست `adultGate` (۹۳ تست فرانت) و `tsc`/`oxlint` سبز؛ در بازبینی ظاهری نوار دسته‌بندی دسکتاپ **تک‌ردیفه** شد (حذف `flex-wrap`، فشرده‌سازی فاصله/اندازه تب‌ها، `truncate` روی نام دسته و `ms-auto shrink-0` روی گروه راهنما) و دکمهٔ «بخش ویژه ۱۸+» کلاس `adult-nav-button` (گرادیان متحرک + درخشش در `frontend/src/styles/storefront-extras.css`، با احترام به `prefers-reduced-motion`) گرفت |
 | 1.51 | 2026-11-24 | **داشبورد تحلیل کمپین‌ها (تسک ۵ نقشهٔ راه):** مجوز جدید `analytics.view` (مدیر ارشد + مدیر سفارش‌ها) در `AdminRole` و `adminPermissions.ts`؛ `AdminAnalyticsController@traffic` روی `GET /admin/analytics/traffic?days=30` فقط از ستون‌های انتساب سفارش (`utm_*` و `referrer`) می‌خواند — خلاصه (درآمد/سفارش/میانگین/سهم UTM/سهم ترافیک شناسایی‌شده/مستقیم) + پنج گروه‌بندی (منبع، نوع، کمپین، محتوا، دامنهٔ referrer) با `orders_count`، `revenue`، `average_order_total` و `revenue_share`؛ مقادیر خالی/NULL در ردیف `(direct)` ادغام و دامنه‌ها بدون `www` یکسان‌سازی می‌شوند؛ سفارش لغوشده و خارج از بازه حذف است (همان تعریف گزارش فروش) و بدون وابستگی به GA4/جدول رویداد؛ فرانت `pages/AdminAnalytics.tsx` + `services/analytics.ts` با مسیر `/admin/analytics`، آیتم منو «تحلیل کمپین‌ها» در گروه «گزارشات» و کارت‌های خلاصه/جدول‌های سهم؛ ۹ تست `AdminAnalyticsTest` + به‌روزرسانی `AdminPermissionTest` |
 | 1.50 | 2026-11-24 | **فید Google Merchant + راهنمای UTM:** مسیر عمومی `GET /feed/google-merchant.xml` (در `routes/web.php`، بیرون از `/api/v1`) با `App\Http\Controllers\Api\MerchantFeedController` — RSS 2.0 با `xmlns:g` و `Content-Type: application/xml`؛ برای هر محصول فعال: `g:id`, `g:title` (سقف ۱۵۰)، `g:description` (متن ساده، سقف ۵۰۰۰، اول `description` بعد `short_description` بعد نام)، `g:link` = `${FRONTEND_URL}/product/{slug}`، `g:image_link` + حداکثر ۱۰ `g:additional_image_link` (مسیر دیسک public → `url('storage/...')`، مسیر `/...` فرانت → دامنهٔ SPA، فیلد خالی ساخته نمی‌شود)، `g:price`/`g:sale_price` به **ریال** (تومان×۱۰)، `g:availability` (`in_stock`/`out_of_stock`)، `g:brand` (بی‌برند = نام فروشگاه)، `g:mpn` از `sku` + `g:identifier_exists=no` (GTIN نداریم)، `g:condition=new`، `g:product_type` = نام دسته و `g:shipping` (کشور IR، همان قاعدهٔ `OrderController@resolveShippingCost`: فعال + آستانه>0 + قیمت≥آستانه → 0)؛ کش ۳۰ دقیقه‌ای `storefront:feed:google-merchant` که `StorefrontCache::flushCatalog/flushSettings` پاک می‌کند (Observer هم خودکار) — ۴ تست `MerchantFeedTest` و راهنمای قرارداد UTM کمپین در `SEO_ANALYTICS_PLAN.md` |
 | 1.49 | 2026-11-24 | **اعلام فعال‌بودن پرداخت آنلاین به چک‌اوت:** `GET /store-settings` فیلد جدید `payment_online_enabled` را از `config('payment.mode') !== 'disabled'` برمی‌گرداند (در production بدون درگاه واقعی `false`)؛ `services/storeSettings.ts` آن را نرمال می‌کند (فقط `false` صریح = خاموش تا کش قدیمی رفتار قبلی را داشته باشد) و `Checkout` گزینهٔ «پرداخت آنلاین» را غیرفعال، «پرداخت در محل» را پیش‌فرض و علت را نشان می‌دهد — پیش‌تر مشتری لاگین‌کرده پیش‌فرض «آنلاین» را می‌دید، سفارش `pending/unpaid` ثبت می‌شد و در صفحهٔ پرداخت `403` می‌گرفت. اگر هم‌زمان سقف `COD_MAX_TOTAL` رد شود و آنلاین هم بسته باشد، دکمهٔ ثبت غیرفعال و پیام «تماس با پشتیبانی» نمایش داده می‌شود (گارد در `handleSubmit` هم هست)؛ تست `AdminStoreSettingTest::test_public_store_settings_report_online_payment_availability` |

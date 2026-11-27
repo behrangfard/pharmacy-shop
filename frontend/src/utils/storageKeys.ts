@@ -47,6 +47,8 @@ export const STORAGE_KEYS = {
   adminSidebar: "behrang-shop-admin-sidebar",
   /** چیدمان شخصی‌سازی‌شدهٔ صفحهٔ «نمای کلی» پنل مدیریت (ترتیب + بخش‌های پنهان). */
   adminDashboard: "behrang-shop-admin-dashboard",
+  /** تأیید سن (۱۸+) برای ورود به بخش ویژهٔ بزرگسالان؛ فقط در همین مرورگر. */
+  adultConsent: "behrang-shop-adult-consent",
   /** تم انتخاب‌شدهٔ فروشگاه برای پیش‌نمایش پالت رنگ (sage/ocean). */
   storefrontTheme: "behrang-shop-storefront-theme",
   /** حالت روشن/تاریک فروشگاه (light/dark) برای هدر سایت. */

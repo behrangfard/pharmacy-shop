@@ -60,6 +60,8 @@ class CategoryController extends Controller
                 'products' => function ($query) {
                     $query
                         ->where('is_active', true)
+                        // کالاهای ۱۸+ در صفحهٔ دستهٔ عمومی دیده نمی‌شوند.
+                        ->where('is_adult', false)
                         ->with(['brand', 'images'])
                         ->orderByDesc('is_featured')
                         ->orderByDesc('id');
